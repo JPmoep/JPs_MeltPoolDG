@@ -3,7 +3,7 @@
 ##
 
 # Set the name of the project and target:
-SET(TARGET "rotatingbubble")
+SET(TARGET "vortexgaussian")
 
 # Declare all source files the target consists of. Here, this is only
 # the one step-X.cc file, but as you expand your project you may wish
@@ -15,7 +15,7 @@ SET(TARGET "rotatingbubble")
 # or switch altogether to the large project CMakeLists.txt file discussed
 # in the "CMake in user projects" page accessible from the "User info"
 # page of the documentation.
-  FILE(GLOB_RECURSE TARGET_SRC  "rotatingbubble.cpp"
+  FILE(GLOB_RECURSE TARGET_SRC  "vortexgaussian.cpp"
 				"../../source/*.cpp")
   FILE(GLOB_RECURSE TARGET_INC  "../../include/*.hpp")
   INCLUDE_DIRECTORIES(		"../../include")			

@@ -9,47 +9,42 @@
 #include "utilityFunctions.hpp"
 #include <cmath>
 
-
 template <int dim>
 double InitializePhi<dim>::value(const Point<dim> &p,
                                  const unsigned int /*component*/) const
 {
-    Point<2> center     = Point<2>(0,0.5); 
-    const double radius = 0.15;
-
-    return utilityFunctions::tanHyperbolicusCharacteristicFunction( 
-           utilityFunctions::signedDistanceCircle( p, center, radius ), 
-           this->epsInterface 
-           );
-
+    return std::exp( -400 * ( std::pow(p[0] - 0.5, 2 ) + std::pow( p[1] - 0.75 , 2 ) ) );
 }
 
 // specify advection field
 template <int dim>
 Tensor<1, dim> AdvectionField<dim>::value(const Point<dim> & p) const 
 {
-  const double t = this->get_time();
-  
-  Tensor<1, dim> value_;
-  
+  const double time = this->get_time();
+
+  Point<dim> value;
+  const double Tf = 2.0;
   const double x = p[0];
   const double y = p[1];
   
-  value_[0] = 4*y;
-  value_[1] = -4*x;
-  
-  return value_;
+  const double reverseCoefficient = 2 * std::cos( numbers::PI * time / Tf );
+
+  value[0] = reverseCoefficient * (  std::sin( 2. * numbers::PI * y) * std::pow( std::sin( numbers::PI * x ), 2.) );
+  value[1] = reverseCoefficient * ( -std::sin( 2. * numbers::PI * x) * std::pow( std::sin( numbers::PI * y ), 2.) );
+  return value;
 }
 
 LevelSetParameters params {
     .timeStep                  = 0.01,   
-    .maxTime                   = dealii::numbers::PI/2,  
+    .maxTime                   = 2.0,  
     .theta                     = 0.5,
     .diffusivity               = 0.0, // artificial diffusivity
-    .activateReinitialization  = true,
+    .activateReinitialization  = false,
     .computeVolume             = true,
     .dirichletBoundaryValue    = -1.0,  
     .levelSetDegree            = 2,  
+    .characteristicMeshSize    = 0.0,  
+    .epsInterface              = 0.0,  
 };
 
 int main()
@@ -58,20 +53,20 @@ int main()
   try
     {
 
-      const int nDim = 2;
-      const double leftDomain   = -1.0;            // (m)
-      const double rightDomain  = 1.0;
+      const int nDim             = 2;
+      const double leftDomain    = 0.0;            // (m)
+      const double rightDomain   = 1.0;
       const int nMeshRefinements = 6; 
       
       params.characteristicMeshSize  = (rightDomain-leftDomain) / ( std::pow(2,nMeshRefinements )); 
-      params.epsInterface = 2.0* params.characteristicMeshSize;
+      params.epsInterface            = 2.0* params.characteristicMeshSize;
       
       Triangulation<nDim>        triangulation;
       GridGenerator::hyper_cube( triangulation, 
                                  leftDomain, 
                                  rightDomain );
 
-      // mark dirichlet edges
+      // mark all edges with dirichlet bounddary conditions
       for (auto &face : triangulation.active_face_iterators())
         if ( (face->at_boundary() ) ) // && (face->center()[0] == InputParameters::leftDomain) )
         {
@@ -80,7 +75,6 @@ int main()
 
       triangulation.refine_global( nMeshRefinements );
 
-      std::cout << "Input: " << nDim << std::endl;
       LevelSet::LevelSetEquation<nDim> levelSet_equation_solver(
               params,
               triangulation

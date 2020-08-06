@@ -14,29 +14,24 @@ template <int dim>
 double InitializePhi<dim>::value(const Point<dim> &p,
                                  const unsigned int /*component*/) const
 {
-    Point<2> center     = Point<2>(0,0.5); 
-    const double radius = 0.15;
-
-    return utilityFunctions::tanHyperbolicusCharacteristicFunction( 
-           utilityFunctions::signedDistanceCircle( p, center, radius ), 
-           this->epsInterface 
-           );
-
+    Point<2> center     = Point<2>(0,0); 
+    const double radius = 0.2;
+    using namespace utilityFunctions;
+    return tanHyperbolicusCharacteristicFunction( 
+                signedDistanceCircle( p, center, radius ), epsInterface );
 }
 
 // specify advection field
 template <int dim>
 Tensor<1, dim> AdvectionField<dim>::value(const Point<dim> & p) const 
 {
-  const double t = this->get_time();
+  //const double t = this->get_time();
   
+  const std::vector advectionConstant    = {0.1,0.0,0.0};  // (m/s)
   Tensor<1, dim> value_;
   
-  const double x = p[0];
-  const double y = p[1];
-  
-  value_[0] = 4*y;
-  value_[1] = -4*x;
+  value_[0] = advectionConstant[0];
+  value_[1] = advectionConstant[1];
   
   return value_;
 }
@@ -44,12 +39,14 @@ Tensor<1, dim> AdvectionField<dim>::value(const Point<dim> & p) const
 LevelSetParameters params {
     .timeStep                  = 0.01,   
     .maxTime                   = dealii::numbers::PI/2,  
-    .theta                     = 0.5,
+    .theta                     = 0.5, // timestepping; 0=explicit; 0.5=trapez; 1.0=implicit
     .diffusivity               = 0.0, // artificial diffusivity
     .activateReinitialization  = true,
     .computeVolume             = true,
     .dirichletBoundaryValue    = -1.0,  
     .levelSetDegree            = 2,  
+    .characteristicMeshSize    = 0.0,  
+    .epsInterface              = 0.0,
 };
 
 int main()
@@ -59,8 +56,8 @@ int main()
     {
 
       const int nDim = 2;
-      const double leftDomain   = -1.0;            // (m)
-      const double rightDomain  = 1.0;
+      const double leftDomain   = -0.5;            // (m)
+      const double rightDomain  = 0.5;
       const int nMeshRefinements = 6; 
       
       params.characteristicMeshSize  = (rightDomain-leftDomain) / ( std::pow(2,nMeshRefinements )); 
