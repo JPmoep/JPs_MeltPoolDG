@@ -23,6 +23,8 @@ namespace utilityFunctions
     
     double heavisideFunction(const double& x, const double& eps);
     
+    double signedDistanceSphere(const Point<3>& P, const Point<3>& Center, const double radius);
+    
     double signedDistanceCircle(const Point<2>& P, const Point<2>& Center, const double radius);
 
     double signedDistanceVerticalLine(const Point<2>& P, const double xInterface);

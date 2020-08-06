@@ -50,6 +50,11 @@ void printFullMatrix(const FullMatrix<double>& mass_matrix)
     }
     std::cout << outputMass.str();
   }
+ 
+double signedDistanceSphere(const Point<3>& P, const Point<3>& Center, const double radius)
+ {
+    return -std::sqrt( std::pow(P[0]-Center[0],2) + std::pow(P[1]-Center[1],2) + std::pow(P[2]-Center[2],2)) + radius;
+ }
 
  double signedDistanceCircle(const Point<2>& P, const Point<2>& Center, const double radius)
  {

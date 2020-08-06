@@ -81,33 +81,32 @@ namespace LevelSet
     void computeAdvection(TensorFunction<1, dim> &AdvectionField_);
     //void computeDampedNormalLevelSet();
     
-    Triangulation<dim>&        triangulation;
     LevelSetParameters        parameters;
     FE_Q<dim>                 fe;
+    Triangulation<dim>&       triangulation;
     DoFHandler<dim>           dof_handler;
     QGauss<dim>               qGauss; 
+    double                    time_step;
+    double                    time;
+    unsigned int              timestep_number;
+    
     AffineConstraints<double> constraints;
 
-    SparsityPattern    sparsity_pattern;
+    SparsityPattern           sparsity_pattern;
 
-    SparseMatrix<double> systemMatrix; // global system matrix
-    Vector<double>       systemRHS; // global system matrix
+    SparseMatrix<double>      systemMatrix; // global system matrix
+    Vector<double>            systemRHS; // global system matrix
 
-    Vector<double> old_solution_u;
-    Vector<double>     solution_u;
-    Vector<double> re_solution_u;
-    Vector<double> re_delta_solution_u;
-    Vector<double> advection_x;
-    Vector<double> advection_y;
+    Vector<double>            old_solution_u;
+    Vector<double>            solution_u;
+    Vector<double>            re_solution_u;
+    Vector<double>            re_delta_solution_u;
+    Vector<double>            advection_x;
+    Vector<double>            advection_y;
     
-    std::vector<double> volumeOfPhase1PerTimeStep;
-    std::vector<double> volumeOfPhase2PerTimeStep;
-    std::vector<double> timeVector;
-
-    double       time_step;
-    double       time;
-    unsigned int timestep_number;
-    //const double theta;
+    std::vector<double>       volumeOfPhase1PerTimeStep;
+    std::vector<double>       volumeOfPhase2PerTimeStep;
+    std::vector<double>       timeVector;
   };
 
 
@@ -115,21 +114,19 @@ namespace LevelSet
   LevelSetEquation<dim>::LevelSetEquation(
                      const LevelSetParameters& parameters_,
                      Triangulation<dim>&       triangulation_)
-    : fe(               parameters.levelSetDegree )
+    : parameters(       parameters_)
+    , fe(               parameters.levelSetDegree )
     , triangulation(    triangulation_ )
     , dof_handler(      triangulation_ )
-    , parameters(       parameters_)
     , qGauss(           QGauss<dim>(parameters_.levelSetDegree+1) )
     , time_step(        parameters_.timeStep )
     , time(             time_step )
     , timestep_number(  1 )
-    //, theta(            parameters_.theta )  // 0 = explicit euler, 0.5 = Crank-Nicolson, 1.0 = implicit euler
   {}
   
   template <int dim>
   void LevelSetEquation<dim>::setInitialConditions(const Function<dim>& InitialValues)
   {
-    Point<2> center     = Point<2>(0,0.5);
     VectorTools::project(dof_handler, 
                          constraints,
                          qGauss,
@@ -467,8 +464,6 @@ namespace LevelSet
   template <int dim>
   void LevelSetEquation<dim>::computeAdvection(TensorFunction<1, dim> &AdvectionField_)
   {
-    const unsigned int dofs_per_cell =   fe.dofs_per_cell;
-    
     std::map<types::global_dof_index, Point<dim> > supportPoints;
     DoFTools::map_dofs_to_support_points<dim,dim>(MappingQGeneric<dim>(fe.degree),dof_handler,supportPoints);
 
