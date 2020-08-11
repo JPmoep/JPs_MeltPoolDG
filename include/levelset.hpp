@@ -51,6 +51,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <algorithm> // for enum ::All
 //#include <fmt/format.h>  // unfortunately does not work currently
 #include <cmath>
 #include "utilityFunctions.hpp"
@@ -66,14 +67,14 @@ namespace LevelSet
     LevelSetEquation(const LevelSetParameters& parameters,
                      Triangulation<dim>&       triangulation);
     void run( const Function<dim>& InitialValues,
-              TensorFunction<1, dim> &AdvectionField_ 
-            );
+              TensorFunction<1, dim> &AdvectionField_,
+              const Function<dim>& DirichletValues);
     double epsilon;
 
   private:
     void setup_system();
     void setInitialConditions(const Function<dim>& InitialValues);
-    void setDirichletBoundaryConditions();
+    void setDirichletBoundaryConditions(const Function<dim>& DirichletValues);
     void assembleSystemMatrices(TensorFunction<1, dim> &AdvectionField_);
     void computeReinitializationMatrices( const double dTau );
     void solve_u();
@@ -149,13 +150,13 @@ namespace LevelSet
   } 
   
   template <int dim>
-  void LevelSetEquation<dim>::setDirichletBoundaryConditions()
+  void LevelSetEquation<dim>::setDirichletBoundaryConditions(const Function<dim>& DirichletValues)
   {
-    //std::cout << "dirichlet values set " << parameters.dirichletBoundaryValue << std::endl; //@ todo
     std::map<types::global_dof_index, double> boundary_values;
+    
     VectorTools::interpolate_boundary_values( dof_handler,
-                                              utilityFunctions::BCTypes::dirichlet,
-                                              Functions::ConstantFunction<dim>( -1.0 ),
+                                              utilityFunctions::BoundaryConditions::Types::dirichlet,
+                                              DirichletValues,
                                               boundary_values );
 
     MatrixTools::apply_boundary_values(boundary_values,
@@ -251,7 +252,6 @@ namespace LevelSet
          
       }
 
-    setDirichletBoundaryConditions(); 
   }
   
   template <int dim>
@@ -498,6 +498,7 @@ namespace LevelSet
   
     solve_cg(system_curvature_RHS, systemMatrix, solution_curvature_damped, "damped curvature");
   }
+
   template <int dim>
   void LevelSetEquation<dim>::solve_cg(const Vector<double>& RHS,
                                        const SparseMatrix<double>& matrix,
@@ -652,7 +653,8 @@ namespace LevelSet
   
   template <int dim>
   void LevelSetEquation<dim>::run( const Function<dim>& InitialValues,
-                                   TensorFunction<1, dim>& AdvectionField_) 
+                                   TensorFunction<1, dim>& AdvectionField_,
+                                   const Function<dim>& DirichletValues) 
   {
     std::cout << "setup system " << std::endl;
     setup_system();
@@ -662,8 +664,8 @@ namespace LevelSet
 
     timestep_number=0;
     computeAdvection(AdvectionField_);
-    computeDampedNormalLevelSet();
-    computeDampedCurvatureLevelSet();
+    //computeDampedNormalLevelSet();
+    //computeDampedCurvatureLevelSet();
 
     output_results( timestep_number );    // print initial state
     computeVolume( );
@@ -675,9 +677,9 @@ namespace LevelSet
         std::cout << "Time step " << timestep_number << " at t=" << time << std::endl;
 
         assembleSystemMatrices(AdvectionField_); // @todo: insert updateFlag
+        setDirichletBoundaryConditions(DirichletValues); 
         
         solve_u();
-
         
         if ( parameters.activate_reinitialization )    
         {
@@ -704,8 +706,8 @@ namespace LevelSet
         }
 
         computeAdvection(AdvectionField_);
-        computeDampedNormalLevelSet();
-        computeDampedCurvatureLevelSet();
+        //computeDampedNormalLevelSet();
+        //computeDampedCurvatureLevelSet();
         output_results(timestep_number);
         
         if (parameters.compute_volume)

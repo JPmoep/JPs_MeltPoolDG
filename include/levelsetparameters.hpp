@@ -2,6 +2,7 @@
 #include <deal.II/base/parameter_handler.h>
 #include <deal.II/base/function.h>
 #include <deal.II/base/tensor_function.h>
+#include <deal.II/grid/tria.h>
 
 #include <fstream>
 #include <iostream>
@@ -68,6 +69,19 @@ class InitializePhi : public Function<dim>
 };
 
 template <int dim>
+class DirichletCondition : public Function<dim>
+{
+    public:
+        DirichletCondition()
+          : Function<dim>()
+        {}
+        double value(const Point<dim> & p,
+                     const unsigned int component = 0) const override;
+
+        void markDirichletEdges(Triangulation<dim>& triangulation_) const;
+};
+
+template <int dim>
 class AdvectionField : public TensorFunction<1, dim>
 {
     public:
@@ -75,6 +89,6 @@ class AdvectionField : public TensorFunction<1, dim>
           : TensorFunction<1, dim>()
         {}
 
-        virtual Tensor<1, dim> value(const Point<dim> & p) const override;
+        Tensor<1, dim> value(const Point<dim> & p) const override;
 };
 

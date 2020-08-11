@@ -36,32 +36,27 @@ Tensor<1, dim> AdvectionField<dim>::value(const Point<dim> & p) const
   return value_;
 }
 
-LevelSetParameters params {
-    .timeStep                  = 0.01,   
-    .maxTime                   = dealii::numbers::PI/2,  
-    .theta                     = 0.5, // timestepping; 0=explicit; 0.5=trapez; 1.0=implicit
-    .diffusivity               = 0.0, // artificial diffusivity
-    .activateReinitialization  = true,
-    .computeVolume             = true,
-    .dirichletBoundaryValue    = -1.0,  
-    .levelSetDegree            = 2,  
-    .characteristicMeshSize    = 0.0,  
-    .epsInterface              = 0.0,
-};
-
 int main()
 {
+   LevelSetParameters params;
+   params.dimension                 = 2;
+   params.global_refinements        = 6;    
+   params.levelset_degree           = 2;  
+   params.artificial_diffusivity    = 0.0; // artificial diffusivity
+   params.activate_reinitialization = 1;
+   params.compute_volume            = 1;
+   params.max_n_reinit_steps        = 5;   
+   params.theta                     = 0.5; // timestepping; 0=explicit; 0.5=trapez; 1.0=implicit
+   params.start_time                = 0.0;   
+   params.end_time                  = 1.0;   
+   params.time_step_size            = 0.01;   
 
   try
     {
 
-      const int nDim = 2;
+      const int nDim            = 2;
       const double leftDomain   = -0.5;            // (m)
       const double rightDomain  = 0.5;
-      const int nMeshRefinements = 6; 
-      
-      params.characteristicMeshSize  = (rightDomain-leftDomain) / ( std::pow(2,nMeshRefinements )); 
-      params.epsInterface = 2.0* params.characteristicMeshSize;
       
       Triangulation<nDim>        triangulation;
       GridGenerator::hyper_cube( triangulation, 
@@ -75,7 +70,7 @@ int main()
             face->set_boundary_id ( utilityFunctions::BCTypes::dirichlet);
         }
 
-      triangulation.refine_global( nMeshRefinements );
+      triangulation.refine_global( params.global_refinements);
 
       std::cout << "Input: " << nDim << std::endl;
       LevelSet::LevelSetEquation<nDim> levelSet_equation_solver(
@@ -85,7 +80,7 @@ int main()
     
     AdvectionField<nDim> adv;
     InitializePhi<nDim> ini;
-    ini.setEpsInterface(params.epsInterface);
+    ini.setEpsInterface(levelSet_equation_solver.epsilon);
     
     levelSet_equation_solver.run( ini, adv ) ;
     }

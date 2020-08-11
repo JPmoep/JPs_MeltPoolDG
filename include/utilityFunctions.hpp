@@ -10,11 +10,16 @@ namespace utilityFunctions
 {
 
     using namespace dealii;
-    enum BCTypes { inflow=1,
-                   outflow=2,
-                   dirichlet=3,
-                 };
     
+    namespace BoundaryConditions
+    {
+      enum Types { inflow=1,
+                     outflow=2,
+                     dirichlet=3,
+                     };
+      static const Types All[] = { inflow, outflow, dirichlet };
+    }   
+
     void printSparseMatrix(const SparseMatrix<double>& mass_matrix);
     
     void printFullMatrix(const FullMatrix<double>& mass_matrix);
@@ -31,4 +36,5 @@ namespace utilityFunctions
     
     double evaluateCFLCondition();
 
+    void printLine(const int verbosityLevel=0, std::ostream& str=std::cout);
 }

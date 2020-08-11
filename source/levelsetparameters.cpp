@@ -159,7 +159,7 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
   prm.leave_subsection ();
 }
 
-void LevelSetParameters::print_parameters ()
+void LevelSetParameters::print_parameters()
 {
     std::cout << "+----------------------------------------" << std::endl;
     std::cout << "| dimension                 " << dimension << std::endl;                   

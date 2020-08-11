@@ -1,5 +1,6 @@
 #include "utilityFunctions.hpp"
 #include <math.h>
+#include <iomanip>
 
 using namespace dealii;
 
@@ -66,4 +67,9 @@ double signedDistanceSphere(const Point<3>& P, const Point<3>& Center, const dou
     return P[0] - xInterface;  
  }
 
+ void printLine(const int verbosityLevel, std::ostream& str)
+ {
+     str << "+" << std::string(68, '-') << "+" << std::endl;
+ }
+ 
 } // end of utilityFunctions
