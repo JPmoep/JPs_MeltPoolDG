@@ -46,7 +46,7 @@
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/base/utilities.h>
 #include <deal.II/matrix_free/fe_evaluation.h>
-#include <experimental/filesystem>
+//#include <experimental/filesystem>
 #include "levelsetparameters.hpp"
 #include <fstream>
 #include <iostream>
@@ -68,6 +68,7 @@ namespace LevelSet
     void run( const Function<dim>& InitialValues,
               TensorFunction<1, dim> &AdvectionField_ 
             );
+    double epsilon;
 
   private:
     void setup_system();
@@ -101,11 +102,11 @@ namespace LevelSet
 
     SparsityPattern           sparsity_pattern;
 
-    SparseMatrix<double>      systemMatrix; // global system matrix
-    Vector<double>            systemRHS; // global system right-hand side
-    BlockVector<double>       system_normal_RHS; // system right-hand side for computing the normal vector
-    Vector<double>            system_curvature_RHS; // system right-hand side for computing the curvature
-    BlockVector<double>       solution_normal_damped; // solution of the (damped) normal vector
+    SparseMatrix<double>      systemMatrix;              // global system matrix
+    Vector<double>            systemRHS;                 // global system right-hand side
+    BlockVector<double>       system_normal_RHS;         // system right-hand side for computing the normal vector
+    Vector<double>            system_curvature_RHS;      // system right-hand side for computing the curvature
+    BlockVector<double>       solution_normal_damped;    // solution of the (damped) normal vector
     Vector<double>            solution_curvature_damped; // solution of the (damped) curvature
     
     Vector<double>            old_solution_u;
@@ -126,12 +127,13 @@ namespace LevelSet
   LevelSetEquation<dim>::LevelSetEquation(
                      const LevelSetParameters& parameters_,
                      Triangulation<dim>&       triangulation_)
-    : parameters(       parameters_)
-    , fe(               parameters.levelSetDegree )
+    : epsilon ( GridTools::minimal_cell_diameter(triangulation_) * 2.0 )
+    , parameters(       parameters_)
+    , fe(               parameters_.levelset_degree )
     , triangulation(    triangulation_ )
     , dof_handler(      triangulation_ )
-    , qGauss(           QGauss<dim>(parameters_.levelSetDegree+1) )
-    , time_step(        parameters_.timeStep )
+    , qGauss(           QGauss<dim>(parameters_.levelset_degree+1) )
+    , time_step(        parameters_.time_step_size )
     , time(             time_step )
     , timestep_number(  1 )
   {}
@@ -149,11 +151,11 @@ namespace LevelSet
   template <int dim>
   void LevelSetEquation<dim>::setDirichletBoundaryConditions()
   {
-    std::cout << "dirichlet values set " << parameters.dirichletBoundaryValue << std::endl;
+    //std::cout << "dirichlet values set " << parameters.dirichletBoundaryValue << std::endl; //@ todo
     std::map<types::global_dof_index, double> boundary_values;
     VectorTools::interpolate_boundary_values( dof_handler,
                                               utilityFunctions::BCTypes::dirichlet,
-                                              Functions::ConstantFunction<dim>( parameters.dirichletBoundaryValue ),
+                                              Functions::ConstantFunction<dim>( -1.0 ),
                                               boundary_values );
 
     MatrixTools::apply_boundary_values(boundary_values,
@@ -208,7 +210,7 @@ namespace LevelSet
                 {
                     cellMatrix( i, j ) += (  fe_values.shape_value( i, q_index) * 
                                              fe_values.shape_value( j, q_index) +
-                                             parameters.theta * time_step * ( parameters.diffusivity * 
+                                             parameters.theta * time_step * ( parameters.artificial_diffusivity * 
                                                                    fe_values.shape_grad( i, q_index) * 
                                                                    fe_values.shape_grad( j, q_index) -
                                                                    velocityGradShape * 
@@ -221,7 +223,7 @@ namespace LevelSet
                    (  fe_values.shape_value( i, q_index) * phiAtQ[q_index]
                        - 
                       ( 1. - parameters.theta ) * time_step * (
-                              parameters.diffusivity *
+                              parameters.artificial_diffusivity *
                               fe_values.shape_grad( i, q_index) *
                               phiGradAtQ[q_index]
                               -
@@ -292,7 +294,7 @@ namespace LevelSet
         // @todo: only compute normals once during timestepping
         for (const unsigned int q_index : fe_values.quadrature_point_indices())
          {
-            const double diffRhs = parameters.epsInterface * normalAtQ[q_index] * psiGradAtQ[q_index];
+            const double diffRhs = epsilon * normalAtQ[q_index] * psiGradAtQ[q_index];
 
             for (const unsigned int i : fe_values.dof_indices())
             {
@@ -304,7 +306,7 @@ namespace LevelSet
                     cell_matrix(i,j) += (
                                           fe_values.shape_value(i,q_index) * fe_values.shape_value(j,q_index)
                                           + 
-                                          dTau * parameters.epsInterface * nTimesGradient_i * nTimesGradient_j
+                                          dTau * epsilon * nTimesGradient_i * nTimesGradient_j
                                         ) 
                                         * fe_values.JxW( q_index );
                 }
@@ -352,7 +354,7 @@ namespace LevelSet
     std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
     std::vector<Tensor<1,dim>>           normal_at_q(  n_q_points, Tensor<1,dim>() );
 
-    const double damping = parameters.characteristicMeshSize * 0.5; //@todo: modifiy damping parameter
+    const double damping = GridTools::minimal_cell_diameter(triangulation) * 0.5; //@todo: modifiy damping parameter
 
     for (const auto &cell : dof_handler.active_cell_iterators())
     {
@@ -494,7 +496,7 @@ namespace LevelSet
 
     } // end for loop over cells
   
-    solve_cg(system_curvature_RHS, systemMatrix, solution_curvature_damped, __PRETTY_FUNCTION__);
+    solve_cg(system_curvature_RHS, systemMatrix, solution_curvature_damped, "damped curvature");
   }
   template <int dim>
   void LevelSetEquation<dim>::solve_cg(const Vector<double>& RHS,
@@ -508,7 +510,7 @@ namespace LevelSet
               solution, 
               RHS, 
               PreconditionIdentity() );
-    std::cout << "solver called by " << callerFunction << " with "  << solver_control.last_step() << " CG iterations." << std::endl;
+    std::cout << "cg solver called by " << callerFunction << " with "  << solver_control.last_step() << " CG iterations." << std::endl;
   }
 
   template <int dim>
@@ -662,11 +664,12 @@ namespace LevelSet
     computeAdvection(AdvectionField_);
     computeDampedNormalLevelSet();
     computeDampedCurvatureLevelSet();
+
     output_results( timestep_number );    // print initial state
     computeVolume( );
 
     timestep_number++; 
-    for (; time <= parameters.maxTime; time += parameters.timeStep, ++timestep_number)
+    for (; time <= parameters.end_time; time += parameters.time_step_size, ++timestep_number)
       {
         timeVector.push_back(time);
         std::cout << "Time step " << timestep_number << " at t=" << time << std::endl;
@@ -676,15 +679,15 @@ namespace LevelSet
         solve_u();
 
         
-        if ( parameters.activateReinitialization )    
+        if ( parameters.activate_reinitialization )    
         {
             re_solution_u     = solution_u;
-            const double re_time_step       = 1./(dim*dim) * parameters.characteristicMeshSize; 
+            const double re_time_step       = 1./(dim*dim) * GridTools::minimal_cell_diameter(triangulation); 
             unsigned int re_timestep_number = 0;
             double re_time                  = 0.0;
             
             std::cout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
-            for (; re_timestep_number < 10; re_time += re_time_step, ++re_timestep_number) // 3 to 5 timesteps are enough to reach steady state according to Kronbichler et al.
+            for (; re_timestep_number < parameters.max_n_reinit_steps; re_time += re_time_step, ++re_timestep_number) // 3 to 5 timesteps are enough to reach steady state according to Kronbichler et al.
             {
                 computeReinitializationMatrices(re_time_step);
                 re_solve_u();
@@ -705,12 +708,12 @@ namespace LevelSet
         computeDampedCurvatureLevelSet();
         output_results(timestep_number);
         
-        if (parameters.computeVolume)
+        if (parameters.compute_volume)
         {
             std::cout << " n = " << timestep_number << std::endl;
             computeVolume();
-                std::cout << "curr volume -- phase 1 " << volumeOfPhase1PerTimeStep[timestep_number] << std::endl;
-                std::cout << "curr volume -- phase 2 " << volumeOfPhase2PerTimeStep[timestep_number] << std::endl;
+            std::cout << "curr volume -- phase 1 " << volumeOfPhase1PerTimeStep[timestep_number] << std::endl;
+            std::cout << "curr volume -- phase 2 " << volumeOfPhase2PerTimeStep[timestep_number] << std::endl;
 
         }   
     }
