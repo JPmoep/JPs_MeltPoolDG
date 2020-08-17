@@ -664,8 +664,8 @@ namespace LevelSet
 
     timestep_number=0;
     computeAdvection(AdvectionField_);
-    //computeDampedNormalLevelSet();
-    //computeDampedCurvatureLevelSet();
+    computeDampedNormalLevelSet();
+    computeDampedCurvatureLevelSet();
 
     output_results( timestep_number );    // print initial state
     computeVolume( );
@@ -706,8 +706,8 @@ namespace LevelSet
         }
 
         computeAdvection(AdvectionField_);
-        //computeDampedNormalLevelSet();
-        //computeDampedCurvatureLevelSet();
+        computeDampedNormalLevelSet();
+        computeDampedCurvatureLevelSet();
         output_results(timestep_number);
         
         if (parameters.compute_volume)

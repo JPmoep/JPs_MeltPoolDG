@@ -17,13 +17,22 @@ namespace utilityFunctions
             return ( d + eps ) / ( 2.*eps )+ 1. / ( 2. * numbers::PI ) * std::sin(numbers::PI * d / eps);
   }
   
+  double signFunction(const double& d)
+  {
+        return (d<0) ? -1 : 1;
+  }
+  
+  double normalizeFunction(const double& x, const double& x_min, const double& x_max)
+  {
+        return ( x - x_min ) / ( x_max - x_min );
+  }
+
   double tanHyperbolicusCharacteristicFunction(const double& d, const double& eps)
   {
-        //return std::tanh( d / ( eps ) ); 
         return std::tanh( d / ( 2. * eps ) ); // denominator modified to obtain only a slight shift between the intial and the first initialization step
   }
 
-void printSparseMatrix(const SparseMatrix<double>& mass_matrix)
+  void printSparseMatrix(const SparseMatrix<double>& mass_matrix)
   {
     std::ostringstream outputMass;
     

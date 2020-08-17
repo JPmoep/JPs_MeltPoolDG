@@ -33,6 +33,7 @@ namespace LA
 #include <deal.II/base/quadrature_lib.h>
 #include <deal.II/base/function.h>
 #include <deal.II/base/tensor_function.h>
+#include <deal.II/base/timer.h>
 
 #include <deal.II/fe/mapping.h>
 #include <deal.II/lac/vector.h>
@@ -63,6 +64,7 @@ namespace LA
 #include "levelsetparameters.hpp"
 #include <fstream>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <algorithm> // for enum ::All
 //#include <fmt/format.h>  // unfortunately does not work currently
@@ -80,11 +82,15 @@ namespace LA
 #include <deal.II/lac/petsc_precondition.h>
 #include <deal.II/distributed/tria.h>
 #include <deal.II/distributed/grid_refinement.h>
+#include <deal.II/numerics/data_postprocessor.h>
+#include <deal.II/base/hdf5.h>
 
+#include <deal.II/base/data_out_base.h>
+#include <deal.II/lac/trilinos_solver.h> // direct solver
 
 namespace LevelSetParallel
 {
-  using namespace dealii; 
+    using namespace dealii; 
   
   template <int dim>
   class LevelSetEquation
@@ -92,34 +98,31 @@ namespace LevelSetParallel
   public:
     LevelSetEquation(const LevelSetParameters& parameters,
                      parallel::distributed::Triangulation<dim>&       triangulation,
+                     TensorFunction<1, dim>& AdvectionField_,
                      MPI_Comm& mpi_commun);
     void run( const Function<dim>& InitialValues,
-              TensorFunction<1, dim> &AdvectionField_,
               const Function<dim>& DirichletValues);
+    void compute_error( const Function<dim>& ExactSolution );
     double epsilon;
 
   private:
     void setup_system(const Function<dim>& DirichletValues );
     void setInitialConditions(const Function<dim>& InitialValues);
-    void assembleSystemMatrices( TensorFunction<1, dim> &AdvectionField_,
-                                 const Function<dim>& DirichletValues );
-    void computeReinitializationMatrices( const double dTau );
+    void setInitialConditions_reinitialize(const Function<dim>& InitialValues);
+    void assemble_levelset_system( const Function<dim>& DirichletValues );
+    void assemble_reinitialization_system( );
+    void assemble_total_reinitialization_system( const double dTau );
     void solve_u();
-    void re_solve_u();
     void solve_cg(const LA::MPI::Vector& RHS,
-                                       const LA::MPI::SparseMatrix& matrix,
-                                       LA::MPI::Vector& solution,
-                                       const std::string& callerFunction);
-    //void solve_cg( const Vector<double>& RHS, 
-                   //const SparseMatrix<double>& matrix,
-                   //Vector<double>& solution,
-                   //const std::string& callerFunction = " "
-                   //);
+                  const LA::MPI::SparseMatrix& matrix,
+                  LA::MPI::Vector& solution,
+                  const std::string& callerFunction);
     void output_results(const double timeStep);
-    //void computeVolume();
-    //void computeAdvection(TensorFunction<1, dim> &AdvectionField_);
-    void computeDampedNormalLevelSet();
-    //void computeDampedCurvatureLevelSet();
+           //TensorFunction<1, dim> &AdvectionField_ );
+    void compute_overall_phase_volume();
+    void computeAdvection(TensorFunction<1, dim> &AdvectionField_);
+    void computeNormalLevelSet();
+    void computeCurvatureLevelSet();
     MPI_Comm&                 mpi_communicator;
     LevelSetParameters        parameters;
     FE_Q<dim>                 fe;
@@ -137,26 +140,24 @@ namespace LevelSetParallel
     LA::MPI::SparseMatrix      systemMatrix_re;              // global system matrix
     LA::MPI::Vector            systemRHS;                 // global system right-hand side
     LA::MPI::Vector            solution_u;
-    //Vector<double>            system_curvature_RHS;      // system right-hand side for computing the curvature
-    //BlockVector<double>       solution_normal_damped;    // solution of the (damped) normal vector
-    //Vector<double>            solution_curvature_damped; // solution of the (damped) curvature
     
-    //Vector<double>            old_solution_u;
-    LA::MPI::Vector             re_solution_u;
-    LA::MPI::Vector             re_delta_solution_u;
-    LA::MPI::BlockVector        normal_vector_field;
-    LA::MPI::BlockVector        system_normal_RHS;         // system right-hand side for computing the normal vector
+    LA::MPI::Vector            re_solution_u;
+    LA::MPI::Vector            re_delta_solution_u;
+    LA::MPI::BlockVector       normal_vector_field;
+    LA::MPI::BlockVector       system_normal_RHS;         // system right-hand side for computing the normal vector
+    LA::MPI::Vector            curvature_field;
+    LA::MPI::Vector            system_curvature_RHS;         // system right-hand side for computing the normal vector
+    //LA::MPI::BlockVector       advection_field;         // system right-hand side for computing the normal vector
 
-    //Vector<double>            advection_x;
-    //Vector<double>            advection_y;
-    
-    //std::vector<double>       volumeOfPhase1PerTimeStep;
-    //std::vector<double>       volumeOfPhase2PerTimeStep;
-    //std::vector<double>       timeVector;
-    IndexSet locally_owned_dofs;
-    IndexSet locally_relevant_dofs;
-    ConditionalOStream pcout;
-    bool normalsComputed;
+    std::vector<double>        volume_fraction;
+    IndexSet                   locally_owned_dofs;
+    IndexSet                   locally_relevant_dofs;
+    ConditionalOStream         pcout;
+    bool                       normalsComputed;
+    TimerOutput                computing_timer;
+    Timer                      timer;
+    TensorFunction<1, dim> &   AdvectionField;
+
   };
 
 
@@ -164,9 +165,10 @@ namespace LevelSetParallel
   LevelSetEquation<dim>::LevelSetEquation(
                      const LevelSetParameters& parameters_,
                      parallel::distributed::Triangulation<dim>&       triangulation_,
+                     TensorFunction<1, dim>& AdvectionField_,
                      MPI_Comm& mpi_commun)
-    : mpi_communicator( mpi_commun)
-    , epsilon ( GridTools::minimal_cell_diameter(triangulation_) * 2.0 )
+    : epsilon ( GridTools::minimal_cell_diameter(triangulation_) / std::sqrt(dim) )
+    , mpi_communicator( mpi_commun)
     , parameters(       parameters_)
     , fe(               parameters_.levelset_degree )
     , triangulation(    triangulation_ )
@@ -175,13 +177,21 @@ namespace LevelSetParallel
     , time_step(        parameters_.time_step_size )
     , time(             time_step )
     , timestep_number(  1 )
-    , pcout(std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0))
+    , pcout(            std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0))
+    , computing_timer(  mpi_communicator,
+                        pcout,
+                        TimerOutput::summary,
+                        TimerOutput::wall_times)
+    , timer(            mpi_communicator)
+    , AdvectionField(   AdvectionField_ )
+    , volume_fraction(2,0)
   {}
   
   
   template <int dim>
   void LevelSetEquation<dim>::setup_system(const Function<dim>& DirichletValues )
   {
+    TimerOutput::Scope t(computing_timer, "setup");
     dof_handler.distribute_dofs( fe );
 
     locally_owned_dofs = dof_handler.locally_owned_dofs();
@@ -194,14 +204,14 @@ namespace LevelSetParallel
     
     solution_u.reinit(locally_owned_dofs,
                       locally_relevant_dofs,
-                       mpi_communicator);
+                      mpi_communicator);
     
-    re_solution_u.reinit(locally_owned_dofs,
-                      locally_relevant_dofs,
-                       mpi_communicator);
+    re_solution_u.reinit( locally_owned_dofs,
+                          locally_relevant_dofs,
+                          mpi_communicator);
     
     re_delta_solution_u.reinit(locally_owned_dofs,
-                       mpi_communicator);
+                               mpi_communicator);
     
     system_normal_RHS.reinit( dim ); 
     normal_vector_field.reinit( dim); 
@@ -216,6 +226,11 @@ namespace LevelSetParallel
     }   
     system_normal_RHS.collect_sizes(); 
     normal_vector_field.collect_sizes(); 
+    
+    system_curvature_RHS.reinit( locally_owned_dofs, mpi_communicator ); 
+    curvature_field.reinit( locally_owned_dofs, 
+                            locally_relevant_dofs,
+                            mpi_communicator ); 
 
     // constraints for level set function
     constraints.clear();
@@ -230,19 +245,20 @@ namespace LevelSetParallel
     DynamicSparsityPattern dsp( locally_relevant_dofs );
     DoFTools::make_sparsity_pattern( dof_handler, dsp, constraints, false );
     SparsityTools::distribute_sparsity_pattern(dsp,
-                                           dof_handler.locally_owned_dofs(),
-                                           mpi_communicator,
-                                           locally_relevant_dofs);
+                                               dof_handler.locally_owned_dofs(),
+                                               mpi_communicator,
+                                               locally_relevant_dofs);
 
     systemMatrix.reinit( locally_owned_dofs,
                          locally_owned_dofs,
                          dsp,
                          mpi_communicator);
-    
+    // -------------------------------------------------------
     // constraints for reinitialization function
+    // -------------------------------------------------------
     constraints_re.clear();
     constraints_re.reinit(locally_relevant_dofs);
-    //DoFTools::make_hanging_node_constraints(dof_handler, constraints_re); 
+    DoFTools::make_hanging_node_constraints(dof_handler, constraints_re); 
     constraints_re.close();   
     
     DynamicSparsityPattern dsp_re( locally_relevant_dofs );
@@ -256,29 +272,9 @@ namespace LevelSetParallel
                             locally_owned_dofs,
                             dsp_re,
                             mpi_communicator );
-    
-    
-    //system_normal_RHS.reinit( dim,   dof_handler.n_dofs() );
-    //system_normal_RHS.collect_sizes(); 
-    
-    //solution_normal_damped.reinit( dim, dof_handler.n_dofs() );
-    ////for (unsigned int d=0; d<dim; ++d)
-        ////solution_normal_damped.block(d).reinit(dof_handler.n_dofs());
-
-    //solution_normal_damped.collect_sizes(); 
-    
-    //system_curvature_RHS.reinit(      dof_handler.n_dofs() );
-    //solution_curvature_damped.reinit( dof_handler.n_dofs() );
-    
-    
-    //re_solution_u.reinit(            dof_handler.n_dofs() );
-    //re_delta_solution_u.reinit(      dof_handler.n_dofs() );
-    
-    //advection_x.reinit(              dof_handler.n_dofs() ); //todo
-    //advection_y.reinit(              dof_handler.n_dofs() );
-
   }
   
+
   template <int dim>
   void LevelSetEquation<dim>::setInitialConditions(const Function<dim>& InitialValues)
   {
@@ -291,14 +287,33 @@ namespace LevelSetParallel
                          solutionTemp);
 
     solution_u = solutionTemp;
+    solution_u.update_ghost_values();
+  } 
+
+  template <int dim>
+  void LevelSetEquation<dim>::setInitialConditions_reinitialize(const Function<dim>& InitialValues)
+  {
+    LA::MPI::Vector solutionTemp( dof_handler.locally_owned_dofs(), mpi_communicator);
+
+    VectorTools::project(dof_handler, 
+                         constraints_re,
+                         qGauss,
+                         InitialValues,           
+                         solutionTemp);
+
+    solution_u = solutionTemp;
+    solution_u.update_ghost_values();
   } 
   
+
   template <int dim>
-  void LevelSetEquation<dim>::assembleSystemMatrices(TensorFunction<1, dim> &AdvectionField_,
-                                                    const Function<dim>& DirichletValues)
+  void LevelSetEquation<dim>::assemble_levelset_system(const Function<dim>& DirichletValues)
   {
+    TimerOutput::Scope t(computing_timer, "assembly");   
+    AdvectionField.set_time(time);
     systemMatrix = 0.0;
-    systemRHS = 0.0;
+    systemRHS    = 0.0;
+
     FEValues<dim> fe_values( fe,
                              qGauss,
                              update_values | update_gradients | update_JxW_values | update_quadrature_points );
@@ -314,13 +329,13 @@ namespace LevelSetParallel
     FullMatrix<double> cellMatrix(dofs_per_cell, dofs_per_cell);
     Vector<double> cellRHS( dofs_per_cell );
     
-    AdvectionField_.set_time(time);
     
     for (const auto &cell : dof_handler.active_cell_iterators())
     if (cell->is_locally_owned())
     {
         cellMatrix = 0;
-        cellRHS = 0;
+        cellRHS    = 0;
+
         fe_values.reinit(cell);
         fe_values.get_function_values(     solution_u, phiAtQ ); // compute values of old solution
         fe_values.get_function_gradients(  solution_u, phiGradAtQ ); // compute values of old solution
@@ -328,7 +343,7 @@ namespace LevelSetParallel
         for (const unsigned int q_index : fe_values.quadrature_point_indices())
         {
             auto qCoord = fe_values.get_quadrature_points()[q_index];
-            Tensor<1, dim> a = AdvectionField_.value( qCoord );
+            Tensor<1, dim> a = AdvectionField.value( qCoord );
 
             for (unsigned int i=0; i<dofs_per_cell; ++i)
             {
@@ -376,10 +391,14 @@ namespace LevelSetParallel
   }
   
   template <int dim>
-  void LevelSetEquation<dim>::computeReinitializationMatrices( const double dTau )
+  void LevelSetEquation<dim>::assemble_reinitialization_system( )
   {
-    systemRHS = 0;
-    systemMatrix_re = 0.0;
+    pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
+    TimerOutput::Scope t(computing_timer, "reinitialize");
+
+    pcout << "Start computaiton of normals " << std::endl;
+    //computeNormalLevelSet();
+    pcout << "End computaiton of normals " << std::endl;
     
     FEValues<dim> fe_values( fe,
                              qGauss,
@@ -395,93 +414,141 @@ namespace LevelSetParallel
     std::vector<Tensor<1,dim>>  normalAtQ(  n_q_points, Tensor<1,dim>() );
     std::vector<Tensor<1,dim>>  psiGradAtQ( n_q_points, Tensor<1,dim>() );
     
-    std::vector<types::global_dof_index> globalDofIndices( dofs_per_cell );
+    std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
     
     bool normalsQuick = false;
 
-    for (const auto &cell : dof_handler.active_cell_iterators())
-    if (cell->is_locally_owned())
-    {
-        fe_values.reinit(cell);
-        
-        cell_matrix = 0.0;
-        cell_rhs = 0.0;
-        
-        fe_values.get_function_values(     re_solution_u, psiAtQ ); // compute values of old solution
-        fe_values.get_function_gradients(  re_solution_u, psiGradAtQ ); // compute values of old solution
+    const double re_time_step       = 1./std::sqrt(dim) * GridTools::minimal_cell_diameter(triangulation); // * GridTools::minimal_cell_diameter(triangulation) ;
+    const double dTau = re_time_step; 
+    unsigned int re_timestep_number = 0;
+    double re_time                  = 0.0;
 
-        if (normalsQuick)
+   for (; re_timestep_number < parameters.max_n_reinit_steps; re_time += re_time_step, ++re_timestep_number) // 3 to 5 timesteps are enough to reach steady state according to Kronbichler et al.
+   {
+        systemRHS       = 0;
+        systemMatrix_re = 0.0;
+        if (re_timestep_number == 0)
+            computeNormalLevelSet();
+
+        pcout << "      | Time step " << re_timestep_number << " at tau=" << std::fixed << std::setprecision(5); 
+        for (const auto &cell : dof_handler.active_cell_iterators())
+        if (cell->is_locally_owned())
         {
-            fe_values.get_function_gradients( solution_u, normalAtQ ); // compute normals from level set solution at tau=0
-            for (auto& n : normalAtQ)
-                n /= n.norm(); //@todo: add exception
-        }
-        else
-        {
-            for (unsigned int d=0; d<dim; ++d )
+           cell_matrix = 0.0;
+           cell_rhs = 0.0;
+           const double epsilon_cell = cell->diameter() / std::sqrt(dim);
+           
+           fe_values.reinit(cell);
+           
+           fe_values.get_function_values(     solution_u, psiAtQ ); // compute values of old solution
+           fe_values.get_function_gradients(  solution_u, psiGradAtQ ); // compute values of old solution
+
+           if (normalsQuick)
+           {
+               fe_values.get_function_gradients( solution_u, normalAtQ ); // compute normals from level set solution at tau=0
+               for (auto& n : normalAtQ)
+                   n /= n.norm(); //@todo: add exception
+           }
+           else
+           {
+               for (unsigned int d=0; d<dim; ++d )
+               {
+                   std::vector<double> temp (n_q_points);
+                   fe_values.get_function_values(  normal_vector_field.block(d), temp); // compute normals from level set solution at tau=0
+                   for (const unsigned int q_index : fe_values.quadrature_point_indices())
+                   {
+                       normalAtQ[q_index][d] = temp[q_index];
+                   }
+               }
+               for (auto& n : normalAtQ)
+                   n /= n.norm(); //@todo: add exception
+           }
+           // @todo: only compute normals once during timestepping
+           for (const unsigned int q_index : fe_values.quadrature_point_indices())
             {
-                std::vector<double> temp (n_q_points);
-                fe_values.get_function_values(  normal_vector_field.block(d), temp); // compute normals from level set solution at tau=0
-                for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                {
-                    normalAtQ[q_index][d] = temp[q_index];
-                }
-            }
-            for (auto& n : normalAtQ)
-                n /= n.norm(); //@todo: add exception
+               const double diffRhs = epsilon_cell * normalAtQ[q_index] * psiGradAtQ[q_index];
+
+               for (const unsigned int i : fe_values.dof_indices())
+               {
+                   //if (!normalsComputed)
+                   //{
+                       const double nTimesGradient_i = normalAtQ[q_index] * fe_values.shape_grad(i, q_index);
+
+                       for (const unsigned int j : fe_values.dof_indices())
+                       {
+                           const double nTimesGradient_j = normalAtQ[q_index] * fe_values.shape_grad(j, q_index);
+                           cell_matrix(i,j) += (
+                                                 fe_values.shape_value(i,q_index) * fe_values.shape_value(j,q_index)
+                                                 + 
+                                                 dTau * epsilon_cell * nTimesGradient_i * nTimesGradient_j
+                                               ) 
+                                               * fe_values.JxW( q_index );
+                       }
+                   //}
+
+                   cell_rhs(i) += ( 0.5 * ( 1. - psiAtQ[q_index] * psiAtQ[q_index] ) - diffRhs )
+                                   *
+                                   nTimesGradient_i 
+                                   *
+                                   dTau 
+                                   * 
+                                   fe_values.JxW( q_index );
+                   
+               }                                    
+          }// end loop over gauss points
+          
+          // assembly
+          cell->get_dof_indices(local_dof_indices);
+          constraints_re.distribute_local_to_global(cell_matrix,
+                                                    cell_rhs,
+                                                    local_dof_indices,
+                                                    systemMatrix_re,
+                                                    systemRHS);
+           
         }
-
-        // @todo: only compute normals once during timestepping
-        for (const unsigned int q_index : fe_values.quadrature_point_indices())
-         {
-            const double diffRhs = epsilon * normalAtQ[q_index] * psiGradAtQ[q_index];
-
-            for (const unsigned int i : fe_values.dof_indices())
-            {
-                //if (!normalsComputed)
-                //{
-                    const double nTimesGradient_i = normalAtQ[q_index] * fe_values.shape_grad(i, q_index);
-
-                    for (const unsigned int j : fe_values.dof_indices())
-                    {
-                        const double nTimesGradient_j = normalAtQ[q_index] * fe_values.shape_grad(j, q_index);
-                        cell_matrix(i,j) += (
-                                              fe_values.shape_value(i,q_index) * fe_values.shape_value(j,q_index)
-                                              + 
-                                              dTau * epsilon * nTimesGradient_i * nTimesGradient_j
-                                            ) 
-                                            * fe_values.JxW( q_index );
-                    }
-                //}
-
-                cell_rhs(i) += ( 0.5 * ( 1. - psiAtQ[q_index] * psiAtQ[q_index] ) - diffRhs )
-                                *
-                                nTimesGradient_i 
-                                *
-                                dTau 
-                                * 
-                                fe_values.JxW( q_index );
-                
-            }                                    
-        }// end loop over gauss points
+        systemMatrix_re.compress( VectorOperation::add );
+        systemRHS.compress(    VectorOperation::add );
         
-        // assembly
-        cell->get_dof_indices(globalDofIndices);
-        constraints_re.distribute_local_to_global(cell_matrix,
-                                                  cell_rhs,
-                                                  globalDofIndices,
-                                                  systemMatrix_re,
-                                                  systemRHS);
-         
-      }
-      systemMatrix_re.compress(VectorOperation::add);
-      systemRHS.compress(VectorOperation::add);
-      normalsComputed = true;  
+        SolverControl solver_control( dof_handler.n_dofs() , 1e-3 * systemRHS.l2_norm() );
+        
+        LA::SolverCG solver(solver_control, mpi_communicator);
+
+        LA::MPI::PreconditionAMG preconditioner;
+        LA::MPI::PreconditionAMG::AdditionalData data;
+        preconditioner.initialize(systemMatrix_re, data);
+
+        LA::MPI::Vector    re_solution_u_temp( locally_owned_dofs,
+                                           mpi_communicator );
+        re_solution_u_temp = solution_u;
+        
+        re_delta_solution_u = 0;
+
+        solver.solve( systemMatrix_re, 
+                      re_delta_solution_u, 
+                      systemRHS, 
+                      preconditioner );
+        constraints_re.distribute(re_delta_solution_u);
+
+        re_solution_u_temp += re_delta_solution_u;
+        
+        solution_u = re_solution_u_temp;
+        solution_u.update_ghost_values();
+        //output_results( re_timestep_number+1);    // print initial state
+        
+        pcout << "      | Time step " << re_timestep_number << " at tau=" << std::fixed << std::setprecision(5); 
+        pcout << re_time << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << "\t |R|²/dT = " << re_delta_solution_u.l2_norm()/dTau << std::endl;
+        pcout << "cg solver called by " << "reinitialization "<< " with "  << solver_control.last_step() << " CG iterations." << std::endl;
+
+        if (re_delta_solution_u.l2_norm() / dTau < 1e-6)
+           break;
+    }
+    pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
   }
-
+  
   template <int dim>
-  void LevelSetEquation<dim>::computeDampedNormalLevelSet()
+  void LevelSetEquation<dim>::computeNormalLevelSet()
   {
+    TimerOutput::Scope t(computing_timer, "compute damped normals");  
     systemMatrix_re = 0.0;
     for (unsigned int d=0; d<dim; d++)
         system_normal_RHS.block(d) = 0.0;
@@ -493,13 +560,13 @@ namespace LevelSetParallel
 
     const unsigned int          dofs_per_cell = fe.dofs_per_cell;
     FullMatrix<double>          normal_cell_matrix( dofs_per_cell, dofs_per_cell );
-    std::vector<Vector<double>> normal_cell_rhs(dim, Vector<double>(dofs_per_cell) );
+    std::vector<Vector<double>> normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
     
     std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
     std::vector<Tensor<1,dim>>           normal_at_q(  n_q_points, Tensor<1,dim>() );
 
     const double damping = GridTools::minimal_cell_diameter(triangulation) * 0.5; //@todo: modifiy damping parameter
-
+    
     for (const auto &cell : dof_handler.active_cell_iterators())
     if (cell->is_locally_owned())
     {
@@ -510,8 +577,13 @@ namespace LevelSetParallel
         for(auto& normal_cell : normal_cell_rhs)
             normal_cell =    0.0;
 
-        fe_values.get_function_gradients(  solution_u, normal_at_q ); // compute normals from level set solution at tau=0
-        
+        fe_values.get_function_gradients( solution_u, normal_at_q ); // compute normals from level set solution at tau=0
+        //for (auto& n : normal_at_q)
+         //{
+             //if (n.norm()<1e-10)
+                //std::cout << "@@@@@@@@@@@q NORM IS ZERO " << n.norm() <<std::endl;
+             //n /= n.norm();
+         //}
         for (const unsigned int q_index : fe_values.quadrature_point_indices())
         {
             for (unsigned int i=0; i<dofs_per_cell; ++i)
@@ -543,6 +615,7 @@ namespace LevelSetParallel
                 }
             }
         }
+        
         // assembly
         cell->get_dof_indices(local_dof_indices);
         for (unsigned int d=0; d<dim; ++d)
@@ -557,106 +630,107 @@ namespace LevelSetParallel
       for (unsigned int d=0; d<dim; ++d)
         system_normal_RHS.block(d).compress(VectorOperation::add);
       normalsComputed = true;  
-
+    
     for (unsigned int d=0; d<dim; ++d)
         solve_cg(system_normal_RHS.block( d ), systemMatrix_re, normal_vector_field.block( d ), "damped normals");
-  
-  
-  }
-
-  //template <int dim>
-  //void LevelSetEquation<dim>::computeDampedCurvatureLevelSet()
-  //{
-    //systemMatrix = 0.0; // @currently system matrix from computeDampedNormal is reused
-    //system_curvature_RHS = 0.0;
-    
-    ////TimerOutput::Scope timer (*this->timer, "Curvature computation.");
-
-    //FEValues<dim> fe_values( fe,
-                             //qGauss,
-                             //update_values | update_gradients | update_quadrature_points | update_JxW_values );
-
-    //const unsigned int n_q_points    = qGauss.size();
-    //const unsigned int dofs_per_cell = fe.dofs_per_cell;
-    
-    //std::vector<types::global_dof_index> local_dof_indices(     dofs_per_cell );
-    //FullMatrix<double>                   curvature_cell_matrix( dofs_per_cell, dofs_per_cell );
-    //Vector<double>                       curvature_cell_rhs(    dofs_per_cell );
-    //std::vector<Tensor<1,dim>>           normal_at_q(           n_q_points, Tensor<1,dim>() );
-
-    //const double damping = 0.0; //@todo: modifiy damping parameter
-
-    //for (const auto &cell : dof_handler.active_cell_iterators())
-    //{
-        //fe_values.reinit( cell );
-        
-        //curvature_cell_matrix = 0.0;
-        //curvature_cell_rhs    = 0.0;
- 
-        //for (unsigned int d=0; d<dim; ++d)
-        //{
-            //std::vector<double> temp(n_q_points);
-            //fe_values.get_function_values( solution_normal_damped.block(d), temp ); 
-            //for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                //normal_at_q[q_index][d] = temp[q_index];
-        //}
-
-        //for (const unsigned int q_index : fe_values.quadrature_point_indices())
-        //{
-            //normal_at_q[q_index] /= normal_at_q[q_index].norm();
-            
-
-            //for (unsigned int i=0; i<dofs_per_cell; ++i)
-            //{
-                //const double phi_i             = fe_values.shape_value( i, q_index );
-                //const Tensor<1,dim> grad_phi_i = fe_values.shape_grad(  i, q_index );
-                
-                //for (unsigned int j=0; j<dofs_per_cell; ++j)
-                //{
-                    //const double phi_j             = fe_values.shape_value( j, q_index);
-                    //const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(  j, q_index);
-
-                    //curvature_cell_matrix( i, j ) += ( phi_i * phi_j 
-                                                       //+ 
-                                                       //damping * grad_phi_i * grad_phi_j  
-                                                     //)
-                                                       //* 
-                                                       //fe_values.JxW( q_index ) ;
-                //}
-                //curvature_cell_rhs(i) += ( grad_phi_i
-                                           //* 
-                                           //normal_at_q[ q_index ] 
-                                           //* 
-                                           //fe_values.JxW( q_index ) );
-            //}
-        //}
-        
-        //cell->get_dof_indices( local_dof_indices );
-        
-        //// assembly
-        //for (const unsigned int i : fe_values.dof_indices())
-          //for (const unsigned int j : fe_values.dof_indices())
-            //systemMatrix.add( local_dof_indices[i],
-                              //local_dof_indices[j],
-                              //curvature_cell_matrix(i, j));
-
-        //for (const unsigned int i : fe_values.dof_indices())
-            //system_curvature_RHS[ local_dof_indices[ i ] ] += curvature_cell_rhs(i);
-
-    //} // end for loop over cells
-  
-    //solve_cg(system_curvature_RHS, systemMatrix, solution_curvature_damped, "damped curvature");
-  //}
+   }
 
   template <int dim>
-  void LevelSetEquation<dim>::solve_cg(const LA::MPI::Vector& RHS,
+  void LevelSetEquation<dim>::computeCurvatureLevelSet()
+  {
+    TimerOutput::Scope timer (computing_timer, "Curvature computation.");
+
+    computeNormalLevelSet();
+    
+    systemMatrix_re = 0.0; 
+    system_curvature_RHS = 0.0;
+
+    FEValues<dim> fe_values( fe,
+                             qGauss,
+                             update_values | update_gradients | update_quadrature_points | update_JxW_values );
+
+    const unsigned int n_q_points    = qGauss.size();
+    const unsigned int dofs_per_cell = fe.dofs_per_cell;
+    
+    std::vector<types::global_dof_index> local_dof_indices(     dofs_per_cell );
+    FullMatrix<double>                   curvature_cell_matrix( dofs_per_cell, dofs_per_cell );
+    Vector<double>                       curvature_cell_rhs(    dofs_per_cell );
+
+    const double curvature_damping = 0.0; //@todo: modifiy damping parameter
+
+    for (const auto &cell : dof_handler.active_cell_iterators())
+    if (cell->is_locally_owned())
+    {
+        fe_values.reinit( cell );
+        
+        curvature_cell_matrix = 0.0;
+        curvature_cell_rhs    = 0.0;
+ 
+        std::vector<Tensor<1,dim>>           normal_at_q( n_q_points, Tensor<1,dim>() );
+        for (unsigned int d=0; d<dim; ++d)
+        {
+            std::vector<double> temp(n_q_points);
+            
+            fe_values.get_function_values( normal_vector_field.block(d), temp ); 
+
+            for (const unsigned int q_index : fe_values.quadrature_point_indices())
+                normal_at_q[q_index][d] = temp[q_index];
+        }
+        
+        // ALTERNATIVE
+        //fe_values.get_function_gradients( solution_u, normal_at_q); // compute normals from level set solution at tau=0
+        //for (auto& n : normal_at_q)
+            //n /= n.norm(); //@todo: add exception
+
+        for (const unsigned int q_index : fe_values.quadrature_point_indices())
+        {
+            for (unsigned int i=0; i<dofs_per_cell; ++i)
+            {
+                const double phi_i             = fe_values.shape_value( i, q_index );
+                const Tensor<1,dim> grad_phi_i = fe_values.shape_grad(  i, q_index );
+                
+                for (unsigned int j=0; j<dofs_per_cell; ++j)
+                {
+                    const double phi_j             = fe_values.shape_value( j, q_index);
+                    const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(  j, q_index);
+
+                    curvature_cell_matrix( i, j ) += ( phi_i * phi_j 
+                                                       + 
+                                                       curvature_damping * grad_phi_i * grad_phi_j  
+                                                     )
+                                                       * 
+                                                       fe_values.JxW( q_index ) ;
+                }
+                curvature_cell_rhs(i) += ( grad_phi_i
+                                           * 
+                                           normal_at_q[ q_index ] 
+                                           * 
+                                           fe_values.JxW( q_index ) );
+            }
+        }
+        
+        cell->get_dof_indices(local_dof_indices);
+        constraints_re.distribute_local_to_global(curvature_cell_matrix,
+                                                  curvature_cell_rhs,
+                                                  local_dof_indices,
+                                                  systemMatrix_re,
+                                                  system_curvature_RHS);
+    } // end loop over cells
+    systemMatrix_re.compress(      VectorOperation::add );
+    system_curvature_RHS.compress( VectorOperation::add );
+
+    solve_cg(system_curvature_RHS, systemMatrix_re, curvature_field, "damped curvature");
+  }
+
+  template <int dim>
+  void LevelSetEquation<dim>::solve_cg(const LA::MPI::Vector&       RHS,
                                        const LA::MPI::SparseMatrix& matrix,
-                                       LA::MPI::Vector& solution,
-                                       const std::string& callerFunction)
+                                       LA::MPI::Vector&             solution,
+                                       const std::string&           callerFunction)
   {
     LA::MPI::Vector    completely_distributed_solution(locally_owned_dofs,
                                                        mpi_communicator);
-    SolverControl            solver_control( dof_handler.n_dofs(), 1e-8 * systemRHS.l2_norm() );
+    SolverControl            solver_control( dof_handler.n_dofs() * 2, 1e-6 * RHS.l2_norm() );
 #ifdef USE_PETSC_LA
     LA::SolverCG solver(solver_control, mpi_communicator);
 #else
@@ -679,6 +753,7 @@ namespace LevelSetParallel
   template <int dim>
   void LevelSetEquation<dim>::solve_u()
   {
+    TimerOutput::Scope t(computing_timer, "solve");
     LA::MPI::Vector    completely_distributed_solution(locally_owned_dofs,
                                                        mpi_communicator);
     SolverControl            solver_control( dof_handler.n_dofs(), 1e-8 * systemRHS.l2_norm() );
@@ -701,100 +776,127 @@ namespace LevelSetParallel
     constraints.distribute(completely_distributed_solution);
 
     solution_u = completely_distributed_solution;
+    //solution_u.update_ghost_values();
   }
   
-  template <int dim>
-  void LevelSetEquation<dim>::re_solve_u()
-  {
-    re_delta_solution_u = 0.0;
-    LA::MPI::Vector    completely_distributed_solution( locally_owned_dofs,
-                                                        mpi_communicator );
-
-    SolverControl            solver_control( dof_handler.n_dofs(), 1e-8 * systemRHS.l2_norm() );
-#ifdef USE_PETSC_LA
-    LA::SolverGMRES solver(solver_control, mpi_communicator);
-#else
-    LA::SolverGMRES solver(solver_control);
-#endif
-
-    LA::MPI::PreconditionAMG preconditioner;
-    LA::MPI::PreconditionAMG::AdditionalData data;
-    preconditioner.initialize(systemMatrix, data);
-    
-    LA::MPI::Vector    re_solution_u_temp( locally_owned_dofs,
-                                           mpi_communicator );
-    re_solution_u_temp = re_solution_u;
-
-    completely_distributed_solution = 0.0;
-
-    solver.solve( systemMatrix_re, 
-                  completely_distributed_solution, 
-                  systemRHS, 
-                  preconditioner );
-    
-    re_delta_solution_u = completely_distributed_solution;
-    re_solution_u_temp += completely_distributed_solution;
-    re_solution_u       = re_solution_u_temp;
-  }
-  
+  //@ to be added!!
   //template <int dim>
-  //void LevelSetEquation<dim>::computeAdvection(TensorFunction<1, dim> &AdvectionField_)
+  //void LevelSetEquation<dim>::computeAdvection( TensorFunction<1, dim> &AdvectionField_)
   //{
-    //std::map<types::global_dof_index, Point<dim> > supportPoints;
-    //DoFTools::map_dofs_to_support_points<dim,dim>(MappingQGeneric<dim>(fe.degree),dof_handler,supportPoints);
+    //AdvectionField_.set_time(time);
+    
+    //std::vector<types::global_dof_index> local_dof_indices( fe.dofs_per_cell );
 
-    //for(auto& globalDofAndNodeCoord : supportPoints)
-    //{
-        //auto a = AdvectionField_.value(globalDofAndNodeCoord.second);
-        //advection_x[globalDofAndNodeCoord.first] = a[0];
-        //advection_y[globalDofAndNodeCoord.first] = a[1];
-    //} 
+    //for (const auto &cell : dof_handler.active_cell_iterators())
+    ////if(cell->is_locally_owned())
+    ////{
+        //cell->get_dof_indices(local_dof_indices);
+        //for (auto vertex_index : GeometryInfo<dim>::vertex_indices())
+        //{
+            ////if (locally_owned_dofs.is_element(local_dof_indices[vertex_index]))
+            ////{
+                //auto a = AdvectionField_.value(cell->vertex(vertex_index)); 
+                //for (unsigned int d=0; d<dim; d++)
+                    //advection_field.block(d)[local_dof_indices[vertex_index]] = a[d];
+            ////} 
+            ////else
+                ////std::cout << "proc: " << Utilities::MPI::this_mpi_process(mpi_communicator) << "dof" << local_dof_indices[vertex_index] << std::endl;
+        //}
+    ////}
+    //std::cout << " -----------" << std::endl;
   //}
 
   //// @ to be rearranged
-  //template <int dim>
-  //void LevelSetEquation<dim>::computeVolume( )
-  //{
+  template <int dim>
+  void LevelSetEquation<dim>::compute_overall_phase_volume( )
+  {
+    //Vector<double> phase_volume_per_cell(triangulation.n_active_cells());
+
+    //////VectorTools::integrate_difference(MappingQGeneric<dim>(fe.degree),
+    ////VectorTools::integrate(true, false, phase_volume_per_cell);
+    //VectorTools::integrate_difference(
+                                      //dof_handler,
+                                      //solution_u,
+                                      //Function<dim>ZeroFunction(),
+                                      //phase_volume_per_cell,
+                                      //qGauss,
+                                      //VectorTools::L2_norm);
+    
+    //pcout     << "   Global error    "
+              //<< std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+              //<< compute_global_error(triangulation, 
+                                      //norm_per_cell,
+                                      //VectorTools::L2_norm) << std::endl;
+
+
+
     //FEValues<dim> fe_values( fe,
                              //qGauss,
-                             //update_values | update_gradients | update_JxW_values | update_quadrature_points );
+                             //update_values | update_JxW_values | update_quadrature_points );
 
     //const unsigned int dofs_per_cell =   fe.dofs_per_cell;
-    //std::vector<types::global_dof_index> globalDofIndices( dofs_per_cell );
+    //std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
     
-    //double volumeOfPhase1 = 0;
-    //double volumeOfPhase2 = 0;
     //const unsigned int n_q_points    = qGauss.size();
-    //std::vector<double> phiAtQ(  n_q_points );
+    //std::vector<double> phi_at_q(  n_q_points );
+
+    //const double& max_value = solution_u.max();
+    //const double& min_value = solution_u.min();
     
+    //std::fill(volume_fraction.begin(), volume_fraction.end(), 0);
+
     //for (const auto &cell : dof_handler.active_cell_iterators())
+    //if (cell->is_locally_owned())
     //{
         //fe_values.reinit(               cell );
-        //cell->get_dof_indices(          globalDofIndices );
-        //fe_values.get_function_values(  solution_u, phiAtQ ); // compute values of old solution
+        //cell->get_dof_indices(          local_dof_indices);
+        //fe_values.get_function_values(  solution_u, phi_at_q ); // compute values of old solution
 
         //for (const unsigned int q_index : fe_values.quadrature_point_indices())
         //{
-            //volumeOfPhase1 += ( phiAtQ[q_index] * 0.5 + 0.5 ) * fe_values.JxW(q_index); 
-            //volumeOfPhase2 += ( 1. - ( phiAtQ[q_index] * 0.5 + 0.5 ) ) * fe_values.JxW(q_index);
+            //const double phi_normalized = utilityFunctions::normalizeFunction ( phi_at_q[q_index], min_value, max_value );
+            //volume_fraction[0] += phi_normalized * fe_values.JxW(q_index); 
+            //volume_fraction[1] += ( 1. - phi_normalized ) * fe_values.JxW(q_index);
         //}
     //}
-    //volumeOfPhase1PerTimeStep.push_back(volumeOfPhase1);
-    //volumeOfPhase2PerTimeStep.push_back(volumeOfPhase2);
-  //}
+    //pcout << "1: " << volume_fraction[0] << " 2: " << volume_fraction[1] << std::endl;
+  }
 
   template <int dim>
-  void LevelSetEquation<dim>::output_results(const double timeStep)
+  void LevelSetEquation<dim>::output_results( const double timeStep )
   {
-    DataOut<dim> data_out;
+    if (!parameters.compute_paraview_output)
+        return;
+    TimerOutput::Scope t(computing_timer, "output_results");   
 
+    std::vector<std::string> solution_names(dim, "velocity");
+
+    std::vector<DataComponentInterpretation::DataComponentInterpretation>
+      data_component_interpretation(dim, DataComponentInterpretation::component_is_part_of_vector);
+
+    utilityFunctions::GradientPostprocessor<dim>    gradient_postprocessor;
+    //utilityFunctions::VectorFieldPostprocessor<dim> normal_vector_postprocessor;
+
+    DataOut<dim> data_out;
     data_out.attach_dof_handler(dof_handler);
     data_out.add_data_vector(solution_u,                      "phi");
-    //data_out.add_data_vector(advection_x ,                    "a_x");
-    //data_out.add_data_vector(advection_y,                     "a_y");
-    //data_out.add_data_vector(solution_normal_damped.block(0), "normal_x");
-    //data_out.add_data_vector(solution_normal_damped.block(1), "normal_y");
-    //data_out.add_data_vector(solution_curvature_damped,       "curvature");
+
+    //HDF5::File  data_file("results.h5",
+                         //HDF5::File::FileAccessMode::create);
+                         //mpi_communicator);
+    //HDF5::Group data = data_file.open_group("data");
+    //// write hdf5 file for creating test file
+    //DataOutBase::DataOutFilterFlags flags(false, false);
+    ////DataOutBase::DataOutFilter data_filter(flags);
+    //DataOutBase::DataOutFilter data_filter(flags);
+    //data_out.write_filtered_data(data_filter);
+    //data_out.write_hdf5_parallel(data_filter, "solution.h5", mpi_communicator);
+
+    data_out.add_data_vector(solution_u, gradient_postprocessor);
+    
+    data_out.add_data_vector(normal_vector_field.block(0), "normal_x");
+    data_out.add_data_vector(normal_vector_field.block(1), "normal_y");
+    data_out.add_data_vector(curvature_field,              "curvature");
      Vector<float> subdomain(triangulation.n_active_cells());
     for (unsigned int i = 0; i < subdomain.size(); ++i)
       subdomain(i) = triangulation.locally_owned_subdomain();
@@ -803,20 +905,35 @@ namespace LevelSetParallel
     data_out.build_patches();
     data_out.write_vtu_with_pvtu_record(
         "./", "solution", timeStep, mpi_communicator, 2, 8);
-    //const std::string filename = "solution-" + Utilities::int_to_string(timeStep, 3) + ".vtu";
-    //DataOutBase::VtkFlags vtk_flags;
-    //vtk_flags.compression_level = DataOutBase::VtkFlags::ZlibCompressionLevel::best_speed;
-    //data_out.set_flags(vtk_flags);
-    //std::ofstream output(filename);
-    //data_out.write_vtu(output);
-    
+
+  }
+  
+  template <int dim>
+  void LevelSetEquation<dim>::compute_error( const Function<dim>& ExactSolution )
+  {
+        Vector<double> norm_per_cell(triangulation.n_active_cells());
+
+        //VectorTools::integrate_difference(MappingQGeneric<dim>(fe.degree),
+        VectorTools::integrate_difference(
+                                          dof_handler,
+                                          solution_u,
+                                          ExactSolution,
+                                          norm_per_cell,
+                                          qGauss,
+                                          VectorTools::L2_norm);
+        
+        pcout     << "   Global error    "
+                  << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                  << compute_global_error(triangulation, 
+                                          norm_per_cell,
+                                          VectorTools::L2_norm) << std::endl;
   }
   
   template <int dim>
   void LevelSetEquation<dim>::run( const Function<dim>& InitialValues,
-                                   TensorFunction<1, dim>& AdvectionField_,
                                    const Function<dim>& DirichletValues) 
   {
+    timer.start();
     pcout << "Running with "
 #ifdef USE_PETSC_LA
           << "PETSc"
@@ -827,67 +944,60 @@ namespace LevelSetParallel
           << " MPI rank(s)..." << std::endl;
 
     pcout << "setup system " << std::endl;
-    setup_system(DirichletValues);
-    setInitialConditions(InitialValues);
-    pcout << "initial conditions set " << std::endl;
-    //timeVector.push_back(0.0);
-
     timestep_number=0;
-    //computeAdvection(AdvectionField_);
-    //computeDampedNormalLevelSet();
-    //computeDampedCurvatureLevelSet();
-
+    setup_system( DirichletValues );
+    //setInitialConditions_reinitialize( InitialValues );
+    setInitialConditions(InitialValues);
     output_results( timestep_number );    // print initial state
-    //computeVolume( );
+    //assemble_levelset_system( DirichletValues ); // @todo: insert updateFlag
+    //solve_u();
+    
+    if ( parameters.activate_reinitialization )    
+        assemble_reinitialization_system();
+
+    //auto t = std::time(nullptr);
+    //auto tm = *std::localtime(&t);
+    //auto currTime = std::string(std::put_time(&tm, "%d-%m-%Y_%H-%M-%S"));
+    //std::stringstream ss;
+	//ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d");
+	//return ss.str();
+
+    //pcout << "currTime: " << currTime << std::endl;
+    
+    if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+    {
+        std::fstream fs;
+        fs.open ("ouputMass.txt", std::fstream::in | std::fstream::out | std::fstream::app);
+        fs << "vol phase 1    vol phase 2 " << std::endl; 
+    }
+    //fs << " more lorem ipsum";
+
+    //fs.close();
 
     timestep_number++; 
+    
     for (; time <= parameters.end_time; time += parameters.time_step_size, ++timestep_number)
       {
-        //timeVector.push_back(time);
         pcout << "Time step " << timestep_number << " at t=" << time << std::endl;
 
-        assembleSystemMatrices(AdvectionField_, DirichletValues); // @todo: insert updateFlag
-        
+        assemble_levelset_system(  DirichletValues ); // @todo: insert updateFlag
         solve_u();
-
         if ( parameters.activate_reinitialization )    
-        {
-            
-            computeDampedNormalLevelSet();
-            re_solution_u                   = solution_u;
-            const double re_time_step       = 1./(dim*dim) * GridTools::minimal_cell_diameter(triangulation); 
-            unsigned int re_timestep_number = 0;
-            double re_time                  = 0.0;
-            
-            pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
-            for (; re_timestep_number < parameters.max_n_reinit_steps; re_time += re_time_step, ++re_timestep_number) // 3 to 5 timesteps are enough to reach steady state according to Kronbichler et al.
-            {
-                computeReinitializationMatrices(re_time_step);
-                re_solve_u();
-                pcout << "      | Time step " << re_timestep_number << " at tau=" << std::fixed << std::setprecision(5) << re_time << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << std::endl;
-                
-                if (re_delta_solution_u.linfty_norm() < 1e-6)
-                    break;
-            }
-            pcout << "       <<<<<<<<<<<<<<<<<<< REINITIALIZATION END " << std::endl;
+            assemble_reinitialization_system();
 
-            solution_u     = re_solution_u;
-        }
-
-        //computeAdvection(AdvectionField_);
-        //computeDampedNormalLevelSet();
-        //computeDampedCurvatureLevelSet();
         output_results(timestep_number);
         
-        //if (parameters.compute_volume)
-        //{
-            //std::cout << " n = " << timestep_number << std::endl;
-            //computeVolume();
-            //std::cout << "curr volume -- phase 1 " << volumeOfPhase1PerTimeStep[timestep_number] << std::endl;
-            //std::cout << "curr volume -- phase 2 " << volumeOfPhase2PerTimeStep[timestep_number] << std::endl;
+        if (parameters.compute_volume)
+        {
+            compute_overall_phase_volume();
+            pcout << "vol 1" << volume_fraction[0] << " vol 2 " << volume_fraction[1] << std::endl;
+        }
 
-        //}   
+        computing_timer.print_summary();
+        pcout << "+" << std::string(70, '-') << "+" << std::endl;
+        pcout << "| real total wall clock time elapsed since start: " << timer.wall_time() << " s" << std::endl;
+        pcout << "+" << std::string(70, '-') << "+" << std::endl;
+        computing_timer.reset();    
     }
-
   }
 } // end of namespace LevelSet

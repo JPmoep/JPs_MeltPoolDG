@@ -45,6 +45,7 @@ struct LevelSetParameters
   double              time_step_size;
 
   // output options
+  bool                compute_paraview_output;
   //
 };
 

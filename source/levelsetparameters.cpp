@@ -88,6 +88,12 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
                          "step.");
   }
   prm.leave_subsection();
+  prm.enter_subsection ("output");
+  {
+      prm.declare_entry ("compute paraview output", "0", Patterns::Integer(),
+                         "boolena for producing paraview output files");
+  }
+  prm.leave_subsection();
 
   //prm.enter_subsection("Output options");
   //prm.declare_entry ("output filename","",Patterns::Anything(),
@@ -157,23 +163,27 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
       end_time       =  (prm.get_double ("end time"));
       time_step_size = (prm.get_double ("time step size"));
   prm.leave_subsection ();
+  prm.enter_subsection ("output");
+      compute_paraview_output = prm.get_integer("compute paraview output");
+  prm.leave_subsection ();
 }
 
 void LevelSetParameters::print_parameters()
 {
-    std::cout << "+----------------------------------------" << std::endl;
-    std::cout << "| dimension                 " << dimension << std::endl;                   
-    std::cout << "| global_refinements        " << global_refinements<< std::endl;                   
-    std::cout << "| levelset_degree           " << levelset_degree<< std::endl;                   
-    std::cout << "| artificial_diffusivity    " << artificial_diffusivity<< std::endl;                   
+    std::cout << "+----------------------------------------"                << std::endl;
+    std::cout << "| dimension                 " << dimension                << std::endl;                   
+    std::cout << "| global_refinements        " << global_refinements       << std::endl;                   
+    std::cout << "| levelset_degree           " << levelset_degree          << std::endl;                   
+    std::cout << "| artificial_diffusivity    " << artificial_diffusivity   << std::endl;                   
     std::cout << "| activate_reinitialization " << activate_reinitialization<< std::endl;                   
-    std::cout << "| compute_volume            " << compute_volume<< std::endl;                   
-    std::cout << "| max_n_reinit_steps        " << max_n_reinit_steps<< std::endl;                   
-    std::cout << "| theta                     " << theta<< std::endl;                   
-    std::cout << "| start_time                " << start_time<< std::endl;                   
-    std::cout << "| end_time                  " << end_time<< std::endl;                   
-    std::cout << "| time_step_size            " << time_step_size<< std::endl;                   
-    std::cout << "+----------------------------------------" << std::endl;
+    std::cout << "| compute_volume            " << compute_volume           << std::endl;                   
+    std::cout << "| max_n_reinit_steps        " << max_n_reinit_steps       << std::endl;                   
+    std::cout << "| theta                     " << theta                    << std::endl;                   
+    std::cout << "| start_time                " << start_time               << std::endl;                   
+    std::cout << "| end_time                  " << end_time                 << std::endl;                   
+    std::cout << "| time_step_size            " << time_step_size           << std::endl;                   
+    std::cout << "| compute_paraview_output   " << compute_paraview_output  << std::endl;                   
+    std::cout << "+----------------------------------------"                << std::endl;
 
 }
 
