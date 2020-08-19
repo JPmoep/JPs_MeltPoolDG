@@ -3,15 +3,13 @@
  * Author: Magdalena Schreter, TUM, August 2020
  *
  * ---------------------------------------------------------------------*/
-// for FEValues<dim>
-//#include <deal.II/fe/fe.h>
+
 // to access minimal_cell_diamater
 #include <deal.II/grid/grid_tools.h>
 // to use preconditioner 
 #include <deal.II/lac/petsc_precondition.h>
-#include <reinitialization.hpp>
-#include <deal.II/fe/mapping.h>
 
+#include <reinitialization.hpp>
 
 namespace LevelSetParallel
 {
@@ -46,33 +44,32 @@ namespace LevelSetParallel
         system_rhs.reinit( locally_owned_dofs, 
                            mpi_commun ); 
         
-        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=VerbosityType::silent));
+        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
         this->pcout.set_condition(verbosity_active);
     }
 
     template <int dim>
     void 
-    Reinitialization<dim>::solve( 
-                                        VectorType & solution_out )
+    Reinitialization<dim>::solve( VectorType & solution_out )
     {
-        if (reinit_data.reinit_model==ReinitModelType::olsson2007)
-            solve_olsson_model(
-                               solution_out);
-        else
+        switch(reinit_data.reinit_model)
+        {
+        case ReinitModelType::olsson2007:
+            solve_olsson_model( solution_out );
+            break;
+        default:
             AssertThrow(false, ExcMessage("Requested reinitialization model not implemented."))
+            break;
+        }
     }
 
 
     template <int dim>
     void 
-    Reinitialization<dim>::solve_olsson_model(
-                                                     VectorType & solution_out )
+    Reinitialization<dim>::solve_olsson_model( VectorType & solution_out )
     {
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
-        //TimerOutput::Scope t(computing_timer, "reinitialize");
-        // store solution before initialization to compute normal vector
         VectorType solution_in = solution_out;
-        //solution_out = solution_in;
         
         auto qGauss = QGauss<dim>(reinit_data.degree+1);
         
@@ -122,7 +119,7 @@ namespace LevelSetParallel
 
                if (normalsQuick)
                {
-                   fe_values.get_function_gradients( solution_out, normalAtQ ); // compute normals from level set solution at tau=0
+                   fe_values.get_function_gradients( solution_in, normalAtQ ); // compute normals from level set solution at tau=0
                    for (auto& n : normalAtQ)
                    {
                        n /= n.norm(); //@todo: add exception

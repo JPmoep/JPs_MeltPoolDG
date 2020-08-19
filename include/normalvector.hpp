@@ -48,7 +48,9 @@ namespace LevelSetParallel
 
   /*
    *    Data for computing the normal vector of a given scalar field 
-   *    considering diffusive damping 
+   *    considering diffusive damping;
+   *
+   *    !!!!  the normal vector field is not normalized !!!! 
    */
   
   struct NormalVectorData 
@@ -71,7 +73,8 @@ namespace LevelSetParallel
   };
   
   /*
-   *     Model for computing the normal vector to a scalar function as a smooth function 
+   *     Model for computing the normal vector to a scalar function as a smooth function
+   *     @ todo: add equation 
    */
   
   template <int dim>

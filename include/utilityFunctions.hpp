@@ -12,6 +12,8 @@ namespace utilityFunctions
 
     using namespace dealii;
     
+    typedef enum {silent=0, major=1, detailed=2} VerbosityType;
+    
     namespace BoundaryConditions
     {
       enum Types { inflow=1,

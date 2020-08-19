@@ -20,8 +20,18 @@ namespace LA
 #endif
 } // namespace LA
 
-// for distributed triangulation
-#include <deal.II/distributed/tria.h>
+// enabling conditional ostreams
+#include <deal.II/base/conditional_ostream.h> 
+// for index set
+#include <deal.II/base/index_set.h>
+// for mpi
+#include <deal.II/base/mpi.h> 
+// for quadrature points
+#include <deal.II/base/quadrature_lib.h>
+// for using smart pointers
+#include <deal.II/base/smartpointer.h>
+//// for distributed triangulation
+//#include <deal.II/distributed/tria.h>
 // for dof_handler type
 #include <deal.II/dofs/dof_handler.h>
 // for FE_Q<dim> type
@@ -29,16 +39,9 @@ namespace LA
 #include <deal.II/fe/fe_values.h>
 // for FE_Q<dim> type
 #include <deal.II/fe/mapping.h>
-// for quadrature points
-#include <deal.II/base/quadrature_lib.h>
-// for index set
-#include <deal.II/base/index_set.h>
-// for mpi
-#include <deal.II/base/mpi.h> 
-// for using smart pointers
-#include <deal.II/base/smartpointer.h>
-// enabling conditional ostreams
-#include <deal.II/base/conditional_ostream.h> 
+
+// from multiphaseflow
+#include <utilityFunctions.hpp>
 
 namespace LevelSetParallel
 {
@@ -49,7 +52,6 @@ namespace LevelSetParallel
    */
   
   typedef enum {olsson2007, undefined}         ReinitModelType;
-  typedef enum {silent=0, major=1, detailed=2} VerbosityType;
   
   struct ReinitializationData
   {
@@ -59,7 +61,7 @@ namespace LevelSetParallel
         , constant_epsilon(0.0)
         , degree(1)
         , max_reinit_steps(5)
-        , verbosity_level(VerbosityType::silent)
+        , verbosity_level(utilityFunctions::VerbosityType::silent)
     {
     }
 
@@ -79,7 +81,7 @@ namespace LevelSetParallel
     unsigned int max_reinit_steps;
     
     // maximum number of reinitialization steps to be completed
-    VerbosityType verbosity_level;
+    utilityFunctions::VerbosityType verbosity_level;
 
     // @ add lambda function for calculating epsilon
   };
@@ -103,8 +105,6 @@ namespace LevelSetParallel
     
     typedef AffineConstraints<double>                 ConstraintsType;
 
-    //typedef activeCells                               TriangulationType::active_cell_iterator;
-
   public:
 
     /*
@@ -114,11 +114,10 @@ namespace LevelSetParallel
 
     void
     initialize( const ReinitializationData &     data_in,
-                //const FEType&              fe_in,
-                const SparsityPatternType& dsp_in,
-                DoFHandler<dim> const &      dof_handler_in,
-                const ConstraintsType&     constraints_in,
-                const IndexSet&            locally_owned_dofs_in);
+                const SparsityPatternType&       dsp_in,
+                DoFHandler<dim> const &          dof_handler_in,
+                const ConstraintsType&           constraints_in,
+                const IndexSet&                  locally_owned_dofs_in);
 
     /*
      *  This function reinitializes the solution of the level set equation for a given solution
@@ -137,17 +136,14 @@ namespace LevelSetParallel
      * @todo: write equation
      */
     void 
-    solve_olsson_model( 
-                             VectorType & solution_out );
+    solve_olsson_model( VectorType & solution_out );
     
-    const MPI_Comm &                                    mpi_commun;
+    const MPI_Comm & mpi_commun;
 
     ReinitializationData  reinit_data;
-   //parallel::distributed::Triangulation<dim> triangulation;
     SmartPointer<const DoFHandlerType>       dof_handler;
     SmartPointer<const ConstraintsType>      constraints;
-    IndexSet                                    locally_owned_dofs;
-
+    IndexSet                                 locally_owned_dofs;
 
     SparseMatrixType      system_matrix;
     VectorType            system_rhs;

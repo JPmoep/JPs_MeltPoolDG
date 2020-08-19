@@ -122,7 +122,25 @@ namespace LevelSetParallel
      *      solve reinitialization model
      */
     void compute_reinitialization_model();
-
+    /*
+     *      initialize normal vector routine
+     */
+    void initialize_normal_vectors();
+    /*
+     *      compute normal vecotr for given level set solution vector
+     */
+    void compute_normal_vectors();
+    /*
+     *      initialize normal vector routine
+     */
+    void initialize_curvature();
+    /*
+     *      compute normal vector for given level set solution vector
+     */
+    void compute_curvature();
+    /*
+     *      compute normal vector for given level set solution vector
+     */
     void solve_u();
     void solve_cg(const LA::MPI::Vector& RHS,
                   const LA::MPI::SparseMatrix& matrix,
