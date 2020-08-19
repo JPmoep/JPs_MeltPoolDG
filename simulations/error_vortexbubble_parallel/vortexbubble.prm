@@ -1,0 +1,21 @@
+subsection spatial domain
+  set dimension = 2
+  set global refinements = 6
+end
+subsection level set equation
+  set level set degree = 1
+  set artificial diffusivity = 0
+  set activate reinitialization = 0
+  set max reinitialization steps = 5
+end
+subsection time stepping
+  set theta            = 0.5
+  set start time       = 0.0
+  set end time         = 2.0
+  set time step size   = 0.01
+end
+subsection output
+  set compute paraview output  = 1
+  set compute volume output    = 0
+  set filename volume output   = myVolumes.txt
+end
