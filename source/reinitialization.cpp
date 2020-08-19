@@ -20,7 +20,7 @@ namespace LevelSetParallel
     template <int dim>
     Reinitialization<dim>::Reinitialization(const MPI_Comm & mpi_commun_in)
     : mpi_commun( mpi_commun_in )
-    , pcout( std::cout,(Utilities::MPI::this_mpi_process(mpi_commun) == 0) )
+    , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_commun) == 0)
     {
     }
 
@@ -42,9 +42,12 @@ namespace LevelSetParallel
                               locally_owned_dofs,
                               dsp_in,
                               mpi_commun );
+
         system_rhs.reinit( locally_owned_dofs, 
                            mpi_commun ); 
-
+        
+        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=VerbosityType::silent));
+        this->pcout.set_condition(verbosity_active);
     }
 
     template <int dim>
@@ -59,13 +62,6 @@ namespace LevelSetParallel
             AssertThrow(false, ExcMessage("Requested reinitialization model not implemented."))
     }
 
-
-    template <int dim>
-    void
-    Reinitialization<dim>::print_me( )
-    {
-        pcout << " hello from reinitialization" << std::endl;   
-    }
 
     template <int dim>
     void 
@@ -118,7 +114,7 @@ namespace LevelSetParallel
             {
                cell_matrix = 0.0;
                cell_rhs = 0.0;
-               const double epsilon_cell = cell->diameter() / ( std::sqrt(dim) * 2 );
+               const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
                fe_values.reinit(cell);
                
                fe_values.get_function_values(     solution_out, psiAtQ );     // compute values of old solution at tau_n
@@ -199,7 +195,8 @@ namespace LevelSetParallel
             LA::MPI::PreconditionAMG preconditioner;
             LA::MPI::PreconditionAMG::AdditionalData data;
             preconditioner.initialize(system_matrix, data);
-
+            
+            // @ here is space for iimprovementn
             VectorType    re_solution_u_temp( locally_owned_dofs,
                                                mpi_commun );
             VectorType    re_delta_solution_u(locally_owned_dofs,
@@ -218,17 +215,28 @@ namespace LevelSetParallel
             solution_out = re_solution_u_temp;
             solution_out.update_ghost_values();
 
-            //output_results( re_timestep_number+1);    // print initial state
-            
             pcout << "      | Time step " << re_timestep_number << " at tau=" << std::fixed << std::setprecision(5); 
-            pcout << re_time << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << "\t |R|²/dT = " << re_delta_solution_u.l2_norm()/d_tau << std::endl;
-            pcout << "      | cg solver called by " << "reinitialization "<< " with "  << solver_control.last_step() << " CG iterations." << std::endl;
+            pcout << re_time << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << "\t |R|²/dT = ";
+            pcout << re_delta_solution_u.l2_norm()/d_tau << "   with " << solver_control.last_step() << " CG iterations." << std::endl;
 
             if (re_delta_solution_u.l2_norm() / d_tau < 1e-6)
                break;
-            pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
         } // end of time loop
+
+        pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
     }
+    
+    template <int dim>
+    void
+    Reinitialization<dim>::print_me( )
+    {
+        pcout << " hello from reinitialization" << std::endl;   
+        pcout << "reinit_model: "               << reinit_data.reinit_model     << std::endl;
+        pcout << "d_tau: "                      << reinit_data.d_tau            << std::endl;
+        pcout << "constant_epsilon: "           << reinit_data.constant_epsilon << std::endl;
+        pcout << "max reinit steps: "           << reinit_data.max_reinit_steps << std::endl;
+    }
+
 
     // instantiation
     template class Reinitialization<2>;

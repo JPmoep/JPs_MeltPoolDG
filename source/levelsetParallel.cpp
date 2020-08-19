@@ -25,7 +25,7 @@ namespace LevelSetParallel
     , time_step(        parameters_.time_step_size )
     , time(             parameters_.start_time )
     , timestep_number(  1 )
-    , pcout(            std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0))
+    , pcout(            std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0) )
     , computing_timer(  mpi_communicator,
                         pcout,
                         TimerOutput::summary,
@@ -261,164 +261,18 @@ namespace LevelSetParallel
                                                locally_relevant_dofs);
   
     reini.initialize( reinit_data , 
-                                 dsp_re,
-                                 dof_handler,
-                                 constraints_re,
-                                 locally_owned_dofs);
+                      dsp_re,
+                      dof_handler,
+                      constraints_re,
+                      locally_owned_dofs);
   
   }
+
   template <int dim>
   void LevelSetEquation<dim>::compute_reinitialization_model()
   {
+    // update the solution vector to the reinitialized value
     reini.solve(solution_u);
-  }
-    //reini.print_me();
-    
-    /*
-    pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
-    TimerOutput::Scope t(computing_timer, "reinitialize");
-
-    FEValues<dim> fe_values( fe,
-                             qGauss,
-                             update_values | update_gradients | update_quadrature_points | update_JxW_values );
-
-    const unsigned int dofs_per_cell = fe.dofs_per_cell;
-    const unsigned int n_q_points    = qGauss.size();
-    
-    FullMatrix<double>   cell_matrix( dofs_per_cell, dofs_per_cell );
-    Vector<double>       cell_rhs(    dofs_per_cell );
-    
-    std::vector<double>         psiAtQ(     n_q_points );
-    std::vector<Tensor<1,dim>>  normalAtQ(  n_q_points, Tensor<1,dim>() );
-    std::vector<Tensor<1,dim>>  psiGradAtQ( n_q_points, Tensor<1,dim>() );
-    
-    std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
-    
-    bool normalsQuick = false;
-
-    const double re_time_step       = GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim); // * GridTools::minimal_cell_diameter(triangulation) ;
-    const double dTau = re_time_step; 
-    unsigned int re_timestep_number = 0;
-    double re_time                  = dTau;
-
-   for (; re_timestep_number < parameters.max_n_reinit_steps; re_time += re_time_step, ++re_timestep_number) // 3 to 5 timesteps are enough to reach steady state according to Kronbichler et al.
-   {
-        systemRHS       = 0;
-        systemMatrix_re = 0.0;
-        if (re_timestep_number == 0 )
-        {
-            computeNormalLevelSet();
-        }
-        for (const auto &cell : dof_handler.active_cell_iterators())
-        if (cell->is_locally_owned())
-        {
-           cell_matrix = 0.0;
-           cell_rhs = 0.0;
-           const double epsilon_cell = cell->diameter() / ( std::sqrt(dim) * 2 );
-           fe_values.reinit(cell);
-           
-           fe_values.get_function_values(     solution_u, psiAtQ ); // compute values of old solution
-           fe_values.get_function_gradients(  solution_u, psiGradAtQ ); // compute values of old solution
-
-           if (normalsQuick)
-           {
-               fe_values.get_function_gradients( solution_u, normalAtQ ); // compute normals from level set solution at tau=0
-               for (auto& n : normalAtQ)
-                   n /= n.norm(); //@todo: add exception
-           }
-           else
-           {
-               for (unsigned int d=0; d<dim; ++d )
-               {
-                   std::vector<double> temp (n_q_points);
-                   fe_values.get_function_values(  normal_vector_field.block(d), temp); // compute normals from level set solution at tau=0
-                   for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                       normalAtQ[q_index][d] = temp[q_index];
-               }
-               for (auto& n : normalAtQ)
-                   n /= n.norm(); //@todo: add exception
-           }
-           // @todo: only compute normals once during timestepping
-           for (const unsigned int q_index : fe_values.quadrature_point_indices())
-            {
-               const double diffRhs = epsilon_cell * normalAtQ[q_index] * psiGradAtQ[q_index];
-
-               for (const unsigned int i : fe_values.dof_indices())
-               {
-                   //if (!normalsComputed)
-                   //{
-                       const double nTimesGradient_i = normalAtQ[q_index] * fe_values.shape_grad(i, q_index);
-
-                       for (const unsigned int j : fe_values.dof_indices())
-                       {
-                           const double nTimesGradient_j = normalAtQ[q_index] * fe_values.shape_grad(j, q_index);
-                           cell_matrix(i,j) += (
-                                                 fe_values.shape_value(i,q_index) * fe_values.shape_value(j,q_index)
-                                                 + 
-                                                 dTau * epsilon_cell * nTimesGradient_i * nTimesGradient_j
-                                               ) 
-                                               * fe_values.JxW( q_index );
-                       }
-                   //}
-
-                   cell_rhs(i) += ( 0.5 * ( 1. - psiAtQ[q_index] * psiAtQ[q_index] ) - diffRhs )
-                                   *
-                                   nTimesGradient_i 
-                                   *
-                                   dTau 
-                                   * 
-                                   fe_values.JxW( q_index );
-                   
-               }                                    
-          }// end loop over gauss points
-          
-          // assembly
-          cell->get_dof_indices(local_dof_indices);
-          constraints_re.distribute_local_to_global(cell_matrix,
-                                                    cell_rhs,
-                                                    local_dof_indices,
-                                                    systemMatrix_re,
-                                                    systemRHS);
-           
-        }
-        systemMatrix_re.compress( VectorOperation::add );
-        systemRHS.compress(    VectorOperation::add );
-        
-        SolverControl solver_control( dof_handler.n_dofs() , 1e-3 * systemRHS.l2_norm() );
-        
-        LA::SolverCG solver(solver_control, mpi_communicator);
-
-        LA::MPI::PreconditionAMG preconditioner;
-        LA::MPI::PreconditionAMG::AdditionalData data;
-        preconditioner.initialize(systemMatrix_re, data);
-
-        LA::MPI::Vector    re_solution_u_temp( locally_owned_dofs,
-                                           mpi_communicator );
-        re_solution_u_temp = solution_u;
-        
-        re_delta_solution_u = 0;
-
-        solver.solve( systemMatrix_re, 
-                      re_delta_solution_u, 
-                      systemRHS, 
-                      preconditioner );
-        constraints_re.distribute(re_delta_solution_u);
-
-        re_solution_u_temp += re_delta_solution_u;
-        
-        solution_u = re_solution_u_temp;
-        solution_u.update_ghost_values();
-        //output_results( re_timestep_number+1);    // print initial state
-        
-        pcout << "      | Time step " << re_timestep_number << " at tau=" << std::fixed << std::setprecision(5); 
-        pcout << re_time << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << "\t |R|²/dT = " << re_delta_solution_u.l2_norm()/dTau << std::endl;
-        pcout << "      | cg solver called by " << "reinitialization "<< " with "  << solver_control.last_step() << " CG iterations." << std::endl;
-
-        if (re_delta_solution_u.l2_norm() / dTau < 1e-6)
-           break;
-    }
-    pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
-    */
   }
   
   template <int dim>
@@ -853,8 +707,10 @@ namespace LevelSetParallel
     timestep_number=0;
     setup_system( DirichletValues );
     setInitialConditions(InitialValues);
-    //if ( parameters.activate_reinitialization )    
-        //assemble_reinitialization_system();
+    if ( parameters.activate_reinitialization )    
+    {
+        initialize_reinitialization_model();
+    }
     
     output_results( timestep_number );    // print initial state
 
@@ -865,8 +721,6 @@ namespace LevelSetParallel
 
     //time_step = std::min(parameters.time_step_size, CFL * epsilon /solution_u.max());
 
-    std::cout << "time_step_size: " << time_step << std::endl;
-    
     for ( time = time_step; time <= parameters.end_time; time += time_step, ++timestep_number )
     {
         pcout << "Time step " << timestep_number << " at current t=" << time << std::endl;
@@ -874,7 +728,7 @@ namespace LevelSetParallel
         assemble_levelset_system(  DirichletValues ); // @todo: insert updateFlag
         solve_u();
         if ( parameters.activate_reinitialization )    
-            assemble_reinitialization_system();
+            compute_reinitialization_model();
 
         output_results(timestep_number);
 

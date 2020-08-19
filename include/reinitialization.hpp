@@ -48,7 +48,8 @@ namespace LevelSetParallel
    *    Data for reinitialization of level set equation
    */
   
-  typedef enum {olsson2007, undefined} ReinitModelType;
+  typedef enum {olsson2007, undefined}         ReinitModelType;
+  typedef enum {silent=0, major=1, detailed=2} VerbosityType;
   
   struct ReinitializationData
   {
@@ -58,6 +59,7 @@ namespace LevelSetParallel
         , constant_epsilon(0.0)
         , degree(1)
         , max_reinit_steps(5)
+        , verbosity_level(VerbosityType::silent)
     {
     }
 
@@ -75,6 +77,9 @@ namespace LevelSetParallel
 
     // maximum number of reinitialization steps to be completed
     unsigned int max_reinit_steps;
+    
+    // maximum number of reinitialization steps to be completed
+    VerbosityType verbosity_level;
 
     // @ add lambda function for calculating epsilon
   };
