@@ -63,14 +63,10 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
                             "Sets the degree for the level set function (default value=1)"); 
       prm.declare_entry    ("artificial diffusivity","0.0",Patterns::Double(),
                             "Defines the artificial diffusivity for the level set transport equation");
-      //prm.declare_entr   y ("interface_thickness","0.0",Patterns::Double(),
-                            //"Defines the artificial diffusivity for the level set transport equation");
       prm.declare_entry    ("activate reinitialization","0",Patterns::Integer(),
                             "Defines if reinitialization of level set function is activated (default=false)");
       prm.declare_entry    ("max reinitialization steps","2",Patterns::Integer(),
                             "Defines the maximum number of reinitialization steps (default=2)");
-      prm.declare_entry    ("compute volume","0",Patterns::Integer(),
-                            "Defines if volume should be computed (default=false)");
   }
   prm.leave_subsection();
 
@@ -86,35 +82,25 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
                          "Sets the step size for time stepping. For non-uniform "
                          "time stepping, this sets the size of the first time "
                          "step.");
+      prm.declare_entry ("enable CFL condition", "0", Patterns::Integer(),
+                         "Enables to dynamically adapt the time step to the current"
+                         " mesh size");
   }
   prm.leave_subsection();
   prm.enter_subsection ("output");
   {
       prm.declare_entry ("compute paraview output", "0", Patterns::Integer(),
-                         "boolena for producing paraview output files");
+                         "boolean for producing paraview output files");
+      prm.declare_entry ("filename paraview output", "solution", Patterns::Anything(),
+                         "Sets the base name for the paraview file output.");
+      prm.declare_entry ("compute volume output", "0", Patterns::Integer(),
+                         "boolean for computing the phase volumes");
+      prm.declare_entry ("filename volume output", "volumes", Patterns::Anything(),
+                         "Sets the base name for the volume fraction file output.");
   }
   prm.leave_subsection();
 
-  //prm.enter_subsection("Output options");
-  //prm.declare_entry ("output filename","",Patterns::Anything(),
-                     //"Sets the base name for the file output.");
-  //prm.declare_entry ("output verbosity","2",Patterns::Integer(),
-                     //"Sets the amount of information from the "
-                     //"Navier-Stokes solver that is printed to screen. "
-                     //"0 means no output at all, and larger numbers mean an "
-                     //"increasing amount of output (maximum value: 3). "
-                     //"A value of 3 not only includes solver iterations "
-                     //"but also details on solution time and some memory "
-                     //"statistics.");
-  //prm.declare_entry ("output frequency","1",Patterns::Double(),
-                     //"defines at with time interface the solution "
-                     //"should be written to file (in supported routines)");
-  //prm.declare_entry ("output vtk files","0",Patterns::Integer(),
-                     //"defines whether to output vtk files with the "
-                     //"whole solution field or just collected point data");
-
 }
-
 
 
 void LevelSetParameters::parse_parameters (const std::string parameter_file,
@@ -126,9 +112,9 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
     }
   catch (...)
     {
-      //if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+      if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
         prm.print_parameters(std::cout, ParameterHandler::Text);
-      //AssertThrow (false, ExcMessage ("Invalid input parameter file."));
+     AssertThrow (false, ExcMessage ("Invalid input parameter file."));
     }
 
   prm.enter_subsection("spatial domain");
@@ -139,50 +125,51 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
   prm.leave_subsection ();
 
   prm.enter_subsection("level set equation");
-      levelset_degree        = prm.get_integer("level set degree");
-      artificial_diffusivity = prm.get_double("artificial diffusivity");
-      //AssertThrow (levelset_degree >= 1, ExcNotImplemented());
+      levelset_degree        =    prm.get_integer("level set degree");
+      AssertThrow (levelset_degree >= 1, ExcNotImplemented());
+      artificial_diffusivity =     prm.get_double("artificial diffusivity");
       activate_reinitialization = prm.get_integer("activate reinitialization");
-      compute_volume         = prm.get_integer("compute volume");
-      max_n_reinit_steps     = prm.get_integer("max reinitialization steps");
+      max_n_reinit_steps     =    prm.get_integer("max reinitialization steps");
   prm.leave_subsection ();
 
-  //prm.enter_subsection("Output options");
-  //output_filename = prm.get("output filename");
-  //output_verbosity = prm.get_integer("output verbosity");
-  //Assert (output_verbosity <= 3, ExcInternalError());
-  //output_frequency = prm.get_double("output frequency");
-  //print_solution_fields = prm.get_integer("output vtk files");
-  //if (print_solution_fields > 2)
-    //print_solution_fields = 1;
-  //prm.leave_subsection ();
-
   prm.enter_subsection ("time stepping");
-      theta          = (prm.get_double ("theta"));
-      start_time     = (prm.get_double ("start time"));
-      end_time       =  (prm.get_double ("end time"));
-      time_step_size = (prm.get_double ("time step size"));
+      theta                = (prm.get_double ("theta"));
+      start_time           = (prm.get_double ("start time"));
+      end_time             = (prm.get_double ("end time"));
+      time_step_size       = (prm.get_double ("time step size"));
+      AssertThrow (time_step_size>= 0.0, ExcNotImplemented());
+      enable_CFL_condition = (prm.get_double ("enable CFL condition"));
   prm.leave_subsection ();
   prm.enter_subsection ("output");
       compute_paraview_output = prm.get_integer("compute paraview output");
+      filename_paraview_output =        prm.get("filename paraview output");
+      compute_volume_output =   prm.get_integer("compute volume output");
+      filename_volume_output =          prm.get("filename volume output");
   prm.leave_subsection ();
 }
 
 void LevelSetParameters::print_parameters()
 {
     std::cout << "+----------------------------------------"                << std::endl;
+    std::cout << "|       input protocol                  |"                << std::endl;
+    std::cout << "+----------------------------------------"                << std::endl;
     std::cout << "| dimension                 " << dimension                << std::endl;                   
     std::cout << "| global_refinements        " << global_refinements       << std::endl;                   
     std::cout << "| levelset_degree           " << levelset_degree          << std::endl;                   
     std::cout << "| artificial_diffusivity    " << artificial_diffusivity   << std::endl;                   
     std::cout << "| activate_reinitialization " << activate_reinitialization<< std::endl;                   
-    std::cout << "| compute_volume            " << compute_volume           << std::endl;                   
     std::cout << "| max_n_reinit_steps        " << max_n_reinit_steps       << std::endl;                   
+    std::cout << "| ------------ time stepping -------------"               << std::endl;    
     std::cout << "| theta                     " << theta                    << std::endl;                   
     std::cout << "| start_time                " << start_time               << std::endl;                   
     std::cout << "| end_time                  " << end_time                 << std::endl;                   
-    std::cout << "| time_step_size            " << time_step_size           << std::endl;                   
+    std::cout << "| time_step_size            " << time_step_size           << std::endl;
+    std::cout << "| enable_CFL_condition      " << enable_CFL_condition     << std::endl;
+    std::cout << "| --------------- output ----------------"                << std::endl;    
     std::cout << "| compute_paraview_output   " << compute_paraview_output  << std::endl;                   
+    std::cout << "| filename_paraview_output   " << filename_paraview_output  << std::endl;                   
+    std::cout << "| compute_volume_output   " << compute_volume_output  << std::endl;                   
+    std::cout << "| filename_volume_output   " << filename_volume_output  << std::endl;                   
     std::cout << "+----------------------------------------"                << std::endl;
 
 }

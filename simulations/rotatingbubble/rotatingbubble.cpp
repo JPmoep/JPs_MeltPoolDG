@@ -57,7 +57,6 @@ int main()
 
   try
     {
-
       const int nDim = 2;
       const double leftDomain   = -1.0;            // (m)
       const double rightDomain  = 1.0;

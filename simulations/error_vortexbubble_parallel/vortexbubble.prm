@@ -5,7 +5,7 @@ end
 subsection level set equation
   set level set degree = 1
   set artificial diffusivity = 0
-  set activate reinitialization = 0
+  set activate reinitialization = 1
   set max reinitialization steps = 5
 end
 subsection time stepping

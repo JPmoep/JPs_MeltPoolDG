@@ -87,6 +87,9 @@ namespace LA
 #include <deal.II/base/data_out_base.h>
 #include <deal.II/lac/trilinos_solver.h> // direct solver
 
+// multiphaseflow
+#include <reinitialization.hpp>
+
 namespace LevelSetParallel
 {
   using namespace dealii; 
@@ -109,8 +112,17 @@ namespace LevelSetParallel
     void setInitialConditions(const Function<dim>& InitialValues);
     void setInitialConditions_reinitialize(const Function<dim>& InitialValues);
     void assemble_levelset_system( const Function<dim>& DirichletValues );
-    void assemble_reinitialization_system( );
-    void assemble_total_reinitialization_system( const double dTau );
+
+
+    /*
+     *      setup reinitialization model
+     */
+    void initialize_reinitialization_model();
+    /*
+     *      solve reinitialization model
+     */
+    void compute_reinitialization_model();
+
     void solve_u();
     void solve_cg(const LA::MPI::Vector& RHS,
                   const LA::MPI::SparseMatrix& matrix,
@@ -156,5 +168,7 @@ namespace LevelSetParallel
     TimerOutput                computing_timer;
     Timer                      timer;
     TensorFunction<1, dim> &   AdvectionField;
+
+    Reinitialization<dim>      reini;
   };
 } // end of namespace LevelSet

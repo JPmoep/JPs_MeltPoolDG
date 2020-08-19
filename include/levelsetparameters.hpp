@@ -35,7 +35,6 @@ struct LevelSetParameters
   double              artificial_diffusivity;
   //double              interface_thickness; // to be calculated from the characteristic mesh size
   bool                activate_reinitialization;
-  bool                compute_volume;
   unsigned int        max_n_reinit_steps;
 
   // time stepping
@@ -43,9 +42,13 @@ struct LevelSetParameters
   double              start_time;
   double              end_time;
   double              time_step_size;
+  bool                enable_CFL_condition; 
 
   // output options
   bool                compute_paraview_output;
+  std::string         filename_paraview_output;
+  bool                compute_volume_output;
+  std::string         filename_volume_output;
   //
 };
 

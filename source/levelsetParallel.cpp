@@ -2,6 +2,7 @@
  * Author: Magdalena Schreter, TUM, 2020
  */
 #include <levelsetParallel.hpp>
+#include <reinitialization.hpp>
 #include <deal.II/lac/generic_linear_algebra.h>
 
 namespace LevelSetParallel
@@ -32,6 +33,7 @@ namespace LevelSetParallel
     , timer(            mpi_communicator)
     , AdvectionField(   AdvectionField_ )
     , volume_fraction(2,0)
+    , reini( mpi_commun)
   {}
   
   
@@ -92,7 +94,7 @@ namespace LevelSetParallel
     DynamicSparsityPattern dsp( locally_relevant_dofs );
     DoFTools::make_sparsity_pattern( dof_handler, dsp, constraints, false );
     SparsityTools::distribute_sparsity_pattern(dsp,
-                                               dof_handler.locally_owned_dofs(),
+                                               locally_owned_dofs, 
                                                mpi_communicator,
                                                locally_relevant_dofs);
 
@@ -111,7 +113,7 @@ namespace LevelSetParallel
     DynamicSparsityPattern dsp_re( locally_relevant_dofs );
     DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_re, false );
     SparsityTools::distribute_sparsity_pattern(dsp_re,
-                                               dof_handler.locally_owned_dofs(),
+                                               locally_owned_dofs, 
                                                mpi_communicator,
                                                locally_relevant_dofs);
     
@@ -125,7 +127,7 @@ namespace LevelSetParallel
   template <int dim>
   void LevelSetEquation<dim>::setInitialConditions(const Function<dim>& InitialValues)
   {
-    LA::MPI::Vector solutionTemp( dof_handler.locally_owned_dofs(), mpi_communicator);
+    LA::MPI::Vector solutionTemp( locally_owned_dofs, mpi_communicator);
 
     VectorTools::project(dof_handler, 
                          constraints,
@@ -241,10 +243,38 @@ namespace LevelSetParallel
       systemMatrix.compress(VectorOperation::add);
       systemRHS.compress(VectorOperation::add);
   }
-  
+
+
   template <int dim>
-  void LevelSetEquation<dim>::assemble_reinitialization_system( )
+  void LevelSetEquation<dim>::initialize_reinitialization_model()
   {
+    ReinitializationData reinit_data;
+    reinit_data.reinit_model = ReinitModelType::olsson2007;
+    reinit_data.d_tau        = GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim);
+    reinit_data.degree       = parameters.levelset_degree;
+    
+    DynamicSparsityPattern dsp_re( locally_relevant_dofs );
+    DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_re, false );
+    SparsityTools::distribute_sparsity_pattern(dsp_re,
+                                               locally_owned_dofs,
+                                               mpi_communicator,
+                                               locally_relevant_dofs);
+  
+    reini.initialize( reinit_data , 
+                                 dsp_re,
+                                 dof_handler,
+                                 constraints_re,
+                                 locally_owned_dofs);
+  
+  }
+  template <int dim>
+  void LevelSetEquation<dim>::compute_reinitialization_model()
+  {
+    reini.solve(solution_u);
+  }
+    //reini.print_me();
+    
+    /*
     pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
     TimerOutput::Scope t(computing_timer, "reinitialize");
 
@@ -388,6 +418,7 @@ namespace LevelSetParallel
            break;
     }
     pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
+    */
   }
   
   template <int dim>
@@ -822,8 +853,8 @@ namespace LevelSetParallel
     timestep_number=0;
     setup_system( DirichletValues );
     setInitialConditions(InitialValues);
-    if ( parameters.activate_reinitialization )    
-        assemble_reinitialization_system();
+    //if ( parameters.activate_reinitialization )    
+        //assemble_reinitialization_system();
     
     output_results( timestep_number );    // print initial state
 
@@ -832,7 +863,9 @@ namespace LevelSetParallel
     const double CFL = 0.2/(p*p);
     const double dx = GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim);
 
-    time_step = std::min(parameters.time_step_size, CFL*epsilon/solution_u.max());
+    //time_step = std::min(parameters.time_step_size, CFL * epsilon /solution_u.max());
+
+    std::cout << "time_step_size: " << time_step << std::endl;
     
     for ( time = time_step; time <= parameters.end_time; time += time_step, ++timestep_number )
     {
