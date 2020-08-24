@@ -103,11 +103,11 @@ namespace LevelSetParallel
     NormalVector(const MPI_Comm & mpi_commun_in);
 
     void
-    initialize( const NormalVectorData&          data_in,
-                const SparsityPatternType&       dsp_in,
-                DoFHandler<dim> const &          dof_handler_in,
-                const ConstraintsType&           constraints_in,
-                const IndexSet&                  locally_owned_dofs_in);
+    initialize( const NormalVectorData&     data_in,
+                const SparsityPatternType&  dsp_in,
+                const DoFHandler<dim>&      dof_handler_in,
+                const ConstraintsType&      constraints_in,
+                const IndexSet&             locally_owned_dofs_in);
 
     /*
      *  This function computes the (damped) normal vector field for a given solution of a scalar function
@@ -115,9 +115,30 @@ namespace LevelSetParallel
     void 
     compute_normal_vector_field( const VectorType & level_set_solution_in,
                                  BlockVectorType & normal_vector_out);
+    /*
+     *  This function overloads the previous one, where the normal vectors are stored as a member variable.
+     */ 
+    void 
+    compute_normal_vector_field( const VectorType & level_set_solution_in);
 
     void 
     print_me(); 
+    
+    /*
+     *  For a given (non-normalized) vector field calculate the (normalized) vector field at the quadrature
+     *  points.
+     */
+
+    void
+    get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
+                                    const BlockVectorType& normal_vector_in, 
+                                    std::vector<Tensor<1,dim>>& normal_at_gauss ) const;
+    /*
+     * This function overloads the previous function by using the stored vector field as a member variable
+     */
+    void
+    get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
+                                    std::vector<Tensor<1,dim>>& normal_at_gauss ) const;
   
   private:
     void 
@@ -132,7 +153,7 @@ namespace LevelSetParallel
 
     SparseMatrixType                        system_matrix;
     BlockVectorType                         system_rhs;
-    //BlockVectorType                         normal_vector_field;
+    BlockVectorType                         normal_vector_field;
     ConditionalOStream                      pcout;
   };
 } // namespace LevelSetParallel

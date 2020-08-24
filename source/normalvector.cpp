@@ -49,7 +49,6 @@ namespace LevelSetParallel
         for (unsigned int d=0; d<dim; ++d)
             system_rhs.block(d).reinit( locally_owned_dofs, 
                                         mpi_commun ); 
-        
         /*
          * here the current verbosity level is set
          */
@@ -60,12 +59,15 @@ namespace LevelSetParallel
     template <int dim>
     void 
     NormalVector<dim>::compute_normal_vector_field( const VectorType & solution_in,
-                                                    BlockVectorType & normal_vector_out )
+                                                    BlockVectorType & normal_vector_out ) 
     {
         //TimerOutput::Scope t(computing_timer, "compute damped normals");  
         system_matrix = 0.0;
         for (unsigned int d=0; d<dim; d++)
+        {
             system_rhs.block(d) = 0.0;
+            normal_vector_out.block(d) = 0.0;
+        } 
 
         auto qGauss = QGauss<dim>(normal_vector_data.degree+1);
         
@@ -74,16 +76,16 @@ namespace LevelSetParallel
         FEValues<dim> fe_values( fe,
                                  qGauss,
                                  update_values | update_gradients | update_quadrature_points | update_JxW_values );
-        const unsigned int n_q_points    = qGauss.size();
 
         const unsigned int          dofs_per_cell = fe.dofs_per_cell;
         FullMatrix<double>          normal_cell_matrix( dofs_per_cell, dofs_per_cell );
         std::vector<Vector<double>> normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
-        
         std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
+        
+        const unsigned int n_q_points    = qGauss.size();
         std::vector<Tensor<1,dim>>           normal_at_q(  n_q_points, Tensor<1,dim>() );
 
-        double damping = normal_vector_data.damping_parameter; //GridTools::minimal_cell_diameter(triangulation) * 0.5; //@todo: modifiy damping parameter
+        const double damping = 0.0; // normal_vector_data.damping_parameter; //GridTools::minimal_cell_diameter(triangulation) * 0.5; //@todo: modifiy damping parameter
         
         for (const auto &cell : dof_handler->active_cell_iterators())
         if (cell->is_locally_owned())
@@ -96,7 +98,6 @@ namespace LevelSetParallel
                 normal_cell =    0.0;
 
             fe_values.get_function_gradients( solution_in, normal_at_q ); // compute normals from level set solution at tau=0
-            
             for (const unsigned int q_index : fe_values.quadrature_point_indices())
             {
                 for (unsigned int i=0; i<dofs_per_cell; ++i)
@@ -110,20 +111,22 @@ namespace LevelSetParallel
                         const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(j, q_index);
 
                         normal_cell_matrix( i, j ) += ( 
-                                                    phi_i * phi_j 
-                                                    + 
-                                                    damping * grad_phi_i * grad_phi_j  
-                                                    )
-                                                    * 
-                                                    fe_values.JxW( q_index ) ;
+                                                        phi_i * phi_j 
+                                                        + 
+                                                        damping * grad_phi_i * grad_phi_j  
+                                                      )
+                                                      * 
+                                                      fe_values.JxW( q_index ) ;
                     }
      
                     for (unsigned int d=0; d<dim; ++d)
+                    {
                         normal_cell_rhs[d](i) +=   phi_i
                                                    * 
                                                    normal_at_q[ q_index ][ d ]  
                                                    * 
                                                    fe_values.JxW( q_index );
+                    }
                 }
             }
             
@@ -148,6 +151,44 @@ namespace LevelSetParallel
           }
     }
     
+    template <int dim>
+    void 
+    NormalVector<dim>::compute_normal_vector_field( const VectorType & solution_in )
+    {
+        normal_vector_field.reinit( dim );
+        for (unsigned int d=0; d<dim; ++d)
+            normal_vector_field.block(d).reinit( locally_owned_dofs, 
+                                                 mpi_commun ); 
+
+        compute_normal_vector_field( solution_in, normal_vector_field );
+    }
+
+    template <int dim>
+    void
+    NormalVector<dim>::get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
+                                                       const BlockVectorType& normal_vector_field_in,
+                                                       std::vector<Tensor<1,dim>>& unit_normal_at_quadrature ) const
+    {
+        for (unsigned int d=0; d<dim; ++d )
+        {
+            std::vector<double> temp ( unit_normal_at_quadrature.size() );
+            fe_values.get_function_values(  normal_vector_field_in.block(d), temp); // compute normals from level set solution at tau=0
+            for (const unsigned int q_index : fe_values.quadrature_point_indices())
+                unit_normal_at_quadrature[ q_index ][ d ] = temp[ q_index ];
+        }
+        for (auto& n : unit_normal_at_quadrature)
+            n /= n.norm(); //@todo: add exception
+    }
+
+    template <int dim>
+    void
+    NormalVector<dim>::get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
+                                                       std::vector<Tensor<1,dim>>& unit_normal_at_quadrature ) const
+    {
+        get_unit_normals_at_quadrature(fe_values, normal_vector_field, unit_normal_at_quadrature );
+    }
+
+
     template <int dim>
     void 
     NormalVector<dim>::solve_cg( VectorType & solution, const VectorType & rhs)

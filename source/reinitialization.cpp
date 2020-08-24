@@ -29,15 +29,17 @@ namespace LevelSetParallel
     void
     Reinitialization<dim>::initialize( const ReinitializationData &  data_in,
                                        const SparsityPatternType&    dsp_in,
-                                       DoFHandler<dim> const &       dof_handler_in,
+                                       const DoFHandler<dim> &       dof_handler_in,
                                        const ConstraintsType&        constraints_in,
-                                       const IndexSet&               locally_owned_dofs_in
+                                       const IndexSet&               locally_owned_dofs_in,
+                                       const IndexSet&               locally_relevant_dofs_in
                                     )
     {
-        reinit_data        = data_in;
-        dof_handler        = &dof_handler_in;
-        constraints        = &constraints_in;
-        locally_owned_dofs = locally_owned_dofs_in;
+        reinit_data           = data_in;
+        dof_handler           = &dof_handler_in;
+        constraints           = &constraints_in;
+        locally_owned_dofs    = locally_owned_dofs_in;
+        locally_relevant_dofs = locally_relevant_dofs_in;
         
         system_matrix.reinit( locally_owned_dofs,
                               locally_owned_dofs,
@@ -54,15 +56,24 @@ namespace LevelSetParallel
          * initialize the normal_vector_field computation
          * @ todo: how should data be transferred from the base class
          */
+        
+        solution_normal_vector.reinit( dim ); 
+        
+        for (unsigned int d=0; d<dim; ++d)
+            solution_normal_vector.block(d).reinit(locally_owned_dofs,
+                                                   locally_relevant_dofs,
+                                                   mpi_commun);
+
         NormalVectorData normal_vector_data;
         normal_vector_data.damping_parameter = 1e-6;
         normal_vector_data.degree            = reinit_data.degree;
+        normal_vector_data.verbosity_level   = reinit_data.verbosity_level;
 
-        //normal_vector_field.initialize( normal_vector_data, 
-                                        //dsp_in,
-                                        //dof_handler,
-                                        //constraints,
-                                        //locally_owned_dofs);
+        normal_vector_field.initialize( normal_vector_data, 
+                                        dsp_in,
+                                        dof_handler_in,
+                                        constraints_in,
+                                        locally_owned_dofs_in);
     }
 
     template <int dim>
@@ -71,15 +82,14 @@ namespace LevelSetParallel
     {
         switch(reinit_data.reinit_model)
         {
-        case ReinitModelType::olsson2007:
-            solve_olsson_model( solution_out );
-            break;
-        default:
-            AssertThrow(false, ExcMessage("Requested reinitialization model not implemented."))
-            break;
+            case ReinitModelType::olsson2007:
+                solve_olsson_model( solution_out );
+                break;
+            default:
+                AssertThrow(false, ExcMessage("Requested reinitialization model not implemented."))
+                break;
         }
     }
-
 
     template <int dim>
     void 
@@ -88,9 +98,9 @@ namespace LevelSetParallel
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
         VectorType solution_in = solution_out;
         
-        auto qGauss = QGauss<dim>(reinit_data.degree+1);
+        auto qGauss = QGauss<dim>( reinit_data.degree+1 );
         
-        FE_Q<dim> fe(reinit_data.degree);
+        FE_Q<dim> fe( reinit_data.degree );
         FEValues<dim> fe_values( fe,
                                  qGauss,
                                  update_values | update_gradients | update_quadrature_points | update_JxW_values );
@@ -103,35 +113,21 @@ namespace LevelSetParallel
         const unsigned int n_q_points    = qGauss.size();
 
         std::vector<double>         psiAtQ(     n_q_points );
-        std::vector<Tensor<1,dim>>  normalAtQ(  n_q_points, Tensor<1,dim>() );
+        std::vector<Tensor<1,dim>>  normal_at_quadrature(  n_q_points, Tensor<1,dim>() );
         std::vector<Tensor<1,dim>>  psiGradAtQ( n_q_points, Tensor<1,dim>() );
         
         std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
         
-        bool normalsQuick = false;
-
         const double d_tau = 0.01;//GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim); // * GridTools::minimal_cell_diameter(triangulation) ;
         unsigned int re_timestep_number = 0;
         double re_time=d_tau;
 
-        // @ is there a shorter way to extract the latter
-        IndexSet locally_relevant_dofs;
-        DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
-        
-        BlockVectorType solution_normal_vector;
-        solution_normal_vector.reinit( dim ); 
-        
-        for (unsigned int d=0; d<dim; ++d)
-            solution_normal_vector.block(d).reinit(locally_owned_dofs,
-                                                   locally_relevant_dofs,
-                                                   mpi_commun);
-        solution_normal_vector.collect_sizes();  // @ is this necessary
-        
         /*
          * compute vector field of normals to the current solution of the level set function
          * @todo: is there an option that normal vectors are also accessible from the base level set class 
          *        for output routines?
          */
+        // @ is there a shorter way to extract the latter ?
         
         normal_vector_field.compute_normal_vector_field( solution_in, solution_normal_vector );
 
@@ -147,48 +143,32 @@ namespace LevelSetParallel
             if (cell->is_locally_owned())
             {
                cell_matrix = 0.0;
-               cell_rhs = 0.0;
-               const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
+               cell_rhs    = 0.0;
                fe_values.reinit(cell);
+               
+               const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
                
                fe_values.get_function_values(     solution_out, psiAtQ );     // compute values of old solution at tau_n
                fe_values.get_function_gradients(  solution_out, psiGradAtQ ); // compute values of old solution at tau_n
+                
+               normal_vector_field.get_unit_normals_at_quadrature(fe_values,
+                                                                  solution_normal_vector,
+                                                                  normal_at_quadrature);
 
-               if (normalsQuick)
-               {
-                   fe_values.get_function_gradients( solution_in, normalAtQ ); // compute normals from level set solution at tau=0
-                   for (auto& n : normalAtQ)
-                   {
-                       n /= n.norm(); //@todo: add exception
-                   }
-               }
-               else
-               {
-                   //AssertThrow(false, ExcMessage("not implemented"))
-                   for (unsigned int d=0; d<dim; ++d )
-                   {
-                       std::vector<double> temp (n_q_points);
-                       fe_values.get_function_values(  solution_normal_vector.block(d), temp); // compute normals from level set solution at tau=0
-                       for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                           normalAtQ[q_index][d] = temp[q_index];
-                   }
-                   for (auto& n : normalAtQ)
-                       n /= n.norm(); //@todo: add exception
-               }
                // @todo: only compute normals once during timestepping
                for (const unsigned int q_index : fe_values.quadrature_point_indices())
                 {
-                   const double diffRhs = epsilon_cell * normalAtQ[q_index] * psiGradAtQ[q_index];
+                   const double diffRhs = epsilon_cell * normal_at_quadrature[q_index] * psiGradAtQ[q_index];
 
                    for (const unsigned int i : fe_values.dof_indices())
                    {
                        //if (!normalsComputed)
                        //{
-                           const double nTimesGradient_i = normalAtQ[q_index] * fe_values.shape_grad(i, q_index);
+                           const double nTimesGradient_i = normal_at_quadrature[q_index] * fe_values.shape_grad(i, q_index);
 
                            for (const unsigned int j : fe_values.dof_indices())
                            {
-                               const double nTimesGradient_j = normalAtQ[q_index] * fe_values.shape_grad(j, q_index);
+                               const double nTimesGradient_j = normal_at_quadrature[q_index] * fe_values.shape_grad(j, q_index);
                                cell_matrix(i,j) += (
                                                      fe_values.shape_value(i,q_index) * fe_values.shape_value(j,q_index)
                                                      + 
@@ -260,6 +240,8 @@ namespace LevelSetParallel
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
     }
     
+
+
     template <int dim>
     void
     Reinitialization<dim>::print_me( )

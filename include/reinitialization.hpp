@@ -41,7 +41,7 @@ namespace LA
 #include <deal.II/fe/mapping.h>
 
 // from multiphaseflow
-#include <utilityFunctions.hpp>
+#include "utilityFunctions.hpp"
 #include "normalvector.hpp"
 
 namespace LevelSetParallel
@@ -118,7 +118,8 @@ namespace LevelSetParallel
                 const SparsityPatternType&       dsp_in,
                 DoFHandler<dim> const &          dof_handler_in,
                 const ConstraintsType&           constraints_in,
-                const IndexSet&                  locally_owned_dofs_in);
+                const IndexSet&                  locally_owned_dofs_in,
+                const IndexSet&                  locally_relevant_dofs_in);
 
     /*
      *  This function reinitializes the solution of the level set equation for a given solution
@@ -134,11 +135,10 @@ namespace LevelSetParallel
      *
      * for reinitialization of the level set equation 
      * 
-     * @todo: write equation
      */
     void 
     solve_olsson_model( VectorType & solution_out );
-    
+
     const MPI_Comm & mpi_commun;
 
     ReinitializationData                     reinit_data;
@@ -147,10 +147,12 @@ namespace LevelSetParallel
     SmartPointer<const DoFHandlerType>       dof_handler;
     SmartPointer<const ConstraintsType>      constraints;
     IndexSet                                 locally_owned_dofs;
+    IndexSet                                 locally_relevant_dofs;
 
     SparseMatrixType      system_matrix;
     VectorType            system_rhs;
     ConditionalOStream    pcout;
     NormalVector<dim>     normal_vector_field;
+    BlockVectorType       solution_normal_vector;
   };
 } // namespace LevelSetParallel

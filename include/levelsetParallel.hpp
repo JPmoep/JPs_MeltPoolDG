@@ -89,6 +89,7 @@ namespace LA
 
 // multiphaseflow
 #include <reinitialization.hpp>
+#include <curvature.hpp>
 
 namespace LevelSetParallel
 {
@@ -109,11 +110,9 @@ namespace LevelSetParallel
 
   private:
     void setup_system(const Function<dim>& DirichletValues );
+
     void setInitialConditions(const Function<dim>& InitialValues);
-    void setInitialConditions_reinitialize(const Function<dim>& InitialValues);
     void assemble_levelset_system( const Function<dim>& DirichletValues );
-
-
     /*
      *      setup reinitialization model
      */
@@ -123,35 +122,21 @@ namespace LevelSetParallel
      */
     void compute_reinitialization_model();
     /*
-     *      initialize normal vector routine
-     */
-    void initialize_normal_vectors();
-    /*
-     *      compute normal vecotr for given level set solution vector
-     */
-    void compute_normal_vectors();
-    /*
-     *      initialize normal vector routine
+     *      initialize the curvature calculation routine
      */
     void initialize_curvature();
     /*
-     *      compute normal vector for given level set solution vector
+     *      compute the curvature for given level set solution vector
      */
     void compute_curvature();
-    /*
-     *      compute normal vector for given level set solution vector
-     */
+    
     void solve_u();
-    void solve_cg(const LA::MPI::Vector& RHS,
-                  const LA::MPI::SparseMatrix& matrix,
-                  LA::MPI::Vector& solution,
-                  const std::string& callerFunction);
+    
     void output_results(const double timeStep);
            //TensorFunction<1, dim> &AdvectionField_ );
     void compute_overall_phase_volume();
     void computeAdvection(TensorFunction<1, dim> &AdvectionField_);
-    void computeNormalLevelSet();
-    void computeCurvatureLevelSet();
+    
     MPI_Comm&                 mpi_communicator;
     LevelSetParameters        parameters;
     FE_Q<dim>                 fe;
@@ -163,24 +148,18 @@ namespace LevelSetParallel
     unsigned int              timestep_number;
     
     AffineConstraints<double> constraints;
-    AffineConstraints<double> constraints_re;
+    AffineConstraints<double> constraints_no_dirichlet;
 
     LA::MPI::SparseMatrix      systemMatrix;              // global system matrix
-    LA::MPI::SparseMatrix      systemMatrix_re;              // global system matrix
     LA::MPI::Vector            systemRHS;                 // global system right-hand side
     LA::MPI::Vector            solution_u;
     
-    LA::MPI::BlockVector       normal_vector_field;
-    LA::MPI::BlockVector       system_normal_RHS;         // system right-hand side for computing the normal vector
-    LA::MPI::Vector            curvature_field;
-    LA::MPI::Vector            system_curvature_RHS;         // system right-hand side for computing the normal vector
     //LA::MPI::BlockVector       advection_field;         // system right-hand side for computing the normal vector
 
     std::vector<double>        volume_fraction;
     IndexSet                   locally_owned_dofs;
     IndexSet                   locally_relevant_dofs;
     ConditionalOStream         pcout;
-    bool                       normalsComputed;
     TimerOutput                computing_timer;
     Timer                      timer;
     TensorFunction<1, dim> &   AdvectionField;
@@ -188,8 +167,8 @@ namespace LevelSetParallel
     /* 
      * the following are subproblem classes
     */
-    Reinitialization<dim>  reini;
+    Reinitialization<dim>      reini;
     //NormalVector<dim>      normal_vector_field;
-    //Curvature<dim>      reini;
+    Curvature<dim>             curvature;
   };
 } // end of namespace LevelSet

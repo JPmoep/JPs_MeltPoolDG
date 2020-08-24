@@ -3,6 +3,7 @@
  */
 #include <levelsetParallel.hpp>
 #include <reinitialization.hpp>
+#include <curvature.hpp>
 #include <deal.II/lac/generic_linear_algebra.h>
 
 namespace LevelSetParallel
@@ -34,6 +35,7 @@ namespace LevelSetParallel
     , AdvectionField(   AdvectionField_ )
     , volume_fraction(2,0)
     , reini( mpi_commun )
+    , curvature( mpi_commun )
   {}
   
   
@@ -55,25 +57,6 @@ namespace LevelSetParallel
                       locally_relevant_dofs,
                       mpi_communicator);
     
-    system_normal_RHS.reinit( dim ); 
-    normal_vector_field.reinit( dim); 
-    
-    for (unsigned int d=0; d<dim; ++d)
-    {
-        system_normal_RHS.block(d).reinit(locally_owned_dofs, mpi_communicator); 
-        
-        normal_vector_field.block(d).reinit(locally_owned_dofs,
-                                   locally_relevant_dofs,
-                                    mpi_communicator);
-    }   
-    system_normal_RHS.collect_sizes(); 
-    normal_vector_field.collect_sizes(); 
-    
-    system_curvature_RHS.reinit( locally_owned_dofs, mpi_communicator ); 
-    curvature_field.reinit( locally_owned_dofs, 
-                            locally_relevant_dofs,
-                            mpi_communicator ); 
-
     // constraints for level set function
     constraints.clear();
     constraints.reinit(locally_relevant_dofs);
@@ -95,25 +78,11 @@ namespace LevelSetParallel
                          locally_owned_dofs,
                          dsp,
                          mpi_communicator);
-    // -------------------------------------------------------
-    // constraints for reinitialization function
-    // -------------------------------------------------------
-    constraints_re.clear();
-    constraints_re.reinit(locally_relevant_dofs);
-    DoFTools::make_hanging_node_constraints(dof_handler, constraints_re); 
-    constraints_re.close();   
-    
-    DynamicSparsityPattern dsp_re( locally_relevant_dofs );
-    DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_re, false );
-    SparsityTools::distribute_sparsity_pattern(dsp_re,
-                                               locally_owned_dofs, 
-                                               mpi_communicator,
-                                               locally_relevant_dofs);
-    
-    systemMatrix_re.reinit( locally_owned_dofs,
-                            locally_owned_dofs,
-                            dsp_re,
-                            mpi_communicator );
+
+    constraints_no_dirichlet.clear();
+    constraints_no_dirichlet.reinit(locally_relevant_dofs);
+    DoFTools::make_hanging_node_constraints(dof_handler, constraints_no_dirichlet); 
+    constraints_no_dirichlet.close();   
   }
   
 
@@ -242,12 +211,13 @@ namespace LevelSetParallel
   void LevelSetEquation<dim>::initialize_reinitialization_model()
   {
     ReinitializationData reinit_data;
-    reinit_data.reinit_model = ReinitModelType::olsson2007;
-    reinit_data.d_tau        = GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim);
-    reinit_data.degree       = parameters.levelset_degree;
+    reinit_data.reinit_model        = ReinitModelType::olsson2007;
+    reinit_data.d_tau               = GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim);
+    reinit_data.degree              = parameters.levelset_degree;
+    reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
     
     DynamicSparsityPattern dsp_re( locally_relevant_dofs );
-    DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_re, false );
+    DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_no_dirichlet, false );
     SparsityTools::distribute_sparsity_pattern(dsp_re,
                                                locally_owned_dofs,
                                                mpi_communicator,
@@ -256,226 +226,46 @@ namespace LevelSetParallel
     reini.initialize( reinit_data , 
                       dsp_re,
                       dof_handler,
-                      constraints_re,
-                      locally_owned_dofs);
+                      constraints_no_dirichlet,
+                      locally_owned_dofs,
+                      locally_relevant_dofs );
   }
 
   template <int dim>
   void LevelSetEquation<dim>::compute_reinitialization_model()
   {
     // update the solution vector to the reinitialized value
-    reini.solve(solution_u);
+    reini.solve( solution_u );
+  }
+
+  template <int dim>
+  void LevelSetEquation<dim>::initialize_curvature()
+  {
+    CurvatureData curvature_data;
+    curvature_data.degree              = parameters.levelset_degree;
+    curvature_data.verbosity_level     = utilityFunctions::VerbosityType::major;
+    
+    DynamicSparsityPattern dsp_re( locally_relevant_dofs );
+    DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_no_dirichlet, false );
+    SparsityTools::distribute_sparsity_pattern(dsp_re,
+                                               locally_owned_dofs,
+                                               mpi_communicator,
+                                               locally_relevant_dofs);
+  
+    curvature.initialize( curvature_data , 
+                          dsp_re,
+                          dof_handler,
+                          constraints_no_dirichlet,
+                          locally_owned_dofs,
+                          locally_relevant_dofs );
   }
   
+  template <int dim>
+  void LevelSetEquation<dim>::compute_curvature()
+  {
+    curvature.solve( solution_u );
+  }
   
-  template <int dim>
-  void LevelSetEquation<dim>::computeNormalLevelSet()
-  {
-    TimerOutput::Scope t(computing_timer, "compute damped normals");  
-    systemMatrix_re = 0.0;
-    for (unsigned int d=0; d<dim; d++)
-        system_normal_RHS.block(d) = 0.0;
-    
-    FEValues<dim> fe_values( fe,
-                             qGauss,
-                             update_values | update_gradients | update_quadrature_points | update_JxW_values );
-    const unsigned int n_q_points    = qGauss.size();
-
-    const unsigned int          dofs_per_cell = fe.dofs_per_cell;
-    FullMatrix<double>          normal_cell_matrix( dofs_per_cell, dofs_per_cell );
-    std::vector<Vector<double>> normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
-    
-    std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
-    std::vector<Tensor<1,dim>>           normal_at_q(  n_q_points, Tensor<1,dim>() );
-
-    double damping = GridTools::minimal_cell_diameter(triangulation) * 0.5; //@todo: modifiy damping parameter
-    
-    for (const auto &cell : dof_handler.active_cell_iterators())
-    if (cell->is_locally_owned())
-    {
-        fe_values.reinit(cell);
-        cell->get_dof_indices( local_dof_indices );
-        
-        normal_cell_matrix = 0.0;
-        for(auto& normal_cell : normal_cell_rhs)
-            normal_cell =    0.0;
-
-        fe_values.get_function_gradients( solution_u, normal_at_q ); // compute normals from level set solution at tau=0
-        //for (auto& n : normal_at_q)
-         //{
-             //if (n.norm()<1e-10)
-                //std::cout << "@@@@@@@@@@@q NORM IS ZERO " << n.norm() <<std::endl;
-             //n /= n.norm();
-         //}
-        for (const unsigned int q_index : fe_values.quadrature_point_indices())
-        {
-            for (unsigned int i=0; i<dofs_per_cell; ++i)
-            {
-                const double phi_i             = fe_values.shape_value(i, q_index);
-                const Tensor<1,dim> grad_phi_i = fe_values.shape_grad(i, q_index);
-                
-                for (unsigned int j=0; j<dofs_per_cell; ++j)
-                {
-                    const double phi_j             = fe_values.shape_value(j, q_index);
-                    const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(j, q_index);
-
-                    normal_cell_matrix( i, j ) += ( 
-                                                phi_i * phi_j 
-                                                + 
-                                                damping * grad_phi_i * grad_phi_j  
-                                                )
-                                                * 
-                                                fe_values.JxW( q_index ) ;
-                }
- 
-                for (unsigned int d=0; d<dim; ++d)
-                {
-                    normal_cell_rhs[d](i) +=   phi_i
-                                               * 
-                                               normal_at_q[ q_index ][ d ]  
-                                               * 
-                                               fe_values.JxW( q_index );
-                }
-            }
-        }
-        
-        // assembly
-        cell->get_dof_indices(local_dof_indices);
-        for (unsigned int d=0; d<dim; ++d)
-            constraints_re.distribute_local_to_global(normal_cell_matrix,
-                                                      normal_cell_rhs[d],
-                                                      local_dof_indices,
-                                                      systemMatrix_re,
-                                                      system_normal_RHS.block(d));
-         
-      }
-      systemMatrix_re.compress(VectorOperation::add);
-      for (unsigned int d=0; d<dim; ++d)
-        system_normal_RHS.block(d).compress(VectorOperation::add);
-      normalsComputed = true;  
-    
-    for (unsigned int d=0; d<dim; ++d)
-    {
-        solve_cg(system_normal_RHS.block( d ), systemMatrix_re, normal_vector_field.block( d ), "damped normals");
-        constraints_re.distribute(normal_vector_field.block( d ));
-   }
-  }
-
-  template <int dim>
-  void LevelSetEquation<dim>::computeCurvatureLevelSet()
-  {
-    TimerOutput::Scope timer (computing_timer, "Curvature computation.");
-
-    computeNormalLevelSet();
-    
-    systemMatrix_re = 0.0; 
-    system_curvature_RHS = 0.0;
-
-    FEValues<dim> fe_values( fe,
-                             qGauss,
-                             update_values | update_gradients | update_quadrature_points | update_JxW_values );
-
-    const unsigned int n_q_points    = qGauss.size();
-    const unsigned int dofs_per_cell = fe.dofs_per_cell;
-    
-    std::vector<types::global_dof_index> local_dof_indices(     dofs_per_cell );
-    FullMatrix<double>                   curvature_cell_matrix( dofs_per_cell, dofs_per_cell );
-    Vector<double>                       curvature_cell_rhs(    dofs_per_cell );
-
-    const double curvature_damping = 0.0; //@todo: modifiy damping parameter
-
-    for (const auto &cell : dof_handler.active_cell_iterators())
-    if (cell->is_locally_owned())
-    {
-        fe_values.reinit( cell );
-        
-        curvature_cell_matrix = 0.0;
-        curvature_cell_rhs    = 0.0;
- 
-        std::vector<Tensor<1,dim>>           normal_at_q( n_q_points, Tensor<1,dim>() );
-        for (unsigned int d=0; d<dim; ++d)
-        {
-            std::vector<double> temp(n_q_points);
-            
-            fe_values.get_function_values( normal_vector_field.block(d), temp ); 
-
-            for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                normal_at_q[q_index][d] = temp[q_index];
-        }
-        
-        // ALTERNATIVE
-        //fe_values.get_function_gradients( solution_u, normal_at_q); // compute normals from level set solution at tau=0
-        //for (auto& n : normal_at_q)
-            //n /= n.norm(); //@todo: add exception
-
-        for (const unsigned int q_index : fe_values.quadrature_point_indices())
-        {
-            for (unsigned int i=0; i<dofs_per_cell; ++i)
-            {
-                const double phi_i             = fe_values.shape_value( i, q_index );
-                const Tensor<1,dim> grad_phi_i = fe_values.shape_grad(  i, q_index );
-                
-                for (unsigned int j=0; j<dofs_per_cell; ++j)
-                {
-                    const double phi_j             = fe_values.shape_value( j, q_index);
-                    const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(  j, q_index);
-
-                    curvature_cell_matrix( i, j ) += ( phi_i * phi_j 
-                                                       + 
-                                                       curvature_damping * grad_phi_i * grad_phi_j  
-                                                     )
-                                                       * 
-                                                       fe_values.JxW( q_index ) ;
-                }
-                curvature_cell_rhs(i) += ( grad_phi_i
-                                           * 
-                                           normal_at_q[ q_index ] 
-                                           * 
-                                           fe_values.JxW( q_index ) );
-            }
-        }
-        
-        cell->get_dof_indices(local_dof_indices);
-        constraints_re.distribute_local_to_global(curvature_cell_matrix,
-                                                  curvature_cell_rhs,
-                                                  local_dof_indices,
-                                                  systemMatrix_re,
-                                                  system_curvature_RHS);
-    } // end loop over cells
-    systemMatrix_re.compress(      VectorOperation::add );
-    system_curvature_RHS.compress( VectorOperation::add );
-
-    solve_cg(system_curvature_RHS, systemMatrix_re, curvature_field, "damped curvature");
-  }
-
-  template <int dim>
-  void LevelSetEquation<dim>::solve_cg(const LA::MPI::Vector&       RHS,
-                                       const LA::MPI::SparseMatrix& matrix,
-                                       LA::MPI::Vector&             solution,
-                                       const std::string&           callerFunction)
-  {
-    LA::MPI::Vector    completely_distributed_solution(locally_owned_dofs,
-                                                       mpi_communicator);
-    SolverControl            solver_control( dof_handler.n_dofs() * 2, 1e-6 * RHS.l2_norm() );
-#ifdef USE_PETSC_LA
-    LA::SolverCG solver(solver_control, mpi_communicator);
-#else
-    LA::SolverCG solver(solver_control);
-#endif
-
-    LA::MPI::PreconditionAMG preconditioner;
-    LA::MPI::PreconditionAMG::AdditionalData data;
-    preconditioner.initialize(matrix, data);
-
-    solver.solve( matrix, 
-                  completely_distributed_solution, 
-                  RHS, 
-                  preconditioner );
-    solution = completely_distributed_solution;
-    pcout << "cg solver called by " << callerFunction << " with "  << solver_control.last_step() << " CG iterations." << std::endl;
-  }
-
-
   template <int dim>
   void LevelSetEquation<dim>::solve_u()
   {
@@ -631,9 +421,9 @@ namespace LevelSetParallel
 
         data_out.add_data_vector(solution_u, gradient_postprocessor);
         
-        data_out.add_data_vector(normal_vector_field.block(0), "normal_x");
-        data_out.add_data_vector(normal_vector_field.block(1), "normal_y");
-        data_out.add_data_vector(curvature_field,              "curvature");
+        //data_out.add_data_vector(normal_vector_field.block(0), "normal_x");
+        //data_out.add_data_vector(normal_vector_field.block(1), "normal_y");
+        //data_out.add_data_vector(curvature_field,              "curvature");
          Vector<float> subdomain(triangulation.n_active_cells());
         for (unsigned int i = 0; i < subdomain.size(); ++i)
           subdomain(i) = triangulation.locally_owned_subdomain();
