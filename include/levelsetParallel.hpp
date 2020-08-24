@@ -170,8 +170,6 @@ namespace LevelSetParallel
     LA::MPI::Vector            systemRHS;                 // global system right-hand side
     LA::MPI::Vector            solution_u;
     
-    LA::MPI::Vector            re_solution_u;
-    LA::MPI::Vector            re_delta_solution_u;
     LA::MPI::BlockVector       normal_vector_field;
     LA::MPI::BlockVector       system_normal_RHS;         // system right-hand side for computing the normal vector
     LA::MPI::Vector            curvature_field;
@@ -187,6 +185,11 @@ namespace LevelSetParallel
     Timer                      timer;
     TensorFunction<1, dim> &   AdvectionField;
 
-    Reinitialization<dim>      reini;
+    /* 
+     * the following are subproblem classes
+    */
+    Reinitialization<dim>  reini;
+    //NormalVector<dim>      normal_vector_field;
+    //Curvature<dim>      reini;
   };
 } // end of namespace LevelSet

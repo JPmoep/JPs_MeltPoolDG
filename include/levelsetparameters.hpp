@@ -3,9 +3,13 @@
 #include <deal.II/base/function.h>
 #include <deal.II/base/tensor_function.h>
 #include <deal.II/grid/tria.h>
+#include "boundaryconditions.hpp"
+#include "fieldconditions.hpp"
 
 #include <fstream>
 #include <iostream>
+
+//@ put struct into namespace
 
 using namespace dealii;
 
@@ -49,7 +53,12 @@ struct LevelSetParameters
   std::string         filename_paraview_output;
   bool                compute_volume_output;
   std::string         filename_volume_output;
-  //
+
+  //// boundary conditions 
+  //BoundaryConditionsLevelSet boundary_conditions;
+
+  //// initial conditions
+  //FieldVariables             field_conditions;
 };
 
 template <int dim>

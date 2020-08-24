@@ -50,7 +50,11 @@ namespace LevelSetParallel
    *    Data for computing the normal vector of a given scalar field 
    *    considering diffusive damping;
    *
-   *    !!!!  the normal vector field is not normalized !!!! 
+   *    !!!! 
+   *          the normal vector field is not normalized to length one, 
+   *          it actually represents the gradient of the level set 
+   *          function 
+   *    !!!! 
    */
   
   struct NormalVectorData 
@@ -106,16 +110,19 @@ namespace LevelSetParallel
                 const IndexSet&                  locally_owned_dofs_in);
 
     /*
-     *  This function reinitializes the solution of the level set equation for a given solution
+     *  This function computes the (damped) normal vector field for a given solution of a scalar function
      */
     void 
-    solve( const VectorType & solution_in,
-                 BlockVectorType & normal_vector_out);
+    compute_normal_vector_field( const VectorType & level_set_solution_in,
+                                 BlockVectorType & normal_vector_out);
 
     void 
     print_me(); 
   
   private:
+    void 
+    solve_cg( VectorType & solution, const VectorType & rhs );
+
     const MPI_Comm & mpi_commun;
 
     NormalVectorData                        normal_vector_data;
@@ -125,6 +132,7 @@ namespace LevelSetParallel
 
     SparseMatrixType                        system_matrix;
     BlockVectorType                         system_rhs;
+    //BlockVectorType                         normal_vector_field;
     ConditionalOStream                      pcout;
   };
 } // namespace LevelSetParallel

@@ -9,9 +9,10 @@
 #include <deal.II/grid/grid_tools.h>
 // to use preconditioner 
 #include <deal.II/lac/petsc_precondition.h>
-#include <normalvector.hpp>
 #include <deal.II/fe/mapping.h>
+#include <deal.II/lac/solver_cg.h> // only for symmetric matrices
 
+#include <normalvector.hpp>
 
 namespace LevelSetParallel
 {
@@ -20,7 +21,7 @@ namespace LevelSetParallel
     template <int dim>
     NormalVector<dim>::NormalVector(const MPI_Comm & mpi_commun_in)
     : mpi_commun( mpi_commun_in )
-    , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_commun) == 0)
+    , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_commun_in) == 0)
     {
     }
 
@@ -28,7 +29,7 @@ namespace LevelSetParallel
     void
     NormalVector<dim>::initialize( const NormalVectorData &      data_in,
                                    const SparsityPatternType&    dsp_in,
-                                   DoFHandler<dim> const &       dof_handler_in,
+                                   const DoFHandler<dim>&        dof_handler_in,
                                    const ConstraintsType&        constraints_in,
                                    const IndexSet&               locally_owned_dofs_in
                                     )
@@ -49,14 +50,17 @@ namespace LevelSetParallel
             system_rhs.block(d).reinit( locally_owned_dofs, 
                                         mpi_commun ); 
         
+        /*
+         * here the current verbosity level is set
+         */
         const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
         this->pcout.set_condition(verbosity_active);
     }
 
     template <int dim>
     void 
-    NormalVector<dim>::solve( const VectorType & solution_in,
-                                    BlockVectorType & normal_vector_out )
+    NormalVector<dim>::compute_normal_vector_field( const VectorType & solution_in,
+                                                    BlockVectorType & normal_vector_out )
     {
         //TimerOutput::Scope t(computing_timer, "compute damped normals");  
         system_matrix = 0.0;
@@ -92,12 +96,7 @@ namespace LevelSetParallel
                 normal_cell =    0.0;
 
             fe_values.get_function_gradients( solution_in, normal_at_q ); // compute normals from level set solution at tau=0
-            //for (auto& n : normal_at_q)
-             //{
-                 //if (n.norm()<1e-10)
-                    //std::cout << "@@@@@@@@@@@q NORM IS ZERO " << n.norm() <<std::endl;
-                 //n /= n.norm();
-             //}
+            
             for (const unsigned int q_index : fe_values.quadrature_point_indices())
             {
                 for (unsigned int i=0; i<dofs_per_cell; ++i)
@@ -120,39 +119,57 @@ namespace LevelSetParallel
                     }
      
                     for (unsigned int d=0; d<dim; ++d)
-                    {
                         normal_cell_rhs[d](i) +=   phi_i
                                                    * 
                                                    normal_at_q[ q_index ][ d ]  
                                                    * 
                                                    fe_values.JxW( q_index );
-                    }
                 }
             }
             
             // assembly
             cell->get_dof_indices(local_dof_indices);
             for (unsigned int d=0; d<dim; ++d)
-                constraints->distribute_local_to_global(normal_cell_matrix,
-                                                          normal_cell_rhs[d],
-                                                          local_dof_indices,
-                                                          system_matrix,
-                                                          system_rhs.block(d));
+                constraints->distribute_local_to_global( normal_cell_matrix,
+                                                         normal_cell_rhs[d],
+                                                         local_dof_indices,
+                                                         system_matrix,
+                                                         system_rhs.block(d) );
              
           }
           system_matrix.compress(VectorOperation::add);
           for (unsigned int d=0; d<dim; ++d)
             system_rhs.block(d).compress(VectorOperation::add);
         
-        // @todo
-        //for (unsigned int d=0; d<dim; ++d)
-        //{
-            //solve_cg(system_rhs.block( d ), system_matrix, normal_vector_out.block( d ), "damped normals");
-            //constraints->distribute(normal_vector_out.block( d ));
-       //}
-
+          for (unsigned int d=0; d<dim; ++d)
+          {
+            solve_cg( normal_vector_out.block( d ), system_rhs.block( d ) );
+            constraints->distribute(normal_vector_out.block( d ));
+          }
     }
+    
+    template <int dim>
+    void 
+    NormalVector<dim>::solve_cg( VectorType & solution, const VectorType & rhs)
+    {
+      SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-6 * rhs.l2_norm() );
+      LA::SolverCG             solver( solver_control, mpi_commun );
 
+      LA::MPI::PreconditionAMG preconditioner;
+      LA::MPI::PreconditionAMG::AdditionalData data;
+      preconditioner.initialize(system_matrix, data);
+      
+      VectorType    completely_distributed_solution( locally_owned_dofs,
+                                                     mpi_commun);
+
+      solver.solve( system_matrix, 
+                    completely_distributed_solution, 
+                    rhs, 
+                    preconditioner );
+
+      solution = completely_distributed_solution;
+      pcout << "normal vectors: solver  with "  << solver_control.last_step() << " CG iterations." << std::endl;
+    }
 
     template <int dim>
     void
@@ -166,6 +183,7 @@ namespace LevelSetParallel
     // instantiation
     template class NormalVector<2>;
     template class NormalVector<3>;
+
 } // namespace LevelSetParallel
 
 

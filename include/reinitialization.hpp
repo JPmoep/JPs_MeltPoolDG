@@ -42,6 +42,7 @@ namespace LA
 
 // from multiphaseflow
 #include <utilityFunctions.hpp>
+#include "normalvector.hpp"
 
 namespace LevelSetParallel
 {
@@ -51,7 +52,7 @@ namespace LevelSetParallel
    *    Data for reinitialization of level set equation
    */
   
-  typedef enum {olsson2007, undefined}         ReinitModelType;
+  enum class ReinitModelType {olsson2007, undefined};
   
   struct ReinitializationData
   {
@@ -123,8 +124,8 @@ namespace LevelSetParallel
      *  This function reinitializes the solution of the level set equation for a given solution
      */
     void 
-    solve(
-           VectorType & solution_out );
+    solve( VectorType & solution_out );
+
     void 
     print_me(); 
   
@@ -140,7 +141,9 @@ namespace LevelSetParallel
     
     const MPI_Comm & mpi_commun;
 
-    ReinitializationData  reinit_data;
+    ReinitializationData                     reinit_data;
+    bool                                     compute_normal_vector;
+
     SmartPointer<const DoFHandlerType>       dof_handler;
     SmartPointer<const ConstraintsType>      constraints;
     IndexSet                                 locally_owned_dofs;
@@ -148,6 +151,6 @@ namespace LevelSetParallel
     SparseMatrixType      system_matrix;
     VectorType            system_rhs;
     ConditionalOStream    pcout;
-
+    NormalVector<dim>     normal_vector_field;
   };
 } // namespace LevelSetParallel

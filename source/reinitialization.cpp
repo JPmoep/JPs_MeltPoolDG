@@ -8,6 +8,8 @@
 #include <deal.II/grid/grid_tools.h>
 // to use preconditioner 
 #include <deal.II/lac/petsc_precondition.h>
+// to use DoFTools::
+#include <deal.II/dofs/dof_tools.h>
 
 #include <reinitialization.hpp>
 
@@ -19,6 +21,7 @@ namespace LevelSetParallel
     Reinitialization<dim>::Reinitialization(const MPI_Comm & mpi_commun_in)
     : mpi_commun( mpi_commun_in )
     , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_commun) == 0)
+    , normal_vector_field( mpi_commun_in )
     {
     }
 
@@ -46,6 +49,20 @@ namespace LevelSetParallel
         
         const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
         this->pcout.set_condition(verbosity_active);
+
+        /*
+         * initialize the normal_vector_field computation
+         * @ todo: how should data be transferred from the base class
+         */
+        NormalVectorData normal_vector_data;
+        normal_vector_data.damping_parameter = 1e-6;
+        normal_vector_data.degree            = reinit_data.degree;
+
+        //normal_vector_field.initialize( normal_vector_data, 
+                                        //dsp_in,
+                                        //dof_handler,
+                                        //constraints,
+                                        //locally_owned_dofs);
     }
 
     template <int dim>
@@ -91,11 +108,33 @@ namespace LevelSetParallel
         
         std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
         
-        bool normalsQuick = true;
+        bool normalsQuick = false;
 
         const double d_tau = 0.01;//GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim); // * GridTools::minimal_cell_diameter(triangulation) ;
         unsigned int re_timestep_number = 0;
         double re_time=d_tau;
+
+        // @ is there a shorter way to extract the latter
+        IndexSet locally_relevant_dofs;
+        DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
+        
+        BlockVectorType solution_normal_vector;
+        solution_normal_vector.reinit( dim ); 
+        
+        for (unsigned int d=0; d<dim; ++d)
+            solution_normal_vector.block(d).reinit(locally_owned_dofs,
+                                                   locally_relevant_dofs,
+                                                   mpi_commun);
+        solution_normal_vector.collect_sizes();  // @ is this necessary
+        
+        /*
+         * compute vector field of normals to the current solution of the level set function
+         * @todo: is there an option that normal vectors are also accessible from the base level set class 
+         *        for output routines?
+         */
+        
+        normal_vector_field.compute_normal_vector_field( solution_in, solution_normal_vector );
+
         for (  ; 
               re_timestep_number < reinit_data.max_reinit_steps; 
               re_time += d_tau, ++re_timestep_number
@@ -103,9 +142,7 @@ namespace LevelSetParallel
         {
             system_rhs      = 0.0;
             system_matrix   = 0.0;
-            //if (re_timestep_number == 0 )
-                //computeNormalLevelSet();
-            //}
+            
             for (const auto &cell : dof_handler->active_cell_iterators())
             if (cell->is_locally_owned())
             {
@@ -127,16 +164,16 @@ namespace LevelSetParallel
                }
                else
                {
-                   AssertThrow(false, ExcMessage("not implemented"))
-                   //for (unsigned int d=0; d<dim; ++d )
-                   //{
-                       //std::vector<double> temp (n_q_points);
-                       //fe_values.get_function_values(  normal_vector_field.block(d), temp); // compute normals from level set solution at tau=0
-                       //for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                           //normalAtQ[q_index][d] = temp[q_index];
-                   //}
-                   //for (auto& n : normalAtQ)
-                       //n /= n.norm(); //@todo: add exception
+                   //AssertThrow(false, ExcMessage("not implemented"))
+                   for (unsigned int d=0; d<dim; ++d )
+                   {
+                       std::vector<double> temp (n_q_points);
+                       fe_values.get_function_values(  solution_normal_vector.block(d), temp); // compute normals from level set solution at tau=0
+                       for (const unsigned int q_index : fe_values.quadrature_point_indices())
+                           normalAtQ[q_index][d] = temp[q_index];
+                   }
+                   for (auto& n : normalAtQ)
+                       n /= n.norm(); //@todo: add exception
                }
                // @todo: only compute normals once during timestepping
                for (const unsigned int q_index : fe_values.quadrature_point_indices())
@@ -227,13 +264,13 @@ namespace LevelSetParallel
     void
     Reinitialization<dim>::print_me( )
     {
-        pcout << " hello from reinitialization" << std::endl;   
-        pcout << "reinit_model: "               << reinit_data.reinit_model     << std::endl;
+        pcout << "hello from reinitialization"                                  << std::endl;   
+        // @ is there a more elegant solution?
+        pcout << "reinit_model: "               <<static_cast<std::underlying_type<ReinitModelType>::type>(reinit_data.reinit_model)     << std::endl;
         pcout << "d_tau: "                      << reinit_data.d_tau            << std::endl;
         pcout << "constant_epsilon: "           << reinit_data.constant_epsilon << std::endl;
         pcout << "max reinit steps: "           << reinit_data.max_reinit_steps << std::endl;
     }
-
 
     // instantiation
     template class Reinitialization<2>;

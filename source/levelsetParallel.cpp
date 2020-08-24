@@ -33,7 +33,7 @@ namespace LevelSetParallel
     , timer(            mpi_communicator)
     , AdvectionField(   AdvectionField_ )
     , volume_fraction(2,0)
-    , reini( mpi_commun)
+    , reini( mpi_commun )
   {}
   
   
@@ -54,13 +54,6 @@ namespace LevelSetParallel
     solution_u.reinit(locally_owned_dofs,
                       locally_relevant_dofs,
                       mpi_communicator);
-    
-    re_solution_u.reinit( locally_owned_dofs,
-                          locally_relevant_dofs,
-                          mpi_communicator);
-    
-    re_delta_solution_u.reinit(locally_owned_dofs,
-                               mpi_communicator);
     
     system_normal_RHS.reinit( dim ); 
     normal_vector_field.reinit( dim); 
@@ -265,7 +258,6 @@ namespace LevelSetParallel
                       dof_handler,
                       constraints_re,
                       locally_owned_dofs);
-  
   }
 
   template <int dim>
@@ -274,6 +266,7 @@ namespace LevelSetParallel
     // update the solution vector to the reinitialized value
     reini.solve(solution_u);
   }
+  
   
   template <int dim>
   void LevelSetEquation<dim>::computeNormalLevelSet()

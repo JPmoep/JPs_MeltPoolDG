@@ -9,4 +9,5 @@ INCLUDE_DIRECTORIES(
         ${CMAKE_SOURCE_DIR}/include
         )
 ADD_SUBDIRECTORY(error_vortexbubble_parallel)
+ADD_SUBDIRECTORY(newFrameWorkTest)
 
