@@ -8,7 +8,11 @@
 #include "levelsetParallel.hpp"
 #include "levelsetparameters.hpp"
 #include "utilityFunctions.hpp"
+#include "simulationbase.hpp"
 #include <cmath>
+
+namespace LevelSetParallel
+{
 
 template <int dim>
 class ExactSolution : public Function<dim> 
@@ -35,7 +39,7 @@ template <int dim>
 double InitializePhi<dim>::value(const Point<dim> &p,
                                  const unsigned int /*component*/) const
 {
-    Point<2> center     = Point<2>(0.5,0.75); 
+    Point<dim> center     = Point<dim>(0.5,0.75); 
     const double radius = 0.15;
 
     return utilityFunctions::tanHyperbolicusCharacteristicFunction( 
@@ -81,11 +85,46 @@ void DirichletCondition<dim>::markDirichletEdges(Triangulation<dim>& triangulati
     //}
 }
 
+template<int dim>
+class Simulation : public SimulationBase<dim>
+{
+public:
+    Simulation() : SimulationBase<dim>()
+    {}
+
+    void set_parameters ()
+    {
+    }
+
+    void set_boundary_conditions()
+    {
+        this->boundary_conditions.dirichlet_bc.emplace(std::make_pair(utilityFunctions::BoundaryConditions::Types::dirichlet, std::make_shared<DirichletCondition<dim>>()));
+    }
+
+    void set_field_conditions()
+    {   
+        this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>(); 
+        //// @ how to set correct time of Advection field?
+        this->field_conditions.advection_field = std::make_shared<AdvectionField<dim>>(); 
+    }
+
+    void create_spatial_discretization()
+    {
+    }
+
+};
+
+template class Simulation<2>; 
+//template class Simulation<3>; //@ does not work currently
+} // LevelSetParallel
+
+
 
 int main(int argc, char* argv[])
 {
 
-  //using namespace LevelSetParallel;
+  using namespace LevelSetParallel;
+
   Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
   MPI_Comm mpi_communicator;
   mpi_communicator = MPI_COMM_WORLD;
@@ -104,6 +143,16 @@ int main(int argc, char* argv[])
         paramfile = "vortexbubble.prm";
 
       LevelSetParameters parameters (paramfile);
+      
+      //if ( parameters.dimension==2 )
+      //{
+        //auto mySim = Simulation<2>();
+        //mySim.set_field_conditions();
+        //mySim.set_boundary_conditions();
+        //Point<2> center     = Point<2>(0.5,0.75); 
+        //std::cout << "my advection " << mySim.field_conditions.advection_field->value(center) << std::endl;
+        //std::cout << "my bc        " << mySim.boundary_conditions.dirichlet_bc[utilityFunctions::BoundaryConditions::Types::dirichlet]->value(center) << std::endl;
+      //}
 
       if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
       {

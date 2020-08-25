@@ -61,6 +61,9 @@ struct LevelSetParameters
   //FieldVariables             field_conditions;
 };
 
+namespace LevelSetParallel
+{
+
 template <int dim>
 class InitializePhi : public Function<dim>
 {
@@ -104,4 +107,4 @@ class AdvectionField : public TensorFunction<1, dim>
 
         Tensor<1, dim> value(const Point<dim> & p) const override;
 };
-
+}

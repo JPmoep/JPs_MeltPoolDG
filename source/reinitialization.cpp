@@ -13,6 +13,8 @@
 
 #include <reinitialization.hpp>
 
+#include <timeiterator.hpp>
+
 namespace LevelSetParallel
 {
     using namespace dealii; 
@@ -63,7 +65,8 @@ namespace LevelSetParallel
             solution_normal_vector.block(d).reinit(locally_owned_dofs,
                                                    locally_relevant_dofs,
                                                    mpi_commun);
-
+        
+        //@ introduce new C++20 features
         NormalVectorData normal_vector_data;
         normal_vector_data.damping_parameter = 1e-6;
         normal_vector_data.degree            = reinit_data.degree;
@@ -96,6 +99,7 @@ namespace LevelSetParallel
     Reinitialization<dim>::solve_olsson_model( VectorType & solution_out )
     {
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
+
         VectorType solution_in = solution_out;
         
         auto qGauss = QGauss<dim>( reinit_data.degree+1 );
@@ -117,25 +121,22 @@ namespace LevelSetParallel
         std::vector<Tensor<1,dim>>  psiGradAtQ( n_q_points, Tensor<1,dim>() );
         
         std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
-        
-        const double d_tau = 0.01;//GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim); // * GridTools::minimal_cell_diameter(triangulation) ;
-        unsigned int re_timestep_number = 0;
-        double re_time=d_tau;
-
         /*
          * compute vector field of normals to the current solution of the level set function
          * @todo: is there an option that normal vectors are also accessible from the base level set class 
          *        for output routines?
          */
-        // @ is there a shorter way to extract the latter ?
         
         normal_vector_field.compute_normal_vector_field( solution_in, solution_normal_vector );
+        
+        std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
 
-        for (  ; 
-              re_timestep_number < reinit_data.max_reinit_steps; 
-              re_time += d_tau, ++re_timestep_number
-              ) // 3 to 5 timesteps are enough to reach steady state according to Kronbichler et al.
+        initialize_time_iterator(time_iterator); 
+        
+        while ( !time_iterator->is_finished() )
         {
+            const double d_tau = time_iterator->get_next_time_increment();
+
             system_rhs      = 0.0;
             system_matrix   = 0.0;
             
@@ -201,10 +202,10 @@ namespace LevelSetParallel
             }
             system_matrix.compress( VectorOperation::add );
             system_rhs.compress(    VectorOperation::add );
-            
+
             SolverControl solver_control( dof_handler->n_dofs() , 1e-6 * system_rhs.l2_norm() );
             
-            LA::SolverCG solver(solver_control, mpi_commun);
+            LA::SolverCG solver( solver_control, mpi_commun );
 
             LA::MPI::PreconditionAMG preconditioner;
             LA::MPI::PreconditionAMG::AdditionalData data;
@@ -229,8 +230,9 @@ namespace LevelSetParallel
             solution_out = re_solution_u_temp;
             solution_out.update_ghost_values();
 
-            pcout << "      | Time step " << re_timestep_number << " at tau=" << std::fixed << std::setprecision(5); 
-            pcout << re_time << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << "\t |R|²/dT = ";
+            time_iterator->print_me( pcout.get_stream() );
+            
+            pcout << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << "\t |R|²/dT = ";
             pcout << re_delta_solution_u.l2_norm()/d_tau << "   with " << solver_control.last_step() << " CG iterations." << std::endl;
 
             if (re_delta_solution_u.l2_norm() / d_tau < 1e-6)
@@ -240,7 +242,20 @@ namespace LevelSetParallel
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
     }
     
-
+    
+    template <int dim>
+    void
+    Reinitialization<dim>::initialize_time_iterator( std::shared_ptr<TimeIterator> t )
+    {
+        // @ shift into own function ?
+        TimeIteratorData time_data;
+        time_data.start_time       = 0.0;
+        time_data.end_time         = 100.;
+        time_data.time_increment   = reinit_data.d_tau; 
+        time_data.max_n_time_steps = reinit_data.max_reinit_steps;
+        
+        t->initialize(time_data);
+    }
 
     template <int dim>
     void
@@ -248,7 +263,7 @@ namespace LevelSetParallel
     {
         pcout << "hello from reinitialization"                                  << std::endl;   
         // @ is there a more elegant solution?
-        pcout << "reinit_model: "               <<static_cast<std::underlying_type<ReinitModelType>::type>(reinit_data.reinit_model)     << std::endl;
+        pcout << "reinit_model: "               << static_cast<std::underlying_type<ReinitModelType>::type>(reinit_data.reinit_model) << std::endl;
         pcout << "d_tau: "                      << reinit_data.d_tau            << std::endl;
         pcout << "constant_epsilon: "           << reinit_data.constant_epsilon << std::endl;
         pcout << "max reinit steps: "           << reinit_data.max_reinit_steps << std::endl;

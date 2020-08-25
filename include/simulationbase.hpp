@@ -4,6 +4,7 @@
 #include "levelsetParallel.hpp"
 #include "boundaryconditions.hpp"
 #include "fieldconditions.hpp"
+#include <memory>
 
 namespace LevelSetParallel
 {
@@ -21,8 +22,10 @@ namespace LevelSetParallel
             virtual void set_field_conditions() = 0;
 
             virtual void create_spatial_discretization() = 0;
-        protected:
+
             LevelSetParameters parameters;
+            FieldConditions<dim>               field_conditions;
+            BoundaryConditionsLevelSet<dim>    boundary_conditions;
     };
 
 }

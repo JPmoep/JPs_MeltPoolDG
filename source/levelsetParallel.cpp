@@ -212,7 +212,7 @@ namespace LevelSetParallel
   {
     ReinitializationData reinit_data;
     reinit_data.reinit_model        = ReinitModelType::olsson2007;
-    reinit_data.d_tau               = GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim);
+    reinit_data.d_tau               = GridTools::minimal_cell_diameter(triangulation);
     reinit_data.degree              = parameters.levelset_degree;
     reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
     
@@ -294,33 +294,6 @@ namespace LevelSetParallel
     solution_u = completely_distributed_solution;
     //solution_u.update_ghost_values();
   }
-  
-  //@ to be added!!
-  //template <int dim>
-  //void LevelSetEquation<dim>::computeAdvection( TensorFunction<1, dim> &AdvectionField_)
-  //{
-    //AdvectionField_.set_time(time);
-    
-    //std::vector<types::global_dof_index> local_dof_indices( fe.dofs_per_cell );
-
-    //for (const auto &cell : dof_handler.active_cell_iterators())
-    ////if(cell->is_locally_owned())
-    ////{
-        //cell->get_dof_indices(local_dof_indices);
-        //for (auto vertex_index : GeometryInfo<dim>::vertex_indices())
-        //{
-            ////if (locally_owned_dofs.is_element(local_dof_indices[vertex_index]))
-            ////{
-                //auto a = AdvectionField_.value(cell->vertex(vertex_index)); 
-                //for (unsigned int d=0; d<dim; d++)
-                    //advection_field.block(d)[local_dof_indices[vertex_index]] = a[d];
-            ////} 
-            ////else
-                ////std::cout << "proc: " << Utilities::MPI::this_mpi_process(mpi_communicator) << "dof" << local_dof_indices[vertex_index] << std::endl;
-        //}
-    ////}
-    //std::cout << " -----------" << std::endl;
-  //}
 
   //// @ to be rearranged
   template <int dim>
@@ -488,12 +461,13 @@ namespace LevelSetParallel
 
     pcout << "setup system " << std::endl;
     timestep_number=0;
+
     setup_system( DirichletValues );
+
     setInitialConditions(InitialValues);
+
     if ( parameters.activate_reinitialization )    
-    {
         initialize_reinitialization_model();
-    }
     
     output_results( timestep_number );    // print initial state
 

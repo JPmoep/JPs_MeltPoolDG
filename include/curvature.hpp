@@ -30,8 +30,6 @@ namespace LA
 #include <deal.II/base/quadrature_lib.h>
 // for using smart pointers
 #include <deal.II/base/smartpointer.h>
-//// for distributed triangulation
-//#include <deal.II/distributed/tria.h>
 // for dof_handler type
 #include <deal.II/dofs/dof_handler.h>
 // for FE_Q<dim> type
@@ -43,58 +41,41 @@ namespace LA
 // from multiphaseflow
 #include "utilityFunctions.hpp"
 #include "normalvector.hpp"
-#include "timeiterator.hpp"
 
 namespace LevelSetParallel
 {
   using namespace dealii; 
 
   /*
-   *    Data for reinitialization of level set equation
+   *    Data for computing curvature of the level set function
    */
   
-  enum class ReinitModelType {olsson2007, undefined};
-  
-  struct ReinitializationData
+  struct CurvatureData
   {
-    ReinitializationData()
-        : reinit_model(ReinitModelType::undefined)
-        , d_tau(0.01)
-        , constant_epsilon(0.0)
+    CurvatureData()
+        : damping_parameter(0.0)
         , degree(1)
-        , max_reinit_steps(5)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
     {
     }
-
-    // enum which reinitialization model should be solved
-    ReinitModelType reinit_model;
     
-    // time step for reinitialization
-    double d_tau;
+    // parameter for diffusive term in computation of normals
+    double damping_parameter;
     
-    // choose a constant, not cell-size dependent smoothing parameter
-    double constant_epsilon;
-    
-    // interpolation degree of reinitalization function
+    // interpolation degree of normal vector interpolation
     unsigned int degree;
 
-    // maximum number of reinitialization steps to be completed
-    unsigned int max_reinit_steps;
-    
-    // maximum number of reinitialization steps to be completed
+    // current verbosity level --> see possible options in utilityFunctions
     utilityFunctions::VerbosityType verbosity_level;
-
-    // @ add lambda function for calculating epsilon
   };
   
   /*
-   *     Reinitialization model for reobtaining the signed-distance 
+   *     Curvature model for reobtaining the signed-distance 
    *     property of the  level set equation
    */
   
   template <int dim>
-  class Reinitialization
+  class Curvature
   {
   private:
     typedef LA::MPI::Vector                           VectorType;
@@ -112,51 +93,50 @@ namespace LevelSetParallel
     /*
      *  Constructor
      */
-    Reinitialization(const MPI_Comm & mpi_commun_in);
+    Curvature(const MPI_Comm & mpi_commun_in);
 
     void
-    initialize( const ReinitializationData &     data_in,
-                const SparsityPatternType&       dsp_in,
-                DoFHandler<dim> const &          dof_handler_in,
-                const ConstraintsType&           constraints_in,
-                const IndexSet&                  locally_owned_dofs_in,
-                const IndexSet&                  locally_relevant_dofs_in);
+    initialize( const CurvatureData &       data_in,
+                const SparsityPatternType&  dsp_in,
+                DoFHandler<dim> const &     dof_handler_in,
+                const ConstraintsType&      constraints_in,
+                const IndexSet&             locally_owned_dofs_in,
+                const IndexSet&             locally_relevant_dofs_in);
 
     /*
-     *  This function reinitializes the solution of the level set equation for a given solution
+     *  This function calculates the curvature of the current level set function according
+     *  to
      */
     void 
-    solve( VectorType & solution_out );
+    solve( const VectorType & solution_in,
+                 VectorType & curvature_solution_out );
+    
+    void 
+    solve( const VectorType & solution_in );
+    
+    VectorType 
+    get_curvature_values(); 
 
     void 
     print_me(); 
   
   private:
-    /* Olsson, Kreiss, Zahedi (2007) model 
-     *
-     * for reinitialization of the level set equation 
-     * 
-     */
     void 
-    solve_olsson_model( VectorType & solution_out );
-
-    void
-    initialize_time_iterator(std::shared_ptr<TimeIterator> t);
-
+    solve_cg( VectorType & solution, const VectorType & rhs );
+    
     const MPI_Comm & mpi_commun;
 
-    ReinitializationData                     reinit_data;
-    bool                                     compute_normal_vector;
+    CurvatureData                            curvature_data;
 
     SmartPointer<const DoFHandlerType>       dof_handler;
     SmartPointer<const ConstraintsType>      constraints;
     IndexSet                                 locally_owned_dofs;
     IndexSet                                 locally_relevant_dofs;
 
-    SparseMatrixType      system_matrix;
-    VectorType            system_rhs;
-    ConditionalOStream    pcout;
-    NormalVector<dim>     normal_vector_field;
-    BlockVectorType       solution_normal_vector;
+    SparseMatrixType                         system_matrix;
+    VectorType                               system_rhs;
+    ConditionalOStream                       pcout;
+    VectorType                               curvature_field;
+    NormalVector<dim>                        normal_vector_field;
   };
 } // namespace LevelSetParallel
