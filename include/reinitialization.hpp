@@ -64,6 +64,7 @@ namespace LevelSetParallel
         , degree(1)
         , max_reinit_steps(5)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
+        , min_cell_size()
     {
     }
 
@@ -84,6 +85,9 @@ namespace LevelSetParallel
     
     // maximum number of reinitialization steps to be completed
     utilityFunctions::VerbosityType verbosity_level;
+    
+    // minimum cell size --> to compute CFL condition
+    double min_cell_size;
 
     // @ add lambda function for calculating epsilon
   };

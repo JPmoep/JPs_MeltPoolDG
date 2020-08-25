@@ -137,23 +137,10 @@ int main(int argc, char* argv[])
       const double rightDomain   = 1.0;
  
       std::string paramfile;
-      if (argc>1)
-        paramfile = argv[1];
-      else
-        paramfile = "vortexbubble.prm";
+      paramfile = "/home/schreter/deal/multiphaseflow/tests/vortexbubble/vortexbubble.prm";
 
       LevelSetParameters parameters (paramfile);
       
-      //if ( parameters.dimension==2 )
-      //{
-        //auto mySim = Simulation<2>();
-        //mySim.set_field_conditions();
-        //mySim.set_boundary_conditions();
-        //Point<2> center     = Point<2>(0.5,0.75); 
-        //std::cout << "my advection " << mySim.field_conditions.advection_field->value(center) << std::endl;
-        //std::cout << "my bc        " << mySim.boundary_conditions.dirichlet_bc[utilityFunctions::BoundaryConditions::Types::dirichlet]->value(center) << std::endl;
-      //}
-
       if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
           parameters.print_parameters();
 

@@ -215,6 +215,7 @@ namespace LevelSetParallel
     reinit_data.d_tau               = GridTools::minimal_cell_diameter(triangulation);
     reinit_data.degree              = parameters.levelset_degree;
     reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
+    reinit_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
     
     DynamicSparsityPattern dsp_re( locally_relevant_dofs );
     DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_no_dirichlet, false );
@@ -450,16 +451,10 @@ namespace LevelSetParallel
                                    const Function<dim>& DirichletValues) 
   {
     timer.start();
-    pcout << "Running with "
-#ifdef USE_PETSC_LA
-          << "PETSc"
-#else
-          << "Trilinos"
-#endif
+    pcout << "Running "
           << " on " << Utilities::MPI::n_mpi_processes(mpi_communicator)
           << " MPI rank(s)..." << std::endl;
 
-    pcout << "setup system " << std::endl;
     timestep_number=0;
 
     setup_system( DirichletValues );
@@ -487,13 +482,22 @@ namespace LevelSetParallel
         if ( parameters.activate_reinitialization )    
             compute_reinitialization_model();
 
+        if (parameters.output_norm_levelset)
+            pcout << " levelset function ||phi|| = " << solution_u.l2_norm() << std::endl;
+
         output_results(timestep_number);
 
-        computing_timer.print_summary();
-        pcout << "+" << std::string(70, '-') << "+" << std::endl;
-        pcout << "| real total wall clock time elapsed since start: " << timer.wall_time() << " s" << std::endl;
-        pcout << "+" << std::string(70, '-') << "+" << std::endl;
-        computing_timer.reset();    
+        if ( !parameters.output_walltime )
+            computing_timer.disable_output();
+        else
+        {
+            computing_timer.print_summary();
+            pcout << "+" << std::string(70, '-') << "+" << std::endl;
+            pcout << "| real total wall clock time elapsed since start: " << timer.wall_time() << " s" << std::endl;
+            pcout << "+" << std::string(70, '-') << "+" << std::endl;
+            computing_timer.reset();  
+        } 
+
         if ( ( time+time_step ) > parameters.end_time)
         {
             time_step = parameters.end_time - time;

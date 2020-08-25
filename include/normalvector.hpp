@@ -63,6 +63,7 @@ namespace LevelSetParallel
         : damping_parameter(0.0)
         , degree(1)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
+        , min_cell_size(0.0)
     {
     }
     
@@ -74,6 +75,9 @@ namespace LevelSetParallel
 
     // current verbosity level --> see possible options in utilityFunctions
     utilityFunctions::VerbosityType verbosity_level;
+    
+    // minimum size of cells --> to evaluate damping parameter @todo: should this parameter be made cell-size-dependent?
+    double min_cell_size;
   };
   
   /*

@@ -89,6 +89,10 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
   prm.leave_subsection();
   prm.enter_subsection ("output");
   {
+      prm.declare_entry ("output walltime", "0", Patterns::Integer(),
+                         "this flag enables the output of wall times (should be disabled if a test file is prepared)");
+      prm.declare_entry ("output norm levelset", "0", Patterns::Integer(),
+                         "this flag enables the output of the norm of the dof vector (should be ENABLED if a test file is prepared)");
       prm.declare_entry ("compute paraview output", "0", Patterns::Integer(),
                          "boolean for producing paraview output files");
       prm.declare_entry ("filename paraview output", "solution", Patterns::Anything(),
@@ -141,6 +145,8 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
       enable_CFL_condition = (prm.get_double ("enable CFL condition"));
   prm.leave_subsection ();
   prm.enter_subsection ("output");
+      output_walltime =         prm.get_integer("output walltime");
+      output_norm_levelset =    prm.get_integer("output norm levelset");
       compute_paraview_output = prm.get_integer("compute paraview output");
       filename_paraview_output =        prm.get("filename paraview output");
       compute_volume_output =   prm.get_integer("compute volume output");
@@ -150,27 +156,29 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
 
 void LevelSetParameters::print_parameters()
 {
-    std::cout << "+----------------------------------------"                << std::endl;
-    std::cout << "|       input protocol                  |"                << std::endl;
-    std::cout << "+----------------------------------------"                << std::endl;
-    std::cout << "| dimension                 " << dimension                << std::endl;                   
-    std::cout << "| global_refinements        " << global_refinements       << std::endl;                   
-    std::cout << "| levelset_degree           " << levelset_degree          << std::endl;                   
-    std::cout << "| artificial_diffusivity    " << artificial_diffusivity   << std::endl;                   
-    std::cout << "| activate_reinitialization " << activate_reinitialization<< std::endl;                   
-    std::cout << "| max_n_reinit_steps        " << max_n_reinit_steps       << std::endl;                   
-    std::cout << "| ------------ time stepping -------------"               << std::endl;    
-    std::cout << "| theta                     " << theta                    << std::endl;                   
-    std::cout << "| start_time                " << start_time               << std::endl;                   
-    std::cout << "| end_time                  " << end_time                 << std::endl;                   
-    std::cout << "| time_step_size            " << time_step_size           << std::endl;
-    std::cout << "| enable_CFL_condition      " << enable_CFL_condition     << std::endl;
-    std::cout << "| --------------- output ----------------"                << std::endl;    
-    std::cout << "| compute_paraview_output   " << compute_paraview_output  << std::endl;                   
-    std::cout << "| filename_paraview_output   " << filename_paraview_output  << std::endl;                   
-    std::cout << "| compute_volume_output   " << compute_volume_output  << std::endl;                   
-    std::cout << "| filename_volume_output   " << filename_volume_output  << std::endl;                   
-    std::cout << "+----------------------------------------"                << std::endl;
+    std::cout << "+----------------------------------------"                 << std::endl;
+    std::cout << "|       input protocol                  |"                 << std::endl;
+    std::cout << "+----------------------------------------"                 << std::endl;
+    std::cout << "| dimension                 " << dimension                 << std::endl;                   
+    std::cout << "| global_refinements        " << global_refinements        << std::endl;                   
+    std::cout << "| levelset_degree           " << levelset_degree           << std::endl;                   
+    std::cout << "| artificial_diffusivity    " << artificial_diffusivity    << std::endl;                   
+    std::cout << "| activate_reinitialization " << activate_reinitialization << std::endl;                   
+    std::cout << "| max_n_reinit_steps        " << max_n_reinit_steps        << std::endl;                   
+    std::cout << "| ------------ time stepping -------------"                << std::endl;    
+    std::cout << "| theta                     " << theta                     << std::endl;                   
+    std::cout << "| start_time                " << start_time                << std::endl;                   
+    std::cout << "| end_time                  " << end_time                  << std::endl;                   
+    std::cout << "| time_step_size            " << time_step_size            << std::endl;
+    std::cout << "| enable_CFL_condition      " << enable_CFL_condition      << std::endl;
+    std::cout << "| --------------- output ----------------"                 << std::endl;    
+    std::cout << "| output_walltime           " << output_walltime           << std::endl;                   
+    std::cout << "| output_norm_levelset      " << output_norm_levelset      << std::endl;                   
+    std::cout << "| compute_paraview_output   " << compute_paraview_output   << std::endl;                   
+    std::cout << "| filename_paraview_output  " << filename_paraview_output  << std::endl;                   
+    std::cout << "| compute_volume_output     " << compute_volume_output     << std::endl;                   
+    std::cout << "| filename_volume_output    " << filename_volume_output    << std::endl;                   
+    std::cout << "+----------------------------------------"                 << std::endl;
 
 }
 

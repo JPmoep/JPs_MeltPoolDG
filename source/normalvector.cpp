@@ -85,7 +85,7 @@ namespace LevelSetParallel
         const unsigned int n_q_points    = qGauss.size();
         std::vector<Tensor<1,dim>>           normal_at_q(  n_q_points, Tensor<1,dim>() );
 
-        const double damping = 0.0; // normal_vector_data.damping_parameter; //GridTools::minimal_cell_diameter(triangulation) * 0.5; //@todo: modifiy damping parameter
+        const double damping = normal_vector_data.min_cell_size * 0.5; //GridTools::minimal_cell_diameter(triangulation) * 0.5; //@todo: modifiy damping parameter
         
         for (const auto &cell : dof_handler->active_cell_iterators())
         if (cell->is_locally_owned())
@@ -193,7 +193,7 @@ namespace LevelSetParallel
     void 
     NormalVector<dim>::solve_cg( VectorType & solution, const VectorType & rhs)
     {
-      SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-6 * rhs.l2_norm() );
+      SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-8 * rhs.l2_norm() );
       LA::SolverCG             solver( solver_control, mpi_commun );
 
       LA::MPI::PreconditionAMG preconditioner;

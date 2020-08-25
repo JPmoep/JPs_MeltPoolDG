@@ -25,11 +25,11 @@ IF(NOT ${deal.II_FOUND})
     )
 ENDIF()
 
-IF(NOT DEAL_II_WITH_P4EST)
-  MESSAGE(FATAL_ERROR
-    "\nExaDG requires a deal.II installation built with support for p4est but it appears to be missing!\n"
-    )
-ENDIF()
+#IF(NOT DEAL_II_WITH_P4EST)
+  #MESSAGE(FATAL_ERROR
+    #"\nThis library requires a deal.II installation built with support for p4est but it appears to be missing!\n"
+    #)
+#ENDIF()
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
@@ -68,12 +68,19 @@ ADD_CUSTOM_TARGET(release
   COMMENT "Switch CMAKE_BUILD_TYPE to Release\nPlease call 'make' to build the release project"
   )
 
+IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
+  SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
+ENDIF()
+
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 DEAL_II_SETUP_TARGET(multiphaseflow)
 
-enable_testing()
+# applications
 ADD_SUBDIRECTORY(simulations)
+
+# tests
+enable_testing()
 ADD_SUBDIRECTORY(tests)
 
 

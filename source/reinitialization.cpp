@@ -15,6 +15,8 @@
 
 #include <timeiterator.hpp>
 
+#include <reinitializationoperator.hpp>
+
 namespace LevelSetParallel
 {
     using namespace dealii; 
@@ -71,6 +73,7 @@ namespace LevelSetParallel
         normal_vector_data.damping_parameter = 1e-6;
         normal_vector_data.degree            = reinit_data.degree;
         normal_vector_data.verbosity_level   = reinit_data.verbosity_level;
+        normal_vector_data.min_cell_size     = reinit_data.min_cell_size;
 
         normal_vector_field.initialize( normal_vector_data, 
                                         dsp_in,
@@ -98,6 +101,8 @@ namespace LevelSetParallel
     void 
     Reinitialization<dim>::solve_olsson_model( VectorType & solution_out )
     {
+
+        ReinitializationOperator<2,1,double> rei;
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
 
         VectorType solution_in = solution_out;
@@ -203,7 +208,7 @@ namespace LevelSetParallel
             system_matrix.compress( VectorOperation::add );
             system_rhs.compress(    VectorOperation::add );
 
-            SolverControl solver_control( dof_handler->n_dofs() , 1e-6 * system_rhs.l2_norm() );
+            SolverControl solver_control( dof_handler->n_dofs() , 1e-8 * system_rhs.l2_norm() );
             
             LA::SolverCG solver( solver_control, mpi_commun );
 
@@ -230,7 +235,7 @@ namespace LevelSetParallel
             solution_out = re_solution_u_temp;
             solution_out.update_ghost_values();
 
-            time_iterator->print_me( pcout.get_stream() );
+            //time_iterator->print_me( pcout.get_stream() );
             
             pcout << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << "\t |R|²/dT = ";
             pcout << re_delta_solution_u.l2_norm()/d_tau << "   with " << solver_control.last_step() << " CG iterations." << std::endl;

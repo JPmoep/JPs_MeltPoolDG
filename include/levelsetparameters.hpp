@@ -49,6 +49,8 @@ struct LevelSetParameters
   bool                enable_CFL_condition; 
 
   // output options
+  bool                output_walltime;
+  bool                output_norm_levelset;
   bool                compute_paraview_output;
   std::string         filename_paraview_output;
   bool                compute_volume_output;

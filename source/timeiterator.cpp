@@ -20,7 +20,7 @@ namespace LevelSetParallel
     }
 
     bool
-    TimeIterator::is_finished()
+    TimeIterator::is_finished() 
     {
         if (n_time_steps>=time_data.max_n_time_steps)
             return true;
@@ -40,11 +40,16 @@ namespace LevelSetParallel
     {
         current_time_increment *= factor;
     }
+    //void
+    //TimeIterator::print_me(ConditionalOstream pcout)
+    //{
+    
+    //}
 
     void
     TimeIterator::print_me(std::ostream & pcout)
     {
-        pcout << "      | Time step " << n_time_steps << " at t=" << std::fixed 
-              << std::setprecision(5) << current_time << std::endl; 
+        //pcout << "      | Time step " << n_time_steps << " at t=" << std::fixed 
+              //<< std::setprecision(5) << current_time << std::endl; 
     }
 }
