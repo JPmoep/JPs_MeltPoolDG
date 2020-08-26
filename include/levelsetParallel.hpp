@@ -38,6 +38,9 @@ namespace LA
 #include <deal.II/fe/mapping.h>
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/block_vector.h>
+
+#include <deal.II/lac/la_parallel_vector.h>
+#include <deal.II/lac/la_parallel_block_vector.h>
 //#include <deal.II/lac/sparse_matrix.h>
 //#include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/lac/solver_cg.h> // only for symmetric matrices
@@ -109,6 +112,11 @@ namespace LevelSetParallel
     double epsilon;
 
   private:
+    //typedef LinearAlgebra::distributed::Vector<double>         VectorType;
+    //typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
+    typedef LA::MPI::Vector    VectorType;
+    typedef LA::MPI::Vector    BlockVectorType;
+
     void setup_system(const Function<dim>& DirichletValues );
 
     void setInitialConditions(const Function<dim>& InitialValues);
@@ -151,8 +159,8 @@ namespace LevelSetParallel
     AffineConstraints<double> constraints_no_dirichlet;
 
     LA::MPI::SparseMatrix      systemMatrix;              // global system matrix
-    LA::MPI::Vector            systemRHS;                 // global system right-hand side
-    LA::MPI::Vector            solution_u;
+    VectorType                 systemRHS;                 // global system right-hand side
+    VectorType                 solution_u;
     
     //LA::MPI::BlockVector       advection_field;         // system right-hand side for computing the normal vector
 

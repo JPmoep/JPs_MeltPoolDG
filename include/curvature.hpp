@@ -41,7 +41,8 @@ namespace LA
 // from multiphaseflow
 #include "utilityFunctions.hpp"
 #include "normalvector.hpp"
-
+#include <deal.II/lac/la_parallel_vector.h>
+#include <deal.II/lac/la_parallel_block_vector.h>
 namespace LevelSetParallel
 {
   using namespace dealii; 
@@ -78,6 +79,8 @@ namespace LevelSetParallel
   class Curvature
   {
   private:
+    //typedef LinearAlgebra::distributed::Vector<double>         VectorType;
+    //typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
     typedef LA::MPI::Vector                           VectorType;
     typedef LA::MPI::BlockVector                      BlockVectorType;
     typedef LA::MPI::SparseMatrix                     SparseMatrixType;

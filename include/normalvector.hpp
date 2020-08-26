@@ -20,6 +20,9 @@ namespace LA
 #endif
 } // namespace LA
 
+#include <deal.II/lac/la_parallel_vector.h>
+#include <deal.II/lac/la_parallel_block_vector.h>
+
 // enabling conditional ostreams
 #include <deal.II/base/conditional_ostream.h> 
 // for index set
@@ -93,15 +96,20 @@ namespace LevelSetParallel
   class NormalVector
   {
   private:
-    typedef LA::MPI::Vector                           VectorType;
-    typedef LA::MPI::BlockVector                      BlockVectorType;
-    typedef LA::MPI::SparseMatrix                     SparseMatrixType;
 
-    typedef DoFHandler<dim>                           DoFHandlerType;
+    //typedef LinearAlgebra::distributed::Vector<double>      VectorType;
+    //typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
+    //typedef LinearAlgebra::distributed::SparseMatrix<double> SparseMatrixTypeNew;
+
+    typedef LA::MPI::Vector                            VectorType;
+    typedef LA::MPI::BlockVector                       BlockVectorType;
+    typedef LA::MPI::SparseMatrix                      SparseMatrixType;
+
+    typedef DoFHandler<dim>                            DoFHandlerType;
     
-    typedef DynamicSparsityPattern                    SparsityPatternType;
+    typedef DynamicSparsityPattern                     SparsityPatternType;
     
-    typedef AffineConstraints<double>                 ConstraintsType;
+    typedef AffineConstraints<double>                  ConstraintsType;
 
   public:
 
