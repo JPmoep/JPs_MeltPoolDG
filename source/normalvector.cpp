@@ -150,7 +150,7 @@ namespace LevelSetParallel
             constraints->distribute(normal_vector_out.block( d ));
 
             if (normal_vector_data.do_print_l2norm)
-                pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.l2_norm() << std::endl;
+                pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
           }
     }
     
@@ -194,7 +194,7 @@ namespace LevelSetParallel
 
     template <int dim>
     void 
-    NormalVector<dim>::solve_cg( VectorType & solution, const VectorType & rhs)
+    NormalVector<dim>::solve_cg( VectorType& solution, const VectorType & rhs)
     {
       SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-8 * rhs.l2_norm() );
       LA::SolverCG             solver( solver_control, mpi_commun );

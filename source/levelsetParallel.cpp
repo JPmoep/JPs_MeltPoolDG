@@ -89,7 +89,7 @@ namespace LevelSetParallel
   template <int dim>
   void LevelSetEquation<dim>::setInitialConditions(const Function<dim>& InitialValues)
   {
-    LA::MPI::Vector solutionTemp( locally_owned_dofs, mpi_communicator);
+    VectorType solutionTemp( locally_owned_dofs, mpi_communicator);
 
     VectorTools::project(dof_handler, 
                          constraints,
@@ -272,7 +272,7 @@ namespace LevelSetParallel
   void LevelSetEquation<dim>::solve_u()
   {
     TimerOutput::Scope t(computing_timer, "solve");
-    LA::MPI::Vector    completely_distributed_solution(locally_owned_dofs,
+    VectorType    completely_distributed_solution(locally_owned_dofs,
                                                        mpi_communicator);
     SolverControl            solver_control( dof_handler.n_dofs(), 1e-8 * systemRHS.l2_norm() );
 #ifdef USE_PETSC_LA
@@ -512,5 +512,5 @@ namespace LevelSetParallel
   
   // instantiation
   template class LevelSetEquation<2>; 
-  template class LevelSetEquation<3>;
+  //template class LevelSetEquation<3>;
 } // end of namespace LevelSet

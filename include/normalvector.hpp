@@ -101,9 +101,12 @@ namespace LevelSetParallel
     //typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
     //typedef LinearAlgebra::distributed::SparseMatrix<double> SparseMatrixTypeNew;
 
-    typedef LA::MPI::Vector                            VectorType;
-    typedef LA::MPI::BlockVector                       BlockVectorType;
-    typedef LA::MPI::SparseMatrix                      SparseMatrixType;
+    //typedef LA::MPI::Vector                            VectorType;
+    //typedef LA::MPI::BlockVector                       BlockVectorType;
+    //typedef LA::MPI::SparseMatrix                      SparseMatrixType;
+    typedef PETScWrappers::MPI::Vector                   VectorType;
+    typedef PETScWrappers::MPI::BlockVector              BlockVectorType;
+    typedef PETScWrappers::MPI::SparseMatrix             SparseMatrixType;
 
     typedef DoFHandler<dim>                            DoFHandlerType;
     

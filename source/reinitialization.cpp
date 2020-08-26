@@ -19,8 +19,40 @@
 // for direct solver
 #include <deal.II/lac/sparse_direct.h>
 
+#include <deal.II/fe/mapping_q.h>
+
+#include <deal.II/matrix_free/matrix_free.h>
+#include <deal.II/lac/solver_control.h> // for reduction_control
+#include <deal.II/lac/precondition.h>
+#include <deal.II/numerics/vector_tools.h>
+#include "utilityFunctions.hpp"
+
+#include <deal.II/lac/vector_operation.h>
+
 namespace LevelSetParallel
 {
+    template <int dim>
+    class InitialValues : public dealii::Function<dim>
+    {
+    private:
+      Point<dim>   point{0.5, 0.5};
+      const double rad = 0.1;
+
+    public:
+      InitialValues()
+        : Function<dim>(1)
+      {}
+
+      virtual double
+      value(const dealii::Point<dim> &p,
+            const unsigned int        component = 0) const override
+      {
+        (void)component;
+        double dist = point.distance(p);
+        return 0.5 * (1.0 - std::tanh(2 * (dist - rad)));
+      }
+    };
+
     using namespace dealii; 
 
     template <int dim>
@@ -92,6 +124,7 @@ namespace LevelSetParallel
         switch(reinit_data.reinit_model)
         {
             case ReinitModelType::olsson2007:
+                solve_olsson_model_matrixfree( solution_out );
                 solve_olsson_model( solution_out );
                 break;
             default:
@@ -100,12 +133,106 @@ namespace LevelSetParallel
         }
     }
 
+
+    template <int dim>
+    void 
+    Reinitialization<dim>::solve_olsson_model_matrixfree( VectorType & solution_out )
+    {
+        normal_vector_field.compute_normal_vector_field( solution_out, solution_normal_vector );
+        
+        pcout << "----------- MATRIX FREE " << std::endl;
+        std::cout << "norm solution out " << solution_out.l2_norm() << std::endl;
+
+        PETScVectorType ls;
+        ls.reinit(locally_owned_dofs,
+                  locally_relevant_dofs,
+                  mpi_commun);
+       
+        ls = solution_out;
+
+        const unsigned int dimTemp = 2;
+        const unsigned int degreeTemp = 2;
+
+        MappingQ<dimTemp> mapping(reinit_data.degree);
+
+        QGauss<1> quad(reinit_data.degree+1);
+        
+        typedef VectorizedArray<double>     VectorizedArrayType ;
+        typename MatrixFree<dimTemp, double, VectorizedArrayType>::AdditionalData
+          additional_data;
+        additional_data.mapping_update_flags = update_values | update_gradients;
+
+        MatrixFree<dimTemp, double, VectorizedArrayType> matrix_free;
+
+        matrix_free.reinit(mapping, *dof_handler, *constraints, quad, additional_data);
+       
+        solution_normal_vector.update_ghost_values();
+
+        LevelSetMatrixFree::ReinitializationOperator<dimTemp,degreeTemp,double> rei(matrix_free,
+                                                                          reinit_data.min_cell_size/(std::sqrt(2.)*2.),
+                                                                          reinit_data.d_tau,
+                                                                           solution_normal_vector
+                                                                           );
+        LinearAlgebra::distributed::Vector<double> src, dst;
+        LinearAlgebra::distributed::Vector<double> solution; 
+
+        matrix_free.initialize_dof_vector(src);
+        matrix_free.initialize_dof_vector(dst);
+
+
+        matrix_free.initialize_dof_vector(solution);
+        
+
+        // very dirty programming to initialize phi  @@@@@@@@@@@@@@@@@
+        auto local_owners = src.locally_owned_elements();
+
+        int idx =0;
+        for (auto i = local_owners.begin(); i < local_owners.end(); ++i) 
+        {
+            const auto g_idx = local_owners.nth_index_in_set(idx);
+            solution[g_idx] = ls[g_idx];
+            idx += 1;
+        }
+
+        std::cout << "norm solution " << solution.l2_norm() << std::endl;
+
+        ReductionControl     reduction_control;
+        SolverCG<LinearAlgebra::distributed::Vector<double>> solver(reduction_control);
+
+        std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
+        initialize_time_iterator(time_iterator); 
+        while ( !time_iterator->is_finished() )
+        {
+            const double d_tau = time_iterator->get_next_time_increment();  
+            std::cout << "d_tau " << d_tau << std::endl;
+            rei.set_time_increment(d_tau);
+            
+            // create right hand side
+            dst = 0.0;
+            rei.create_rhs(dst, solution);
+
+            std::cout << " RHS.norm" << dst.l2_norm() << std::endl;
+            src = 0.0;
+            solver.solve(rei,
+                         src,
+                         dst,
+                         PreconditionIdentity());
+            
+            solution += src;
+            solution.update_ghost_values();
+
+            pcout << "   with " << reduction_control.last_step() << " CG iterations.";
+            pcout << "\t |ΔΨ|∞ = " << std::setprecision(10) << src.linfty_norm() << "\t |ΔΨ|²/dT = " << std::setprecision(10) << src.l2_norm()/d_tau << std::endl;
+        }
+        pcout << "----------- END MATRIX FREE " << std::endl;
+        std::cout << "( reinitialized ) norm solution " << solution.l2_norm() << std::endl;
+    }
+
     template <int dim>
     void 
     Reinitialization<dim>::solve_olsson_model( VectorType & solution_out )
     {
 
-        ReinitializationOperator<2,1,double> rei;
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START NEW" << std::endl;
 
         VectorType solution_in = solution_out;
@@ -136,6 +263,7 @@ namespace LevelSetParallel
          */
         
         normal_vector_field.compute_normal_vector_field( solution_in, solution_normal_vector );
+        std::cout << "norm solution " << solution_in.l2_norm() << std::endl;
         
         std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
 
@@ -144,7 +272,7 @@ namespace LevelSetParallel
         while ( !time_iterator->is_finished() )
         {
             const double d_tau = time_iterator->get_next_time_increment();
-
+            std::cout << "d_tau " << d_tau << std::endl;
             system_rhs      = 0.0;
             system_matrix   = 0.0;
             
@@ -167,8 +295,6 @@ namespace LevelSetParallel
                // @todo: only compute normals once during timestepping
                for (const unsigned int q_index : fe_values.quadrature_point_indices())
                 {
-                   const double diffRhs = epsilon_cell * normal_at_quadrature[q_index] * psiGradAtQ[q_index];
-
                    for (const unsigned int i : fe_values.dof_indices())
                    {
                        //if (!normalsComputed)
@@ -186,6 +312,8 @@ namespace LevelSetParallel
                                                    * fe_values.JxW( q_index );
                            }
                        //}
+                      
+                       const double diffRhs = epsilon_cell * normal_at_quadrature[q_index] * psiGradAtQ[q_index];
 
                        cell_rhs(i) += ( 0.5 * ( 1. - psiAtQ[q_index] * psiAtQ[q_index] ) - diffRhs )
                                        *
@@ -210,6 +338,8 @@ namespace LevelSetParallel
             }
             system_matrix.compress( VectorOperation::add );
             system_rhs.compress(    VectorOperation::add );
+            
+            std::cout << " RHS.norm" << system_rhs.l2_norm() << std::endl;
             
             // @ here is space for iimprovementn
             VectorType    re_solution_u_temp( locally_owned_dofs,
@@ -237,14 +367,6 @@ namespace LevelSetParallel
                           system_rhs, 
                           preconditioner );
              pcout << "   with " << solver_control.last_step() << " CG iterations.";
-
-
-            /* 
-             *  direct solver
-             */
-            //SolverControl                    solver_control;
-            //PETScWrappers::SparseDirectMUMPS solver(solver_control, mpi_commun);
-            //solver.solve(system_matrix, re_delta_solution_u, system_rhs);
 
 
             constraints->distribute( re_delta_solution_u );
@@ -294,7 +416,7 @@ namespace LevelSetParallel
 
     // instantiation
     template class Reinitialization<2>;
-    template class Reinitialization<3>;
+    //template class Reinitialization<3>; // temporarily disabled to work on matrixfree implementation
 } // namespace LevelSetParallel
 
 

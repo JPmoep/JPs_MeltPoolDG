@@ -20,6 +20,11 @@ namespace LA
 #endif
 } // namespace LA
 
+#include <deal.II/lac/petsc_block_vector.h>
+
+#include <deal.II/lac/la_parallel_vector.h>
+#include <deal.II/lac/la_parallel_block_vector.h>
+
 // enabling conditional ostreams
 #include <deal.II/base/conditional_ostream.h> 
 // for index set
@@ -105,9 +110,16 @@ namespace LevelSetParallel
   class Reinitialization
   {
   private:
+      
+    //typedef LinearAlgebra::distributed::Vector<double>      VectorType;
+    //typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
     typedef LA::MPI::Vector                           VectorType;
     typedef LA::MPI::BlockVector                      BlockVectorType;
     typedef LA::MPI::SparseMatrix                     SparseMatrixType;
+    
+    typedef PETScWrappers::MPI::Vector                PETScVectorType;
+    typedef PETScWrappers::MPI::BlockVector           PETScBlockVectorType;
+    typedef PETScWrappers::MPI::SparseMatrix          PETScSparseMatrixType;
 
     typedef DoFHandler<dim>                           DoFHandlerType;
     
@@ -147,6 +159,9 @@ namespace LevelSetParallel
      */
     void 
     solve_olsson_model( VectorType & solution_out );
+    
+    void 
+    solve_olsson_model_matrixfree( PETScVectorType & solution_out );
 
     void
     initialize_time_iterator(std::shared_ptr<TimeIterator> t);
@@ -161,10 +176,10 @@ namespace LevelSetParallel
     IndexSet                                 locally_owned_dofs;
     IndexSet                                 locally_relevant_dofs;
 
-    SparseMatrixType      system_matrix;
-    VectorType            system_rhs;
-    ConditionalOStream    pcout;
-    NormalVector<dim>     normal_vector_field;
-    BlockVectorType       solution_normal_vector;
+    SparseMatrixType                        system_matrix;
+    VectorType                              system_rhs;
+    ConditionalOStream                      pcout;
+    NormalVector<dim>                       normal_vector_field;
+    PETScBlockVectorType                    solution_normal_vector;
   };
 } // namespace LevelSetParallel
