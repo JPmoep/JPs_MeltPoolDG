@@ -16,6 +16,8 @@
 #include <timeiterator.hpp>
 
 #include <reinitializationoperator.hpp>
+// for direct solver
+#include <deal.II/lac/sparse_direct.h>
 
 namespace LevelSetParallel
 {
@@ -74,6 +76,7 @@ namespace LevelSetParallel
         normal_vector_data.degree            = reinit_data.degree;
         normal_vector_data.verbosity_level   = reinit_data.verbosity_level;
         normal_vector_data.min_cell_size     = reinit_data.min_cell_size;
+        normal_vector_data.do_print_l2norm   = reinit_data.do_print_l2norm;
 
         normal_vector_field.initialize( normal_vector_data, 
                                         dsp_in,
@@ -103,7 +106,7 @@ namespace LevelSetParallel
     {
 
         ReinitializationOperator<2,1,double> rei;
-        pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
+        pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START NEW" << std::endl;
 
         VectorType solution_in = solution_out;
         
@@ -207,14 +210,6 @@ namespace LevelSetParallel
             }
             system_matrix.compress( VectorOperation::add );
             system_rhs.compress(    VectorOperation::add );
-
-            SolverControl solver_control( dof_handler->n_dofs() , 1e-8 * system_rhs.l2_norm() );
-            
-            LA::SolverCG solver( solver_control, mpi_commun );
-
-            LA::MPI::PreconditionAMG preconditioner;
-            LA::MPI::PreconditionAMG::AdditionalData data;
-            preconditioner.initialize(system_matrix, data);
             
             // @ here is space for iimprovementn
             VectorType    re_solution_u_temp( locally_owned_dofs,
@@ -223,10 +218,34 @@ namespace LevelSetParallel
                                                mpi_commun );
             re_solution_u_temp = solution_out;
             
+
+            /* 
+             *  iterative solver
+             */
+
+            SolverControl solver_control( dof_handler->n_dofs() * 2, 1e-6 * system_rhs.l2_norm() );
+            
+            LA::SolverCG solver( solver_control, mpi_commun );
+
+            LA::MPI::PreconditionAMG preconditioner;
+            LA::MPI::PreconditionAMG::AdditionalData data;
+            preconditioner.initialize(system_matrix, data);
+            
+            
             solver.solve( system_matrix, 
                           re_delta_solution_u, 
                           system_rhs, 
                           preconditioner );
+             pcout << "   with " << solver_control.last_step() << " CG iterations.";
+
+
+            /* 
+             *  direct solver
+             */
+            //SolverControl                    solver_control;
+            //PETScWrappers::SparseDirectMUMPS solver(solver_control, mpi_commun);
+            //solver.solve(system_matrix, re_delta_solution_u, system_rhs);
+
 
             constraints->distribute( re_delta_solution_u );
 
@@ -236,9 +255,8 @@ namespace LevelSetParallel
             solution_out.update_ghost_values();
 
             //time_iterator->print_me( pcout.get_stream() );
-            
-            pcout << "\t |R|∞ = " << re_delta_solution_u.linfty_norm() << "\t |R|²/dT = ";
-            pcout << re_delta_solution_u.l2_norm()/d_tau << "   with " << solver_control.last_step() << " CG iterations." << std::endl;
+            if(reinit_data.do_print_l2norm)
+                pcout << "\t |ΔΨ|∞ = " << std::setprecision(10) << re_delta_solution_u.linfty_norm() << "\t |ΔΨ|²/dT = " << std::setprecision(10) << re_delta_solution_u.l2_norm()/d_tau << std::endl;
 
             if (re_delta_solution_u.l2_norm() / d_tau < 1e-6)
                break;

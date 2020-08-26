@@ -64,7 +64,8 @@ namespace LevelSetParallel
         , degree(1)
         , max_reinit_steps(5)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
-        , min_cell_size()
+        , min_cell_size(0.0)
+        , do_print_l2norm(false)
     {
     }
 
@@ -88,6 +89,9 @@ namespace LevelSetParallel
     
     // minimum cell size --> to compute CFL condition
     double min_cell_size;
+    
+    // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
+    bool do_print_l2norm;
 
     // @ add lambda function for calculating epsilon
   };

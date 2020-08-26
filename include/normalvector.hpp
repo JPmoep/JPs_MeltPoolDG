@@ -64,6 +64,7 @@ namespace LevelSetParallel
         , degree(1)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
         , min_cell_size(0.0)
+        , do_print_l2norm(false)
     {
     }
     
@@ -78,6 +79,9 @@ namespace LevelSetParallel
     
     // minimum size of cells --> to evaluate damping parameter @todo: should this parameter be made cell-size-dependent?
     double min_cell_size;
+
+    // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
+    bool do_print_l2norm;
   };
   
   /*

@@ -148,6 +148,9 @@ namespace LevelSetParallel
           {
             solve_cg( normal_vector_out.block( d ), system_rhs.block( d ) );
             constraints->distribute(normal_vector_out.block( d ));
+
+            if (normal_vector_data.do_print_l2norm)
+                pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.l2_norm() << std::endl;
           }
     }
     
@@ -209,7 +212,8 @@ namespace LevelSetParallel
                     preconditioner );
 
       solution = completely_distributed_solution;
-      pcout << "normal vectors: solver  with "  << solver_control.last_step() << " CG iterations." << std::endl;
+      solution.update_ghost_values();
+      //pcout << "\t normal vectors: solver  with "  << solver_control.last_step() << " CG iterations." << std::endl;
     }
 
     template <int dim>

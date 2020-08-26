@@ -216,6 +216,7 @@ namespace LevelSetParallel
     reinit_data.degree              = parameters.levelset_degree;
     reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
     reinit_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
+    reinit_data.do_print_l2norm     = parameters.output_norm_levelset;
     
     DynamicSparsityPattern dsp_re( locally_relevant_dofs );
     DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_no_dirichlet, false );
@@ -293,7 +294,7 @@ namespace LevelSetParallel
     constraints.distribute(completely_distributed_solution);
 
     solution_u = completely_distributed_solution;
-    //solution_u.update_ghost_values();
+    solution_u.update_ghost_values();
   }
 
   //// @ to be rearranged
@@ -479,11 +480,13 @@ namespace LevelSetParallel
 
         assemble_levelset_system(  DirichletValues ); // @todo: insert updateFlag
         solve_u();
+        if (parameters.output_norm_levelset)
+            pcout << " (not reinitialized) levelset function ||phi|| = " << solution_u.l2_norm() << std::endl;
         if ( parameters.activate_reinitialization )    
             compute_reinitialization_model();
 
         if (parameters.output_norm_levelset)
-            pcout << " levelset function ||phi|| = " << solution_u.l2_norm() << std::endl;
+            pcout << " (reinitialized) levelset function ||phi|| = " << solution_u.l2_norm() << std::endl;
 
         output_results(timestep_number);
 

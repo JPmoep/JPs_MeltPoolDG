@@ -572,7 +572,7 @@ namespace LevelSet
             unsigned int re_timestep_number = 0;
             double re_time                  = 0.0;
             
-            std::cout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START " << std::endl;
+            std::cout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START OLD " << std::endl;
             for (; re_timestep_number < parameters.max_n_reinit_steps; re_time += re_time_step, ++re_timestep_number) // 3 to 5 timesteps are enough to reach steady state according to Kronbichler et al.
             {
                 computeReinitializationMatrices(re_time_step);
