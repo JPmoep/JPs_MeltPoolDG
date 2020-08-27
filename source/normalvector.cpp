@@ -33,12 +33,12 @@ namespace LevelSetParallel
                                    const ConstraintsType&        constraints_in,
                                    const IndexSet&               locally_owned_dofs_in,
                                    const IndexSet&               locally_relevant_dofs_in
-                                    )
+                                 )
     {
-        normal_vector_data = data_in;
-        dof_handler        = &dof_handler_in;
-        constraints        = &constraints_in;
-        locally_owned_dofs = locally_owned_dofs_in;
+        normal_vector_data    = data_in;
+        dof_handler           = &dof_handler_in;
+        constraints           = &constraints_in;
+        locally_owned_dofs    = locally_owned_dofs_in;
         locally_relevant_dofs = locally_relevant_dofs_in;
         
         system_matrix.reinit( locally_owned_dofs,
@@ -150,12 +150,11 @@ namespace LevelSetParallel
           for (unsigned int d=0; d<dim; ++d)
           {
             solve_cg( normal_vector_out.block( d ), system_rhs.block( d ) );
-            constraints->distribute(normal_vector_out.block( d ));
 
             if (normal_vector_data.do_print_l2norm)
                 pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
           }
-          normal_vector_out.update_ghost_values();
+          //normal_vector_out.update_ghost_values();
     }
     
     template <int dim>
@@ -210,13 +209,16 @@ namespace LevelSetParallel
       
       VectorType    completely_distributed_solution( locally_owned_dofs,
                                                      mpi_commun);
+      rhs.update_ghost_values();
 
       solver.solve( system_matrix, 
                     completely_distributed_solution, 
                     rhs, 
                     preconditioner );
-
+      
+      
       solution = completely_distributed_solution;
+      constraints->distribute(solution);
       solution.update_ghost_values();
       //pcout << "\t normal vectors: solver  with "  << solver_control.last_step() << " CG iterations." << std::endl;
     }

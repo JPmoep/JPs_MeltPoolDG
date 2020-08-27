@@ -28,6 +28,7 @@
 #include <deal.II/lac/trilinos_solver.h>
 
 #include "utilityFunctions.hpp"
+#include "normalvectoroperator.hpp"
 
 namespace LevelSetParallel
 {
@@ -126,7 +127,7 @@ namespace LevelSetParallel
         switch(reinit_data.reinit_model)
         {
             case ReinitModelType::olsson2007:
-                //solve_olsson_model_matrixfree( solution_out );
+                solve_olsson_model_matrixfree( solution_out );
                 solve_olsson_model( solution_out );
                 break;
             default:
@@ -134,28 +135,78 @@ namespace LevelSetParallel
                 break;
         }
     }
+    
+    
+    template <int dim>
+    void 
+    Reinitialization<dim>::solve_normal_vector_matrixfree( const VectorType & levelset_in )
+    {
+        pcout << "----------- NORMAL VECTORS -- MATRIX FREE " << std::endl;
+        pcout << " ||phi_in|| " << levelset_in.l2_norm()   << std::endl;  
+
+        const unsigned int dimTemp = 2;
+        const unsigned int degreeTemp = 1;
+
+        MappingQ<dimTemp> mapping( degreeTemp );
+        QGauss<1> quad_1d(         degreeTemp + 1 );
+        
+        typedef VectorizedArray<double>     VectorizedArrayType ;
+        typename MatrixFree<dimTemp, double, VectorizedArrayType>::AdditionalData
+          additional_data;
+
+        additional_data.mapping_update_flags = update_values | update_gradients;
+
+        MatrixFree<dimTemp, double, VectorizedArrayType> matrix_free;
+
+        matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
+       
+        LevelSetMatrixFree::NormalVectorOperator<dimTemp,degreeTemp> normal_operator(matrix_free,
+                                                                                     1e-6);
+
+        // compute right-hand side
+        BlockVectorType rhs(dimTemp); 
+        normal_operator.initialize_dof_vector(rhs.block(0));
+        normal_operator.initialize_dof_vector(rhs.block(1));
+        
+        normal_operator.create_rhs(rhs, levelset_in);
+
+        ReductionControl     reduction_control;
+        SolverCG<BlockVectorType> solver(reduction_control);
+
+        BlockVectorType normals(dimTemp); 
+        normal_operator.initialize_dof_vector(normals.block(0));
+        normal_operator.initialize_dof_vector(normals.block(1));
+        
+        //for (unsigned int d=0; d<dimTemp; d++)
+        //{
+          solver.solve(normal_operator,
+                       normals,
+                       rhs,
+                       PreconditionIdentity());
+         
+          //constraints->distribute(normals.block(d));
+          //normals.block(d).update_ghost_values();
+          pcout << " ||n || ("  << "0" << ") " << normals.block(0).l2_norm()   << std::endl;  
+          pcout << " ||n || ("  << "1" << ") " << normals.block(1).l2_norm()   << std::endl;  
+        //}
+    }
 
 
     template <int dim>
     void 
     Reinitialization<dim>::solve_olsson_model_matrixfree( VectorType & solution_out )
     {
+        // matrix free computation of normal vectors
+        solve_normal_vector_matrixfree( solution_out );
         normal_vector_field.compute_normal_vector_field( solution_out, solution_normal_vector );
+        solution_normal_vector.update_ghost_values();
         
         pcout << "----------- MATRIX FREE " << std::endl;
-        std::cout << "norm solution out " << solution_out.l2_norm() << std::endl;
-
-        //VectorType ls;
-        //ls.reinit(locally_owned_dofs,
-                  //locally_relevant_dofs,
-                  //mpi_commun);
-       
-        //ls = solution_out;
 
         const unsigned int dimTemp = 2;
-        const unsigned int degreeTemp = 2;
+        const unsigned int degreeTemp = 1;
 
-        MappingQ<dimTemp> mapping(1);
+        MappingQ<dimTemp> mapping(degreeTemp);
         QGauss<1> quad_1d(degreeTemp + 1);
         
         typedef VectorizedArray<double>     VectorizedArrayType ;
@@ -168,54 +219,56 @@ namespace LevelSetParallel
 
         matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
        
-        solution_normal_vector.update_ghost_values();
 
-        LevelSetMatrixFree::ReinitializationOperator<dimTemp,degreeTemp,double> rei(matrix_free,
-                                                                          reinit_data.min_cell_size/(std::sqrt(2.)*2.),
+        LevelSetMatrixFree::ReinitializationOperator<dimTemp,degreeTemp> rei(matrix_free,
                                                                           reinit_data.d_tau,
-                                                                           solution_normal_vector
-                                                                           );
-        LinearAlgebra::distributed::Vector<double> src, dst;
-        LinearAlgebra::distributed::Vector<double> solution(solution_out); 
+                                                                          reinit_data.min_cell_size/(std::sqrt(2)*2.));
+        VectorType src, dst, solution;
+        BlockVectorType normals(dimTemp); //(solution_out); 
 
-        matrix_free.initialize_dof_vector(src);
-        matrix_free.initialize_dof_vector(dst);
-        matrix_free.initialize_dof_vector(solution);
-
+        rei.initialize_dof_vector(src);
+        rei.initialize_dof_vector(dst);
+        
+        rei.set_normal_vector_field(solution_normal_vector);
+        rei.initialize_dof_vector(solution);
         solution.copy_locally_owned_data_from(solution_out);
-/*
-        std::cout << "norm solution " << solution.l2_norm() << std::endl;
+        solution.update_ghost_values();
 
         ReductionControl     reduction_control;
         SolverCG<VectorType> solver(reduction_control);
 
         std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
         initialize_time_iterator(time_iterator); 
+
         while ( !time_iterator->is_finished() )
         {
             const double d_tau = time_iterator->get_next_time_increment();  
             rei.set_time_increment(d_tau);
             
             // create right hand side
-            dst = 0.0;
+            matrix_free.initialize_dof_vector(dst);
             rei.create_rhs(dst, solution);
-
-            std::cout << " RHS.norm" << dst.l2_norm() << std::endl;
-            src = 0.0;
+            pcout << " RHS.norm" << dst.l2_norm() << std::endl;
+            
+            matrix_free.initialize_dof_vector(src);
             solver.solve(rei,
                          src,
                          dst,
                          PreconditionIdentity());
-            
+
+            constraints->distribute(src);
+
             solution += src;
             solution.update_ghost_values();
+            
+            pcout << " solution" << solution.l2_norm() << std::endl;
 
             pcout << "   with " << reduction_control.last_step() << " CG iterations.";
-            pcout << "\t |ΔΨ|∞ = " << std::setprecision(10) << src.linfty_norm() << "\t |ΔΨ|²/dT = " << std::setprecision(10) << src.l2_norm()/d_tau << std::endl;
+            pcout << " |ΔΨ|∞ = " << std::setprecision(10) << src.linfty_norm() << " |ΔΨ|²/dT = " << std::setprecision(10) << src.l2_norm()/d_tau;
+            pcout << " |RHS| " << dst.l2_norm() << " |psi| " << solution.l2_norm() << std::endl;
         }
+        pcout << "( reinitialized ) norm solution " << solution.l2_norm() << std::endl;
         pcout << "----------- END MATRIX FREE " << std::endl;
-        std::cout << "( reinitialized ) norm solution " << solution.l2_norm() << std::endl;
-*/
     }
 
     template <int dim>
@@ -259,7 +312,7 @@ namespace LevelSetParallel
          */
         
         normal_vector_field.compute_normal_vector_field( solution_in, solution_normal_vector );
-        //std::cout << "norm solution " << solution_in.l2_norm() << std::endl;
+        solution_normal_vector.update_ghost_values();
         
         std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
 
@@ -279,7 +332,6 @@ namespace LevelSetParallel
                fe_values.reinit(cell);
                
                const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
-               
                fe_values.get_function_values(     solution_out, psiAtQ );     // compute values of old solution at tau_n
                fe_values.get_function_gradients(  solution_out, psiGradAtQ ); // compute values of old solution at tau_n
                 
@@ -334,7 +386,7 @@ namespace LevelSetParallel
             system_matrix.compress( VectorOperation::add );
             system_rhs.compress(    VectorOperation::add );
             
-            //std::cout << " RHS.norm" << system_rhs.l2_norm() << std::endl;
+            pcout << " RHS.norm" << system_rhs.l2_norm() << std::endl;
             
             // @ here is space for iimprovementn
             VectorType    re_solution_u_temp( locally_owned_dofs,
@@ -356,14 +408,13 @@ namespace LevelSetParallel
             TrilinosWrappers::PreconditionAMG::AdditionalData data;
             preconditioner.initialize(system_matrix, data);
             
-            
+            system_rhs.update_ghost_values();
             solver.solve( system_matrix, 
                           re_delta_solution_u, 
                           system_rhs, 
-                          preconditioner );
-             pcout << "   with " << solver_control.last_step() << " CG iterations.";
-
-
+                          PreconditionIdentity() );
+            
+            pcout << "   with " << solver_control.last_step() << " CG iterations.";
             constraints->distribute( re_delta_solution_u );
 
             re_solution_u_temp += re_delta_solution_u;
@@ -373,7 +424,10 @@ namespace LevelSetParallel
 
             //time_iterator->print_me( pcout.get_stream() );
             if(reinit_data.do_print_l2norm)
-                pcout << "\t |ΔΨ|∞ = " << std::setprecision(10) << re_delta_solution_u.linfty_norm() << "\t |ΔΨ|²/dT = " << std::setprecision(10) << re_delta_solution_u.l2_norm()/d_tau << std::endl;
+            {
+                pcout << " |ΔΨ|∞ = " << std::setprecision(10) << re_delta_solution_u.linfty_norm();
+                pcout << " |ΔΨ|²/dT = " << std::setprecision(10) << re_delta_solution_u.l2_norm()/d_tau << " |RHS| " << system_rhs.l2_norm() << " |psi| " << solution_out.l2_norm() << std::endl;
+            }
 
             if (re_delta_solution_u.l2_norm() / d_tau < 1e-6)
                break;

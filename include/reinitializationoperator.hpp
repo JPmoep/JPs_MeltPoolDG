@@ -24,17 +24,15 @@ class ReinitializationOperator
       ReinitializationOperator
         (const MatrixFree<dim, number, VectorizedArrayType> &matrix_free,
          const double time_increment,
-         const double diffusion,
-         const BlockVectorType& normals)
+         const double diffusion)
         : matrix_free( matrix_free )
         , d_tau(       time_increment )
         , eps(         diffusion )
-        , n(           normals )
         {}
 
       void
-      vmult(VectorType & destination,
-            const VectorType & source) const
+      vmult(VectorType & dst,
+            const VectorType & src) const
       {
         const int n_q_points_1d = degree+1;
         
@@ -42,8 +40,8 @@ class ReinitializationOperator
         FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( matrix_free );
 
         matrix_free.template cell_loop<VectorType, VectorType>( [&] 
-          (const auto&, auto& dest, const auto& src, auto &cell_range) {
-            for (unsigned int cell = cell_range.first; cell<cell_range.second; ++cell)
+          (const auto&, auto& dst, const auto& src, auto cell_range) {
+            for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
             {
               levelset.reinit(cell);
               levelset.gather_evaluate(src, true, true);
@@ -52,14 +50,11 @@ class ReinitializationOperator
               normal_vector.read_dof_values(n);
               normal_vector.evaluate(true, false);
 
-              // #1
               for (unsigned int q_index=0; q_index<levelset.n_q_points; q_index++)
               {
-                  //std::cout << "q_index: " << q_index << std::endl;
-                  // #2
-                  const auto phi = levelset.get_value(         q_index);
-                  //std::cout << "phi: " << phi << std::endl;
-                  const auto grad_phi = levelset.get_gradient( q_index);
+                  const scalar phi =      levelset.get_value(    q_index );
+                  
+                  const vector grad_phi = levelset.get_gradient( q_index );
                   
                   vector n_phi = normal_vector.get_value( q_index );
                   n_phi /= n_phi.norm();
@@ -67,33 +62,33 @@ class ReinitializationOperator
                   levelset.submit_value(phi, q_index);
                   levelset.submit_gradient(d_tau * eps * scalar_product(grad_phi, n_phi) * n_phi, q_index);
               }
-              // #3
-              levelset.integrate_scatter(true, true, dest);
+
+              levelset.integrate_scatter(true, true, dst);
             }
           },
-          destination, 
-          source, 
+          dst, 
+          src, 
           true );
     }
 
 
     void
     create_rhs(VectorType & dst,
-         const VectorType & src) const
+               const VectorType & src) const
     {
       const auto compressive_flux = [&](const auto &phi) 
       {
           return 0.5 * ( make_vectorized_array<number>(1.) - phi * phi );
       };
-      
+
       const int n_q_points_1d = degree+1;
 
       FEEvaluation<dim, degree, n_q_points_1d, 1, number>   psi(           matrix_free);
       FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( matrix_free);
-      
+
       matrix_free.template cell_loop<VectorType, VectorType>(
-        [&](const auto &, auto &dst, const auto &src, auto cells) {
-          for (unsigned int cell = cells.first; cell < cells.second; ++cell)
+        [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
+          for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
           {
             psi.reinit(cell);
             psi.gather_evaluate(src, true, true);
@@ -102,22 +97,33 @@ class ReinitializationOperator
             normal_vector.read_dof_values(n);
             normal_vector.evaluate(true, false);
 
-            for (unsigned int q = 0; q < psi.n_q_points; ++q)
+            for (unsigned int q_index = 0; q_index < psi.n_q_points; ++q_index)
             {
-              const scalar val = psi.get_value(q);
-              vector n_phi = normal_vector.get_value(q);
-              n_phi /= n_phi.norm();
+              const scalar val = psi.get_value(q_index);
+              vector n_phi = normal_vector.get_value(q_index);
+                    n_phi /= n_phi.norm();
 
               psi.submit_gradient( d_tau * compressive_flux(val) * n_phi 
                                    - 
-                                   d_tau * eps * scalar_product( psi.get_gradient(q), n_phi) * n_phi, q);
+                                   d_tau * eps * scalar_product( psi.get_gradient(q_index), n_phi ) * n_phi, q_index);
             }
+
             psi.integrate_scatter(false, true, dst);
           }
         },
         dst,
         src,
         true);
+    }
+
+    void
+    set_normal_vector_field(const BlockVectorType &normal_vector) 
+    {
+      this->n.reinit(dim);
+      matrix_free.initialize_dof_vector(this->n.block(0));
+      matrix_free.initialize_dof_vector(this->n.block(1));
+      this->n.block(0).copy_locally_owned_data_from(normal_vector.block(0));
+      this->n.block(1).copy_locally_owned_data_from(normal_vector.block(1));
     }
 
 
@@ -137,7 +143,7 @@ class ReinitializationOperator
       const MatrixFree<dim, number, VectorizedArrayType> &matrix_free;
       double d_tau; 
       double eps; 
-      const BlockVectorType &n;
+      BlockVectorType n;
 
 };
 }   // LevelSetMatrixFree

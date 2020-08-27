@@ -23,33 +23,41 @@ namespace LevelSetParallel
           
           NormalVectorOperator
             (const MatrixFree<dim, number, VectorizedArrayType> &matrix_free,
-             const double damping)
+             const double damping_in)
             : matrix_free( matrix_free )
-            , damping(         damping )
+            , damping(         damping_in )
             {}
 
           void
-          vmult(VectorType & dst,
-                const VectorType & src) const
+          vmult(BlockVectorType & dst,
+                const BlockVectorType & src) const
           {
             const int n_q_points_1d = degree+1;
             
-            FEEvaluation<dim, degree, n_q_points_1d, 1, number>   normal_comp(      matrix_free );
+            FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal_comp(      matrix_free );
 
-            matrix_free.template cell_loop<VectorType, VectorType>( [&] 
+            matrix_free.template cell_loop<BlockVectorType, BlockVectorType>( [&] 
               (const auto&, auto& dst, const auto& src, auto cell_range) {
                 for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
                 {
                   normal_comp.reinit(cell);
-                  normal_comp.gather_evaluate(src, true, true);
-                  
+                /*
+                 * @ bug? --> the following call yield a compilation error
+                 */
+                  //normal_comp.gather_evaluate(src, true, true);
+                  normal_comp.read_dof_values(src);
+                  normal_comp.evaluate(true,true);
                   for (unsigned int q_index=0; q_index<normal_comp.n_q_points; q_index++)
                   {
-                      
-                      normal_comp.submit_value( normal_comp.get_value(    q_index ), q_index);
+                      normal_comp.submit_value(              normal_comp.get_value(    q_index ), q_index);
                       normal_comp.submit_gradient( damping * normal_comp.get_gradient( q_index ), q_index);
                   }
-                  normal_comp.integrate_scatter(true, true, dst);
+                  /*
+                  * @ bug? --> the following call yield a compilation error
+                  */
+                  //normal_comp.integrate_scatter(true, true, dst);
+                  normal_comp.integrate(true, true);
+                  normal_comp.distribute_local_to_global(dst);
                 }
               },
               dst, 

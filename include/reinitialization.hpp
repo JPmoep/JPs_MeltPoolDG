@@ -142,6 +142,9 @@ namespace LevelSetParallel
     
     void 
     solve_olsson_model_matrixfree( VectorType & solution_out );
+    
+    void 
+    solve_normal_vector_matrixfree( const VectorType & levelset_in );
 
     void
     initialize_time_iterator(std::shared_ptr<TimeIterator> t);
