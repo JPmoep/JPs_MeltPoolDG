@@ -6,8 +6,6 @@
 
 // to access minimal_cell_diamater
 #include <deal.II/grid/grid_tools.h>
-// to use preconditioner 
-#include <deal.II/lac/petsc_precondition.h>
 // to use DoFTools::
 #include <deal.II/dofs/dof_tools.h>
 
@@ -25,9 +23,11 @@
 #include <deal.II/lac/solver_control.h> // for reduction_control
 #include <deal.II/lac/precondition.h>
 #include <deal.II/numerics/vector_tools.h>
-#include "utilityFunctions.hpp"
 
 #include <deal.II/lac/vector_operation.h>
+#include <deal.II/lac/trilinos_solver.h>
+
+#include "utilityFunctions.hpp"
 
 namespace LevelSetParallel
 {
@@ -85,6 +85,7 @@ namespace LevelSetParallel
                               mpi_commun );
 
         system_rhs.reinit( locally_owned_dofs, 
+                           locally_relevant_dofs,
                            mpi_commun ); 
         
         const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
@@ -114,7 +115,8 @@ namespace LevelSetParallel
                                         dsp_in,
                                         dof_handler_in,
                                         constraints_in,
-                                        locally_owned_dofs_in);
+                                        locally_owned_dofs_in,
+                                        locally_relevant_dofs);
     }
 
     template <int dim>
@@ -124,7 +126,7 @@ namespace LevelSetParallel
         switch(reinit_data.reinit_model)
         {
             case ReinitModelType::olsson2007:
-                solve_olsson_model_matrixfree( solution_out );
+                //solve_olsson_model_matrixfree( solution_out );
                 solve_olsson_model( solution_out );
                 break;
             default:
@@ -143,28 +145,28 @@ namespace LevelSetParallel
         pcout << "----------- MATRIX FREE " << std::endl;
         std::cout << "norm solution out " << solution_out.l2_norm() << std::endl;
 
-        PETScVectorType ls;
-        ls.reinit(locally_owned_dofs,
-                  locally_relevant_dofs,
-                  mpi_commun);
+        //VectorType ls;
+        //ls.reinit(locally_owned_dofs,
+                  //locally_relevant_dofs,
+                  //mpi_commun);
        
-        ls = solution_out;
+        //ls = solution_out;
 
         const unsigned int dimTemp = 2;
         const unsigned int degreeTemp = 2;
 
-        MappingQ<dimTemp> mapping(reinit_data.degree);
-
-        QGauss<1> quad(reinit_data.degree+1);
+        MappingQ<dimTemp> mapping(1);
+        QGauss<1> quad_1d(degreeTemp + 1);
         
         typedef VectorizedArray<double>     VectorizedArrayType ;
         typename MatrixFree<dimTemp, double, VectorizedArrayType>::AdditionalData
           additional_data;
+
         additional_data.mapping_update_flags = update_values | update_gradients;
 
         MatrixFree<dimTemp, double, VectorizedArrayType> matrix_free;
 
-        matrix_free.reinit(mapping, *dof_handler, *constraints, quad, additional_data);
+        matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
        
         solution_normal_vector.update_ghost_values();
 
@@ -174,37 +176,24 @@ namespace LevelSetParallel
                                                                            solution_normal_vector
                                                                            );
         LinearAlgebra::distributed::Vector<double> src, dst;
-        LinearAlgebra::distributed::Vector<double> solution; 
+        LinearAlgebra::distributed::Vector<double> solution(solution_out); 
 
         matrix_free.initialize_dof_vector(src);
         matrix_free.initialize_dof_vector(dst);
-
-
         matrix_free.initialize_dof_vector(solution);
-        
 
-        // very dirty programming to initialize phi  @@@@@@@@@@@@@@@@@
-        auto local_owners = src.locally_owned_elements();
-
-        int idx =0;
-        for (auto i = local_owners.begin(); i < local_owners.end(); ++i) 
-        {
-            const auto g_idx = local_owners.nth_index_in_set(idx);
-            solution[g_idx] = ls[g_idx];
-            idx += 1;
-        }
-
+        solution.copy_locally_owned_data_from(solution_out);
+/*
         std::cout << "norm solution " << solution.l2_norm() << std::endl;
 
         ReductionControl     reduction_control;
-        SolverCG<LinearAlgebra::distributed::Vector<double>> solver(reduction_control);
+        SolverCG<VectorType> solver(reduction_control);
 
         std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
         initialize_time_iterator(time_iterator); 
         while ( !time_iterator->is_finished() )
         {
             const double d_tau = time_iterator->get_next_time_increment();  
-            std::cout << "d_tau " << d_tau << std::endl;
             rei.set_time_increment(d_tau);
             
             // create right hand side
@@ -226,6 +215,7 @@ namespace LevelSetParallel
         }
         pcout << "----------- END MATRIX FREE " << std::endl;
         std::cout << "( reinitialized ) norm solution " << solution.l2_norm() << std::endl;
+*/
     }
 
     template <int dim>
@@ -235,7 +225,13 @@ namespace LevelSetParallel
 
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START NEW" << std::endl;
 
-        VectorType solution_in = solution_out;
+        VectorType solution_in; //solution_out;
+        solution_in.reinit(locally_owned_dofs,
+                           locally_relevant_dofs,
+                           mpi_commun);
+        solution_in.copy_locally_owned_data_from(solution_out);
+        solution_in.update_ghost_values();
+
         
         auto qGauss = QGauss<dim>( reinit_data.degree+1 );
         
@@ -263,7 +259,7 @@ namespace LevelSetParallel
          */
         
         normal_vector_field.compute_normal_vector_field( solution_in, solution_normal_vector );
-        std::cout << "norm solution " << solution_in.l2_norm() << std::endl;
+        //std::cout << "norm solution " << solution_in.l2_norm() << std::endl;
         
         std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
 
@@ -272,7 +268,6 @@ namespace LevelSetParallel
         while ( !time_iterator->is_finished() )
         {
             const double d_tau = time_iterator->get_next_time_increment();
-            std::cout << "d_tau " << d_tau << std::endl;
             system_rhs      = 0.0;
             system_matrix   = 0.0;
             
@@ -339,7 +334,7 @@ namespace LevelSetParallel
             system_matrix.compress( VectorOperation::add );
             system_rhs.compress(    VectorOperation::add );
             
-            std::cout << " RHS.norm" << system_rhs.l2_norm() << std::endl;
+            //std::cout << " RHS.norm" << system_rhs.l2_norm() << std::endl;
             
             // @ here is space for iimprovementn
             VectorType    re_solution_u_temp( locally_owned_dofs,
@@ -355,10 +350,10 @@ namespace LevelSetParallel
 
             SolverControl solver_control( dof_handler->n_dofs() * 2, 1e-6 * system_rhs.l2_norm() );
             
-            LA::SolverCG solver( solver_control, mpi_commun );
+            SolverCG<VectorType> solver( solver_control );
 
-            LA::MPI::PreconditionAMG preconditioner;
-            LA::MPI::PreconditionAMG::AdditionalData data;
+            TrilinosWrappers::PreconditionAMG preconditioner;
+            TrilinosWrappers::PreconditionAMG::AdditionalData data;
             preconditioner.initialize(system_matrix, data);
             
             

@@ -7,21 +7,7 @@
 
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
-namespace LA
-{
-#if defined(DEAL_II_WITH_PETSC) && !defined(DEAL_II_PETSC_WITH_COMPLEX) && \
-  !(defined(DEAL_II_WITH_TRILINOS) && defined(FORCE_USE_OF_TRILINOS))
-  using namespace dealii::LinearAlgebraPETSc;
-#  define USE_PETSC_LA
-#elif defined(DEAL_II_WITH_TRILINOS)
-  using namespace dealii::LinearAlgebraTrilinos;
-#else
-#  error DEAL_II_WITH_PETSC or DEAL_II_WITH_TRILINOS required
-#endif
-} // namespace LA
-
-#include <deal.II/lac/petsc_block_vector.h>
-
+#include <deal.II/lac/trilinos_sparse_matrix.h>
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
 
@@ -111,21 +97,15 @@ namespace LevelSetParallel
   {
   private:
       
-    //typedef LinearAlgebra::distributed::Vector<double>      VectorType;
-    //typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
-    typedef LA::MPI::Vector                           VectorType;
-    typedef LA::MPI::BlockVector                      BlockVectorType;
-    typedef LA::MPI::SparseMatrix                     SparseMatrixType;
-    
-    typedef PETScWrappers::MPI::Vector                PETScVectorType;
-    typedef PETScWrappers::MPI::BlockVector           PETScBlockVectorType;
-    typedef PETScWrappers::MPI::SparseMatrix          PETScSparseMatrixType;
+    typedef LinearAlgebra::distributed::Vector<double>      VectorType;
+    typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
+    typedef TrilinosWrappers::SparseMatrix                  SparseMatrixType;
 
-    typedef DoFHandler<dim>                           DoFHandlerType;
+    typedef DoFHandler<dim>                                 DoFHandlerType;
     
-    typedef DynamicSparsityPattern                    SparsityPatternType;
+    typedef DynamicSparsityPattern                          SparsityPatternType;
     
-    typedef AffineConstraints<double>                 ConstraintsType;
+    typedef AffineConstraints<double>                       ConstraintsType;
 
   public:
 
@@ -161,7 +141,7 @@ namespace LevelSetParallel
     solve_olsson_model( VectorType & solution_out );
     
     void 
-    solve_olsson_model_matrixfree( PETScVectorType & solution_out );
+    solve_olsson_model_matrixfree( VectorType & solution_out );
 
     void
     initialize_time_iterator(std::shared_ptr<TimeIterator> t);
@@ -180,6 +160,6 @@ namespace LevelSetParallel
     VectorType                              system_rhs;
     ConditionalOStream                      pcout;
     NormalVector<dim>                       normal_vector_field;
-    PETScBlockVectorType                    solution_normal_vector;
+    BlockVectorType                         solution_normal_vector;
   };
 } // namespace LevelSetParallel

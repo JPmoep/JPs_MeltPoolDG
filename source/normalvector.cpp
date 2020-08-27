@@ -31,13 +31,15 @@ namespace LevelSetParallel
                                    const SparsityPatternType&    dsp_in,
                                    const DoFHandler<dim>&        dof_handler_in,
                                    const ConstraintsType&        constraints_in,
-                                   const IndexSet&               locally_owned_dofs_in
+                                   const IndexSet&               locally_owned_dofs_in,
+                                   const IndexSet&               locally_relevant_dofs_in
                                     )
     {
         normal_vector_data = data_in;
         dof_handler        = &dof_handler_in;
         constraints        = &constraints_in;
         locally_owned_dofs = locally_owned_dofs_in;
+        locally_relevant_dofs = locally_relevant_dofs_in;
         
         system_matrix.reinit( locally_owned_dofs,
                               locally_owned_dofs,
@@ -48,6 +50,7 @@ namespace LevelSetParallel
         system_rhs.reinit( dim );
         for (unsigned int d=0; d<dim; ++d)
             system_rhs.block(d).reinit( locally_owned_dofs, 
+                                        locally_relevant_dofs,
                                         mpi_commun ); 
         /*
          * here the current verbosity level is set
@@ -152,6 +155,7 @@ namespace LevelSetParallel
             if (normal_vector_data.do_print_l2norm)
                 pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
           }
+          normal_vector_out.update_ghost_values();
     }
     
     template <int dim>
@@ -161,6 +165,7 @@ namespace LevelSetParallel
         normal_vector_field.reinit( dim );
         for (unsigned int d=0; d<dim; ++d)
             normal_vector_field.block(d).reinit( locally_owned_dofs, 
+                                                 locally_relevant_dofs,
                                                  mpi_commun ); 
 
         compute_normal_vector_field( solution_in, normal_vector_field );
@@ -196,11 +201,11 @@ namespace LevelSetParallel
     void 
     NormalVector<dim>::solve_cg( VectorType& solution, const VectorType & rhs)
     {
-      SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-8 * rhs.l2_norm() );
-      LA::SolverCG             solver( solver_control, mpi_commun );
+      SolverControl         solver_control( dof_handler->n_dofs() * 2, 1e-8 * rhs.l2_norm() );
+      SolverCG<VectorType>  solver( solver_control );
 
-      LA::MPI::PreconditionAMG preconditioner;
-      LA::MPI::PreconditionAMG::AdditionalData data;
+      TrilinosWrappers::PreconditionAMG preconditioner;
+      TrilinosWrappers::PreconditionAMG::AdditionalData data;
       preconditioner.initialize(system_matrix, data);
       
       VectorType    completely_distributed_solution( locally_owned_dofs,

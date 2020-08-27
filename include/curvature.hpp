@@ -79,12 +79,10 @@ namespace LevelSetParallel
   class Curvature
   {
   private:
-    //typedef LinearAlgebra::distributed::Vector<double>         VectorType;
-    //typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
-    typedef LA::MPI::Vector                           VectorType;
-    typedef LA::MPI::BlockVector                      BlockVectorType;
-    typedef LA::MPI::SparseMatrix                     SparseMatrixType;
-
+    typedef LinearAlgebra::distributed::Vector<double>         VectorType;
+    typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
+    typedef TrilinosWrappers::SparseMatrix                     SparseMatrixType;
+    
     typedef DoFHandler<dim>                           DoFHandlerType;
     
     typedef DynamicSparsityPattern                    SparsityPatternType;

@@ -1,18 +1,6 @@
 #pragma once
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
-namespace LA
-{
-#if defined(DEAL_II_WITH_PETSC) && !defined(DEAL_II_PETSC_WITH_COMPLEX) && \
-  !(defined(DEAL_II_WITH_TRILINOS) && defined(FORCE_USE_OF_TRILINOS))
-  using namespace dealii::LinearAlgebraPETSc;
-#  define USE_PETSC_LA
-#elif defined(DEAL_II_WITH_TRILINOS)
-  using namespace dealii::LinearAlgebraTrilinos;
-#else
-#  error DEAL_II_WITH_PETSC or DEAL_II_WITH_TRILINOS required
-#endif
-} // namespace LA
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/full_matrix.h>
 #include <deal.II/base/utilities.h>
@@ -57,10 +45,10 @@ namespace utilityFunctions
     
     double evaluateCFLCondition();
 
-    void solve_linear_system_cg(const LA::MPI::Vector& RHS,
-                                const LA::MPI::SparseMatrix& matrix,
-                                LA::MPI::Vector& solution,
-                                const std::string& callerFunction);
+    //void solve_linear_system_cg(const LA::MPI::Vector& RHS,
+                                //const LA::MPI::SparseMatrix& matrix,
+                                //LA::MPI::Vector& solution,
+                                //const std::string& callerFunction);
 
 
     void printLine(const int verbosityLevel=0, std::ostream& str=std::cout);

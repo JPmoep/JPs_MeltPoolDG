@@ -9,7 +9,7 @@ namespace LevelSet
   using namespace dealii; 
   
   template <int dim>
-  LevelSetEquation<dim>::LevelSetEquation(
+  LevelSetEquationNotParallel<dim>::LevelSetEquationNotParallel(
                      const LevelSetParameters& parameters_,
                      Triangulation<dim>&       triangulation_)
     : epsilon ( GridTools::minimal_cell_diameter(triangulation_) * 2.0 )
@@ -24,7 +24,7 @@ namespace LevelSet
   {}
   
   template <int dim>
-  void LevelSetEquation<dim>::setInitialConditions(const Function<dim>& InitialValues)
+  void LevelSetEquationNotParallel<dim>::setInitialConditions(const Function<dim>& InitialValues)
   {
     VectorTools::project(dof_handler, 
                          constraints,
@@ -34,7 +34,7 @@ namespace LevelSet
   } 
   
   template <int dim>
-  void LevelSetEquation<dim>::setDirichletBoundaryConditions(const Function<dim>& DirichletValues)
+  void LevelSetEquationNotParallel<dim>::setDirichletBoundaryConditions(const Function<dim>& DirichletValues)
   {
     std::map<types::global_dof_index, double> boundary_values;
     
@@ -50,7 +50,7 @@ namespace LevelSet
   } 
   
   template <int dim>
-  void LevelSetEquation<dim>::assembleSystemMatrices(TensorFunction<1, dim> &AdvectionField_)
+  void LevelSetEquationNotParallel<dim>::assembleSystemMatrices(TensorFunction<1, dim> &AdvectionField_)
   {
     systemMatrix = 0.0;
     systemRHS = 0.0;
@@ -139,7 +139,7 @@ namespace LevelSet
   }
   
   template <int dim>
-  void LevelSetEquation<dim>::computeReinitializationMatrices( const double dTau )
+  void LevelSetEquationNotParallel<dim>::computeReinitializationMatrices( const double dTau )
   {
     systemRHS = 0;
     systemMatrix = 0.0;
@@ -220,7 +220,7 @@ namespace LevelSet
   }
 
   template <int dim>
-  void LevelSetEquation<dim>::computeDampedNormalLevelSet()
+  void LevelSetEquationNotParallel<dim>::computeDampedNormalLevelSet()
   {
     systemMatrix = 0.0;
     for (unsigned int d=0; d<dim; ++d)
@@ -300,7 +300,7 @@ namespace LevelSet
   }
 
   template <int dim>
-  void LevelSetEquation<dim>::computeDampedCurvatureLevelSet()
+  void LevelSetEquationNotParallel<dim>::computeDampedCurvatureLevelSet()
   {
     systemMatrix = 0.0; // @currently system matrix from computeDampedNormal is reused
     system_curvature_RHS = 0.0;
@@ -384,7 +384,7 @@ namespace LevelSet
   }
 
   template <int dim>
-  void LevelSetEquation<dim>::solve_cg(const Vector<double>& RHS,
+  void LevelSetEquationNotParallel<dim>::solve_cg(const Vector<double>& RHS,
                                        const SparseMatrix<double>& matrix,
                                        Vector<double>& solution,
                                        const std::string& callerFunction)
@@ -399,7 +399,7 @@ namespace LevelSet
   }
 
   template <int dim>
-  void LevelSetEquation<dim>::setup_system()
+  void LevelSetEquationNotParallel<dim>::setup_system()
   {
     dof_handler.distribute_dofs( fe );
 
@@ -438,7 +438,7 @@ namespace LevelSet
   }
 
   template <int dim>
-  void LevelSetEquation<dim>::solve_u()
+  void LevelSetEquationNotParallel<dim>::solve_u()
   {
     SolverControl            solver_control( 1000, 1e-8 * systemRHS.l2_norm() );
     SolverGMRES<Vector<double>>       gmres( solver_control );
@@ -453,7 +453,7 @@ namespace LevelSet
   
   //@ todo: merge two solve functions using call by reference
   template <int dim>
-  void LevelSetEquation<dim>::re_solve_u()
+  void LevelSetEquationNotParallel<dim>::re_solve_u()
   {
     SolverControl            solver_control( 1000, 1e-8 * systemRHS.l2_norm() );
     SolverGMRES<Vector<double>>       gmres( solver_control );
@@ -467,7 +467,7 @@ namespace LevelSet
   }
   
   template <int dim>
-  void LevelSetEquation<dim>::computeAdvection(TensorFunction<1, dim> &AdvectionField_)
+  void LevelSetEquationNotParallel<dim>::computeAdvection(TensorFunction<1, dim> &AdvectionField_)
   {
     std::map<types::global_dof_index, Point<dim> > supportPoints;
     DoFTools::map_dofs_to_support_points<dim,dim>(MappingQGeneric<dim>(fe.degree),dof_handler,supportPoints);
@@ -482,7 +482,7 @@ namespace LevelSet
 
   // @ to be rearranged
   template <int dim>
-  void LevelSetEquation<dim>::computeVolume( )
+  void LevelSetEquationNotParallel<dim>::computeVolume( )
   {
     FEValues<dim> fe_values( fe,
                              qGauss,
@@ -513,7 +513,7 @@ namespace LevelSet
   }
 
   template <int dim>
-  void LevelSetEquation<dim>::output_results(const double timeStep)
+  void LevelSetEquationNotParallel<dim>::output_results(const double timeStep)
   {
     DataOut<dim> data_out;
 
@@ -536,7 +536,7 @@ namespace LevelSet
   }
   
   template <int dim>
-  void LevelSetEquation<dim>::run( const Function<dim>& InitialValues,
+  void LevelSetEquationNotParallel<dim>::run( const Function<dim>& InitialValues,
                                    TensorFunction<1, dim>& AdvectionField_,
                                    const Function<dim>& DirichletValues) 
   {

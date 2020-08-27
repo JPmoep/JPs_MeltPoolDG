@@ -7,19 +7,6 @@
 
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
-namespace LA
-{
-#if defined(DEAL_II_WITH_PETSC) && !defined(DEAL_II_PETSC_WITH_COMPLEX) && \
-  !(defined(DEAL_II_WITH_TRILINOS) && defined(FORCE_USE_OF_TRILINOS))
-  using namespace dealii::LinearAlgebraPETSc;
-#  define USE_PETSC_LA
-#elif defined(DEAL_II_WITH_TRILINOS)
-  using namespace dealii::LinearAlgebraTrilinos;
-#else
-#  error DEAL_II_WITH_PETSC or DEAL_II_WITH_TRILINOS required
-#endif
-} // namespace LA
-
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
 
@@ -97,22 +84,15 @@ namespace LevelSetParallel
   {
   private:
 
-    //typedef LinearAlgebra::distributed::Vector<double>      VectorType;
-    //typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
-    //typedef LinearAlgebra::distributed::SparseMatrix<double> SparseMatrixTypeNew;
+    typedef LinearAlgebra::distributed::Vector<double>      VectorType;
+    typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
+    typedef TrilinosWrappers::SparseMatrix                  SparseMatrixType;
 
-    //typedef LA::MPI::Vector                            VectorType;
-    //typedef LA::MPI::BlockVector                       BlockVectorType;
-    //typedef LA::MPI::SparseMatrix                      SparseMatrixType;
-    typedef PETScWrappers::MPI::Vector                   VectorType;
-    typedef PETScWrappers::MPI::BlockVector              BlockVectorType;
-    typedef PETScWrappers::MPI::SparseMatrix             SparseMatrixType;
-
-    typedef DoFHandler<dim>                            DoFHandlerType;
+    typedef DoFHandler<dim>                                 DoFHandlerType;
     
-    typedef DynamicSparsityPattern                     SparsityPatternType;
+    typedef DynamicSparsityPattern                          SparsityPatternType;
     
-    typedef AffineConstraints<double>                  ConstraintsType;
+    typedef AffineConstraints<double>                       ConstraintsType;
 
   public:
 
@@ -126,7 +106,8 @@ namespace LevelSetParallel
                 const SparsityPatternType&  dsp_in,
                 const DoFHandler<dim>&      dof_handler_in,
                 const ConstraintsType&      constraints_in,
-                const IndexSet&             locally_owned_dofs_in);
+                const IndexSet&             locally_owned_dofs_in,
+                const IndexSet&             locally_relevant_dofs_in);
 
     /*
      *  This function computes the (damped) normal vector field for a given solution of a scalar function
@@ -169,6 +150,7 @@ namespace LevelSetParallel
     SmartPointer<const DoFHandlerType>      dof_handler;
     SmartPointer<const ConstraintsType>     constraints;
     IndexSet                                locally_owned_dofs;
+    IndexSet                                locally_relevant_dofs;
 
     SparseMatrixType                        system_matrix;
     BlockVectorType                         system_rhs;

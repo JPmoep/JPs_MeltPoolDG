@@ -49,6 +49,7 @@ namespace LevelSetParallel
                               mpi_commun );
         
         system_rhs.reinit( locally_owned_dofs, 
+                           locally_relevant_dofs,
                            mpi_commun ); 
         
         /*
@@ -70,7 +71,8 @@ namespace LevelSetParallel
                                         dsp_in,
                                         dof_handler_in,
                                         constraints_in,
-                                        locally_owned_dofs_in);
+                                        locally_owned_dofs_in,
+                                        locally_relevant_dofs_in);
     }
     
     template <int dim>
@@ -177,10 +179,10 @@ namespace LevelSetParallel
     Curvature<dim>::solve_cg( VectorType & solution, const VectorType & rhs)
     {
       SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-6 * rhs.l2_norm() );
-      LA::SolverCG             solver( solver_control, mpi_commun );
+      SolverCG<VectorType>     solver( solver_control );
 
-      LA::MPI::PreconditionAMG preconditioner;
-      LA::MPI::PreconditionAMG::AdditionalData data;
+      TrilinosWrappers::PreconditionAMG preconditioner;
+      TrilinosWrappers::PreconditionAMG::AdditionalData data;
       preconditioner.initialize(system_matrix, data);
       
       VectorType    completely_distributed_solution( locally_owned_dofs,

@@ -61,10 +61,10 @@ namespace LevelSet
   using namespace dealii; 
   
   template <int dim>
-  class LevelSetEquation
+  class LevelSetEquationNotParallel
   {
   public:
-    LevelSetEquation(const LevelSetParameters& parameters,
+    LevelSetEquationNotParallel(const LevelSetParameters& parameters,
                      Triangulation<dim>&       triangulation);
     void run( const Function<dim>& InitialValues,
               TensorFunction<1, dim> &AdvectionField_,

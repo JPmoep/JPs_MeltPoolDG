@@ -16,83 +16,68 @@
  * Author: Magdalena Schreter, TUM, 2020
  */
 #pragma once
-#include <deal.II/lac/generic_linear_algebra.h>
-namespace LA
-{
-#if defined(DEAL_II_WITH_PETSC) && !defined(DEAL_II_PETSC_WITH_COMPLEX) && \
-  !(defined(DEAL_II_WITH_TRILINOS) && defined(FORCE_USE_OF_TRILINOS))
-  using namespace dealii::LinearAlgebraPETSc;
-#  define USE_PETSC_LA
-#elif defined(DEAL_II_WITH_TRILINOS)
-  using namespace dealii::LinearAlgebraTrilinos;
-#else
-#  error DEAL_II_WITH_PETSC or DEAL_II_WITH_TRILINOS required
-#endif
-} // namespace LA
 
-#include <deal.II/base/quadrature_lib.h>
+#include <deal.II/base/timer.h>
 #include <deal.II/base/function.h>
 #include <deal.II/base/tensor_function.h>
-#include <deal.II/base/timer.h>
 
-#include <deal.II/fe/mapping.h>
-#include <deal.II/lac/vector.h>
-#include <deal.II/lac/block_vector.h>
-
+// for distributed vectors/matrices
+#include <deal.II/lac/generic_linear_algebra.h>
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
-//#include <deal.II/lac/sparse_matrix.h>
-//#include <deal.II/lac/dynamic_sparsity_pattern.h>
+
+// sparse matrices utilites
+#include <deal.II/lac/trilinos_sparse_matrix.h>
+#include <deal.II/lac/sparsity_tools.h>
+
+// (non)-distributed algebra
+#include <deal.II/lac/full_matrix.h>
+#include <deal.II/numerics/data_out.h>
+#include <deal.II/numerics/vector_tools.h>
+#include <deal.II/numerics/matrix_tools.h>
+
+// solvers
 #include <deal.II/lac/solver_cg.h> // only for symmetric matrices
 #include <deal.II/lac/solver_gmres.h>
 
+// preconditioner
 #include <deal.II/lac/precondition.h>
+
+// constraints
 #include <deal.II/lac/affine_constraints.h>
 
-//#include <deal.II/grid/tria.h>
+// grid-specific libraries
+#include <deal.II/distributed/tria.h>
+#include <deal.II/distributed/grid_refinement.h>
 #include <deal.II/grid/grid_generator.h>
+#include <deal.II/grid/grid_tools.h>
 
+// dof handler
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/dofs/dof_tools.h>
 
+// finite element
 #include <deal.II/fe/fe_q.h>
-#include <deal.II/fe/fe_system.h>
-#include <deal.II/numerics/data_out.h>
-#include <deal.II/lac/full_matrix.h>
-#include <deal.II/numerics/vector_tools.h>
-#include <deal.II/numerics/matrix_tools.h>
-#include <deal.II/base/utilities.h>
-#include <deal.II/matrix_free/fe_evaluation.h>
-//#include <experimental/filesystem>
-#include "levelsetparameters.hpp"
-#include <fstream>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <algorithm> // for enum ::All
-#include <cmath>
-#include "utilityFunctions.hpp"
 
 // additional includes for parallelization
 #include <deal.II/base/conditional_ostream.h> 
 #include <deal.II/base/index_set.h>
-#include <deal.II/lac/sparsity_tools.h>
 #include <deal.II/base/mpi.h> 
-//#include <deal.II/lac/petsc_vector.h>
-#include <deal.II/lac/petsc_sparse_matrix.h>
-//#include <deal.II/lac/petsc_solver.h>
-#include <deal.II/lac/petsc_precondition.h>
-#include <deal.II/distributed/tria.h>
-#include <deal.II/distributed/grid_refinement.h>
-#include <deal.II/numerics/data_postprocessor.h>
-#include <deal.II/base/hdf5.h>
-
+#include <deal.II/base/utilities.h>
 #include <deal.II/base/data_out_base.h>
-#include <deal.II/lac/trilinos_solver.h> // direct solver
 
 // multiphaseflow
-#include <reinitialization.hpp>
-#include <curvature.hpp>
+#include "reinitialization.hpp"
+#include "curvature.hpp"
+#include "levelsetparameters.hpp"
+#include "utilityFunctions.hpp"
+
+// c++
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <algorithm> // for enum ::All
+#include <cmath>
 
 namespace LevelSetParallel
 {
@@ -101,6 +86,11 @@ namespace LevelSetParallel
   template <int dim>
   class LevelSetEquation
   {
+  private:
+    typedef LinearAlgebra::distributed::Vector<double>         VectorType;
+    typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
+    typedef TrilinosWrappers::SparseMatrix                     SparseMatrixType;
+
   public:
     LevelSetEquation(const LevelSetParameters& parameters,
                      parallel::distributed::Triangulation<dim>&       triangulation,
@@ -112,11 +102,6 @@ namespace LevelSetParallel
     double epsilon;
 
   private:
-    //typedef LinearAlgebra::distributed::Vector<double>         VectorType;
-    //typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
-    typedef LA::MPI::Vector    VectorType;
-    typedef LA::MPI::Vector    BlockVectorType;
-
     void setup_system(const Function<dim>& DirichletValues );
 
     void setInitialConditions(const Function<dim>& InitialValues);
@@ -145,22 +130,22 @@ namespace LevelSetParallel
     void compute_overall_phase_volume();
     void computeAdvection(TensorFunction<1, dim> &AdvectionField_);
     
-    MPI_Comm&                 mpi_communicator;
-    LevelSetParameters        parameters;
-    FE_Q<dim>                 fe;
+    MPI_Comm&                                  mpi_communicator;
+    LevelSetParameters                         parameters;
+    FE_Q<dim>                                  fe;
     parallel::distributed::Triangulation<dim>& triangulation;
-    DoFHandler<dim>           dof_handler;
-    QGauss<dim>               qGauss; 
-    double                    time_step;
-    double                    time;
-    unsigned int              timestep_number;
+    DoFHandler<dim>                            dof_handler;
+    QGauss<dim>                                qGauss; 
+    double                                     time_step;
+    double                                     time;
+    unsigned int                               timestep_number;
     
-    AffineConstraints<double> constraints;
-    AffineConstraints<double> constraints_no_dirichlet;
+    AffineConstraints<double>                  constraints;
+    AffineConstraints<double>                  constraints_no_dirichlet;
 
-    LA::MPI::SparseMatrix      systemMatrix;              // global system matrix
-    VectorType                 systemRHS;                 // global system right-hand side
-    VectorType                 solution_u;
+    SparseMatrixType                           systemMatrix;              // global system matrix
+    VectorType                                 systemRHS;                 // global system right-hand side
+    VectorType                                 solution_u;
     
     //LA::MPI::BlockVector       advection_field;         // system right-hand side for computing the normal vector
 

@@ -1,10 +1,11 @@
 /* ---------------------------------------------------------------------
  * Author: Magdalena Schreter, TUM, 2020
  */
+#include <deal.II/lac/solver_gmres.h>
+
 #include <levelsetParallel.hpp>
 #include <reinitialization.hpp>
 #include <curvature.hpp>
-#include <deal.II/lac/generic_linear_algebra.h>
 
 namespace LevelSetParallel
 {
@@ -51,7 +52,10 @@ namespace LevelSetParallel
     pcout << "Number of active cells: "       << triangulation.n_active_cells() << std::endl;
     pcout << "Number of degrees of freedom: " << dof_handler.n_dofs()           << std::endl << std::endl;
                                       
-    systemRHS.reinit(locally_owned_dofs, mpi_communicator); 
+    
+    systemRHS.reinit(locally_owned_dofs, 
+                     locally_relevant_dofs, 
+                     mpi_communicator); 
     
     solution_u.reinit(locally_owned_dofs,
                       locally_relevant_dofs,
@@ -60,24 +64,44 @@ namespace LevelSetParallel
     // constraints for level set function
     constraints.clear();
     constraints.reinit(locally_relevant_dofs);
-    DoFTools::make_hanging_node_constraints(dof_handler, constraints); 
+    DoFTools::make_hanging_node_constraints(dof_handler, constraints);
     VectorTools::interpolate_boundary_values( dof_handler,
                                               utilityFunctions::BoundaryConditions::Types::dirichlet,
                                               DirichletValues,
                                               constraints );
     constraints.close();   
 
-    DynamicSparsityPattern dsp( locally_relevant_dofs );
-    DoFTools::make_sparsity_pattern( dof_handler, dsp, constraints, false );
-    SparsityTools::distribute_sparsity_pattern(dsp,
-                                               locally_owned_dofs, 
-                                               mpi_communicator,
-                                               locally_relevant_dofs);
+    //DynamicSparsityPattern dsp( locally_relevant_dofs );
+    //DoFTools::make_sparsity_pattern( dof_handler, dsp, constraints, false );
+    //SparsityTools::distribute_sparsity_pattern(dsp,
+                                               //locally_owned_dofs, 
+                                               //mpi_communicator,
+                                               //locally_relevant_dofs);
 
-    systemMatrix.reinit( locally_owned_dofs,
-                         locally_owned_dofs,
-                         dsp,
-                         mpi_communicator);
+    TrilinosWrappers::SparsityPattern dsp(locally_owned_dofs,
+                                         locally_owned_dofs,
+                                         locally_relevant_dofs,
+                                         mpi_communicator);
+    DoFTools::make_sparsity_pattern(dof_handler,
+                                    dsp,
+                                    constraints,
+                                    false,
+                                    Utilities::MPI::this_mpi_process(
+                                      mpi_communicator));
+    dsp.compress();
+
+    systemMatrix.reinit( dsp ); 
+    //locally_owned_dofs,
+                         //locally_owned_dofs,
+                         //dsp,
+                         //mpi_communicator);
+
+    //systemMatrix.reinit( locally_owned_dofs,
+                         //locally_owned_dofs,
+                         //dsp,
+                         //mpi_communicator);
+                         //
+    //@ replace by merge
 
     constraints_no_dirichlet.clear();
     constraints_no_dirichlet.reinit(locally_relevant_dofs);
@@ -116,7 +140,6 @@ namespace LevelSetParallel
     const unsigned int dofs_per_cell =   fe.dofs_per_cell;
     const unsigned int n_q_points    =   qGauss.size();
 
-    std::vector<types::global_dof_index> globalDofIndices( dofs_per_cell );
     
     std::vector<double>         phiAtQ(  n_q_points );
     std::vector<Tensor<1,dim>>  phiGradAtQ( n_q_points, Tensor<1,dim>() );
@@ -124,10 +147,11 @@ namespace LevelSetParallel
     FullMatrix<double> cellMatrix(dofs_per_cell, dofs_per_cell);
     Vector<double> cellRHS( dofs_per_cell );
     
-    
     for (const auto &cell : dof_handler.active_cell_iterators())
     if (cell->is_locally_owned())
     {
+        std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
+        
         cellMatrix = 0;
         cellRHS    = 0;
 
@@ -194,10 +218,10 @@ namespace LevelSetParallel
           }// end gauss
     
         // assembly
-        cell->get_dof_indices(globalDofIndices);
+        cell->get_dof_indices(local_dof_indices);
         constraints.distribute_local_to_global(cellMatrix,
                                                cellRHS,
-                                               globalDofIndices,
+                                               local_dof_indices,
                                                systemMatrix,
                                                systemRHS);
          
@@ -275,20 +299,18 @@ namespace LevelSetParallel
     VectorType    completely_distributed_solution(locally_owned_dofs,
                                                        mpi_communicator);
     SolverControl            solver_control( dof_handler.n_dofs(), 1e-8 * systemRHS.l2_norm() );
-#ifdef USE_PETSC_LA
-    LA::SolverGMRES solver(solver_control, mpi_communicator);
-#else
-    LA::SolverGMRES solver(solver_control);
-#endif
+    TrilinosWrappers::PreconditionAMG preconditioner;
+    TrilinosWrappers::PreconditionAMG::AdditionalData data;
+    
+    SolverGMRES<VectorType> solver(solver_control); // mpi_communicator);
 
-    LA::MPI::PreconditionAMG preconditioner;
-    LA::MPI::PreconditionAMG::AdditionalData data;
     preconditioner.initialize(systemMatrix, data);
 
     solver.solve( systemMatrix, 
                   completely_distributed_solution, 
                   systemRHS, 
-                  preconditioner );
+                  PreconditionIdentity());
+                  //preconditioner );
 
     pcout << "   u-equation: " << solver_control.last_step() << " GMRES iterations." << std::endl;
     constraints.distribute(completely_distributed_solution);
@@ -457,7 +479,7 @@ namespace LevelSetParallel
           << " MPI rank(s)..." << std::endl;
 
     timestep_number=0;
-
+    
     setup_system( DirichletValues );
 
     setInitialConditions(InitialValues);
