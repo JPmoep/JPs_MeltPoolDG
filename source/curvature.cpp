@@ -208,7 +208,7 @@ namespace LevelSetParallel
 
     // instantiation
     template class Curvature<2>;
-    template class Curvature<3>;
+    //template class Curvature<3>;
 
 } // namespace LevelSetParallel
 

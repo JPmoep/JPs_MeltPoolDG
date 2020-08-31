@@ -9,8 +9,11 @@
 #include <deal.II/grid/grid_tools.h>
 // to use preconditioner 
 #include <deal.II/lac/petsc_precondition.h>
-#include <deal.II/fe/mapping.h>
 #include <deal.II/lac/solver_cg.h> // only for symmetric matrices
+// for matrix free solution
+#include <deal.II/fe/mapping_q.h>
+#include <deal.II/matrix_free/matrix_free.h>
+#include <normalvectoroperator.hpp>
 
 #include <normalvector.hpp>
 
@@ -61,11 +64,80 @@ namespace LevelSetParallel
 
     template <int dim>
     void 
+    NormalVector<dim>::solve_normal_vector_matrixfree( const VectorType & levelset_in )
+    {
+        pcout << "----------- NORMAL VECTORS -- MATRIX FREE " << std::endl;
+        pcout << " ||phi_in|| " << levelset_in.l2_norm()   << std::endl;  
+
+        const unsigned int dimTemp = 2;
+        const unsigned int degreeTemp = 1;
+
+        MappingQ<dimTemp> mapping( degreeTemp );
+        QGauss<1> quad_1d(         degreeTemp + 1 );
+        
+        typedef VectorizedArray<double>     VectorizedArrayType ;
+        typename MatrixFree<dimTemp, double, VectorizedArrayType>::AdditionalData
+          additional_data;
+
+        additional_data.mapping_update_flags = update_values | update_gradients;
+
+        MatrixFree<dimTemp, double, VectorizedArrayType> matrix_free;
+
+        matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
+       
+        LevelSetMatrixFree::NormalVectorOperator<dimTemp,degreeTemp> normal_operator(matrix_free,
+                                                                                     normal_vector_data.min_cell_size * 0.5 );
+        
+        // copy initial level set fiel
+        VectorType level; 
+        matrix_free.initialize_dof_vector(level);
+        level.copy_locally_owned_data_from(levelset_in);
+        level.update_ghost_values();
+
+        // compute right-hand side
+        BlockVectorType rhs;
+
+        rhs.reinit(dimTemp); 
+        matrix_free.initialize_dof_vector(rhs.block(0));
+        matrix_free.initialize_dof_vector(rhs.block(1));
+        normal_operator.create_rhs(rhs, level);
+        
+        ReductionControl     reduction_control;
+        //SolverCG<BlockVectorType> solver(reduction_control);
+        SolverControl         solver_control( dof_handler->n_dofs() * 2, 1e-8 * rhs.l2_norm() );
+        SolverCG<VectorType> solver(solver_control);
+
+        BlockVectorType normals(dimTemp); 
+        normal_operator.initialize_dof_vector(normals.block(0));
+        normal_operator.initialize_dof_vector(normals.block(1));
+        
+        for (unsigned int d=0; d<dimTemp; d++)
+        {
+          pcout << " ||RHS|| " << rhs.block(d).l2_norm()   << std::endl;  
+          solver.solve(normal_operator,
+                       normals.block(d),
+                       rhs.block(d),
+                       PreconditionIdentity());
+          constraints->distribute(normals.block(d));
+          normals.block(d).update_ghost_values();
+          pcout << " ||n || ("  << d << ") " << normals.block(d).l2_norm() << std::endl;  
+          pcout << " infty ||n || ("  << d << ") " << normals.block(d).linfty_norm() << std::endl;  
+        }
+    }
+
+
+    template <int dim>
+    void 
     NormalVector<dim>::compute_normal_vector_field( const VectorType & solution_in,
                                                     BlockVectorType & normal_vector_out ) 
     {
+        pcout << "----------- NORMAL VECTORS -- Matrix " << std::endl;
+        pcout << " ||phi_in|| " << solution_in.l2_norm()   << std::endl;  
+        solution_in.update_ghost_values();
         //TimerOutput::Scope t(computing_timer, "compute damped normals");  
         system_matrix = 0.0;
+        system_rhs=0.0;
+        normal_vector_out = 0.0;
         for (unsigned int d=0; d<dim; d++)
         {
             system_rhs.block(d) = 0.0;
@@ -80,10 +152,10 @@ namespace LevelSetParallel
                                  qGauss,
                                  update_values | update_gradients | update_quadrature_points | update_JxW_values );
 
-        const unsigned int          dofs_per_cell = fe.dofs_per_cell;
-        FullMatrix<double>          normal_cell_matrix( dofs_per_cell, dofs_per_cell );
-        std::vector<Vector<double>> normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
-        std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
+        const unsigned int                    dofs_per_cell = fe.dofs_per_cell;
+        FullMatrix<double>                    normal_cell_matrix( dofs_per_cell, dofs_per_cell );
+        std::vector<Vector<double>>           normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
+        std::vector<types::global_dof_index>  local_dof_indices( dofs_per_cell );
         
         const unsigned int n_q_points    = qGauss.size();
         std::vector<Tensor<1,dim>>           normal_at_q(  n_q_points, Tensor<1,dim>() );
@@ -97,8 +169,9 @@ namespace LevelSetParallel
             cell->get_dof_indices( local_dof_indices );
             
             normal_cell_matrix = 0.0;
-            for(auto& normal_cell : normal_cell_rhs)
-                normal_cell =    0.0;
+            //for(auto& normal_cell : normal_cell_rhs)
+            for (unsigned int d=0; d<dim; d++)
+                normal_cell_rhs[d] =    0.0;
 
             fe_values.get_function_gradients( solution_in, normal_at_q ); // compute normals from level set solution at tau=0
             for (const unsigned int q_index : fe_values.quadrature_point_indices())
@@ -112,7 +185,8 @@ namespace LevelSetParallel
                     {
                         const double phi_j             = fe_values.shape_value(j, q_index);
                         const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(j, q_index);
-
+                        
+                        // clang-format off
                         normal_cell_matrix( i, j ) += ( 
                                                         phi_i * phi_j 
                                                         + 
@@ -120,41 +194,48 @@ namespace LevelSetParallel
                                                       )
                                                       * 
                                                       fe_values.JxW( q_index ) ;
+                        // clang-format on
                     }
      
                     for (unsigned int d=0; d<dim; ++d)
                     {
+                        // clang-format off
                         normal_cell_rhs[d](i) +=   phi_i
                                                    * 
                                                    normal_at_q[ q_index ][ d ]  
                                                    * 
                                                    fe_values.JxW( q_index );
+                        // clang-format on
                     }
                 }
             }
             
             // assembly
             cell->get_dof_indices(local_dof_indices);
+            constraints->distribute_local_to_global( normal_cell_matrix,
+                                                     local_dof_indices,
+                                                     system_matrix);
             for (unsigned int d=0; d<dim; ++d)
-                constraints->distribute_local_to_global( normal_cell_matrix,
-                                                         normal_cell_rhs[d],
+                constraints->distribute_local_to_global( normal_cell_rhs[d],
                                                          local_dof_indices,
-                                                         system_matrix,
                                                          system_rhs.block(d) );
              
           }
           system_matrix.compress(VectorOperation::add);
-          for (unsigned int d=0; d<dim; ++d)
-            system_rhs.block(d).compress(VectorOperation::add);
+          //for (unsigned int d=0; d<dim; ++d)
+          system_rhs.compress(VectorOperation::add);
         
           for (unsigned int d=0; d<dim; ++d)
           {
             solve_cg( normal_vector_out.block( d ), system_rhs.block( d ) );
+            
+            pcout << " ||RHS|| " << system_rhs.block(d).l2_norm()   << std::endl;  
 
             if (normal_vector_data.do_print_l2norm)
                 pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
+                pcout << std::setprecision(10) << "   normal vector: infty: ||n_" << d << "|| = " << normal_vector_out.block(d).linfty_norm() << std::endl;
           }
-          //normal_vector_out.update_ghost_values();
+          normal_vector_out.update_ghost_values();
     }
     
     template <int dim>
@@ -214,13 +295,12 @@ namespace LevelSetParallel
       solver.solve( system_matrix, 
                     completely_distributed_solution, 
                     rhs, 
-                    preconditioner );
+                    PreconditionIdentity() );
       
       
       solution = completely_distributed_solution;
       constraints->distribute(solution);
       solution.update_ghost_values();
-      //pcout << "\t normal vectors: solver  with "  << solver_control.last_step() << " CG iterations." << std::endl;
     }
 
     template <int dim>
@@ -234,8 +314,6 @@ namespace LevelSetParallel
 
     // instantiation
     template class NormalVector<2>;
-    template class NormalVector<3>;
+    //template class NormalVector<3>;
 
 } // namespace LevelSetParallel
-
-

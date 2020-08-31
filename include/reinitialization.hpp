@@ -57,6 +57,7 @@ namespace LevelSetParallel
         , verbosity_level(utilityFunctions::VerbosityType::silent)
         , min_cell_size(0.0)
         , do_print_l2norm(false)
+        , do_matrix_free(false)
     {
     }
 
@@ -83,6 +84,9 @@ namespace LevelSetParallel
     
     // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
     bool do_print_l2norm;
+    
+    // this parameter activates the matrix free cell loop procedure
+    bool do_matrix_free;
 
     // @ add lambda function for calculating epsilon
   };
@@ -142,9 +146,6 @@ namespace LevelSetParallel
     
     void 
     solve_olsson_model_matrixfree( VectorType & solution_out );
-    
-    void 
-    solve_normal_vector_matrixfree( const VectorType & levelset_in );
 
     void
     initialize_time_iterator(std::shared_ptr<TimeIterator> t);

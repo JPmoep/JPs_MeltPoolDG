@@ -14,55 +14,85 @@ namespace LevelSetParallel
     template<int dim, int degree, typename number = double>
     class NormalVectorOperator
     {
-        public:
-          typedef LinearAlgebra::distributed::Vector<number>       VectorType;
-          typedef LinearAlgebra::distributed::BlockVector<number>  BlockVectorType;
-          typedef VectorizedArray<number>                          VectorizedArrayType;
-          typedef Tensor<1, dim, VectorizedArray<number>>          vector;
-          typedef VectorizedArray<number>                          scalar;
+      public:
+        typedef LinearAlgebra::distributed::Vector<number>       VectorType;
+        typedef LinearAlgebra::distributed::BlockVector<number>  BlockVectorType;
+        typedef VectorizedArray<number>                          VectorizedArrayType;
+        typedef Tensor<1, dim, VectorizedArray<number>>          vector;
+        typedef VectorizedArray<number>                          scalar;
+        
+        NormalVectorOperator
+          (const MatrixFree<dim, number, VectorizedArrayType> &matrix_free,
+           const double damping_in)
+          : matrix_free( matrix_free )
+          , damping(      damping_in )
+          {}
+
+        void
+        vmult(BlockVectorType & dst,
+              const BlockVectorType & src) const
+        {
+          const int n_q_points_1d = degree+1; // @ todo: not hard code
           
-          NormalVectorOperator
-            (const MatrixFree<dim, number, VectorizedArrayType> &matrix_free,
-             const double damping_in)
-            : matrix_free( matrix_free )
-            , damping(         damping_in )
-            {}
+          FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal(      matrix_free );
 
-          void
-          vmult(BlockVectorType & dst,
-                const BlockVectorType & src) const
-          {
-            const int n_q_points_1d = degree+1;
-            
-            FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal_comp(      matrix_free );
+          matrix_free.template cell_loop<BlockVectorType, BlockVectorType>( [&] 
+            (const auto&, auto& dst, const auto& src, auto cell_range) {
+              for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
+              {
+                normal.reinit(cell);
+              /*
+               * @ bug? --> the following call yield a compilation error
+               */
+                //normal_comp.gather_evaluate(src, true, true);
+                normal.read_dof_values(src);
+                normal.evaluate(true,true,false);
 
-            matrix_free.template cell_loop<BlockVectorType, BlockVectorType>( [&] 
-              (const auto&, auto& dst, const auto& src, auto cell_range) {
-                for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
+                for (unsigned int q_index=0; q_index<normal.n_q_points; ++q_index)
                 {
-                  normal_comp.reinit(cell);
-                /*
-                 * @ bug? --> the following call yield a compilation error
-                 */
-                  //normal_comp.gather_evaluate(src, true, true);
-                  normal_comp.read_dof_values(src);
-                  normal_comp.evaluate(true,true);
-                  for (unsigned int q_index=0; q_index<normal_comp.n_q_points; q_index++)
-                  {
-                      normal_comp.submit_value(              normal_comp.get_value(    q_index ), q_index);
-                      normal_comp.submit_gradient( damping * normal_comp.get_gradient( q_index ), q_index);
+                    normal.submit_value(              normal.get_value(    q_index ), q_index);
+                    normal.submit_gradient( damping * normal.get_gradient( q_index ), q_index );
                   }
                   /*
                   * @ bug? --> the following call yield a compilation error
                   */
                   //normal_comp.integrate_scatter(true, true, dst);
-                  normal_comp.integrate(true, true);
-                  normal_comp.distribute_local_to_global(dst);
+                  normal.integrate(true, true);
+                  normal.distribute_local_to_global(dst);
                 }
               },
               dst, 
               src, 
               true );
+        }
+        
+        void
+        vmult(VectorType & dst,
+              const VectorType & src) const
+        {
+          const int n_q_points_1d = degree+1; // @ todo: not hard code
+          
+          FEEvaluation<dim, degree, n_q_points_1d, 1, number>   normal(      matrix_free );
+
+          matrix_free.template cell_loop<VectorType, VectorType>( [&] 
+            (const auto&, auto& dst, const auto& src, auto cell_range) {
+              for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
+              {
+                normal.reinit(cell);
+                normal.gather_evaluate(src, true, true, false);
+
+                for (unsigned int q_index=0; q_index<normal.n_q_points; ++q_index)
+                {
+                  normal.submit_value(                    normal.get_value(    q_index ), q_index);
+                  normal.submit_gradient( this->damping * normal.get_gradient( q_index ), q_index );
+                }
+                
+                normal.integrate_scatter(true, true, dst);
+              }
+            },
+            dst, 
+            src, 
+            true );
         }
 
         void
@@ -82,13 +112,11 @@ namespace LevelSetParallel
                 levelset.reinit(cell);
 
                 levelset.gather_evaluate(src, false, true);
-                
                 for (unsigned int q_index = 0; q_index < normal_vector.n_q_points; ++q_index)
                   normal_vector.submit_value( levelset.get_gradient(q_index), q_index );
 
                 normal_vector.integrate(true, false);
                 normal_vector.distribute_local_to_global(dst);
-
                 /*
                  * @ bug? --> the following call yield a compilation error
                  */

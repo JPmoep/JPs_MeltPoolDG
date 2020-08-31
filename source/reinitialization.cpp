@@ -16,10 +16,10 @@
 #include <reinitializationoperator.hpp>
 // for direct solver
 #include <deal.II/lac/sparse_direct.h>
-
+// for matrix free solution
 #include <deal.II/fe/mapping_q.h>
-
 #include <deal.II/matrix_free/matrix_free.h>
+
 #include <deal.II/lac/solver_control.h> // for reduction_control
 #include <deal.II/lac/precondition.h>
 #include <deal.II/numerics/vector_tools.h>
@@ -32,28 +32,6 @@
 
 namespace LevelSetParallel
 {
-    template <int dim>
-    class InitialValues : public dealii::Function<dim>
-    {
-    private:
-      Point<dim>   point{0.5, 0.5};
-      const double rad = 0.1;
-
-    public:
-      InitialValues()
-        : Function<dim>(1)
-      {}
-
-      virtual double
-      value(const dealii::Point<dim> &p,
-            const unsigned int        component = 0) const override
-      {
-        (void)component;
-        double dist = point.distance(p);
-        return 0.5 * (1.0 - std::tanh(2 * (dist - rad)));
-      }
-    };
-
     using namespace dealii; 
 
     template <int dim>
@@ -136,68 +114,13 @@ namespace LevelSetParallel
         }
     }
     
-    
-    template <int dim>
-    void 
-    Reinitialization<dim>::solve_normal_vector_matrixfree( const VectorType & levelset_in )
-    {
-        pcout << "----------- NORMAL VECTORS -- MATRIX FREE " << std::endl;
-        pcout << " ||phi_in|| " << levelset_in.l2_norm()   << std::endl;  
-
-        const unsigned int dimTemp = 2;
-        const unsigned int degreeTemp = 1;
-
-        MappingQ<dimTemp> mapping( degreeTemp );
-        QGauss<1> quad_1d(         degreeTemp + 1 );
-        
-        typedef VectorizedArray<double>     VectorizedArrayType ;
-        typename MatrixFree<dimTemp, double, VectorizedArrayType>::AdditionalData
-          additional_data;
-
-        additional_data.mapping_update_flags = update_values | update_gradients;
-
-        MatrixFree<dimTemp, double, VectorizedArrayType> matrix_free;
-
-        matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
-       
-        LevelSetMatrixFree::NormalVectorOperator<dimTemp,degreeTemp> normal_operator(matrix_free,
-                                                                                     1e-6);
-
-        // compute right-hand side
-        BlockVectorType rhs(dimTemp); 
-        normal_operator.initialize_dof_vector(rhs.block(0));
-        normal_operator.initialize_dof_vector(rhs.block(1));
-        
-        normal_operator.create_rhs(rhs, levelset_in);
-
-        ReductionControl     reduction_control;
-        SolverCG<BlockVectorType> solver(reduction_control);
-
-        BlockVectorType normals(dimTemp); 
-        normal_operator.initialize_dof_vector(normals.block(0));
-        normal_operator.initialize_dof_vector(normals.block(1));
-        
-        //for (unsigned int d=0; d<dimTemp; d++)
-        //{
-          solver.solve(normal_operator,
-                       normals,
-                       rhs,
-                       PreconditionIdentity());
-         
-          //constraints->distribute(normals.block(d));
-          //normals.block(d).update_ghost_values();
-          pcout << " ||n || ("  << "0" << ") " << normals.block(0).l2_norm()   << std::endl;  
-          pcout << " ||n || ("  << "1" << ") " << normals.block(1).l2_norm()   << std::endl;  
-        //}
-    }
-
 
     template <int dim>
     void 
     Reinitialization<dim>::solve_olsson_model_matrixfree( VectorType & solution_out )
     {
         // matrix free computation of normal vectors
-        solve_normal_vector_matrixfree( solution_out );
+        normal_vector_field.solve_normal_vector_matrixfree( solution_out );
         normal_vector_field.compute_normal_vector_field( solution_out, solution_normal_vector );
         solution_normal_vector.update_ghost_values();
         

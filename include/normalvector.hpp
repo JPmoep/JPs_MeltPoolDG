@@ -100,6 +100,7 @@ namespace LevelSetParallel
      *  Constructor
      */
     NormalVector(const MPI_Comm & mpi_commun_in);
+  
 
     void
     initialize( const NormalVectorData&     data_in,
@@ -108,6 +109,9 @@ namespace LevelSetParallel
                 const ConstraintsType&      constraints_in,
                 const IndexSet&             locally_owned_dofs_in,
                 const IndexSet&             locally_relevant_dofs_in);
+    
+    void 
+    solve_normal_vector_matrixfree( const VectorType & levelset_in );
 
     /*
      *  This function computes the (damped) normal vector field for a given solution of a scalar function
