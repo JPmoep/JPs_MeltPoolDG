@@ -34,17 +34,17 @@ namespace LevelSetParallel
 {
     using namespace dealii; 
 
-    template <int dim>
-    Reinitialization<dim>::Reinitialization(const MPI_Comm & mpi_commun_in)
+    template <int dim, int degree>
+    Reinitialization<dim,degree>::Reinitialization(const MPI_Comm & mpi_commun_in)
     : mpi_commun( mpi_commun_in )
     , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_commun) == 0)
     , normal_vector_field( mpi_commun_in )
     {
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void
-    Reinitialization<dim>::initialize( const ReinitializationData &  data_in,
+    Reinitialization<dim,degree>::initialize( const ReinitializationData &  data_in,
                                        const SparsityPatternType&    dsp_in,
                                        const DoFHandler<dim> &       dof_handler_in,
                                        const ConstraintsType&        constraints_in,
@@ -98,14 +98,15 @@ namespace LevelSetParallel
                                         locally_relevant_dofs);
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void 
-    Reinitialization<dim>::solve( VectorType & solution_out )
+    Reinitialization<dim,degree>::solve( VectorType & solution_out )
     {
         switch(reinit_data.reinit_model)
         {
             case ReinitModelType::olsson2007:
-                solve_olsson_model_matrixfree( solution_out );
+                if (reinit_data.do_matrix_free)
+                  solve_olsson_model_matrixfree( solution_out );
                 solve_olsson_model( solution_out );
                 break;
             default:
@@ -113,47 +114,56 @@ namespace LevelSetParallel
                 break;
         }
     }
-    
+    //template <int dim, int degree>
+    //void 
+    //Reinitialization<dim,degree>::initialize_matrixfree( )
+    //{
+      //switch (reinit_data.degree)
+      //{
+        //case 1:
 
-    template <int dim>
+      
+      //}
+    
+    //}
+
+    template <int dim, int degree>
     void 
-    Reinitialization<dim>::solve_olsson_model_matrixfree( VectorType & solution_out )
+    Reinitialization<dim,degree>::solve_olsson_model_matrixfree( VectorType & solution_out )
     {
         // matrix free computation of normal vectors
         normal_vector_field.solve_normal_vector_matrixfree( solution_out );
-        normal_vector_field.compute_normal_vector_field( solution_out, solution_normal_vector );
-        solution_normal_vector.update_ghost_values();
         
         pcout << "----------- MATRIX FREE " << std::endl;
 
-        const unsigned int dimTemp = 2;
-        const unsigned int degreeTemp = 1;
+        //const unsigned int dimTemp = 2;
+        //const unsigned int degreeTemp = 1;
 
-        MappingQ<dimTemp> mapping(degreeTemp);
-        QGauss<1> quad_1d(degreeTemp + 1);
+        MappingQ<dim> mapping(degree);
+        QGauss<1>     quad_1d(reinit_data.degree + 1);
         
-        typedef VectorizedArray<double>     VectorizedArrayType ;
-        typename MatrixFree<dimTemp, double, VectorizedArrayType>::AdditionalData
-          additional_data;
+        typedef VectorizedArray<double>     VectorizedArrayType;
+        typename MatrixFree<dim, double, VectorizedArrayType>::AdditionalData  additional_data;
 
         additional_data.mapping_update_flags = update_values | update_gradients;
 
-        MatrixFree<dimTemp, double, VectorizedArrayType> matrix_free;
-
+        MatrixFree<dim, double, VectorizedArrayType> matrix_free;
         matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
-       
+        
 
-        LevelSetMatrixFree::ReinitializationOperator<dimTemp,degreeTemp> rei(matrix_free,
-                                                                          reinit_data.d_tau,
-                                                                          reinit_data.min_cell_size/(std::sqrt(2)*2.));
-        VectorType src, dst, solution;
-        BlockVectorType normals(dimTemp); //(solution_out); 
+        LevelSetMatrixFree::ReinitializationOperator<dim, degree> rei( matrix_free,
+                                                                       reinit_data.d_tau,
+                                                                       reinit_data.min_cell_size / ( std::sqrt(2)*2. ));
+        VectorType src, rhs, solution;
+        BlockVectorType normals(dim); 
 
         rei.initialize_dof_vector(src);
-        rei.initialize_dof_vector(dst);
+        rei.initialize_dof_vector(rhs);
+        rei.initialize_dof_vector(solution);
         
         rei.set_normal_vector_field(solution_normal_vector);
-        rei.initialize_dof_vector(solution);
+        
+        // @todo: move to create rhs;
         solution.copy_locally_owned_data_from(solution_out);
         solution.update_ghost_values();
 
@@ -169,37 +179,33 @@ namespace LevelSetParallel
             rei.set_time_increment(d_tau);
             
             // create right hand side
-            matrix_free.initialize_dof_vector(dst);
-            rei.create_rhs(dst, solution);
-            pcout << " RHS.norm" << dst.l2_norm() << std::endl;
+            matrix_free.initialize_dof_vector(rhs);
+            rei.create_rhs(rhs, solution);
             
             matrix_free.initialize_dof_vector(src);
-            solver.solve(rei,
-                         src,
-                         dst,
-                         PreconditionIdentity());
+            solver.solve( rei,
+                          src,
+                          rhs,
+                          PreconditionIdentity());
 
             constraints->distribute(src);
 
             solution += src;
             solution.update_ghost_values();
             
-            pcout << " solution" << solution.l2_norm() << std::endl;
-
             pcout << "   with " << reduction_control.last_step() << " CG iterations.";
             pcout << " |ΔΨ|∞ = " << std::setprecision(10) << src.linfty_norm() << " |ΔΨ|²/dT = " << std::setprecision(10) << src.l2_norm()/d_tau;
-            pcout << " |RHS| " << dst.l2_norm() << " |psi| " << solution.l2_norm() << std::endl;
+            //pcout << " |RHS| " << dst.l2_norm() << " |psi| " << solution.l2_norm() << std::endl;
         }
-        pcout << "( reinitialized ) norm solution " << solution.l2_norm() << std::endl;
-        pcout << "----------- END MATRIX FREE " << std::endl;
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void 
-    Reinitialization<dim>::solve_olsson_model( VectorType & solution_out )
+    Reinitialization<dim,degree>::solve_olsson_model( VectorType & solution_out )
     {
 
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION START NEW" << std::endl;
+        normal_vector_field.solve_normal_vector_matrixfree( solution_out );
 
         VectorType solution_in; //solution_out;
         solution_in.reinit(locally_owned_dofs,
@@ -360,9 +366,9 @@ namespace LevelSetParallel
     }
     
     
-    template <int dim>
+    template <int dim, int degree>
     void
-    Reinitialization<dim>::initialize_time_iterator( std::shared_ptr<TimeIterator> t )
+    Reinitialization<dim,degree>::initialize_time_iterator( std::shared_ptr<TimeIterator> t )
     {
         // @ shift into own function ?
         TimeIteratorData time_data;
@@ -374,9 +380,9 @@ namespace LevelSetParallel
         t->initialize(time_data);
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void
-    Reinitialization<dim>::print_me( )
+    Reinitialization<dim,degree>::print_me( )
     {
         pcout << "hello from reinitialization"                                  << std::endl;   
         // @ is there a more elegant solution?
@@ -387,7 +393,8 @@ namespace LevelSetParallel
     }
 
     // instantiation
-    template class Reinitialization<2>;
+    template class Reinitialization<2,1>;
+    template class Reinitialization<2,2>;
     //template class Reinitialization<3>; // temporarily disabled to work on matrixfree implementation
 } // namespace LevelSetParallel
 

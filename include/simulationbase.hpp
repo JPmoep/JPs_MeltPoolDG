@@ -13,19 +13,25 @@ namespace LevelSetParallel
     template <int dim>
     class SimulationBase
     {
-        public:
+      public:
     
-            virtual void set_parameters() = 0;
-            
-            virtual void set_boundary_conditions() = 0;
-            
-            virtual void set_field_conditions() = 0;
+        virtual void set_mpi_commun() = 0;
+        
+        virtual void set_parameters() = 0;
+        
+        virtual void set_boundary_conditions() = 0;
+        
+        virtual void set_field_conditions() = 0;
 
-            virtual void create_spatial_discretization() = 0;
-
-            LevelSetParameters parameters;
-            FieldConditions<dim>               field_conditions;
-            BoundaryConditionsLevelSet<dim>    boundary_conditions;
+        virtual void create_spatial_discretization() = 0;
+        
+        virtual std::shared_ptr<FieldConditions<dim>> get_field_conditions(){ return std::make_shared<FieldConditions<dim>>(this->field_conditions); }
+        
+        LevelSetParameters                        parameters;
+        FieldConditions<dim>                      field_conditions;
+        BoundaryConditionsLevelSet<dim>           boundary_conditions;
+        parallel::distributed::Triangulation<dim> triangulation;
+        MPI_Comm                                  mpi_communicator;
     };
 
 }

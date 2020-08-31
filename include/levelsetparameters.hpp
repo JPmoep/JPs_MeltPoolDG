@@ -17,7 +17,7 @@ struct LevelSetParameters
 {
   LevelSetParameters ();
 
-  LevelSetParameters (const std::string &parameter_filename);
+  void process_parameters_file(const std::string &parameter_filename);
 
   static void declare_parameters (ParameterHandler &prm);
   void parse_parameters (const std::string parameter_filename,
@@ -55,17 +55,12 @@ struct LevelSetParameters
   std::string         filename_paraview_output;
   bool                compute_volume_output;
   std::string         filename_volume_output;
-
-  //// boundary conditions 
-  //BoundaryConditionsLevelSet boundary_conditions;
-
-  //// initial conditions
-  //FieldVariables             field_conditions;
 };
 
 namespace LevelSetParallel
 {
 
+/* deprecated
 template <int dim>
 class InitializePhi : public Function<dim>
 {
@@ -85,6 +80,7 @@ class InitializePhi : public Function<dim>
         double epsInterface;
 
 };
+*/
 
 template <int dim>
 class DirichletCondition : public Function<dim>
@@ -99,6 +95,7 @@ class DirichletCondition : public Function<dim>
         void markDirichletEdges(Triangulation<dim>& triangulation_) const;
 };
 
+/* deprecated
 template <int dim>
 class AdvectionField : public TensorFunction<1, dim>
 {
@@ -109,4 +106,5 @@ class AdvectionField : public TensorFunction<1, dim>
 
         Tensor<1, dim> value(const Point<dim> & p) const override;
 };
+*/
 }

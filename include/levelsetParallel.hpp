@@ -71,7 +71,7 @@
 #include "curvature.hpp"
 #include "levelsetparameters.hpp"
 #include "utilityFunctions.hpp"
-
+#include "simulationbase.hpp"
 // c++
 #include <fstream>
 #include <iostream>
@@ -83,7 +83,7 @@ namespace LevelSetParallel
 {
   using namespace dealii; 
 
-  template <int dim>
+  template <int dim, int degree>
   class LevelSetEquation
   {
   private:
@@ -92,19 +92,24 @@ namespace LevelSetParallel
     typedef TrilinosWrappers::SparseMatrix                     SparseMatrixType;
 
   public:
-    LevelSetEquation(const LevelSetParameters& parameters,
-                     parallel::distributed::Triangulation<dim>&       triangulation,
-                     TensorFunction<1, dim>& AdvectionField_,
-                     MPI_Comm& mpi_commun);
-    void run( const Function<dim>& InitialValues,
-              const Function<dim>& DirichletValues);
+    LevelSetEquation(
+                     //parallel::distributed::Triangulation<dim>&  triangulation,
+                     std::shared_ptr<SimulationBase<dim>>        base
+                     //MPI_Comm&                                   mpi_commun
+                     );
+    void run( const Function<dim>& DirichletValues);
     void compute_error( const Function<dim>& ExactSolution );
     double epsilon;
 
   private:
     void setup_system(const Function<dim>& DirichletValues );
-
-    void setInitialConditions(const Function<dim>& InitialValues);
+    /*
+     *      initialize level set equation
+     */
+    void initialize_levelset( ); 
+    /*
+     *      solve level set equation
+     */
     void assemble_levelset_system( const Function<dim>& DirichletValues );
     /*
      *      setup reinitialization model
@@ -127,8 +132,10 @@ namespace LevelSetParallel
     
     void output_results(const double timeStep);
            //TensorFunction<1, dim> &AdvectionField_ );
+    void print_me();
+
     void compute_overall_phase_volume();
-    void computeAdvection(TensorFunction<1, dim> &AdvectionField_);
+    void computeAdvection(); //TensorFunction<1, dim> &AdvectionField_);
     
     MPI_Comm&                                  mpi_communicator;
     LevelSetParameters                         parameters;
@@ -147,21 +154,21 @@ namespace LevelSetParallel
     VectorType                                 systemRHS;                 // global system right-hand side
     VectorType                                 solution_u;
     
-    //LA::MPI::BlockVector       advection_field;         // system right-hand side for computing the normal vector
+    std::vector<double>                        volume_fraction;
+    IndexSet                                   locally_owned_dofs;
+    IndexSet                                   locally_relevant_dofs;
+    ConditionalOStream                         pcout;
+    TimerOutput                                computing_timer;
+    Timer                                      timer;
+    //TensorFunction<1, dim> &                   AdvectionField;
 
-    std::vector<double>        volume_fraction;
-    IndexSet                   locally_owned_dofs;
-    IndexSet                   locally_relevant_dofs;
-    ConditionalOStream         pcout;
-    TimerOutput                computing_timer;
-    Timer                      timer;
-    TensorFunction<1, dim> &   AdvectionField;
+    std::shared_ptr<FieldConditions<dim>>      field_conditions;
+    //std::shared_ptr<BoundaryConditions<dim>>      boundary_conditions;
 
     /* 
      * the following are subproblem classes
     */
-    Reinitialization<dim>      reini;
-    //NormalVector<dim>      normal_vector_field;
-    Curvature<dim>             curvature;
+    Reinitialization<dim,degree>              reini;
+    Curvature<dim,degree>                     curvature;
   };
 } // end of namespace LevelSet

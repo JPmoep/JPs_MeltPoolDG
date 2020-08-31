@@ -19,17 +19,17 @@ namespace LevelSetParallel
 {
     using namespace dealii; 
 
-    template <int dim>
-    Curvature<dim>::Curvature(const MPI_Comm & mpi_commun_in)
+    template <int dim, int degree>
+    Curvature<dim,degree>::Curvature(const MPI_Comm & mpi_commun_in)
     : mpi_commun( mpi_commun_in )
     , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_commun_in) == 0)
     , normal_vector_field( mpi_commun_in )
     {
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void
-    Curvature<dim>::initialize( const CurvatureData &       data_in,
+    Curvature<dim,degree>::initialize( const CurvatureData &       data_in,
                                 const SparsityPatternType&  dsp_in,
                                 const DoFHandler<dim>&      dof_handler_in,
                                 const ConstraintsType&      constraints_in,
@@ -75,9 +75,9 @@ namespace LevelSetParallel
                                         locally_relevant_dofs_in);
     }
     
-    template <int dim>
+    template <int dim, int degree>
     void 
-    Curvature<dim>::solve( const VectorType & solution_in,
+    Curvature<dim,degree>::solve( const VectorType & solution_in,
                                  VectorType & curvature_out )
     {
         //TimerOutput::Scope timer (computing_timer, "Curvature computation.");
@@ -157,9 +157,9 @@ namespace LevelSetParallel
         solve_cg( curvature_out, system_rhs );
     }
     
-    template <int dim>
+    template <int dim, int degree>
     void 
-    Curvature<dim>::solve( const VectorType & solution_in )
+    Curvature<dim,degree>::solve( const VectorType & solution_in )
     {
         curvature_field.reinit( locally_owned_dofs, 
                                 mpi_commun ); 
@@ -167,16 +167,16 @@ namespace LevelSetParallel
         solve( solution_in, curvature_field);
     }
     
-    template <int dim>
-    typename Curvature<dim>::VectorType
-    Curvature<dim>::get_curvature_values( )
+    template <int dim, int degree>
+    typename Curvature<dim,degree>::VectorType
+    Curvature<dim,degree>::get_curvature_values( )
     {
         return this->curvature_field;
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void 
-    Curvature<dim>::solve_cg( VectorType & solution, const VectorType & rhs)
+    Curvature<dim,degree>::solve_cg( VectorType & solution, const VectorType & rhs)
     {
       SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-6 * rhs.l2_norm() );
       SolverCG<VectorType>     solver( solver_control );
@@ -197,9 +197,9 @@ namespace LevelSetParallel
       pcout << "normal vectors: solver  with "  << solver_control.last_step() << " CG iterations." << std::endl;
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void
-    Curvature<dim>::print_me( )
+    Curvature<dim,degree>::print_me( )
     {
         pcout << "hello from curvature computation" << std::endl;   
         pcout << "damping: "              << curvature_data.damping_parameter << std::endl;
@@ -207,7 +207,8 @@ namespace LevelSetParallel
     }
 
     // instantiation
-    template class Curvature<2>;
+    template class Curvature<2,1>;
+    template class Curvature<2,2>;
     //template class Curvature<3>;
 
 } // namespace LevelSetParallel

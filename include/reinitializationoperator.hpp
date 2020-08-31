@@ -76,6 +76,7 @@ class ReinitializationOperator
     create_rhs(VectorType & dst,
                const VectorType & src) const
     {
+
       const auto compressive_flux = [&](const auto &phi) 
       {
           return 0.5 * ( make_vectorized_array<number>(1.) - phi * phi );

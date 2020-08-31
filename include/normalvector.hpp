@@ -79,7 +79,7 @@ namespace LevelSetParallel
    *     @ todo: add equation 
    */
   
-  template <int dim>
+  template <int dim, int degree>
   class NormalVector
   {
   private:

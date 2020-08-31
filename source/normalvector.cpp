@@ -5,7 +5,7 @@
  * ---------------------------------------------------------------------*/
 // for FEValues<dim>
 //#include <deal.II/fe/fe.h>
-// to access minimal_cell_diamater
+// to access minimal_cell_diameter
 #include <deal.II/grid/grid_tools.h>
 // to use preconditioner 
 #include <deal.II/lac/petsc_precondition.h>
@@ -21,16 +21,16 @@ namespace LevelSetParallel
 {
     using namespace dealii; 
 
-    template <int dim>
-    NormalVector<dim>::NormalVector(const MPI_Comm & mpi_commun_in)
+    template <int dim, int degree>
+    NormalVector<dim,degree>::NormalVector(const MPI_Comm & mpi_commun_in)
     : mpi_commun( mpi_commun_in )
     , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_commun_in) == 0)
     {
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void
-    NormalVector<dim>::initialize( const NormalVectorData &      data_in,
+    NormalVector<dim,degree>::initialize( const NormalVectorData &      data_in,
                                    const SparsityPatternType&    dsp_in,
                                    const DoFHandler<dim>&        dof_handler_in,
                                    const ConstraintsType&        constraints_in,
@@ -56,83 +56,74 @@ namespace LevelSetParallel
                                         locally_relevant_dofs,
                                         mpi_commun ); 
         /*
-         * here the current verbosity level is set
+         * the current verbosity level is set
          */
         const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
         this->pcout.set_condition(verbosity_active);
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void 
-    NormalVector<dim>::solve_normal_vector_matrixfree( const VectorType & levelset_in )
+    NormalVector<dim,degree>::solve_normal_vector_matrixfree( const VectorType & levelset_in )
     {
-        pcout << "----------- NORMAL VECTORS -- MATRIX FREE " << std::endl;
-        pcout << " ||phi_in|| " << levelset_in.l2_norm()   << std::endl;  
+      pcout << "----------- NORMAL VECTORS -- MATRIX FREE " << std::endl;
+      pcout << " ||phi_in|| " << levelset_in.l2_norm()   << std::endl;  
 
-        const unsigned int dimTemp = 2;
-        const unsigned int degreeTemp = 1;
+      const unsigned int degreeTemp = 1;
 
-        MappingQ<dimTemp> mapping( degreeTemp );
-        QGauss<1> quad_1d(         degreeTemp + 1 );
-        
-        typedef VectorizedArray<double>     VectorizedArrayType ;
-        typename MatrixFree<dimTemp, double, VectorizedArrayType>::AdditionalData
-          additional_data;
+      MappingQ<dim> mapping( degreeTemp );
+      QGauss<1> quad_1d(         degreeTemp + 1 );
+      
+      typedef VectorizedArray<double>     VectorizedArrayType ;
+      typename MatrixFree<dim, double, VectorizedArrayType>::AdditionalData
+        additional_data;
 
-        additional_data.mapping_update_flags = update_values | update_gradients;
+      additional_data.mapping_update_flags = update_values | update_gradients;
 
-        MatrixFree<dimTemp, double, VectorizedArrayType> matrix_free;
+      MatrixFree<dim, double, VectorizedArrayType> matrix_free;
 
-        matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
-       
-        LevelSetMatrixFree::NormalVectorOperator<dimTemp,degreeTemp> normal_operator(matrix_free,
-                                                                                     normal_vector_data.min_cell_size * 0.5 );
-        
-        // copy initial level set fiel
-        VectorType level; 
-        matrix_free.initialize_dof_vector(level);
-        level.copy_locally_owned_data_from(levelset_in);
-        level.update_ghost_values();
+      matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
+      
+      LevelSetMatrixFree::NormalVectorOperator<dim, degreeTemp> normal_operator( matrix_free,
+                                                                        normal_vector_data.min_cell_size * 0.5 );
 
-        // compute right-hand side
-        BlockVectorType rhs;
+      /* copy initial level set field
+       *
+       *@ --> is there a better solution? if I do not copy the vector the condition
+       * vec.partitioners_are_compatible(*dof_info.vector_partitioner) is violated
+      */
+      VectorType level; 
+      matrix_free.initialize_dof_vector(level);
+      level.copy_locally_owned_data_from(levelset_in);
+      level.update_ghost_values();
 
-        rhs.reinit(dimTemp); 
-        matrix_free.initialize_dof_vector(rhs.block(0));
-        matrix_free.initialize_dof_vector(rhs.block(1));
-        normal_operator.create_rhs(rhs, level);
-        
-        ReductionControl     reduction_control;
-        //SolverCG<BlockVectorType> solver(reduction_control);
-        SolverControl         solver_control( dof_handler->n_dofs() * 2, 1e-8 * rhs.l2_norm() );
-        SolverCG<VectorType> solver(solver_control);
+      BlockVectorType rhs, normals;
+      normal_operator.initialize_dof_vector(rhs);
+      normal_operator.initialize_dof_vector(normals);
+      
+      // compute right-hand side
+      normal_operator.create_rhs(rhs, level);
+      
+      ReductionControl     reduction_control;
+      //SolverCG<BlockVectorType> solver(reduction_control);
+      SolverControl        solver_control( dof_handler->n_dofs() * 2, 1e-8 * rhs.l2_norm() );
 
-        BlockVectorType normals(dimTemp); 
-        normal_operator.initialize_dof_vector(normals.block(0));
-        normal_operator.initialize_dof_vector(normals.block(1));
-        
-        for (unsigned int d=0; d<dimTemp; d++)
-        {
-          pcout << " ||RHS|| " << rhs.block(d).l2_norm()   << std::endl;  
-          solver.solve(normal_operator,
-                       normals.block(d),
-                       rhs.block(d),
-                       PreconditionIdentity());
-          constraints->distribute(normals.block(d));
-          normals.block(d).update_ghost_values();
-          pcout << " ||n || ("  << d << ") " << normals.block(d).l2_norm() << std::endl;  
-          pcout << " infty ||n || ("  << d << ") " << normals.block(d).linfty_norm() << std::endl;  
-        }
+      SolverCG<BlockVectorType> solver(solver_control);
+      solver.solve(normal_operator,
+                   normals,
+                   rhs,
+                   PreconditionIdentity());
+
+      pcout << " ||n || (0)" << normals.block(0).l2_norm() << std::endl;  
+      pcout << " ||n || (1)" << normals.block(1).l2_norm() << std::endl;  
     }
 
 
-    template <int dim>
+    template <int dim, int degree>
     void 
-    NormalVector<dim>::compute_normal_vector_field( const VectorType & solution_in,
+    NormalVector<dim,degree>::compute_normal_vector_field( const VectorType & solution_in,
                                                     BlockVectorType & normal_vector_out ) 
     {
-        pcout << "----------- NORMAL VECTORS -- Matrix " << std::endl;
-        pcout << " ||phi_in|| " << solution_in.l2_norm()   << std::endl;  
         solution_in.update_ghost_values();
         //TimerOutput::Scope t(computing_timer, "compute damped normals");  
         system_matrix = 0.0;
@@ -169,9 +160,8 @@ namespace LevelSetParallel
             cell->get_dof_indices( local_dof_indices );
             
             normal_cell_matrix = 0.0;
-            //for(auto& normal_cell : normal_cell_rhs)
-            for (unsigned int d=0; d<dim; d++)
-                normal_cell_rhs[d] =    0.0;
+            for(auto& normal_cell : normal_cell_rhs)
+                normal_cell =    0.0;
 
             fe_values.get_function_gradients( solution_in, normal_at_q ); // compute normals from level set solution at tau=0
             for (const unsigned int q_index : fe_values.quadrature_point_indices())
@@ -221,9 +211,8 @@ namespace LevelSetParallel
                                                          system_rhs.block(d) );
              
           }
-          system_matrix.compress(VectorOperation::add);
-          //for (unsigned int d=0; d<dim; ++d)
-          system_rhs.compress(VectorOperation::add);
+          system_matrix.compress( VectorOperation::add );
+          system_rhs.compress(    VectorOperation::add );
         
           for (unsigned int d=0; d<dim; ++d)
           {
@@ -232,15 +221,17 @@ namespace LevelSetParallel
             pcout << " ||RHS|| " << system_rhs.block(d).l2_norm()   << std::endl;  
 
             if (normal_vector_data.do_print_l2norm)
+            {
                 pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
                 pcout << std::setprecision(10) << "   normal vector: infty: ||n_" << d << "|| = " << normal_vector_out.block(d).linfty_norm() << std::endl;
+            }
           }
           normal_vector_out.update_ghost_values();
     }
     
-    template <int dim>
+    template <int dim, int degree>
     void 
-    NormalVector<dim>::compute_normal_vector_field( const VectorType & solution_in )
+    NormalVector<dim,degree>::compute_normal_vector_field( const VectorType & solution_in )
     {
         normal_vector_field.reinit( dim );
         for (unsigned int d=0; d<dim; ++d)
@@ -251,9 +242,9 @@ namespace LevelSetParallel
         compute_normal_vector_field( solution_in, normal_vector_field );
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void
-    NormalVector<dim>::get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
+    NormalVector<dim,degree>::get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
                                                        const BlockVectorType& normal_vector_field_in,
                                                        std::vector<Tensor<1,dim>>& unit_normal_at_quadrature ) const
     {
@@ -268,18 +259,18 @@ namespace LevelSetParallel
             n /= n.norm(); //@todo: add exception
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void
-    NormalVector<dim>::get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
+    NormalVector<dim,degree>::get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
                                                        std::vector<Tensor<1,dim>>& unit_normal_at_quadrature ) const
     {
         get_unit_normals_at_quadrature(fe_values, normal_vector_field, unit_normal_at_quadrature );
     }
 
 
-    template <int dim>
+    template <int dim, int degree>
     void 
-    NormalVector<dim>::solve_cg( VectorType& solution, const VectorType & rhs)
+    NormalVector<dim,degree>::solve_cg( VectorType& solution, const VectorType & rhs)
     {
       SolverControl         solver_control( dof_handler->n_dofs() * 2, 1e-8 * rhs.l2_norm() );
       SolverCG<VectorType>  solver( solver_control );
@@ -303,9 +294,9 @@ namespace LevelSetParallel
       solution.update_ghost_values();
     }
 
-    template <int dim>
+    template <int dim, int degree>
     void
-    NormalVector<dim>::print_me( )
+    NormalVector<dim,degree>::print_me( )
     {
         pcout << "hello from normal vector computation" << std::endl;   
         pcout << "damping: "              << normal_vector_data.damping_parameter << std::endl;
@@ -313,7 +304,7 @@ namespace LevelSetParallel
     }
 
     // instantiation
-    template class NormalVector<2>;
-    //template class NormalVector<3>;
+    template class NormalVector<2,1>;
+    template class NormalVector<2,2>;
 
 } // namespace LevelSetParallel

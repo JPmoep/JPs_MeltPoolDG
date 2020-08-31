@@ -96,7 +96,7 @@ namespace LevelSetParallel
    *     property of the  level set equation
    */
   
-  template <int dim>
+  template <int dim, int degree>
   class Reinitialization
   {
   private:
@@ -163,7 +163,7 @@ namespace LevelSetParallel
     SparseMatrixType                        system_matrix;
     VectorType                              system_rhs;
     ConditionalOStream                      pcout;
-    NormalVector<dim>                       normal_vector_field;
+    NormalVector<dim,degree>                normal_vector_field;
     BlockVectorType                         solution_normal_vector;
   };
 } // namespace LevelSetParallel

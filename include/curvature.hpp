@@ -75,7 +75,7 @@ namespace LevelSetParallel
    *     property of the  level set equation
    */
   
-  template <int dim>
+  template <int dim, int degree>
   class Curvature
   {
   private:
@@ -138,6 +138,6 @@ namespace LevelSetParallel
     VectorType                               system_rhs;
     ConditionalOStream                       pcout;
     VectorType                               curvature_field;
-    NormalVector<dim>                        normal_vector_field;
+    NormalVector<dim,degree>                 normal_vector_field;
   };
 } // namespace LevelSetParallel

@@ -3,6 +3,8 @@
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
+// interface class
+#include "matrixfreeoperator.hpp"
 
 using namespace dealii;
 
@@ -12,7 +14,7 @@ namespace LevelSetParallel
   {
 
     template<int dim, int degree, typename number = double>
-    class NormalVectorOperator
+    class NormalVectorOperator // @ interface to be added : public MatrixFreeOperator<number, BlockVectorType, BlockVectorType>
     {
       public:
         typedef LinearAlgebra::distributed::Vector<number>       VectorType;
@@ -22,8 +24,8 @@ namespace LevelSetParallel
         typedef VectorizedArray<number>                          scalar;
         
         NormalVectorOperator
-          (const MatrixFree<dim, number, VectorizedArrayType> &matrix_free,
-           const double damping_in)
+          ( const MatrixFree<dim, number, VectorizedArrayType> &matrix_free,
+            const double damping_in )
           : matrix_free( matrix_free )
           , damping(      damping_in )
           {}
@@ -44,7 +46,8 @@ namespace LevelSetParallel
               /*
                * @ bug? --> the following call yield a compilation error
                */
-                //normal_comp.gather_evaluate(src, true, true);
+                //normal.gather_evaluate(src, true, true);
+              /* current work around */
                 normal.read_dof_values(src);
                 normal.evaluate(true,true,false);
 
@@ -57,6 +60,7 @@ namespace LevelSetParallel
                   * @ bug? --> the following call yield a compilation error
                   */
                   //normal_comp.integrate_scatter(true, true, dst);
+              /* current work around */
                   normal.integrate(true, true);
                   normal.distribute_local_to_global(dst);
                 }
@@ -65,7 +69,11 @@ namespace LevelSetParallel
               src, 
               true );
         }
-        
+
+        /*
+         * This function is deprecated --> it would be useful for solving the normal vector
+         * in dim blocks
+
         void
         vmult(VectorType & dst,
               const VectorType & src) const
@@ -94,6 +102,7 @@ namespace LevelSetParallel
             src, 
             true );
         }
+        */
 
         void
         create_rhs(BlockVectorType & dst,
@@ -133,12 +142,20 @@ namespace LevelSetParallel
         {
           matrix_free.initialize_dof_vector(dst);
         }
+        
+        void
+        initialize_dof_vector(BlockVectorType &dst) const
+        {
+          dst.reinit(dim);
+          for (unsigned int d=0; d<dim; ++d)
+            matrix_free.initialize_dof_vector(dst.block(d));
+        }
+
 
         private:
           const MatrixFree<dim, number, VectorizedArrayType> &matrix_free;
           double damping; 
 
       };
-
     }   // LevelSetMatrixFree
 } // LevelSetParallel

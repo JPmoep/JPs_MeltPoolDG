@@ -8,15 +8,14 @@ LevelSetParameters::LevelSetParameters()
   // do nothing
 }
 
-LevelSetParameters::
-LevelSetParameters (const std::string &parameter_filename)
+void LevelSetParameters::
+process_parameters_file(const std::string &parameter_filename)
 {
   ParameterHandler prm;
   LevelSetParameters::declare_parameters (prm);
   check_for_file(parameter_filename, prm);
   parse_parameters (parameter_filename, prm);
 }
-
 
 
 void LevelSetParameters::check_for_file (const std::string &parameter_filename,
@@ -46,10 +45,6 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
                          "Defines the dimension of the problem (default value=2)");
       prm.declare_entry ("global refinements","1",Patterns::Integer(),
                          "Defines the number of initial global refinements (default value=1)");
-      //prm.declare_entry ("anisotropic refinement","0",Patterns::Integer(),
-                         //"defines whether the mesh should be refined "
-                         //"anisotropically in normal direction to the interface, "
-                         //"0 means no anisotropy");
       //prm.declare_entry ("adaptive refinements","0",Patterns::Integer(),
                          //"Defines the number of adaptive refinements. Not used "
                          //"in the Navier-Stokes class, but useful in many "
@@ -125,7 +120,6 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
       dimension = prm.get_integer ("dimension");
       global_refinements = prm.get_integer ("global refinements");
       //adaptive_refinements = prm.get_integer ("adaptive refinements");
-      //use_anisotropic_refinement = prm.get_integer ("anisotropic refinement") > 0;
   prm.leave_subsection ();
 
   prm.enter_subsection("level set equation");

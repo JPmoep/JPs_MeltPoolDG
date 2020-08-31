@@ -11,21 +11,21 @@ namespace LevelSetParallel
 {
   using namespace dealii; 
 
-  template <int dim>
-  LevelSetEquation<dim>::LevelSetEquation(
-                     const LevelSetParameters& parameters_,
-                     parallel::distributed::Triangulation<dim>&       triangulation_,
-                     TensorFunction<1, dim>& AdvectionField_,
-                     MPI_Comm& mpi_commun)
-    : epsilon ( GridTools::minimal_cell_diameter(triangulation_) / (std::sqrt(dim) * 2.) )
-    , mpi_communicator( mpi_commun)
-    , parameters(       parameters_)
-    , fe(               parameters_.levelset_degree )
-    , triangulation(    triangulation_ )
-    , dof_handler(      triangulation_ )
-    , qGauss(           QGauss<dim>(parameters_.levelset_degree+1) )
-    , time_step(        parameters_.time_step_size )
-    , time(             parameters_.start_time )
+  template <int dim, int degree>
+  LevelSetEquation<dim,degree>::LevelSetEquation(
+                     //parallel::distributed::Triangulation<dim>&       triangulation_,
+                     std::shared_ptr<SimulationBase<dim>>             base_in
+                     //MPI_Comm&                                        mpi_commun
+                     )
+    : epsilon ( GridTools::minimal_cell_diameter(base_in->triangulation) / (std::sqrt(dim) * 2.) )
+    , mpi_communicator( base_in->mpi_communicator)
+    , parameters(       base_in->parameters )
+    , fe(               parameters.levelset_degree )
+    , triangulation(    base_in->triangulation )
+    , dof_handler(      base_in->triangulation )
+    , qGauss(           QGauss<dim>(parameters.levelset_degree+1) )
+    , time_step(        parameters.time_step_size )
+    , time(             parameters.start_time )
     , timestep_number(  1 )
     , pcout(            std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0) )
     , computing_timer(  mpi_communicator,
@@ -33,15 +33,23 @@ namespace LevelSetParallel
                         TimerOutput::summary,
                         TimerOutput::wall_times)
     , timer(            mpi_communicator)
-    , AdvectionField(   AdvectionField_ )
     , volume_fraction(2,0)
-    , reini( mpi_commun )
-    , curvature( mpi_commun )
+    , field_conditions( base_in->get_field_conditions()  )
+    , reini( mpi_communicator )
+    , curvature( mpi_communicator )
   {}
   
-  
-  template <int dim>
-  void LevelSetEquation<dim>::setup_system(const Function<dim>& DirichletValues )
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::print_me() 
+  {  
+    //if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+      //parameters.print_parameters();
+    //pcout << "Number of active cells: "       << triangulation.n_active_cells() << std::endl;
+    //pcout << "Number of degrees of freedom: " << dof_handler.n_dofs()           << std::endl << std::endl;
+  }
+
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::setup_system(const Function<dim>& DirichletValues )
   {
     TimerOutput::Scope t(computing_timer, "setup");
     dof_handler.distribute_dofs( fe );
@@ -49,8 +57,6 @@ namespace LevelSetParallel
     locally_owned_dofs = dof_handler.locally_owned_dofs();
     DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
     
-    pcout << "Number of active cells: "       << triangulation.n_active_cells() << std::endl;
-    pcout << "Number of degrees of freedom: " << dof_handler.n_dofs()           << std::endl << std::endl;
                                       
     
     systemRHS.reinit(locally_owned_dofs, 
@@ -110,26 +116,27 @@ namespace LevelSetParallel
   }
   
 
-  template <int dim>
-  void LevelSetEquation<dim>::setInitialConditions(const Function<dim>& InitialValues)
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::initialize_levelset()
   {
     VectorType solutionTemp( locally_owned_dofs, mpi_communicator);
 
-    VectorTools::project(dof_handler, 
-                         constraints,
-                         qGauss,
-                         InitialValues,           
-                         solutionTemp);
+    VectorTools::project( dof_handler, 
+                          constraints,
+                          qGauss,
+                          *field_conditions->initial_field,           
+                          solutionTemp );
 
     solution_u = solutionTemp;
     solution_u.update_ghost_values();
   } 
 
-  template <int dim>
-  void LevelSetEquation<dim>::assemble_levelset_system(const Function<dim>& DirichletValues)
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::assemble_levelset_system(const Function<dim>& DirichletValues)
   {
     TimerOutput::Scope t(computing_timer, "assembly");   
-    AdvectionField.set_time(time);
+    field_conditions->advection_field->set_time(time);
+    
     systemMatrix = 0.0;
     systemRHS    = 0.0;
 
@@ -162,7 +169,8 @@ namespace LevelSetParallel
         for (const unsigned int q_index : fe_values.quadrature_point_indices())
         {
             auto qCoord = fe_values.get_quadrature_points()[q_index];
-            Tensor<1, dim> a = AdvectionField.value( qCoord );
+            const Tensor<1, dim> a =  field_conditions->advection_field->value( qCoord );
+
 
             for (unsigned int i=0; i<dofs_per_cell; ++i)
             {
@@ -231,8 +239,8 @@ namespace LevelSetParallel
   }
 
 
-  template <int dim>
-  void LevelSetEquation<dim>::initialize_reinitialization_model()
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::initialize_reinitialization_model()
   {
     ReinitializationData reinit_data;
     reinit_data.reinit_model        = ReinitModelType::olsson2007;
@@ -257,15 +265,15 @@ namespace LevelSetParallel
                       locally_relevant_dofs );
   }
 
-  template <int dim>
-  void LevelSetEquation<dim>::compute_reinitialization_model()
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::compute_reinitialization_model()
   {
     // update the solution vector to the reinitialized value
     reini.solve( solution_u );
   }
 
-  template <int dim>
-  void LevelSetEquation<dim>::initialize_curvature()
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::initialize_curvature()
   {
     CurvatureData curvature_data;
     curvature_data.degree              = parameters.levelset_degree;
@@ -286,14 +294,14 @@ namespace LevelSetParallel
                           locally_relevant_dofs );
   }
   
-  template <int dim>
-  void LevelSetEquation<dim>::compute_curvature()
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::compute_curvature()
   {
     curvature.solve( solution_u );
   }
   
-  template <int dim>
-  void LevelSetEquation<dim>::solve_u()
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::solve_u()
   {
     TimerOutput::Scope t(computing_timer, "solve");
     VectorType    completely_distributed_solution(locally_owned_dofs,
@@ -320,8 +328,8 @@ namespace LevelSetParallel
   }
 
   //// @ to be rearranged
-  template <int dim>
-  void LevelSetEquation<dim>::compute_overall_phase_volume( )
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::compute_overall_phase_volume( )
   {
     Vector<double> phase_volume_per_cell(triangulation.n_active_cells());
 
@@ -398,8 +406,8 @@ namespace LevelSetParallel
     }
   }
 
-  template <int dim>
-  void LevelSetEquation<dim>::output_results( const double timeStep )
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::output_results( const double timeStep )
   {
     if (parameters.compute_paraview_output)
     {
@@ -435,8 +443,8 @@ namespace LevelSetParallel
         compute_overall_phase_volume();
   }
   
-  template <int dim>
-  void LevelSetEquation<dim>::compute_error( const Function<dim>& ExactSolution )
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::compute_error( const Function<dim>& ExactSolution )
   {
         Vector<double> norm_per_cell(triangulation.n_active_cells());
 
@@ -469,8 +477,8 @@ namespace LevelSetParallel
         
   }
   
-  template <int dim>
-  void LevelSetEquation<dim>::run( const Function<dim>& InitialValues,
+  template <int dim, int degree>
+  void LevelSetEquation<dim,degree>::run(
                                    const Function<dim>& DirichletValues) 
   {
     timer.start();
@@ -482,7 +490,7 @@ namespace LevelSetParallel
     
     setup_system( DirichletValues );
 
-    setInitialConditions(InitialValues);
+    initialize_levelset();
 
     if ( parameters.activate_reinitialization )    
         initialize_reinitialization_model();
@@ -499,6 +507,11 @@ namespace LevelSetParallel
     for ( time = time_step; time <= parameters.end_time; time += time_step, ++timestep_number )
     {
         pcout << "Time step " << timestep_number << " at current t=" << time << std::endl;
+        Point<2> center     = Point<2>(0.0,0.5);  
+        pcout << "calculate advection_field: " << std::endl;
+        const Tensor<1, dim> a =  field_conditions->advection_field->value( center );
+        pcout << "a[0] " << a[0] << "a[1] " << a[1] << std::endl;
+        pcout << "end of calculate advection_field: " << std::endl;
 
         assemble_levelset_system(  DirichletValues ); // @todo: insert updateFlag
         solve_u();
@@ -533,6 +546,8 @@ namespace LevelSetParallel
   }
   
   // instantiation
-  template class LevelSetEquation<2>; 
+  template class LevelSetEquation<2,1>; 
+  template class LevelSetEquation<2,2>; 
   //template class LevelSetEquation<3>;
-} // end of namespace LevelSet
+  //
+} // end of namespace LevelSetParallel
