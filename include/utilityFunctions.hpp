@@ -51,7 +51,7 @@ namespace utilityFunctions
                                 //const std::string& callerFunction);
 
 
-    void printLine(const int verbosityLevel=0, std::ostream& str=std::cout);
+    void printLine(const int verbosityLevel=0, std::ostream& str=std::cout, const MPI_Comm& mpi_comm=MPI_COMM_WORLD);
 
     template <int dim>
     class GradientPostprocessor : public DataPostprocessorVector<dim>

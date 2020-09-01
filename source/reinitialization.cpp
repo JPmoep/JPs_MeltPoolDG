@@ -68,8 +68,8 @@ namespace LevelSetParallel
                            locally_relevant_dofs,
                            mpi_commun ); 
         
-        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
-        this->pcout.set_condition(verbosity_active);
+        //const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
+        //this->pcout.set_condition(verbosity_active);
 
         /*
          * initialize the normal_vector_field computation
@@ -153,12 +153,10 @@ namespace LevelSetParallel
       solution.copy_locally_owned_data_from(solution_out);
       solution.update_ghost_values();
 
-      //ReductionControl     reduction_control;
-      //SolverCG<VectorType> solver(reduction_control);
-
       std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
       initialize_time_iterator(time_iterator); 
 
+      table.clear();
       while ( !time_iterator->is_finished() )
       {
           const double d_tau = time_iterator->get_next_time_increment();  
@@ -170,20 +168,34 @@ namespace LevelSetParallel
           
           matrix_free.initialize_dof_vector(src);
           
-          LinearSolve<VectorType,SolverCG<VectorType>, OperatorType>::solve( rei,
+          // @ todo: how to introduce preconditioner for matrix-free solution?
+          const int iter = LinearSolve<VectorType,SolverCG<VectorType>, OperatorType>::solve( rei,
                                                                              src,
-                                                                             rhs,
-                                                                             mpi_commun );
+                                                                             rhs);
           constraints->distribute(src);
 
           solution += src;
           solution.update_ghost_values();
+
+          pcout << "   with " << iter << " GMRES iterations.";
           
-          pcout << " |ΔΨ|∞ = " << std::setprecision(10) << src.linfty_norm() << " |ΔΨ|²/dT = " << std::setprecision(10) << src.l2_norm()/d_tau << std::endl;
+          pcout << "\t\t |ΔΨ|∞ = " << std::setprecision(10) << src.linfty_norm();
+          pcout << " |ΔΨ|²/dT = " << std::setprecision(10) << src.l2_norm()/d_tau << std::endl;
+          
+          table.add_value("t",       time_iterator->get_current_time());
+          table.add_value("iter ",    iter);
+          table.add_value("|ΔΨ|∞",    src.linfty_norm());
+          table.add_value("|ΔΨ|²/dT", src.l2_norm()/d_tau);
       }
+      table.set_precision("t",        6);
+      table.set_precision("|ΔΨ|∞",    10);
+      table.set_precision("|ΔΨ|²/dT", 10);
+
+      //if( Utilities::MPI::this_mpi_process(mpi_commun) == 0) 
+        //table.write_text(std::cout); 
+      
       solution_out = solution;
       solution_out.update_ghost_values();
-      
       pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
     }
 
@@ -232,106 +244,118 @@ namespace LevelSetParallel
 
         initialize_time_iterator(time_iterator); 
         
+        table.clear();
         while ( !time_iterator->is_finished() )
         {
-            const double d_tau = time_iterator->get_next_time_increment();
-            system_rhs      = 0.0;
-            system_matrix   = 0.0;
-            
-            for (const auto &cell : dof_handler->active_cell_iterators())
-            if (cell->is_locally_owned())
-            {
-               cell_matrix = 0.0;
-               cell_rhs    = 0.0;
-               fe_values.reinit(cell);
-               
-               const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
-               fe_values.get_function_values(     solution_out, psiAtQ );     // compute values of old solution at tau_n
-               fe_values.get_function_gradients(  solution_out, psiGradAtQ ); // compute values of old solution at tau_n
-                
-               normal_vector_field.get_unit_normals_at_quadrature(fe_values,
-                                                                  solution_normal_vector,
-                                                                  normal_at_quadrature);
-
-               // @todo: only compute normals once during timestepping
-               for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                {
-                   for (const unsigned int i : fe_values.dof_indices())
-                   {
-                       //if (!normalsComputed)
-                       //{
-                           const double nTimesGradient_i = normal_at_quadrature[q_index] * fe_values.shape_grad(i, q_index);
-
-                           for (const unsigned int j : fe_values.dof_indices())
-                           {
-                               const double nTimesGradient_j = normal_at_quadrature[q_index] * fe_values.shape_grad(j, q_index);
-                               cell_matrix(i,j) += (
-                                                     fe_values.shape_value(i,q_index) * fe_values.shape_value(j,q_index)
-                                                     + 
-                                                     d_tau * epsilon_cell * nTimesGradient_i * nTimesGradient_j
-                                                   ) 
-                                                   * 
-                                                   fe_values.JxW( q_index );
-                           }
-                       //}
-                      
-                       const double diffRhs = epsilon_cell * normal_at_quadrature[q_index] * psiGradAtQ[q_index];
-
-                       cell_rhs(i) += ( 0.5 * ( 1. - psiAtQ[q_index] * psiAtQ[q_index] ) - diffRhs )
-                                       *
-                                       nTimesGradient_i 
-                                       *
-                                       d_tau 
-                                       * 
-                                       fe_values.JxW( q_index );
-                       
-                   }                                    
-              }// end loop over gauss points
+          const double d_tau = time_iterator->get_next_time_increment();
+          system_rhs      = 0.0;
+          system_matrix   = 0.0;
+          
+          for (const auto &cell : dof_handler->active_cell_iterators())
+          if (cell->is_locally_owned())
+          {
+             cell_matrix = 0.0;
+             cell_rhs    = 0.0;
+             fe_values.reinit(cell);
+             
+             const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
+             fe_values.get_function_values(     solution_out, psiAtQ );     // compute values of old solution at tau_n
+             fe_values.get_function_gradients(  solution_out, psiGradAtQ ); // compute gradients of old solution at tau_n
               
-              // assembly
-              cell->get_dof_indices( local_dof_indices );
-              
-              constraints->distribute_local_to_global( cell_matrix,
-                                                       cell_rhs,
-                                                       local_dof_indices,
-                                                       system_matrix,
-                                                       system_rhs);
-               
-            }
-            system_matrix.compress( VectorOperation::add );
-            system_rhs.compress(    VectorOperation::add );
-            
-            // @ here is space for improvement
-            VectorType    re_solution_u_temp( locally_owned_dofs,
-                                               mpi_commun );
-            VectorType    re_delta_solution_u(locally_owned_dofs,
-                                               mpi_commun );
-            re_solution_u_temp = solution_out;
-            
-            /* 
-             *  iterative solver
-             */
-            LinearSolve<VectorType,SolverCG<VectorType>>::solve( system_matrix,
-                                                                 re_delta_solution_u,
-                                                                 system_rhs,
-                                                                 mpi_commun );
-            constraints->distribute( re_delta_solution_u );
+             normal_vector_field.get_unit_normals_at_quadrature(fe_values,
+                                                                solution_normal_vector,
+                                                                normal_at_quadrature);
 
-            re_solution_u_temp += re_delta_solution_u;
+             // @todo: only compute normals once during timestepping
+             for (const unsigned int q_index : fe_values.quadrature_point_indices())
+              {
+                 for (const unsigned int i : fe_values.dof_indices())
+                 {
+                     const double nTimesGradient_i = normal_at_quadrature[q_index] * fe_values.shape_grad(i, q_index);
+
+                     for (const unsigned int j : fe_values.dof_indices())
+                     {
+                         const double nTimesGradient_j = normal_at_quadrature[q_index] * fe_values.shape_grad(j, q_index);
+                         cell_matrix(i,j) += (
+                                               fe_values.shape_value(i,q_index) * fe_values.shape_value(j,q_index)
+                                               + 
+                                               d_tau * epsilon_cell * nTimesGradient_i * nTimesGradient_j
+                                             ) 
+                                             * 
+                                             fe_values.JxW( q_index );
+                     }
+                    
+                     const double diffRhs = epsilon_cell * normal_at_quadrature[q_index] * psiGradAtQ[q_index];
+
+                     cell_rhs(i) += ( 0.5 * ( 1. - psiAtQ[q_index] * psiAtQ[q_index] ) - diffRhs )
+                                     *
+                                     nTimesGradient_i 
+                                     *
+                                     d_tau 
+                                     * 
+                                     fe_values.JxW( q_index );
+                     
+                 }                                    
+            }// end loop over gauss points
             
-            solution_out = re_solution_u_temp;
-            solution_out.update_ghost_values();
+            // assembly
+            cell->get_dof_indices( local_dof_indices );
+            
+            constraints->distribute_local_to_global( cell_matrix,
+                                                     cell_rhs,
+                                                     local_dof_indices,
+                                                     system_matrix,
+                                                     system_rhs);
+             
+          }
+          system_matrix.compress( VectorOperation::add );
+          system_rhs.compress(    VectorOperation::add );
+          
+          // @ here is space for improvement
+          VectorType    re_solution_u_temp( locally_owned_dofs,
+                                             mpi_commun );
+          VectorType    re_delta_solution_u(locally_owned_dofs,
+                                             mpi_commun );
+          re_solution_u_temp = solution_out;
+          
+          /* 
+           *  iterative solver
+           */
+          TrilinosWrappers::PreconditionAMG preconditioner;     
+          TrilinosWrappers::PreconditionAMG::AdditionalData data;     
+          preconditioner.initialize(system_matrix, data); 
 
-            //time_iterator->print_me( pcout.get_stream() );
-            if(reinit_data.do_print_l2norm)
-            {
-                pcout << " |ΔΨ|∞ = " << std::setprecision(10) << re_delta_solution_u.linfty_norm();
-                pcout << " |ΔΨ|²/dT = " << std::setprecision(10) << re_delta_solution_u.l2_norm()/d_tau << std::endl;
-            }
+          const int iter = LinearSolve<VectorType,
+                                       SolverGMRES<VectorType>,
+                                       SparseMatrixType,
+                                       TrilinosWrappers::PreconditionAMG>::solve( system_matrix,
+                                                                                  re_delta_solution_u,
+                                                                                  system_rhs,
+                                                                                  preconditioner);
+          constraints->distribute( re_delta_solution_u );
 
-            if (re_delta_solution_u.l2_norm() / d_tau < 1e-6)
-               break;
-        } // end of time loop
+          re_solution_u_temp += re_delta_solution_u;
+          
+          solution_out = re_solution_u_temp;
+          solution_out.update_ghost_values();
+
+          if(reinit_data.do_print_l2norm)
+          {
+              pcout << "   with " << iter << " GMRES iterations.";
+              pcout << "\t\t |ΔΨ|∞ = " << std::setprecision(10) << re_delta_solution_u.linfty_norm();
+              pcout << " |ΔΨ|²/dT = " << std::setprecision(10) << re_delta_solution_u.l2_norm()/d_tau << std::endl;
+          }
+          table.add_value("t",       time_iterator->get_current_time());
+          table.add_value("iter ",    iter);
+          table.add_value("|ΔΨ|∞",    re_delta_solution_u.linfty_norm());
+          table.add_value("|ΔΨ|²/dT", re_delta_solution_u.l2_norm()/d_tau);
+        }
+        table.set_precision("t",        6);
+        table.set_precision("|ΔΨ|∞",    10);
+        table.set_precision("|ΔΨ|²/dT", 10);
+
+        //if( Utilities::MPI::this_mpi_process(mpi_commun) == 0) 
+          //table.write_text(std::cout); 
 
         pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
     }

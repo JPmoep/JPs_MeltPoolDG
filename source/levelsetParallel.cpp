@@ -7,6 +7,7 @@
 #include <linearsolve.hpp>
 #include <reinitialization.hpp>
 #include <curvature.hpp>
+#include <postprocessor.hpp>
 
 namespace LevelSetParallel
 {
@@ -19,7 +20,7 @@ namespace LevelSetParallel
     , parameters(          base_in->parameters )
     , fe(                  parameters.levelset_degree )
     , triangulation(       base_in->triangulation )
-    , dof_handler(         base_in->triangulation )
+    , dof_handler(         triangulation )
     , pcout(               std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0) )
     , computing_timer(     mpi_communicator,
                            pcout,
@@ -65,7 +66,6 @@ namespace LevelSetParallel
 
     for (auto const& bc : boundary_conditions->dirichlet_bc)
     {
-      pcout << "apply dirichlet condition for all faces with" << bc.first << std::endl;
       VectorTools::interpolate_boundary_values( dof_handler,
                                                 bc.first,
                                                 *bc.second,
@@ -202,10 +202,19 @@ namespace LevelSetParallel
     system_matrix.compress(VectorOperation::add);
     system_rhs.compress(VectorOperation::add);
     
-    LinearSolve<VectorType>::solve( system_matrix,
-                                    solution_levelset,
-                                    system_rhs,
-                                    mpi_communicator);
+    TrilinosWrappers::PreconditionAMG preconditioner;     
+    TrilinosWrappers::PreconditionAMG::AdditionalData data;     
+    preconditioner.initialize(system_matrix, data); 
+
+    const int iter = LinearSolve<VectorType,
+                                 SolverGMRES<VectorType>,
+                                 TrilinosWrappers::SparseMatrix,
+                                 TrilinosWrappers::PreconditionAMG>::solve( system_matrix,
+                                                                            solution_levelset,
+                                                                            system_rhs,
+                                                                            preconditioner);
+    
+    pcout << "  with " << iter << " GMRES iterations.\t";
     constraints.distribute(solution_levelset);
     solution_levelset.update_ghost_values();
   }
@@ -331,7 +340,7 @@ namespace LevelSetParallel
   
   template <int dim, int degree>
   void 
-  LevelSetEquation<dim,degree>::run( )
+  LevelSetEquation<dim,degree>::run()
   {
     timer.start();
     pcout << "Running "
@@ -339,6 +348,10 @@ namespace LevelSetParallel
           << " MPI rank(s)..." << std::endl;
 
     initialize_levelset();
+
+    Postprocessor<dim> postprocessor(mpi_communicator);
+    
+    print_me();
 
     if ( parameters.activate_reinitialization )    
         initialize_reinitialization_model();
@@ -353,8 +366,9 @@ namespace LevelSetParallel
 
     while ( !time_iterator.is_finished() )
     {
-        const double dt = time_iterator.get_next_time_increment();
-        pcout << "Time step " << time_iterator.get_current_time_step_number() << " at current t=" << time_iterator.get_current_time() << std::endl;
+        time_iterator.get_next_time_increment();
+        //utilityFunctions::printLine(1, pcout.get_stream(), mpi_communicator);
+        pcout << "Time step " << time_iterator.get_current_time_step_number() << " at current t=" << std::setprecision(10) << time_iterator.get_current_time() << std::endl;
 
         compute_levelset_model(); // @todo: insert updateFlag
 
@@ -378,8 +392,31 @@ namespace LevelSetParallel
             pcout << "| real total wall clock time elapsed since start: " << timer.wall_time() << " s" << std::endl;
             pcout << "+" << std::string(70, '-') << "+" << std::endl;
             computing_timer.reset();  
-        } 
+        }
+
+        if (parameters.compute_volume_output)
+        {
+          auto volume_frac = postprocessor.compute_volume_of_phases( degree,
+                                    degree+1,
+                                    dof_handler,
+                                    solution_levelset,
+                                    time_iterator.get_current_time(),
+                                    mpi_communicator
+                                  );
+
+          postprocessor.collect_volume_fraction( volume_frac );
+        }
     }
+
+    if (parameters.compute_volume_output)
+      postprocessor.print_volume_fraction_table(mpi_communicator);
+    if (parameters.do_compute_error)
+      postprocessor.compute_error( degree+1,
+                                   solution_levelset,
+                                   *field_conditions->exact_solution_field,  
+                                    dof_handler,
+                                   triangulation         
+                                   );
   }
   
   // instantiation
@@ -387,125 +424,4 @@ namespace LevelSetParallel
   template class LevelSetEquation<2,2>; 
 
 } // end of namespace LevelSetParallel
-
-/*
- *@todo: shift the following functions to a postprocess class
- *
-  template <int dim, int degree>
-  void LevelSetEquation<dim,degree>::compute_error( const Function<dim>& ExactSolution )
-  {
-    const auto qGauss = QGauss<dim>(parameters.levelset_degree+1);
-    Vector<double> norm_per_cell(triangulation.n_active_cells());
-
-    VectorTools::integrate_difference(dof_handler,
-                                      solution_levelset,
-                                      ExactSolution,
-                                      norm_per_cell,
-                                      qGauss,
-                                      VectorTools::L2_norm);
-    
-    pcout     << "L2 error =    "
-              << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
-              << compute_global_error(triangulation, 
-                                      norm_per_cell,
-                                      VectorTools::L2_norm) << std::endl;
-
-    Vector<float> difference_per_cell(triangulation.n_active_cells());
-
-    VectorTools::integrate_difference(dof_handler,
-                                      solution_levelset,
-                                      ExactSolution,
-                                      difference_per_cell,
-                                      qGauss,
-                                      VectorTools::L1_norm);
-
-    double h1_error = VectorTools::compute_global_error(triangulation,
-                                                        difference_per_cell,
-                                                        VectorTools::L1_norm);
-    pcout << "L1 error = " << h1_error << std::endl;
-    
-  }
-
-  //// @ to be rearranged
-  template <int dim, int degree>
-  void LevelSetEquation<dim,degree>::compute_overall_phase_volume( )
-  {
-    Vector<double> phase_volume_per_cell(triangulation.n_active_cells());
-
-    const auto qGauss = QGauss<dim>(parameters.levelset_degree+1);
-    
-    FEValues<dim> fe_values( fe,
-                             qGauss,
-                             update_values | update_JxW_values | update_quadrature_points );
-
-    const unsigned int dofs_per_cell =   fe.dofs_per_cell;
-    
-    const unsigned int n_q_points    = qGauss.size();
-    std::vector<double> phi_at_q(  n_q_points );
-
-    //const double& max_value = solution_levelset.max();
-    //const double& min_value = solution_levelset.min();
-    const double& max_value = 1.0;
-    const double& min_value = -1.0;
-    
-    std::fill(volume_fraction.begin(), volume_fraction.end(), 0);
-    double phaseValue1 = 0;
-    double phaseValue2 = 0;
-    const double threshhold = 0.5;
-
-    for (const auto &cell : dof_handler.active_cell_iterators())
-    if (cell->is_locally_owned())
-    {
-        fe_values.reinit(               cell );
-        fe_values.get_function_values(  solution_levelset, phi_at_q ); // compute values of old solution
-
-        for (const unsigned int q_index : fe_values.quadrature_point_indices())
-        {
-            const double phi_normalized = utilityFunctions::normalizeFunction ( phi_at_q[q_index], min_value, max_value );
-            if (phi_normalized>=threshhold)
-                phaseValue1 += fe_values.JxW(q_index);
-            else 
-                phaseValue2 += fe_values.JxW(q_index);
-            //phaseValue1 += ( phi_at_q[q_index] * 0.5 + 0.5 ) * fe_values.JxW(q_index); 
-            //phaseValue2 += ( 1. - ( phi_at_q[q_index] * 0.5 + 0.5 ) ) * fe_values.JxW(q_index);
-
-        }
-    }
-    volume_fraction[0] = Utilities::MPI::sum(phaseValue1, mpi_communicator);
-    volume_fraction[1] = Utilities::MPI::sum(phaseValue2, mpi_communicator);
-
-    //@ todo: write template class for formatted output table
-    std::cout << "vol 1: " << volume_fraction[0] << "vol 2: " << volume_fraction[1] << std::endl;
-    size_t headerWidths[2] = {
-        std::string("time").size(),
-        std::string("volume phase 1").size(),
-    };
-
-    if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-    {
-        //if ( time==parameters.start_time )
-        //{
-            //std::cout << "output file opened" << std::endl;
-            //std::fstream fs;
-            //fs.open (parameters.filename_volume_output, std::fstream::out);
-            //fs.precision(10);
-            //fs << "time | volume phase 1 | volume phase 2 " << std::endl; 
-            //fs << std::left << std::setw(headerWidths[0]) << time;
-            //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[0]; 
-            //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[1] << std::endl; 
-            //fs.close();
-        //}
-        //else
-        //{
-            //std::fstream fs;
-            //fs.open (parameters.filename_volume_output,std::fstream::in | std::fstream::out | std::fstream::app);
-            //fs.precision(10);
-            //fs << std::left << std::setw(headerWidths[0]) << time;
-            //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[0]; 
-            //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[1] << std::endl; 
-        //}
-    }
-  }
-
- */
 

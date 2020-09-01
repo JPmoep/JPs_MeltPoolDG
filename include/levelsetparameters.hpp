@@ -53,6 +53,7 @@ struct LevelSetParameters
   // output options
   bool                output_walltime;
   bool                output_norm_levelset;
+  bool                do_compute_error;
   bool                compute_paraview_output;
   std::string         filename_paraview_output;
   bool                compute_volume_output;

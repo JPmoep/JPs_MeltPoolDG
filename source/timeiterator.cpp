@@ -30,6 +30,8 @@ namespace LevelSetParallel
     double
     TimeIterator::get_next_time_increment()
     {
+        if (current_time + current_time_increment > time_data.end_time)
+          current_time_increment = time_data.end_time-current_time;
         current_time += current_time_increment;
         n_time_steps += 1;
         return current_time_increment;

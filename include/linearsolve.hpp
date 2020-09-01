@@ -14,6 +14,7 @@
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/base/index_set.h>
 #include <deal.II/base/mpi.h>
+
 using namespace dealii;
 
 namespace LevelSetParallel
@@ -29,14 +30,13 @@ class LinearSolve
     typedef AffineConstraints<double>         ConstraintsType;
 
   public:
-    static void solve( const OperatorType&       system_matrix,
+    static int solve( const OperatorType&       system_matrix,
                        VectorType&               solution,
                        const VectorType&         rhs, 
-                       const MPI_Comm&           mpi_communicator,
+                       const PreconditionerType& preconditioner    = PreconditionIdentity(),
                        const unsigned int        max_iterations    = 1000,
-                       const double              rel_tolerance_rhs = 1e-8, 
-                       const bool                print_iterations  = true,
-                       const PreconditionerType& preconditioner    = PreconditionIdentity())
+                       const double              rel_tolerance_rhs = 1e-8
+                    )
     {
       SolverControl   solver_control( max_iterations, rel_tolerance_rhs * rhs.l2_norm() );
       SolverType      solver(         solver_control );
@@ -47,8 +47,7 @@ class LinearSolve
                     preconditioner);
       
       solution.update_ghost_values();
-      if (print_iterations && Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-          std::cout << " equation: " << solver_control.last_step() << " iterations ";
+      return solver_control.last_step();
     }
     
 };

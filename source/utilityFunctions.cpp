@@ -76,9 +76,10 @@ double signedDistanceSphere(const Point<3>& P, const Point<3>& Center, const dou
     return P[0] - xInterface;  
  }
 
- void printLine(const int verbosityLevel, std::ostream& str)
+ void printLine(const int verbosityLevel, std::ostream& str, const MPI_Comm& mpi_comm)
  {
-     str << "+" << std::string(68, '-') << "+" << std::endl;
+     if( Utilities::MPI::this_mpi_process(mpi_comm) == 0) 
+          str << "+" << std::string(68, '-') << "+" << std::endl;
  }
 
 } // end of utilityFunctions

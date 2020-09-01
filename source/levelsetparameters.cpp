@@ -86,6 +86,8 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
   {
       prm.declare_entry ("output walltime", "0", Patterns::Integer(),
                          "this flag enables the output of wall times (should be disabled if a test file is prepared)");
+      prm.declare_entry ("do compute error", "0", Patterns::Integer(),
+                         "this flag enables the computation of the error compared to a given analytical solution.");
       prm.declare_entry ("output norm levelset", "0", Patterns::Integer(),
                          "this flag enables the output of the norm of the dof vector (should be ENABLED if a test file is prepared)");
       prm.declare_entry ("compute paraview output", "0", Patterns::Integer(),
@@ -141,6 +143,7 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
   prm.leave_subsection ();
   prm.enter_subsection ("output");
       output_walltime =         prm.get_integer("output walltime");
+      do_compute_error =        prm.get_integer("do compute error");
       output_norm_levelset =    prm.get_integer("output norm levelset");
       compute_paraview_output = prm.get_integer("compute paraview output");
       filename_paraview_output =        prm.get("filename paraview output");
@@ -170,6 +173,7 @@ void LevelSetParameters::print_parameters()
     std::cout << "| --------------- output ----------------"                 << std::endl;    
     std::cout << "| output_walltime           " << output_walltime           << std::endl;                   
     std::cout << "| output_norm_levelset      " << output_norm_levelset      << std::endl;                   
+    std::cout << "| do_compute_error          " << do_compute_error          << std::endl;                   
     std::cout << "| compute_paraview_output   " << compute_paraview_output   << std::endl;                   
     std::cout << "| filename_paraview_output  " << filename_paraview_output  << std::endl;                   
     std::cout << "| compute_volume_output     " << compute_volume_output     << std::endl;                   

@@ -104,8 +104,7 @@ namespace LevelSetParallel
       
       LinearSolve<BlockVectorType,SolverCG<BlockVectorType>, OperatorType>::solve( normal_operator,
                                                                                    normal_vector_out,
-                                                                                   rhs,
-                                                                                   mpi_commun);
+                                                                                   rhs );
       normal_vector_out.update_ghost_values();
 
       if (normal_vector_data.do_print_l2norm)
@@ -130,6 +129,7 @@ namespace LevelSetParallel
       system_matrix = 0.0;
       system_rhs=0.0;
       normal_vector_out = 0.0;
+
       for (unsigned int d=0; d<dim; d++)
       {
           system_rhs.block(d) = 0.0;
@@ -201,6 +201,7 @@ namespace LevelSetParallel
             
             // assembly
             cell->get_dof_indices(local_dof_indices);
+
             constraints->distribute_local_to_global( normal_cell_matrix,
                                                      local_dof_indices,
                                                      system_matrix);
@@ -217,9 +218,7 @@ namespace LevelSetParallel
         {
           LinearSolve<VectorType,SolverCG<VectorType>>::solve( system_matrix,
                                                                normal_vector_out.block(d),
-                                                               system_rhs.block(d),
-                                                               mpi_commun
-                                                               );
+                                                               system_rhs.block(d));
         }
 
         normal_vector_out.update_ghost_values();
@@ -270,7 +269,7 @@ namespace LevelSetParallel
     void
     NormalVector<dim,degree>::print_me( )
     {
-        pcout << "hello from normal vector computation" << std::endl;   
+        pcout << "hello from normal vector computation"                           << std::endl;   
         pcout << "damping: "              << normal_vector_data.damping_parameter << std::endl;
         pcout << "degree: "               << normal_vector_data.degree            << std::endl;
     }

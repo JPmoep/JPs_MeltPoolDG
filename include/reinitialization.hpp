@@ -30,7 +30,8 @@
 #include <deal.II/fe/fe_values.h>
 // for FE_Q<dim> type
 #include <deal.II/fe/mapping.h>
-
+// for TableHandler
+#include <deal.II/base/table_handler.h>
 // from multiphaseflow
 #include "utilityFunctions.hpp"
 #include "normalvector.hpp"
@@ -152,18 +153,19 @@ namespace LevelSetParallel
 
     const MPI_Comm & mpi_commun;
 
-    ReinitializationData                     reinit_data;
-    bool                                     compute_normal_vector;
+    ReinitializationData                 reinit_data;
+    bool                                 compute_normal_vector;
 
-    SmartPointer<const DoFHandlerType>       dof_handler;
-    SmartPointer<const ConstraintsType>      constraints;
-    IndexSet                                 locally_owned_dofs;
-    IndexSet                                 locally_relevant_dofs;
+    SmartPointer<const DoFHandlerType>   dof_handler;
+    SmartPointer<const ConstraintsType>  constraints;
+    IndexSet                             locally_owned_dofs;
+    IndexSet                             locally_relevant_dofs;
 
-    SparseMatrixType                         system_matrix;
-    VectorType                               system_rhs;
-    ConditionalOStream                       pcout;
-    NormalVector<dim,degree>                 normal_vector_field;
-    BlockVectorType                          solution_normal_vector;
+    SparseMatrixType                     system_matrix;
+    VectorType                           system_rhs;
+    ConditionalOStream                   pcout;
+    NormalVector<dim,degree>             normal_vector_field;
+    BlockVectorType                      solution_normal_vector;
+    TableHandler                         table;
   };
 } // namespace LevelSetParallel
