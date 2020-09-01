@@ -34,7 +34,8 @@ namespace LevelSetParallel
                         TimerOutput::wall_times)
     , timer(            mpi_communicator)
     , volume_fraction(2,0)
-    , field_conditions( base_in->get_field_conditions()  )
+    , field_conditions(    base_in->get_field_conditions()  )
+    , boundary_conditions( base_in->get_boundary_conditions()  )
     , reini( mpi_communicator )
     , curvature( mpi_communicator )
   {}
@@ -49,7 +50,7 @@ namespace LevelSetParallel
   }
 
   template <int dim, int degree>
-  void LevelSetEquation<dim,degree>::setup_system(const Function<dim>& DirichletValues )
+  void LevelSetEquation<dim,degree>::setup_system()
   {
     TimerOutput::Scope t(computing_timer, "setup");
     dof_handler.distribute_dofs( fe );
@@ -71,10 +72,15 @@ namespace LevelSetParallel
     constraints.clear();
     constraints.reinit(locally_relevant_dofs);
     DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-    VectorTools::interpolate_boundary_values( dof_handler,
-                                              utilityFunctions::BoundaryConditions::Types::dirichlet,
-                                              DirichletValues,
-                                              constraints );
+
+    for (auto const& bc : boundary_conditions->dirichlet_bc)
+    {
+      pcout << "apply dirichlet condition for all faces with" << bc.first << std::endl;
+      VectorTools::interpolate_boundary_values( dof_handler,
+                                                bc.first,
+                                                *bc.second,
+                                                constraints );
+    }
     constraints.close();   
 
     //DynamicSparsityPattern dsp( locally_relevant_dofs );
@@ -132,7 +138,7 @@ namespace LevelSetParallel
   } 
 
   template <int dim, int degree>
-  void LevelSetEquation<dim,degree>::assemble_levelset_system(const Function<dim>& DirichletValues)
+  void LevelSetEquation<dim,degree>::assemble_levelset_system()
   {
     TimerOutput::Scope t(computing_timer, "assembly");   
     field_conditions->advection_field->set_time(time);
@@ -478,8 +484,7 @@ namespace LevelSetParallel
   }
   
   template <int dim, int degree>
-  void LevelSetEquation<dim,degree>::run(
-                                   const Function<dim>& DirichletValues) 
+  void LevelSetEquation<dim,degree>::run( )
   {
     timer.start();
     pcout << "Running "
@@ -488,7 +493,7 @@ namespace LevelSetParallel
 
     timestep_number=0;
     
-    setup_system( DirichletValues );
+    setup_system( );
 
     initialize_levelset();
 
@@ -513,7 +518,7 @@ namespace LevelSetParallel
         pcout << "a[0] " << a[0] << "a[1] " << a[1] << std::endl;
         pcout << "end of calculate advection_field: " << std::endl;
 
-        assemble_levelset_system(  DirichletValues ); // @todo: insert updateFlag
+        assemble_levelset_system(  ); // @todo: insert updateFlag
         solve_u();
         if (parameters.output_norm_levelset)
             pcout << " (not reinitialized) levelset function ||phi|| = " << solution_u.l2_norm() << std::endl;

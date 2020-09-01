@@ -12,15 +12,15 @@ namespace LevelSetParallel
 
     enum class BoundaryTypesLevelSet
     {
-        dirichlet_bc,
-        //neumann_bc,  /* currently not implemented */
-        //wall_bc,    /* currently not implemented */
-        outflow, /* do nothing */
-        undefined   
+        dirichlet_bc = 1,
+        outflow      = 2,        /* do nothing */
+        undefined    = 42   
+        //neumann_bc,   /* currently not implemented */
+        //wall_bc,      /* currently not implemented */
     };
 
     template<int dim>
-    struct BoundaryConditionsLevelSet
+    struct BoundaryConditions
     {
         unsigned int total_number_of_bc = 0;
         // specify 
@@ -48,8 +48,6 @@ namespace LevelSetParallel
             {
                 // @ how to get current boundary_id into ExecMessage??
                 AssertThrow(false, ExcMessage("for specified boundary_id: " + std::string(id)));
-                //AssertThrow(false, ExcMessage("no boundary condition specified for face xx"));
-                //AssertThrow(false, ExcNotImplemented());
 
                 return BoundaryTypesLevelSet::undefined;
             }

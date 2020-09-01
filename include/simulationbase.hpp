@@ -1,11 +1,14 @@
 #pragma once
 
+// dealii
+#include <deal.II/distributed/tria.h>
+// multiphaseflow
 #include "levelsetparameters.hpp"
 #include "levelsetParallel.hpp"
 #include "boundaryconditions.hpp"
 #include "fieldconditions.hpp"
+// c++
 #include <memory>
-
 namespace LevelSetParallel
 {
     using namespace dealii;
@@ -14,9 +17,17 @@ namespace LevelSetParallel
     class SimulationBase
     {
       public:
-    
-        virtual void set_mpi_commun() = 0;
         
+        //virtual void set_mpi_commun() = 0;
+        SimulationBase(MPI_Comm my_communicator)
+        : mpi_communicator(my_communicator)
+        , triangulation(my_communicator)
+        {
+        }
+
+        virtual ~SimulationBase()
+        {}
+
         virtual void set_parameters() = 0;
         
         virtual void set_boundary_conditions() = 0;
@@ -25,13 +36,16 @@ namespace LevelSetParallel
 
         virtual void create_spatial_discretization() = 0;
         
-        virtual std::shared_ptr<FieldConditions<dim>> get_field_conditions(){ return std::make_shared<FieldConditions<dim>>(this->field_conditions); }
+        virtual std::shared_ptr<FieldConditions<dim>>    get_field_conditions(){ return std::make_shared<FieldConditions<dim>>(this->field_conditions); }
         
-        LevelSetParameters                        parameters;
-        FieldConditions<dim>                      field_conditions;
-        BoundaryConditionsLevelSet<dim>           boundary_conditions;
-        parallel::distributed::Triangulation<dim> triangulation;
+        virtual std::shared_ptr<BoundaryConditions<dim>> get_boundary_conditions(){ return std::make_shared<BoundaryConditions<dim>>(this->boundary_conditions); }
+        
         MPI_Comm                                  mpi_communicator;
-    };
+        parallel::distributed::Triangulation<dim> triangulation; 
+        FieldConditions<dim>                      field_conditions;
+        BoundaryConditions<dim>                   boundary_conditions;
 
+        LevelSetParameters                        parameters;
+
+    };
 }

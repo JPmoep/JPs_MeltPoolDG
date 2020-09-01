@@ -97,12 +97,12 @@ namespace LevelSetParallel
                      std::shared_ptr<SimulationBase<dim>>        base
                      //MPI_Comm&                                   mpi_commun
                      );
-    void run( const Function<dim>& DirichletValues);
+    void run( );
     void compute_error( const Function<dim>& ExactSolution );
     double epsilon;
 
   private:
-    void setup_system(const Function<dim>& DirichletValues );
+    void setup_system();
     /*
      *      initialize level set equation
      */
@@ -110,7 +110,7 @@ namespace LevelSetParallel
     /*
      *      solve level set equation
      */
-    void assemble_levelset_system( const Function<dim>& DirichletValues );
+    void assemble_levelset_system( );
     /*
      *      setup reinitialization model
      */
@@ -163,7 +163,7 @@ namespace LevelSetParallel
     //TensorFunction<1, dim> &                   AdvectionField;
 
     std::shared_ptr<FieldConditions<dim>>      field_conditions;
-    //std::shared_ptr<BoundaryConditions<dim>>      boundary_conditions;
+    std::shared_ptr<BoundaryConditions<dim>>   boundary_conditions;
 
     /* 
      * the following are subproblem classes
