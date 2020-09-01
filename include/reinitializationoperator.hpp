@@ -34,6 +34,9 @@ class ReinitializationOperator
       vmult(VectorType & dst,
             const VectorType & src) const
       {
+        AssertThrow(d_tau>0.0, ExcMessage("reinitialization operator: d_tau must be set"));
+        AssertThrow(eps>0.0, ExcMessage("reinitialization operator: epsilon must be set"));
+        
         const int n_q_points_1d = degree+1;
         
         FEEvaluation<dim, degree, n_q_points_1d, 1, number>   levelset(      matrix_free );
@@ -74,19 +77,22 @@ class ReinitializationOperator
 
     void
     create_rhs(VectorType & dst,
-               const VectorType & src) const
+               const VectorType & src,
+               const BlockVectorType& normals) const
     {
-
+      AssertThrow(d_tau>0.0, ExcMessage("reinitialization operator: d_tau must be set"));
+      AssertThrow(eps>0.0, ExcMessage("reinitialization operator: epsilon must be set"));
+      
       const auto compressive_flux = [&](const auto &phi) 
       {
           return 0.5 * ( make_vectorized_array<number>(1.) - phi * phi );
       };
 
       const int n_q_points_1d = degree+1;
-
+      
       FEEvaluation<dim, degree, n_q_points_1d, 1, number>   psi(           matrix_free);
       FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( matrix_free);
-
+  
       matrix_free.template cell_loop<VectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
           for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
@@ -95,15 +101,14 @@ class ReinitializationOperator
             psi.gather_evaluate(src, true, true);
             
             normal_vector.reinit(cell);
-            normal_vector.read_dof_values(n);
+            normal_vector.read_dof_values(normals);
             normal_vector.evaluate(true, false);
 
             for (unsigned int q_index = 0; q_index < psi.n_q_points; ++q_index)
             {
               const scalar val = psi.get_value(q_index);
               vector n_phi = normal_vector.get_value(q_index);
-                    n_phi /= n_phi.norm();
-
+                     n_phi /= n_phi.norm();
               psi.submit_gradient( d_tau * compressive_flux(val) * n_phi 
                                    - 
                                    d_tau * eps * scalar_product( psi.get_gradient(q_index), n_phi ) * n_phi, q_index);
@@ -120,13 +125,13 @@ class ReinitializationOperator
     void
     set_normal_vector_field(const BlockVectorType &normal_vector) 
     {
-      this->n.reinit(dim);
-      matrix_free.initialize_dof_vector(this->n.block(0));
-      matrix_free.initialize_dof_vector(this->n.block(1));
-      this->n.block(0).copy_locally_owned_data_from(normal_vector.block(0));
-      this->n.block(1).copy_locally_owned_data_from(normal_vector.block(1));
+      n.reinit(dim);
+      for (unsigned int d=0; d<dim; ++d)
+      {
+        matrix_free.initialize_dof_vector(n.block(d));
+        n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
+      }
     }
-
 
     void
     initialize_dof_vector(VectorType &dst) const

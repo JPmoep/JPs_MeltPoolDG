@@ -14,6 +14,7 @@
 
 #include "normalvector.hpp"
 #include "curvature.hpp"
+#include "linearsolve.hpp"
 
 namespace LevelSetParallel
 {
@@ -154,7 +155,12 @@ namespace LevelSetParallel
         system_matrix.compress( VectorOperation::add );
         system_rhs.compress(    VectorOperation::add );
 
-        solve_cg( curvature_out, system_rhs );
+        LinearSolve<VectorType,SolverCG<VectorType>>::solve( system_matrix,
+                                                             curvature_out,
+                                                             system_rhs,
+                                                             mpi_commun
+                                                           );
+        //solve_cg( curvature_out, system_rhs );
     }
     
     template <int dim, int degree>
@@ -174,28 +180,28 @@ namespace LevelSetParallel
         return this->curvature_field;
     }
 
-    template <int dim, int degree>
-    void 
-    Curvature<dim,degree>::solve_cg( VectorType & solution, const VectorType & rhs)
-    {
-      SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-6 * rhs.l2_norm() );
-      SolverCG<VectorType>     solver( solver_control );
+    //template <int dim, int degree>
+    //void 
+    //Curvature<dim,degree>::solve_cg( VectorType & solution, const VectorType & rhs)
+    //{
+      //SolverControl            solver_control( dof_handler->n_dofs() * 2, 1e-6 * rhs.l2_norm() );
+      //SolverCG<VectorType>     solver( solver_control );
 
-      TrilinosWrappers::PreconditionAMG preconditioner;
-      TrilinosWrappers::PreconditionAMG::AdditionalData data;
-      preconditioner.initialize(system_matrix, data);
+      //TrilinosWrappers::PreconditionAMG preconditioner;
+      //TrilinosWrappers::PreconditionAMG::AdditionalData data;
+      //preconditioner.initialize(system_matrix, data);
       
-      VectorType    completely_distributed_solution( locally_owned_dofs,
-                                                     mpi_commun);
+      //VectorType    completely_distributed_solution( locally_owned_dofs,
+                                                     //mpi_commun);
 
-      solver.solve( system_matrix, 
-                    completely_distributed_solution, 
-                    rhs, 
-                    preconditioner );
+      //solver.solve( system_matrix, 
+                    //completely_distributed_solution, 
+                    //rhs, 
+                    //preconditioner );
 
-      solution = completely_distributed_solution;
-      pcout << "normal vectors: solver  with "  << solver_control.last_step() << " CG iterations." << std::endl;
-    }
+      //solution = completely_distributed_solution;
+      //pcout << "normal vectors: solver  with "  << solver_control.last_step() << " CG iterations." << std::endl;
+    //}
 
     template <int dim, int degree>
     void

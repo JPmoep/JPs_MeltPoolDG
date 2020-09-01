@@ -50,16 +50,14 @@ namespace LevelSetParallel
   struct NormalVectorData 
   {
     NormalVectorData()
-        : damping_parameter(0.0)
-        , degree(1)
+        : degree(1)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
         , min_cell_size(0.0)
+        , damping_parameter(min_cell_size * 0.5) 
         , do_print_l2norm(false)
     {
     }
     
-    // parameter for diffusive term in computation of normals
-    double damping_parameter;
     
     // interpolation degree of normal vector interpolation
     unsigned int degree;
@@ -69,6 +67,9 @@ namespace LevelSetParallel
     
     // minimum size of cells --> to evaluate damping parameter @todo: should this parameter be made cell-size-dependent?
     double min_cell_size;
+    
+    // parameter for diffusive term in computation of normals
+    double damping_parameter;
 
     // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
     bool do_print_l2norm;
@@ -111,7 +112,13 @@ namespace LevelSetParallel
                 const IndexSet&             locally_relevant_dofs_in);
     
     void 
-    solve_normal_vector_matrixfree( const VectorType & levelset_in );
+    compute_normal_vector_field_matrixfree( const VectorType & levelset_in,
+                                            BlockVectorType & normal_vector_out); 
+    /*
+     *  This function overloads the previous one, where the normal vectors are stored as a member variable.
+     */ 
+    void 
+    compute_normal_vector_field_matrixfree( const VectorType & level_set_solution_in);
 
     /*
      *  This function computes the (damped) normal vector field for a given solution of a scalar function

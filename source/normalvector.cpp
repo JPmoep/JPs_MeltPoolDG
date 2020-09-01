@@ -68,9 +68,6 @@ namespace LevelSetParallel
     NormalVector<dim,degree>::compute_normal_vector_field_matrixfree( const VectorType & levelset_in,
                                                                       BlockVectorType & normal_vector_out)
     {
-      pcout << "----------- NORMAL VECTORS -- MATRIX FREE " << std::endl;
-
-
       MappingQ<dim> mapping( degree );
       QGauss<1> quad_1d(     degree + 1 );
       
@@ -86,7 +83,7 @@ namespace LevelSetParallel
       
       typedef LevelSetMatrixFree::NormalVectorOperator<dim, degree> OperatorType;
       OperatorType normal_operator( matrix_free,
-                                    normal_vector_data.min_cell_size * 0.5 );
+                                    normal_vector_data.damping_parameter );
 
       /* copy initial level set field
        *
@@ -106,12 +103,10 @@ namespace LevelSetParallel
       normal_operator.create_rhs(rhs, level);
       
       LinearSolve<BlockVectorType,SolverCG<BlockVectorType>, OperatorType>::solve( normal_operator,
-                                                                                   rhs,
                                                                                    normal_vector_out,
-                                                                                   *constraints,
-                                                                                   mpi_commun,
-                                                                                   locally_owned_dofs);
-
+                                                                                   rhs,
+                                                                                   mpi_commun);
+      normal_vector_out.update_ghost_values();
 
       if (normal_vector_data.do_print_l2norm)
         for(unsigned int d=0; d<dim; ++d)
@@ -157,8 +152,6 @@ namespace LevelSetParallel
       const unsigned int n_q_points    = qGauss.size();
       std::vector<Tensor<1,dim>>           normal_at_q(  n_q_points, Tensor<1,dim>() );
 
-      const double damping = normal_vector_data.min_cell_size * 0.5; //GridTools::minimal_cell_diameter(triangulation) * 0.5; //@todo: modifiy damping parameter
-      
       for (const auto &cell : dof_handler->active_cell_iterators())
       if (cell->is_locally_owned())
       {
@@ -186,7 +179,7 @@ namespace LevelSetParallel
                       normal_cell_matrix( i, j ) += ( 
                                                       phi_i * phi_j 
                                                       + 
-                                                      damping * grad_phi_i * grad_phi_j  
+                                                      normal_vector_data.damping_parameter * grad_phi_i * grad_phi_j  
                                                     )
                                                     * 
                                                     fe_values.JxW( q_index ) ;
@@ -223,17 +216,16 @@ namespace LevelSetParallel
         for (unsigned int d=0; d<dim; ++d)
         {
           LinearSolve<VectorType,SolverCG<VectorType>>::solve( system_matrix,
-                                                               system_rhs.block(d),
                                                                normal_vector_out.block(d),
-                                                               *constraints,
-                                                               mpi_commun,
-                                                               locally_owned_dofs);
-
-          if (normal_vector_data.do_print_l2norm)
-              pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
+                                                               system_rhs.block(d),
+                                                               mpi_commun
+                                                               );
         }
 
         normal_vector_out.update_ghost_values();
+        if (normal_vector_data.do_print_l2norm)
+          for(unsigned int d=0; d<dim; ++d)
+            pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
     }
     
     template <int dim, int degree>

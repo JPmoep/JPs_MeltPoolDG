@@ -70,40 +70,6 @@ namespace LevelSetParallel
               true );
         }
 
-        /*
-         * This function is deprecated --> it would be useful for solving the normal vector
-         * in dim blocks
-
-        void
-        vmult(VectorType & dst,
-              const VectorType & src) const
-        {
-          const int n_q_points_1d = degree+1; // @ todo: not hard code
-          
-          FEEvaluation<dim, degree, n_q_points_1d, 1, number>   normal(      matrix_free );
-
-          matrix_free.template cell_loop<VectorType, VectorType>( [&] 
-            (const auto&, auto& dst, const auto& src, auto cell_range) {
-              for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
-              {
-                normal.reinit(cell);
-                normal.gather_evaluate(src, true, true, false);
-
-                for (unsigned int q_index=0; q_index<normal.n_q_points; ++q_index)
-                {
-                  normal.submit_value(                    normal.get_value(    q_index ), q_index);
-                  normal.submit_gradient( this->damping * normal.get_gradient( q_index ), q_index );
-                }
-                
-                normal.integrate_scatter(true, true, dst);
-              }
-            },
-            dst, 
-            src, 
-            true );
-        }
-        */
-
         void
         create_rhs(BlockVectorType & dst,
                    const VectorType & src) const

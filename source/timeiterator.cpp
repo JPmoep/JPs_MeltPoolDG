@@ -40,11 +40,24 @@ namespace LevelSetParallel
     {
         current_time_increment *= factor;
     }
-    //void
-    //TimeIterator::print_me(ConditionalOstream pcout)
-    //{
     
-    //}
+    double
+    TimeIterator::get_current_time() const
+    {
+        return current_time;
+    }
+
+    double
+    TimeIterator::get_current_time_increment() const
+    {
+        return current_time_increment;
+    }
+    
+    double
+    TimeIterator::get_current_time_step_number() const
+    {
+        return n_time_steps;
+    }
 
     void
     TimeIterator::print_me(std::ostream & pcout)

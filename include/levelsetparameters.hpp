@@ -31,16 +31,18 @@ struct LevelSetParameters
   // discretization
   unsigned int        dimension;
   unsigned int        global_refinements;
+  bool                do_matrix_free;
   //unsigned int        adaptive_refinements;
-  //bool                use_anisotropic_refinement;
 
   // level set specific parameters
   unsigned int        levelset_degree;
   double              artificial_diffusivity;
-  //double              interface_thickness; // to be calculated from the characteristic mesh size
   bool                activate_reinitialization;
   unsigned int        max_n_reinit_steps;
 
+  // reinitialization specific parameters
+  // normal vector    specific parameters
+  // curvature        specific parameters
   // time stepping
   double              theta;
   double              start_time;

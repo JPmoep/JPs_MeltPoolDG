@@ -160,10 +160,10 @@ namespace LevelSetParallel
     IndexSet                                 locally_owned_dofs;
     IndexSet                                 locally_relevant_dofs;
 
-    SparseMatrixType                        system_matrix;
-    VectorType                              system_rhs;
-    ConditionalOStream                      pcout;
-    NormalVector<dim,degree>                normal_vector_field;
-    BlockVectorType                         solution_normal_vector;
+    SparseMatrixType                         system_matrix;
+    VectorType                               system_rhs;
+    ConditionalOStream                       pcout;
+    NormalVector<dim,degree>                 normal_vector_field;
+    BlockVectorType                          solution_normal_vector;
   };
 } // namespace LevelSetParallel

@@ -102,73 +102,75 @@ namespace LevelSetParallel
     double epsilon;
 
   private:
-    void setup_system();
+    void 
+    setup_system();
     /*
      *      initialize level set equation
      */
-    void initialize_levelset( ); 
+    void 
+    initialize_levelset(); 
+    /*
+     *      initialize the time iterator for solving the level set problem
+     *      with the given input parameters
+     */
+    void
+    initialize_time_iterator();
     /*
      *      solve level set equation
      */
-    void assemble_levelset_system( );
+    void 
+    compute_levelset_model( );
     /*
      *      setup reinitialization model
      */
-    void initialize_reinitialization_model();
+    void 
+    initialize_reinitialization_model();
     /*
      *      solve reinitialization model
      */
-    void compute_reinitialization_model();
+    void 
+    compute_reinitialization_model();
     /*
      *      initialize the curvature calculation routine
      */
-    void initialize_curvature();
+    void 
+    initialize_curvature();
     /*
      *      compute the curvature for given level set solution vector
      */
-    void compute_curvature();
-    
-    void solve_u();
-    
-    void output_results(const double timeStep);
-           //TensorFunction<1, dim> &AdvectionField_ );
-    void print_me();
+    void 
+    compute_curvature();
 
-    void compute_overall_phase_volume();
-    void computeAdvection(); //TensorFunction<1, dim> &AdvectionField_);
+    void output_results();
+    void print_me();
     
     MPI_Comm&                                  mpi_communicator;
     LevelSetParameters                         parameters;
-    FE_Q<dim>                                  fe;
+    FE_Q<dim>                                  fe;                         // @todo: should it stay a member variable?
     parallel::distributed::Triangulation<dim>& triangulation;
     DoFHandler<dim>                            dof_handler;
-    QGauss<dim>                                qGauss; 
-    double                                     time_step;
-    double                                     time;
-    unsigned int                               timestep_number;
-    
     AffineConstraints<double>                  constraints;
     AffineConstraints<double>                  constraints_no_dirichlet;
 
-    SparseMatrixType                           systemMatrix;              // global system matrix
-    VectorType                                 systemRHS;                 // global system right-hand side
-    VectorType                                 solution_u;
+    SparseMatrixType                           system_matrix;              // global system matrix
+    VectorType                                 system_rhs;                 // global system right-hand side
+    VectorType                                 solution_levelset;
     
-    std::vector<double>                        volume_fraction;
     IndexSet                                   locally_owned_dofs;
     IndexSet                                   locally_relevant_dofs;
     ConditionalOStream                         pcout;
     TimerOutput                                computing_timer;
     Timer                                      timer;
-    //TensorFunction<1, dim> &                   AdvectionField;
+
+    TimeIterator                               time_iterator;
 
     std::shared_ptr<FieldConditions<dim>>      field_conditions;
     std::shared_ptr<BoundaryConditions<dim>>   boundary_conditions;
 
     /* 
-     * the following are subproblem classes
+     * the following are subproblem objects
     */
-    Reinitialization<dim,degree>              reini;
-    Curvature<dim,degree>                     curvature;
+    Reinitialization<dim,degree>               reini;
+    Curvature<dim,degree>                      curvature;
   };
 } // end of namespace LevelSet

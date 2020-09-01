@@ -81,33 +81,4 @@ double signedDistanceSphere(const Point<3>& P, const Point<3>& Center, const dou
      str << "+" << std::string(68, '-') << "+" << std::endl;
  }
 
- //void solve_cg(const LA::MPI::Vector&       RHS,
-               //const LA::MPI::SparseMatrix& matrix,
-               //LA::MPI::Vector&             solution,
-               //const IndexSet&              locally_owned_dofs,
-               //const std::string&           callerFunction)
-  //{
-    //LA::MPI::Vector    completely_distributed_solution(locally_owned_dofs,
-                                                       //mpi_communicator);
-    //SolverControl            solver_control( dof_handler.n_dofs() * 2, 1e-6 * RHS.l2_norm() );
-//#ifdef USE_PETSC_LA
-    //LA::SolverCG solver(solver_control, mpi_communicator);
-//#else
-    //LA::SolverCG solver(solver_control);
-//#endif
-
-    //LA::MPI::PreconditionAMG preconditioner;
-    //LA::MPI::PreconditionAMG::AdditionalData data;
-    //preconditioner.initialize(matrix, data);
-
-    //solver.solve( matrix, 
-                  //completely_distributed_solution, 
-                  //RHS, 
-                  //preconditioner );
-    //solution = completely_distributed_solution;
-    //pcout << "cg solver called by " << callerFunction << " with "  << solver_control.last_step() << " CG iterations." << std::endl;
-  //}
- 
-
-
 } // end of utilityFunctions

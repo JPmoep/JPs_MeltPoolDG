@@ -45,10 +45,10 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
                          "Defines the dimension of the problem (default value=2)");
       prm.declare_entry ("global refinements","1",Patterns::Integer(),
                          "Defines the number of initial global refinements (default value=1)");
+      prm.declare_entry ("do matrix free", "0", Patterns::Integer(),
+                         "this flag enables whether a matrix free simulation will be activated (where available)");
       //prm.declare_entry ("adaptive refinements","0",Patterns::Integer(),
-                         //"Defines the number of adaptive refinements. Not used "
-                         //"in the Navier-Stokes class, but useful in many "
-                         //"applications.");
+                         //"Defines the number of adaptive refinements.)
   }
   prm.leave_subsection();
   
@@ -117,8 +117,9 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
     }
 
   prm.enter_subsection("spatial domain");
-      dimension = prm.get_integer ("dimension");
+      dimension          = prm.get_integer ("dimension");
       global_refinements = prm.get_integer ("global refinements");
+      do_matrix_free     = prm.get_integer ("do matrix free");
       //adaptive_refinements = prm.get_integer ("adaptive refinements");
   prm.leave_subsection ();
 
@@ -155,6 +156,7 @@ void LevelSetParameters::print_parameters()
     std::cout << "+----------------------------------------"                 << std::endl;
     std::cout << "| dimension                 " << dimension                 << std::endl;                   
     std::cout << "| global_refinements        " << global_refinements        << std::endl;                   
+    std::cout << "| do_matrix_free            " << do_matrix_free            << std::endl;                   
     std::cout << "| levelset_degree           " << levelset_degree           << std::endl;                   
     std::cout << "| artificial_diffusivity    " << artificial_diffusivity    << std::endl;                   
     std::cout << "| activate_reinitialization " << activate_reinitialization << std::endl;                   

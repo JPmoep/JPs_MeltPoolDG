@@ -42,6 +42,15 @@ namespace LevelSetParallel
         void
         resize_current_time_increment(const double factor);
         
+        double
+        get_current_time() const;
+        
+        double
+        get_current_time_increment() const;
+        
+        double
+        get_current_time_step_number() const;
+        
         //void
         //print_me(ConditionalOstream pcout);
         
