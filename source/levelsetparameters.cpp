@@ -90,17 +90,34 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
                          "this flag enables the computation of the error compared to a given analytical solution.");
       prm.declare_entry ("output norm levelset", "0", Patterns::Integer(),
                          "this flag enables the output of the norm of the dof vector (should be ENABLED if a test file is prepared)");
-      prm.declare_entry ("compute paraview output", "0", Patterns::Integer(),
-                         "boolean for producing paraview output files");
-      prm.declare_entry ("filename paraview output", "solution", Patterns::Anything(),
-                         "Sets the base name for the paraview file output.");
       prm.declare_entry ("compute volume output", "0", Patterns::Integer(),
                          "boolean for computing the phase volumes");
       prm.declare_entry ("filename volume output", "volumes", Patterns::Anything(),
                          "Sets the base name for the volume fraction file output.");
   }
   prm.leave_subsection();
-
+  prm.enter_subsection ("paraview");
+  {
+      prm.declare_entry ("paraview do output", "0", Patterns::Integer(),
+                         "boolean for producing paraview output files");
+      prm.declare_entry ("paraview filename", "solution", Patterns::Anything(),
+                         "Sets the base name for the paraview file output.");
+      prm.declare_entry ("paraview write frequency", "1", Patterns::Integer(),
+                         "every n timestep that should be written");
+      prm.declare_entry ("paraview do initial state", "1", Patterns::Integer(),
+                         "boolean for writing the initial state into the paraview output file");
+      prm.declare_entry ("paraview print levelset", "1", Patterns::Integer(),
+                         "boolean for writing the levelset variable into the paraview output file");
+      prm.declare_entry ("paraview print normal vector", "0", Patterns::Integer(),
+                         "boolean for writing the computed normalvector into the paraview output file");
+      prm.declare_entry ("paraview print curvature", "0", Patterns::Integer(),
+                         "boolean for writing the computed curvature into the paraview output file");
+      prm.declare_entry ("paraview print advection", "0", Patterns::Integer(),
+                         "boolean for writing the computed advection into the paraview output file");
+      prm.declare_entry ("paraview print exactsolution", "0", Patterns::Integer(),
+                         "boolean for writing the exact solution into the paraview output file");
+  }
+  prm.leave_subsection();
 }
 
 
@@ -145,11 +162,21 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
       output_walltime =         prm.get_integer("output walltime");
       do_compute_error =        prm.get_integer("do compute error");
       output_norm_levelset =    prm.get_integer("output norm levelset");
-      compute_paraview_output = prm.get_integer("compute paraview output");
-      filename_paraview_output =        prm.get("filename paraview output");
       compute_volume_output =   prm.get_integer("compute volume output");
       filename_volume_output =          prm.get("filename volume output");
   prm.leave_subsection ();
+  prm.enter_subsection ("paraview");
+      paraview_do_output = prm.get_integer("paraview do output");
+      paraview_filename  =        prm.get("paraview filename");
+      paraview_write_frequency =   prm.get_integer("paraview write frequency");
+      paraview_do_initial_state = prm.get_integer("paraview do initial state");
+      paraview_print_levelset = prm.get_integer("paraview print levelset");
+      paraview_print_normal_vector = prm.get_integer("paraview print normal vector");
+      paraview_print_curvature = prm.get_integer("paraview print curvature");
+      paraview_print_advection = prm.get_integer("paraview print advection");
+      paraview_print_exactsolution = prm.get_integer("paraview print exactsolution");
+  prm.leave_subsection ();
+
 }
 
 void LevelSetParameters::print_parameters()
@@ -174,10 +201,11 @@ void LevelSetParameters::print_parameters()
     std::cout << "| output_walltime           " << output_walltime           << std::endl;                   
     std::cout << "| output_norm_levelset      " << output_norm_levelset      << std::endl;                   
     std::cout << "| do_compute_error          " << do_compute_error          << std::endl;                   
-    std::cout << "| compute_paraview_output   " << compute_paraview_output   << std::endl;                   
-    std::cout << "| filename_paraview_output  " << filename_paraview_output  << std::endl;                   
     std::cout << "| compute_volume_output     " << compute_volume_output     << std::endl;                   
     std::cout << "| filename_volume_output    " << filename_volume_output    << std::endl;                   
+    std::cout << "| --------------- output ----------------"                 << std::endl;    
+    std::cout << "| compute_paraview_output   " << paraview_do_output        << std::endl;                   
+    std::cout << "| filename_paraview_output  " << paraview_filename         << std::endl;                   
     std::cout << "+----------------------------------------"                 << std::endl;
 
 }

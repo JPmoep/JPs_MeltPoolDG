@@ -56,6 +56,7 @@ namespace LevelSetParallel
     CurvatureData()
         : damping_parameter(0.0)
         , degree(1)
+        , min_cell_size(0.0)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
     {
     }
@@ -65,6 +66,9 @@ namespace LevelSetParallel
     
     // interpolation degree of normal vector interpolation
     unsigned int degree;
+
+    // minimum size of cells --> to evaluate damping parameter @todo: should this parameter be made cell-size-dependent?
+    double min_cell_size;
 
     // current verbosity level --> see possible options in utilityFunctions
     utilityFunctions::VerbosityType verbosity_level;
@@ -116,7 +120,7 @@ namespace LevelSetParallel
     solve( const VectorType & solution_in );
     
     VectorType 
-    get_curvature_values(); 
+    get_curvature_values() const; 
 
     void 
     print_me(); 

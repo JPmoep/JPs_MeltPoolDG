@@ -54,10 +54,18 @@ struct LevelSetParameters
   bool                output_walltime;
   bool                output_norm_levelset;
   bool                do_compute_error;
-  bool                compute_paraview_output;
-  std::string         filename_paraview_output;
   bool                compute_volume_output;
   std::string         filename_volume_output;
+  // paraview options
+  bool                paraview_do_output;
+  std::string         paraview_filename;
+  int                 paraview_write_frequency;
+  bool                paraview_do_initial_state;
+  bool                paraview_print_levelset;
+  bool                paraview_print_normal_vector;
+  bool                paraview_print_curvature;
+  bool                paraview_print_advection;
+  bool                paraview_print_exactsolution;
 };
 
 namespace LevelSetParallel

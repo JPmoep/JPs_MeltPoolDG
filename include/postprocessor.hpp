@@ -123,42 +123,34 @@ namespace LevelSetParallel
       volumes.emplace_back(volume_fraction);
     }
 
-    void print_volume_fraction_table(const MPI_Comm& mpi_communicator)
+    void print_volume_fraction_table(const MPI_Comm& mpi_communicator, const std::string filename)
     {
       if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0) 
+      {
         volume_table.write_text(std::cout);
+        std::ofstream out_file(filename);
+        volume_table.write_tex(out_file); 
+        //size_t headerWidths[2] = {
+              //std::string("time").size(),
+              //std::string("volume phase 1").size()
+          //};
+
+          //if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+          //{
+                  //std::cout << "output file opened" << std::endl;
+                  //std::fstream fs;
+                  //fs.open (parameters.filename_volume_output, std::fstream::out);
+                  //fs.precision(10);
+                  //fs << "time | volume phase 1 | volume phase 2 " << std::endl; 
+                  //fs << std::left << std::setw(headerWidths[0]) << time;
+                  //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[0]; 
+                  //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[1] << std::endl; 
+                  //fs.close();
+      }
     }
 
 
     
-    //size_t headerWidths[2] = {
-          //std::string("time").size(),
-          //std::string("volume phase 1").size()
-      //};
-
-      //if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-      //{
-          //if ( time==parameters.start_time )
-          //{
-              //std::cout << "output file opened" << std::endl;
-              //std::fstream fs;
-              //fs.open (parameters.filename_volume_output, std::fstream::out);
-              //fs.precision(10);
-              //fs << "time | volume phase 1 | volume phase 2 " << std::endl; 
-              //fs << std::left << std::setw(headerWidths[0]) << time;
-              //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[0]; 
-              //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[1] << std::endl; 
-              //fs.close();
-          //}
-          //else
-          //{
-              //std::fstream fs;
-              //fs.open (parameters.filename_volume_output,std::fstream::in | std::fstream::out | std::fstream::app);
-              //fs.precision(10);
-              //fs << std::left << std::setw(headerWidths[0]) << time;
-              //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[0]; 
-              //fs << "   " << std::left << std::setw(headerWidths[1]) << volume_fraction[1] << std::endl; 
-          //}
       
   };
 

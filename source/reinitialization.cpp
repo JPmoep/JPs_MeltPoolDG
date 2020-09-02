@@ -46,12 +46,12 @@ namespace LevelSetParallel
     template <int dim, int degree>
     void
     Reinitialization<dim,degree>::initialize( const ReinitializationData &  data_in,
-                                       const SparsityPatternType&    dsp_in,
-                                       const DoFHandler<dim> &       dof_handler_in,
-                                       const ConstraintsType&        constraints_in,
-                                       const IndexSet&               locally_owned_dofs_in,
-                                       const IndexSet&               locally_relevant_dofs_in
-                                    )
+                                              const SparsityPatternType&    dsp_in,
+                                              const DoFHandler<dim> &       dof_handler_in,
+                                              const ConstraintsType&        constraints_in,
+                                              const IndexSet&               locally_owned_dofs_in,
+                                              const IndexSet&               locally_relevant_dofs_in
+                                            )
     {
         reinit_data           = data_in;
         dof_handler           = &dof_handler_in;
@@ -258,7 +258,8 @@ namespace LevelSetParallel
              cell_rhs    = 0.0;
              fe_values.reinit(cell);
              
-             const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
+             //const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
+             const double epsilon_cell = cell->diameter() / ( std::sqrt(dim) * 2 );
              fe_values.get_function_values(     solution_out, psiAtQ );     // compute values of old solution at tau_n
              fe_values.get_function_gradients(  solution_out, psiGradAtQ ); // compute gradients of old solution at tau_n
               
@@ -385,6 +386,13 @@ namespace LevelSetParallel
         pcout << "d_tau: "                      << reinit_data.d_tau            << std::endl;
         pcout << "constant_epsilon: "           << reinit_data.constant_epsilon << std::endl;
         pcout << "max reinit steps: "           << reinit_data.max_reinit_steps << std::endl;
+    }
+    
+    template <int dim, int degree>
+    LinearAlgebra::distributed::BlockVector<double> 
+    Reinitialization<dim,degree>::get_normal_vector_field() const
+    {
+      return solution_normal_vector; 
     }
 
     // instantiation

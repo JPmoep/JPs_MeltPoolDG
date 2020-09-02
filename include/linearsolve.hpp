@@ -34,7 +34,7 @@ class LinearSolve
                        VectorType&               solution,
                        const VectorType&         rhs, 
                        const PreconditionerType& preconditioner    = PreconditionIdentity(),
-                       const unsigned int        max_iterations    = 1000,
+                       const unsigned int        max_iterations    = 10000,
                        const double              rel_tolerance_rhs = 1e-8
                     )
     {

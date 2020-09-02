@@ -36,11 +36,13 @@ namespace LevelSetParallel
 
         virtual void create_spatial_discretization() = 0;
         
-        virtual std::shared_ptr<FieldConditions<dim>>    get_field_conditions(){ return std::make_shared<FieldConditions<dim>>(this->field_conditions); }
+        virtual MPI_Comm get_mpi_communicator() const { return this->mpi_communicator; };
         
-        virtual std::shared_ptr<BoundaryConditions<dim>> get_boundary_conditions(){ return std::make_shared<BoundaryConditions<dim>>(this->boundary_conditions); }
+        std::shared_ptr<FieldConditions<dim>>     get_field_conditions() const { return std::make_shared<FieldConditions<dim>>(this->field_conditions); }
         
-        MPI_Comm                                  mpi_communicator;
+        std::shared_ptr<BoundaryConditions<dim>>  get_boundary_conditions() const { return std::make_shared<BoundaryConditions<dim>>(this->boundary_conditions); }
+
+        const MPI_Comm                            mpi_communicator;
         parallel::distributed::Triangulation<dim> triangulation; 
         FieldConditions<dim>                      field_conditions;
         BoundaryConditions<dim>                   boundary_conditions;

@@ -31,11 +31,11 @@ namespace LevelSetParallel
     template <int dim, int degree>
     void
     Curvature<dim,degree>::initialize( const CurvatureData &       data_in,
-                                const SparsityPatternType&  dsp_in,
-                                const DoFHandler<dim>&      dof_handler_in,
-                                const ConstraintsType&      constraints_in,
-                                const IndexSet&             locally_owned_dofs_in,
-                                const IndexSet&             locally_relevant_dofs_in
+                                       const SparsityPatternType&  dsp_in,
+                                       const DoFHandler<dim>&      dof_handler_in,
+                                       const ConstraintsType&      constraints_in,
+                                       const IndexSet&             locally_owned_dofs_in,
+                                       const IndexSet&             locally_relevant_dofs_in
                                     )
     {
         curvature_data        = data_in;
@@ -64,9 +64,11 @@ namespace LevelSetParallel
          * @ todo: how should data be transferred from the base class ?
          */
         NormalVectorData normal_vector_data;
-        normal_vector_data.damping_parameter = 1e-6;
+        normal_vector_data.damping_parameter = curvature_data.min_cell_size * 0.5;
         normal_vector_data.degree            = curvature_data.degree;
         normal_vector_data.verbosity_level   = curvature_data.verbosity_level;
+        normal_vector_data.min_cell_size     = curvature_data.min_cell_size;
+        //normal_vector_data.do_print_l2norm   = curvature_data.do_print_l2norm;
 
         normal_vector_field.initialize( normal_vector_data, 
                                         dsp_in,
@@ -103,7 +105,7 @@ namespace LevelSetParallel
         FullMatrix<double>                   curvature_cell_matrix( dofs_per_cell, dofs_per_cell );
         Vector<double>                       curvature_cell_rhs(    dofs_per_cell );
 
-        const double curvature_damping = 0.0; //@todo: modifiy damping parameter
+        const double curvature_damping = curvature_data.damping_parameter; //@todo: modifiy damping parameter
 
         for (const auto &cell : dof_handler->active_cell_iterators())
         if (cell->is_locally_owned())
@@ -146,18 +148,21 @@ namespace LevelSetParallel
             }
             
             cell->get_dof_indices(local_dof_indices);
-            constraints->distribute_local_to_global(curvature_cell_matrix,
-                                                   curvature_cell_rhs,
-                                                   local_dof_indices,
-                                                   system_matrix,
-                                                   system_rhs);
+            constraints->distribute_local_to_global( curvature_cell_matrix,
+                                                     curvature_cell_rhs,
+                                                     local_dof_indices,
+                                                     system_matrix,
+                                                     system_rhs);
         } // end loop over cells
         system_matrix.compress( VectorOperation::add );
         system_rhs.compress(    VectorOperation::add );
-
+        
+        curvature_out.reinit(locally_owned_dofs, locally_relevant_dofs, mpi_commun);
         LinearSolve<VectorType,SolverCG<VectorType>>::solve( system_matrix,
                                                              curvature_out,
                                                              system_rhs );
+        constraints->distribute(curvature_out);
+        curvature_out.update_ghost_values();
     }
     
     template <int dim, int degree>
@@ -165,6 +170,7 @@ namespace LevelSetParallel
     Curvature<dim,degree>::solve( const VectorType & solution_in )
     {
         curvature_field.reinit( locally_owned_dofs, 
+                                locally_relevant_dofs,
                                 mpi_commun ); 
 
         solve( solution_in, curvature_field);
@@ -172,9 +178,9 @@ namespace LevelSetParallel
     
     template <int dim, int degree>
     typename Curvature<dim,degree>::VectorType
-    Curvature<dim,degree>::get_curvature_values( )
+    Curvature<dim,degree>::get_curvature_values( ) const
     {
-        return this->curvature_field;
+        return curvature_field;
     }
 
     template <int dim, int degree>

@@ -135,6 +135,9 @@ namespace LevelSetParallel
 
     void 
     print_me(); 
+    
+    BlockVectorType
+    get_normal_vector_field() const; 
   
   private:
     /* Olsson, Kreiss, Zahedi (2007) model 
@@ -161,8 +164,8 @@ namespace LevelSetParallel
     IndexSet                             locally_owned_dofs;
     IndexSet                             locally_relevant_dofs;
 
-    SparseMatrixType                     system_matrix;
-    VectorType                           system_rhs;
+    SparseMatrixType                     system_matrix;     // @todo: might not be a member variable
+    VectorType                           system_rhs;        // @todo: might not be member variables
     ConditionalOStream                   pcout;
     NormalVector<dim,degree>             normal_vector_field;
     BlockVectorType                      solution_normal_vector;

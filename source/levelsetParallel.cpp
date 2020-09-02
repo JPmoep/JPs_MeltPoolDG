@@ -3,6 +3,12 @@
  */
 #include <deal.II/lac/solver_gmres.h>
 
+#include <deal.II/grid/grid_out.h>
+#include <deal.II/numerics/data_out.h>
+#include <deal.II/numerics/data_out_dof_data.h>
+
+#include <deal.II/fe/mapping_q.h>
+
 #include <levelsetParallel.hpp>
 #include <linearsolve.hpp>
 #include <reinitialization.hpp>
@@ -15,22 +21,22 @@ namespace LevelSetParallel
 
   template <int dim, int degree>
   LevelSetEquation<dim,degree>::LevelSetEquation( std::shared_ptr<SimulationBase<dim>> base_in )
-    : epsilon (            GridTools::minimal_cell_diameter(base_in->triangulation) / ( std::sqrt(dim) * 2. ) ) // @todo: is this variable really necessary?
-    , mpi_communicator(    base_in->mpi_communicator)
+    : ProblemBase<dim>( base_in )
+    , mpi_communicator(    base_in->get_mpi_communicator())
     , parameters(          base_in->parameters )
     , fe(                  parameters.levelset_degree )
     , triangulation(       base_in->triangulation )
     , dof_handler(         triangulation )
     , pcout(               std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0) )
-    , computing_timer(     mpi_communicator,
+    , computing_timer(     base_in->mpi_communicator,
                            pcout,
                            TimerOutput::summary,
                            TimerOutput::wall_times)
     , timer(               mpi_communicator)
     , field_conditions(    base_in->get_field_conditions()  )
     , boundary_conditions( base_in->get_boundary_conditions()  )
-    , reini(               mpi_communicator )
-    , curvature(           mpi_communicator )
+    , reini(               this->mpi_communicator )
+    , curvature(           this->mpi_communicator )
   {}
   
   template <int dim, int degree>
@@ -48,8 +54,6 @@ namespace LevelSetParallel
 
     locally_owned_dofs = dof_handler.locally_owned_dofs();
     DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
-    
-                                      
     
     system_rhs.reinit(locally_owned_dofs, 
                      locally_relevant_dofs, 
@@ -219,7 +223,7 @@ namespace LevelSetParallel
     solution_levelset.update_ghost_values();
   }
 
-
+  // @todo initialize normal vector model
   template <int dim, int degree>
   void 
   LevelSetEquation<dim,degree>::initialize_reinitialization_model()
@@ -227,7 +231,9 @@ namespace LevelSetParallel
     ReinitializationData reinit_data;
     reinit_data.reinit_model        = ReinitModelType::olsson2007;
     reinit_data.d_tau               = GridTools::minimal_cell_diameter(triangulation);
-    reinit_data.degree              = parameters.levelset_degree;
+    //reinit_data.constant_epsilon    = 0.0;
+    reinit_data.degree              = degree;
+    reinit_data.max_reinit_steps    = 5;//parameters.max_reinitializationsteps;
     reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
     reinit_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
     reinit_data.do_print_l2norm     = parameters.output_norm_levelset;
@@ -260,7 +266,9 @@ namespace LevelSetParallel
   LevelSetEquation<dim,degree>::initialize_curvature()
   {
     CurvatureData curvature_data;
-    curvature_data.degree              = parameters.levelset_degree;
+    curvature_data.damping_parameter   = 0.0; //GridTools::minimal_cell_diameter(triangulation)*0.5;
+    curvature_data.degree              = degree; 
+    curvature_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
     curvature_data.verbosity_level     = utilityFunctions::VerbosityType::major;
     
     DynamicSparsityPattern dsp_re( locally_relevant_dofs );
@@ -290,7 +298,7 @@ namespace LevelSetParallel
   LevelSetEquation<dim,degree>::initialize_time_iterator()
   {
     TimeIteratorData time_data;
-    time_data.start_time       = 0.0;
+    time_data.start_time       = 0.0; // @ todo: introduce parameter??
     time_data.end_time         = parameters.end_time;
     time_data.time_increment   = parameters.time_step_size; 
     time_data.max_n_time_steps = 1E10; // this criteria is set to be not relevant for the level set problem
@@ -300,38 +308,71 @@ namespace LevelSetParallel
  
   template <int dim, int degree>
   void 
-  LevelSetEquation<dim,degree>::output_results( )
+  LevelSetEquation<dim,degree>::output_results(double timestep)
   {
-    const double time_step = time_iterator.get_current_time_step_number();
-    if (parameters.compute_paraview_output)
+    const double time_step = timestep >= 0.0 ? timestep : time_iterator.get_current_time_step_number();
+    if (parameters.paraview_do_output)
     {
-        TimerOutput::Scope t(computing_timer, "output_results");   
-
-        std::vector<std::string> solution_names(dim, "velocity");
-
-        std::vector<DataComponentInterpretation::DataComponentInterpretation>
-          data_component_interpretation(dim, DataComponentInterpretation::component_is_part_of_vector);
-
-        utilityFunctions::GradientPostprocessor<dim>    gradient_postprocessor;
-
         DataOut<dim> data_out;
         data_out.attach_dof_handler(dof_handler);
-        data_out.add_data_vector(solution_levelset,                      "phi");
-
-        data_out.add_data_vector(solution_levelset, gradient_postprocessor);
+        data_out.add_data_vector(solution_levelset, "phi");
+        //utilityFunctions::GradientPostprocessor<dim>    gradient_postprocessor;
+        //data_out.add_data_vector(solution_levelset, gradient_postprocessor);
         
-        //data_out.add_data_vector(normal_vector_field.block(0), "normal_x");
-        //data_out.add_data_vector(normal_vector_field.block(1), "normal_y");
-        //data_out.add_data_vector(curvature_field,              "curvature");
-         Vector<float> subdomain(triangulation.n_active_cells());
+        BlockVectorType normal_vector_field;
+        normal_vector_field.reinit(dim);
+        for (int d=0; d<dim; ++d)
+          normal_vector_field.block(d).reinit(locally_owned_dofs,
+                            locally_relevant_dofs,
+                            mpi_communicator);
+
+        if (parameters.paraview_print_normal_vector)
+        {
+          normal_vector_field = reini.get_normal_vector_field();
+          for (int d=0; d<dim; d++)
+          {
+            std::string name = "n_"+std::to_string(d);
+            data_out.add_data_vector(dof_handler, normal_vector_field.block(d), name);
+          }
+         }
+        
+        VectorType curvature_field;
+        curvature_field.reinit( locally_owned_dofs,
+                                locally_relevant_dofs,
+                                mpi_communicator);
+    
+        if (parameters.paraview_print_curvature)
+        {
+            initialize_curvature();
+            curvature.solve(solution_levelset, curvature_field);
+            data_out.add_data_vector(dof_handler, curvature_field, "curvature");
+        }
+        
+        VectorType levelset_exact;
+        levelset_exact.reinit( locally_owned_dofs,
+                                mpi_communicator);
+        
+        if (parameters.paraview_print_exactsolution)
+        {
+            VectorTools::project( dof_handler, 
+                                  constraints_no_dirichlet,
+                                  QGauss<dim>(degree+1),
+                                  *field_conditions->exact_solution_field,           
+                                  levelset_exact);
+            data_out.add_data_vector(dof_handler, levelset_exact, "exactsolution");
+        }
+
+        Vector<float> subdomain(triangulation.n_active_cells());
         for (unsigned int i = 0; i < subdomain.size(); ++i)
           subdomain(i) = triangulation.locally_owned_subdomain();
         data_out.add_data_vector(subdomain, "subdomain");
-     
+        
         data_out.build_patches();
-
+        
+        const int n_digits_timestep = 2;
+        const int n_groups = 1;
         data_out.write_vtu_with_pvtu_record(
-            "./", parameters.filename_paraview_output, time_step, mpi_communicator, 2, 8);
+            "./", parameters.paraview_filename, time_step, mpi_communicator, n_digits_timestep, n_groups);
     }
     //if (parameters.compute_volume_output)
         //compute_overall_phase_volume();
@@ -350,13 +391,17 @@ namespace LevelSetParallel
     initialize_levelset();
 
     Postprocessor<dim> postprocessor(mpi_communicator);
+    ////output_results(0.0); // print initial state
     
     print_me();
 
     if ( parameters.activate_reinitialization )    
+    {
         initialize_reinitialization_model();
-    
-    output_results(); // print initial state
+        compute_reinitialization_model();
+    }
+
+    //output_results(0.01); // print initial state
 
     //const int p = parameters.levelset_degree;
     //const double CFL = 0.2/(p*p);
@@ -409,7 +454,7 @@ namespace LevelSetParallel
     }
 
     if (parameters.compute_volume_output)
-      postprocessor.print_volume_fraction_table(mpi_communicator);
+      postprocessor.print_volume_fraction_table(mpi_communicator, parameters.filename_volume_output);
     if (parameters.do_compute_error)
       postprocessor.compute_error( degree+1,
                                    solution_levelset,

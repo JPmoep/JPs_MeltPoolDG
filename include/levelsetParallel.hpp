@@ -71,6 +71,7 @@
 #include "curvature.hpp"
 #include "levelsetparameters.hpp"
 #include "utilityFunctions.hpp"
+#include "problembase.hpp"
 #include "simulationbase.hpp"
 // c++
 #include <fstream>
@@ -84,7 +85,7 @@ namespace LevelSetParallel
   using namespace dealii; 
 
   template <int dim, int degree>
-  class LevelSetEquation
+  class LevelSetEquation : public ProblemBase<dim>
   {
   private:
     typedef LinearAlgebra::distributed::Vector<double>         VectorType;
@@ -92,16 +93,13 @@ namespace LevelSetParallel
     typedef TrilinosWrappers::SparseMatrix                     SparseMatrixType;
 
   public:
-    LevelSetEquation(
-                     //parallel::distributed::Triangulation<dim>&  triangulation,
-                     std::shared_ptr<SimulationBase<dim>>        base
-                     //MPI_Comm&                                   mpi_commun
-                     );
-    void run( );
-    void compute_error( const Function<dim>& ExactSolution );
-    double epsilon;
+    LevelSetEquation( std::shared_ptr<SimulationBase<dim>> base );
+    void run() override;
 
   private:
+    void 
+    compute_error( const Function<dim>& ExactSolution );
+    
     void 
     setup_system();
     /*
@@ -141,10 +139,10 @@ namespace LevelSetParallel
     void 
     compute_curvature();
 
-    void output_results();
+    void output_results(double timestep=-1.0);
     void print_me();
     
-    MPI_Comm&                                  mpi_communicator;
+    MPI_Comm                                   mpi_communicator;
     LevelSetParameters                         parameters;
     FE_Q<dim>                                  fe;                         // @todo: should it stay a member variable?
     parallel::distributed::Triangulation<dim>& triangulation;
@@ -155,7 +153,7 @@ namespace LevelSetParallel
     SparseMatrixType                           system_matrix;              // global system matrix
     VectorType                                 system_rhs;                 // global system right-hand side
     VectorType                                 solution_levelset;
-    
+
     IndexSet                                   locally_owned_dofs;
     IndexSet                                   locally_relevant_dofs;
     ConditionalOStream                         pcout;
