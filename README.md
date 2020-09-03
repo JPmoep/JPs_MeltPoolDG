@@ -1,9 +1,10 @@
-# (DG)-FEM-based multi-phase flow solvers for high-fidelity metal additive manufacturing process simulations
+# MeltPoolDG
+## (DG)-FEM-based multi-phase flow solvers for high-fidelity metal additive manufacturing process simulations
 
-This package provides solvers for simulating the complex multi-physics processes in the vicinity of the melt pool during SLM. It is based on continuous and discontinuous finite element methods in an Eulerian setting. For interface tracking between the different phases and (in the future) phase transition, level set methods and (in the future) phase-field methods will be provided.
+The aim of this project is to provide solvers for simulating the thermo-hydrodynamics in the vicinity of the melt pool during selective laser melting, including melt pool formation and the interaction of the multi-phase flow system (liquid metal/ambient gas/metal vapor). They are based on continuous and discontinuous finite element methods in an Eulerian setting. For modelling interfaces in the multi-phase flow problem including evaporation, level set methods and phase-field methods will be provided.
 
 This project depends on the following third-party libraries:
 
     * dealii
     * p4est
-    * trilinos
+    * Trilinos
