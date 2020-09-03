@@ -9,13 +9,13 @@
 
 #include <deal.II/fe/mapping_q.h>
 
-#include <levelsetParallel.hpp>
-#include <linearsolve.hpp>
-#include <reinitialization.hpp>
-#include <curvature.hpp>
-#include <postprocessor.hpp>
+#include "levelset.hpp"
+#include "linearsolve.hpp"
+#include "reinitialization.hp"
+#include "curvature.hpp"
+#include "postprocessor.hpp"
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
   using namespace dealii; 
 
@@ -478,5 +478,5 @@ namespace LevelSetParallel
   template class LevelSetEquation<2,1>; 
   template class LevelSetEquation<2,2>; 
 
-} // end of namespace LevelSetParallel
+} // namespace MeltPoolDG
 

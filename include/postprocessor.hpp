@@ -3,7 +3,6 @@
 #include <deal.II/lac/generic_linear_algebra.h>
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
-
 #include <deal.II/numerics/vector_tools.h>
 #include <deal.II/distributed/tria.h>
 // for TableHandler
@@ -12,7 +11,9 @@
 
 using namespace dealii;
 
-namespace LevelSetParallel
+// @ todo: !!! clean-up and refactoring !!!
+
+namespace MeltPoolDG
 {
   
   template <int dim>

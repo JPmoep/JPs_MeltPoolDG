@@ -18,7 +18,7 @@
 #include <normalvector.hpp>
 #include <linearsolve.hpp>
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
     using namespace dealii; 
 
@@ -291,4 +291,4 @@ namespace LevelSetParallel
     template class NormalVector<2,1>;
     template class NormalVector<2,2>;
 
-} // namespace LevelSetParallel
+} // namespace MeltPoolDG

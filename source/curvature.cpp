@@ -12,11 +12,12 @@
 #include <deal.II/fe/mapping.h>
 #include <deal.II/lac/solver_cg.h> // only for symmetric matrices
 #include <deal.II/lac/trilinos_sparsity_pattern.h>
+// MeltPoolDG
 #include "normalvector.hpp"
 #include "curvature.hpp"
 #include "linearsolve.hpp"
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
     using namespace dealii; 
 
@@ -196,6 +197,6 @@ namespace LevelSetParallel
     template class Curvature<2,2>;
     //template class Curvature<3>;
 
-} // namespace LevelSetParallel
+} // namespace MeltPoolDG
 
 

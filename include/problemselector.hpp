@@ -1,12 +1,12 @@
 #pragma once
 // multiphaseflow
-#include "levelsetParallel.hpp"
+#include "levelset.hpp"
 #include "simulationbase.hpp"
 #include "problembase.hpp"
 
 //@todo: merge this file with problembase.hpp
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
   using namespace dealii;
 
@@ -29,4 +29,4 @@ namespace LevelSetParallel
           AssertThrow(false, ExcMessage("The solver for your requested problem solver does not exist"));
       }  
   };
-} // namespace LevelSetParallel
+} // namespace MeltPoolDG

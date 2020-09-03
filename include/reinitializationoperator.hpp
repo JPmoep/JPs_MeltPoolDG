@@ -7,7 +7,7 @@
 
 using namespace dealii;
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
     namespace LevelSetMatrixFree
     {
@@ -153,5 +153,5 @@ class ReinitializationOperator
       BlockVectorType n;
 
 };
-}   // LevelSetMatrixFree
-} // LevelSetParallel
+}   // namespace LevelSetMatrixFree
+} // namespace MeltPoolDG

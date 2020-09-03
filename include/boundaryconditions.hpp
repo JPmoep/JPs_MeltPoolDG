@@ -6,7 +6,7 @@
 #include <memory>
 #include <map>
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
     using namespace dealii;
 
@@ -58,4 +58,4 @@ namespace LevelSetParallel
             AssertThrow(false, ExcMessage("The number of assigned boundary conditions does not match the total number of boundary dofs" ));
         }
     };
-}
+} // namespace MeltPoolDG

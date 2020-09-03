@@ -22,6 +22,7 @@
 // for output
 #include <deal.II/numerics/data_out.h>
 
+// MeltPoolDG
 #include "utilityFunctions.hpp"
 #include "normalvectoroperator.hpp"
 #include "linearsolve.hpp"
@@ -29,7 +30,7 @@
 #include "timeiterator.hpp"
 #include "reinitializationoperator.hpp"
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
   using namespace dealii; 
 
@@ -551,6 +552,6 @@ namespace LevelSetParallel
   template class Reinitialization<2,1>;
   template class Reinitialization<2,2>;
   //template class Reinitialization<3>; // temporarily disabled to work on matrixfree implementation
-} // namespace LevelSetParallel
+} // namespace MeltPoolDG
 
 

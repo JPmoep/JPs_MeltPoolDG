@@ -1,5 +1,9 @@
 #include <deal.II/base/mpi.h>
+// MeltPoolDG
 #include <levelsetparameters.hpp>
+
+namespace MeltPoolDG
+{
 
 LevelSetParameters::LevelSetParameters()
   :
@@ -268,3 +272,4 @@ void LevelSetParameters::print_parameters()
   std::cout << print_line();
 }
 
+// namespace MeltPoolDG

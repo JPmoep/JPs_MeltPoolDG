@@ -11,6 +11,9 @@
 
 //@ put struct into namespace
 
+namespace MeltPoolDG
+{
+
 using namespace dealii;
 
 struct LevelSetParameters
@@ -78,19 +81,4 @@ struct LevelSetParameters
   std::string         filename_volume_output;
 };
 
-namespace LevelSetParallel
-{
-
-//template <int dim>
-//class DirichletCondition : public Function<dim>
-//{
-    //public:
-        //DirichletCondition()
-          //: Function<dim>()
-        //{}
-        //double value(const Point<dim> & p,
-                     //const unsigned int component = 0) const override;
-
-        //void markDirichletEdges(Triangulation<dim>& triangulation_) const;
-//};
-}
+} // namespace MeltPoolDG

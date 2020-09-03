@@ -1,8 +1,9 @@
 #include <deal.II/base/conditional_ostream.h> 
 #include <iostream>
+// MeltPoolDG
 #include "timeiterator.hpp"
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
     using namespace dealii;
 

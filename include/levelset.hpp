@@ -1,19 +1,8 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2006 - 2020 by the deal.II authors
- *
- * This file is part of the deal.II library.
- *
- * The deal.II library is free software; you can use it, redistribute
- * it, and/or modify it under the terms of the GNU Lesser General
- * Public License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- * The full text of the license can be found in the file LICENSE.md at
- * the top level directory of deal.II.
+ * Author: Magdalena Schreter, TUM, August 2020
  *
  * ---------------------------------------------------------------------
- *
- * Author: Magdalena Schreter, TUM, 2020
  */
 #pragma once
 
@@ -81,7 +70,7 @@
 #include <algorithm> // for enum ::All
 #include <cmath>
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
   using namespace dealii; 
 
@@ -178,4 +167,4 @@ namespace LevelSetParallel
     Reinitialization<dim,degree>               reini;
     Curvature<dim,degree>                      curvature;
   };
-} // end of namespace LevelSet
+} // namespace MeltPoolDG

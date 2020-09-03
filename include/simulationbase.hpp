@@ -1,5 +1,4 @@
 #pragma once
-
 // dealii
 #include <deal.II/distributed/tria.h>
 // multiphaseflow
@@ -8,7 +7,8 @@
 #include "fieldconditions.hpp"
 // c++
 #include <memory>
-namespace LevelSetParallel
+
+namespace MeltPoolDG
 {
     using namespace dealii;
 
@@ -58,4 +58,4 @@ namespace LevelSetParallel
         LevelSetParameters                        parameters;
 
     };
-}
+} // namespace MeltPoolDG

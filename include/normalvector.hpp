@@ -34,7 +34,7 @@
 
 #include <levelsetparameters.hpp>
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
   using namespace dealii; 
 
@@ -177,4 +177,4 @@ namespace LevelSetParallel
     BlockVectorType                         normal_vector_field;
     ConditionalOStream                      pcout;
   };
-} // namespace LevelSetParallel
+} // namespace MeltPoolDG

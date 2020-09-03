@@ -2,7 +2,7 @@
 #include <deal.II/base/function.h>
 #include <deal.II/base/tensor_function.h>
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
     using namespace dealii;
 
@@ -13,4 +13,4 @@ namespace LevelSetParallel
         std::shared_ptr<TensorFunction<1,dim>>   advection_field;
         std::shared_ptr<Function<dim>>           exact_solution_field;
     };
-}
+} // namespace MeltPoolDG

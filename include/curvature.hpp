@@ -33,7 +33,7 @@
 
 #include <deal.II/lac/trilinos_sparsity_pattern.h>
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
   using namespace dealii; 
 
@@ -134,4 +134,4 @@ namespace LevelSetParallel
     VectorType                               curvature_field;
     NormalVector<dim,degree>                 normal_vector_field;
   };
-} // namespace LevelSetParallel
+} // namespace MeltPoolDG

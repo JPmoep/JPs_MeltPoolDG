@@ -9,7 +9,7 @@
 
 using namespace dealii;
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
   namespace LevelSetMatrixFree
   {
@@ -125,4 +125,4 @@ namespace LevelSetParallel
 
       };
     }   // LevelSetMatrixFree
-} // LevelSetParallel
+} // MeltPoolDG

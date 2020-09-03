@@ -17,7 +17,7 @@
 
 using namespace dealii;
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
 
 template<typename VectorType, 
@@ -52,4 +52,4 @@ class LinearSolve
     
 };
 
-} // LevelSetParallel
+} // namespace MeltPoolDG

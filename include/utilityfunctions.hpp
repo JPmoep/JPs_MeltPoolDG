@@ -1,17 +1,19 @@
 #pragma once
-// for parallelization
+// dealii
 #include <deal.II/lac/generic_linear_algebra.h>
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/full_matrix.h>
 #include <deal.II/base/utilities.h>
 #include <deal.II/base/point.h>
+#include <deal.II/numerics/data_postprocessor.h>
+// c++
 #include <fstream>
 #include <iostream>
-#include <deal.II/numerics/data_postprocessor.h>
 
-namespace utilityFunctions
+namespace MeltPoolDG
 {
-
+namespace UtilityFunctions
+{
     using namespace dealii;
     
     typedef enum {silent=0, major=1, detailed=2} VerbosityType;
@@ -36,7 +38,8 @@ namespace utilityFunctions
     double signFunction(const double& x);
   
     double normalizeFunction(const double& x, const double& x_min, const double& x_max);
-    
+
+    // @ todo: sphere and circle could be merged into a general sphere using a template function 
     double signedDistanceSphere(const Point<3>& P, const Point<3>& Center, const double radius);
     
     double signedDistanceCircle(const Point<2>& P, const Point<2>& Center, const double radius);
@@ -44,12 +47,6 @@ namespace utilityFunctions
     double signedDistanceVerticalLine(const Point<2>& P, const double xInterface);
     
     double evaluateCFLCondition();
-
-    //void solve_linear_system_cg(const LA::MPI::Vector& RHS,
-                                //const LA::MPI::SparseMatrix& matrix,
-                                //LA::MPI::Vector& solution,
-                                //const std::string& callerFunction);
-
 
     void printLine(const int verbosityLevel=0, std::ostream& str=std::cout, const MPI_Comm& mpi_comm=MPI_COMM_WORLD);
 
@@ -132,4 +129,5 @@ namespace utilityFunctions
     };
     */
 
-}
+} // namespace UtilityFunctions
+} // namespace MeltPoolDG

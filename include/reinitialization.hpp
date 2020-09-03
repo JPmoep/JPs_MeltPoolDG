@@ -39,7 +39,7 @@
 #include "problembase.hpp"
 #include "simulationbase.hpp"
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
   using namespace dealii; 
 
@@ -219,4 +219,4 @@ namespace LevelSetParallel
     TableHandler                            table;
     double                                  min_cell_size;     // @todo: check CFL condition
   };
-} // namespace LevelSetParallel
+} // namespace MeltPoolDG

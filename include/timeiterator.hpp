@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 
-namespace LevelSetParallel
+namespace MeltPoolDG
 {
 
     struct TimeIteratorData
@@ -62,4 +62,4 @@ namespace LevelSetParallel
         double n_time_steps;
     };
 
-}
+} // MeltPoolDG

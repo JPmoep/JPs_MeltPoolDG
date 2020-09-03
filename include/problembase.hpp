@@ -1,6 +1,6 @@
 #pragma once
-// multiphaseflow
-namespace LevelSetParallel
+
+namespace MeltPoolDG
 {
   using namespace dealii;
 
@@ -16,4 +16,4 @@ namespace LevelSetParallel
       virtual void perform_convergence_study() {};
   };
 
-} // namespace LevelSetParallel
+} // namespace MeltPoolDG

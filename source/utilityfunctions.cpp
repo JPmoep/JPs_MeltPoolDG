@@ -1,10 +1,13 @@
-#include "utilityFunctions.hpp"
+#include "utilityfunctions.hpp"
 #include <math.h>
 #include <iomanip>
 
 using namespace dealii;
 
-namespace utilityFunctions
+namespace MeltPoolDG
+{
+
+namespace UtilityFunctions
 {
 
   double heavisideFunction(const double& d, const double& eps)
@@ -82,4 +85,5 @@ double signedDistanceSphere(const Point<3>& P, const Point<3>& Center, const dou
           str << "+" << std::string(68, '-') << "+" << std::endl;
  }
 
-} // end of utilityFunctions
+} // namespace UtilityFunctions
+} // namespace MeltPoolDG
