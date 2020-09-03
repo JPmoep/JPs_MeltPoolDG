@@ -29,6 +29,7 @@
 // sparse matrices utilites
 #include <deal.II/lac/trilinos_sparse_matrix.h>
 #include <deal.II/lac/sparsity_tools.h>
+#include <deal.II/lac/trilinos_sparsity_pattern.h>
 
 // (non)-distributed algebra
 #include <deal.II/lac/full_matrix.h>
@@ -85,16 +86,19 @@ namespace LevelSetParallel
   using namespace dealii; 
 
   template <int dim, int degree>
-  class LevelSetEquation : public ProblemBase<dim>
+  class LevelSetEquation : public ProblemBase<dim,degree>
   {
   private:
     typedef LinearAlgebra::distributed::Vector<double>         VectorType;
     typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
     typedef TrilinosWrappers::SparseMatrix                     SparseMatrixType;
+    typedef AffineConstraints<double>                          ConstraintsType;
+    typedef TrilinosWrappers::SparsityPattern                  SparsityPatternType;
 
   public:
     LevelSetEquation( std::shared_ptr<SimulationBase<dim>> base );
-    void run() override;
+    void run() final;
+    std::string get_name() final { return "levelset"; };
 
   private:
     void 
@@ -131,6 +135,7 @@ namespace LevelSetParallel
     /*
      *      initialize the curvature calculation routine
      */
+    
     void 
     initialize_curvature();
     /*

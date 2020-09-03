@@ -21,8 +21,7 @@ namespace LevelSetParallel
 
   template <int dim, int degree>
   LevelSetEquation<dim,degree>::LevelSetEquation( std::shared_ptr<SimulationBase<dim>> base_in )
-    : ProblemBase<dim>( base_in )
-    , mpi_communicator(    base_in->get_mpi_communicator())
+    : mpi_communicator(    base_in->get_mpi_communicator())
     , parameters(          base_in->parameters )
     , fe(                  parameters.levelset_degree )
     , triangulation(       base_in->triangulation )
@@ -222,7 +221,7 @@ namespace LevelSetParallel
     constraints.distribute(solution_levelset);
     solution_levelset.update_ghost_values();
   }
-
+  
   // @todo initialize normal vector model
   template <int dim, int degree>
   void 
@@ -235,17 +234,23 @@ namespace LevelSetParallel
     reinit_data.degree              = degree;
     reinit_data.max_reinit_steps    = 5;//parameters.max_reinitializationsteps;
     reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
-    reinit_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
+    //min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
     reinit_data.do_print_l2norm     = parameters.output_norm_levelset;
     reinit_data.do_matrix_free      = parameters.do_matrix_free;
     
-    DynamicSparsityPattern dsp_re( locally_relevant_dofs );
-    DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_no_dirichlet, false );
-    SparsityTools::distribute_sparsity_pattern(dsp_re,
-                                               locally_owned_dofs,
-                                               mpi_communicator,
-                                               locally_relevant_dofs);
-  
+
+    TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
+                                              locally_owned_dofs,
+                                              locally_relevant_dofs,
+                                              mpi_communicator);
+    DoFTools::make_sparsity_pattern( dof_handler,
+                                     dsp_re,
+                                     constraints_no_dirichlet,
+                                     false,
+                                     Utilities::MPI::this_mpi_process(mpi_communicator)
+                                   );
+    dsp_re.compress();
+
     reini.initialize( reinit_data , 
                       dsp_re,
                       dof_handler,
@@ -271,13 +276,18 @@ namespace LevelSetParallel
     curvature_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
     curvature_data.verbosity_level     = utilityFunctions::VerbosityType::major;
     
-    DynamicSparsityPattern dsp_re( locally_relevant_dofs );
-    DoFTools::make_sparsity_pattern( dof_handler, dsp_re, constraints_no_dirichlet, false );
-    SparsityTools::distribute_sparsity_pattern(dsp_re,
-                                               locally_owned_dofs,
-                                               mpi_communicator,
-                                               locally_relevant_dofs);
-  
+    TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
+                                              locally_owned_dofs,
+                                              locally_relevant_dofs,
+                                              mpi_communicator);
+    DoFTools::make_sparsity_pattern( dof_handler,
+                                     dsp_re,
+                                     constraints_no_dirichlet,
+                                     false,
+                                     Utilities::MPI::this_mpi_process(mpi_communicator)
+                                   );
+    dsp_re.compress();
+    
     curvature.initialize( curvature_data , 
                           dsp_re,
                           dof_handler,
@@ -292,7 +302,7 @@ namespace LevelSetParallel
   {
     curvature.solve( solution_levelset );
   }
-  
+
   template <int dim, int degree>
   void
   LevelSetEquation<dim,degree>::initialize_time_iterator()

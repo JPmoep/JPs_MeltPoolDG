@@ -7,11 +7,11 @@ namespace LevelSetParallel
     struct TimeIteratorData
     {
         TimeIteratorData()
-            : start_time(0.0)
-            , end_time(1.0)
-            , time_increment(0.01)
+            : start_time(       0.0   )
+            , end_time(         1.0   )
+            , time_increment(   0.01  )
             , max_n_time_steps( 10000 ) // this criteria is stronger than the end_time
-            , CFL_condition( false ) // @todo: incorporate CFL condition
+            , CFL_condition(    false ) // @todo: incorporate CFL condition
         {}
 
         double start_time;
@@ -50,9 +50,6 @@ namespace LevelSetParallel
         
         double
         get_current_time_step_number() const;
-        
-        //void
-        //print_me(ConditionalOstream pcout);
         
         void
         print_me(std::ostream & pcout);

@@ -28,7 +28,10 @@ struct LevelSetParameters
   
   void print_parameters();
   
+  // general
+
   // discretization
+  std::string         problem_name;
   unsigned int        dimension;
   unsigned int        global_refinements;
   bool                do_matrix_free;
@@ -38,9 +41,15 @@ struct LevelSetParameters
   unsigned int        levelset_degree;
   double              artificial_diffusivity;
   bool                activate_reinitialization;
-  unsigned int        max_n_reinit_steps;
 
   // reinitialization specific parameters
+  unsigned int        reinit_max_n_steps;
+  double              reinit_constant_epsilon;
+  double              reinit_dtau;
+  bool                reinit_do_print_l2norm;
+  bool                reinit_do_matrixfree;
+  unsigned int        reinit_modeltype;       //@ readability could be improved by using a string variable
+  //
   // normal vector    specific parameters
   // curvature        specific parameters
   // time stepping

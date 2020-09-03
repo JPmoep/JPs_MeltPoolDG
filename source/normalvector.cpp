@@ -29,26 +29,27 @@ namespace LevelSetParallel
     {
     }
 
+    // @ todo: better call initialize_as_submodule??
     template <int dim, int degree>
     void
-    NormalVector<dim,degree>::initialize( const NormalVectorData &      data_in,
-                                   const SparsityPatternType&    dsp_in,
-                                   const DoFHandler<dim>&        dof_handler_in,
-                                   const ConstraintsType&        constraints_in,
-                                   const IndexSet&               locally_owned_dofs_in,
-                                   const IndexSet&               locally_relevant_dofs_in
+    NormalVector<dim,degree>::initialize( const NormalVectorData &   data_in,
+                                          const SparsityPatternType& dsp_in,
+                                          const DoFHandlerType&      dof_handler_in,
+                                          const ConstraintsType&     constraints_in,
+                                          const IndexSet&            locally_owned_dofs_in,
+                                          const IndexSet&            locally_relevant_dofs_in,
+                                          const double               min_cell_size_in
                                  )
     {
+        // replace by extract_local_ ....
         normal_vector_data    = data_in;
         dof_handler           = &dof_handler_in;
         constraints           = &constraints_in;
         locally_owned_dofs    = locally_owned_dofs_in;
         locally_relevant_dofs = locally_relevant_dofs_in;
+        min_cell_size         = min_cell_size_in;
         
-        system_matrix.reinit( locally_owned_dofs,
-                              locally_owned_dofs,
-                              dsp_in,
-                              mpi_commun );
+        system_matrix.reinit( dsp_in );
         
         // @ is there a better way to reinitialize a block vector??
         system_rhs.reinit( dim );
@@ -62,6 +63,18 @@ namespace LevelSetParallel
         const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
         this->pcout.set_condition(verbosity_active);
     }
+
+    template <int dim, int degree>
+    void 
+    NormalVector<dim,degree>::extract_local_parameters_from_global_parameters( const LevelSetParameters& param_in)
+    {
+         //@ introduce new C++20 features --> shift to normalvector class
+      NormalVectorData normal_vector_data;
+      normal_vector_data.damping_parameter = this->min_cell_size * 0.5;
+      normal_vector_data.verbosity_level   = utilityFunctions::VerbosityType::major; // @ introduce verbosity levels in global parameters
+      normal_vector_data.do_print_l2norm   = false; //@ param_in.do_print_l2norm; 
+    }
+
 
     template <int dim, int degree>
     void 

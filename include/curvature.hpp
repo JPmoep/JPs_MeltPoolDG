@@ -7,19 +7,6 @@
 
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
-namespace LA
-{
-#if defined(DEAL_II_WITH_PETSC) && !defined(DEAL_II_PETSC_WITH_COMPLEX) && \
-  !(defined(DEAL_II_WITH_TRILINOS) && defined(FORCE_USE_OF_TRILINOS))
-  using namespace dealii::LinearAlgebraPETSc;
-#  define USE_PETSC_LA
-#elif defined(DEAL_II_WITH_TRILINOS)
-  using namespace dealii::LinearAlgebraTrilinos;
-#else
-#  error DEAL_II_WITH_PETSC or DEAL_II_WITH_TRILINOS required
-#endif
-} // namespace LA
-
 // enabling conditional ostreams
 #include <deal.II/base/conditional_ostream.h> 
 // for index set
@@ -43,6 +30,9 @@ namespace LA
 #include "normalvector.hpp"
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
+
+#include <deal.II/lac/trilinos_sparsity_pattern.h>
+
 namespace LevelSetParallel
 {
   using namespace dealii; 
@@ -89,7 +79,7 @@ namespace LevelSetParallel
     
     typedef DoFHandler<dim>                           DoFHandlerType;
     
-    typedef DynamicSparsityPattern                    SparsityPatternType;
+    typedef TrilinosWrappers::SparsityPattern                    SparsityPatternType;
     
     typedef AffineConstraints<double>                 ConstraintsType;
 

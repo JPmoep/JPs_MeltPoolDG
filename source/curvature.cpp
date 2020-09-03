@@ -11,7 +11,7 @@
 #include <deal.II/lac/petsc_precondition.h>
 #include <deal.II/fe/mapping.h>
 #include <deal.II/lac/solver_cg.h> // only for symmetric matrices
-
+#include <deal.II/lac/trilinos_sparsity_pattern.h>
 #include "normalvector.hpp"
 #include "curvature.hpp"
 #include "linearsolve.hpp"
@@ -44,10 +44,7 @@ namespace LevelSetParallel
         locally_owned_dofs    = locally_owned_dofs_in;
         locally_relevant_dofs = locally_relevant_dofs_in;
         
-        system_matrix.reinit( locally_owned_dofs,
-                              locally_owned_dofs,
-                              dsp_in,
-                              mpi_commun );
+        system_matrix.reinit( dsp_in );
         
         system_rhs.reinit( locally_owned_dofs, 
                            locally_relevant_dofs,
@@ -63,11 +60,12 @@ namespace LevelSetParallel
          * initialize the normal_vector_field computation
          * @ todo: how should data be transferred from the base class ?
          */
+
         NormalVectorData normal_vector_data;
         normal_vector_data.damping_parameter = curvature_data.min_cell_size * 0.5;
         normal_vector_data.degree            = curvature_data.degree;
         normal_vector_data.verbosity_level   = curvature_data.verbosity_level;
-        normal_vector_data.min_cell_size     = curvature_data.min_cell_size;
+        //normal_vector_data.min_cell_size     = curvature_data.min_cell_size;
         //normal_vector_data.do_print_l2norm   = curvature_data.do_print_l2norm;
 
         normal_vector_field.initialize( normal_vector_data, 
@@ -75,7 +73,8 @@ namespace LevelSetParallel
                                         dof_handler_in,
                                         constraints_in,
                                         locally_owned_dofs_in,
-                                        locally_relevant_dofs_in);
+                                        locally_relevant_dofs_in,
+                                        curvature_data.min_cell_size );
     }
     
     template <int dim, int degree>

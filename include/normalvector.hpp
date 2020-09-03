@@ -9,7 +9,7 @@
 #include <deal.II/lac/generic_linear_algebra.h>
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
-
+#include <deal.II/lac/trilinos_sparsity_pattern.h>
 // enabling conditional ostreams
 #include <deal.II/base/conditional_ostream.h> 
 // for index set
@@ -32,6 +32,8 @@
 
 #include <utilityFunctions.hpp>
 
+#include <levelsetparameters.hpp>
+
 namespace LevelSetParallel
 {
   using namespace dealii; 
@@ -45,6 +47,9 @@ namespace LevelSetParallel
    *          it actually represents the gradient of the level set 
    *          function 
    *    !!!! 
+   *
+   *    This module is a sub-module and cannot be instantiated as a 
+   *    module. 
    */
   
   struct NormalVectorData 
@@ -52,8 +57,7 @@ namespace LevelSetParallel
     NormalVectorData()
         : degree(1)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
-        , min_cell_size(0.0)
-        , damping_parameter(min_cell_size * 0.5) 
+        , damping_parameter(1e-6)
         , do_print_l2norm(false)
     {
     }
@@ -64,9 +68,6 @@ namespace LevelSetParallel
 
     // current verbosity level --> see possible options in utilityFunctions
     utilityFunctions::VerbosityType verbosity_level;
-    
-    // minimum size of cells --> to evaluate damping parameter @todo: should this parameter be made cell-size-dependent?
-    double min_cell_size;
     
     // parameter for diffusive term in computation of normals
     double damping_parameter;
@@ -91,7 +92,7 @@ namespace LevelSetParallel
 
     typedef DoFHandler<dim>                                 DoFHandlerType;
     
-    typedef DynamicSparsityPattern                          SparsityPatternType;
+    typedef TrilinosWrappers::SparsityPattern               SparsityPatternType;
     
     typedef AffineConstraints<double>                       ConstraintsType;
 
@@ -106,10 +107,19 @@ namespace LevelSetParallel
     void
     initialize( const NormalVectorData&     data_in,
                 const SparsityPatternType&  dsp_in,
-                const DoFHandler<dim>&      dof_handler_in,
+                const DoFHandlerType&       dof_handler_in,
                 const ConstraintsType&      constraints_in,
                 const IndexSet&             locally_owned_dofs_in,
-                const IndexSet&             locally_relevant_dofs_in);
+                const IndexSet&             locally_relevant_dofs_in,
+                const double                min_cell_size_in);
+    
+    /*
+     *  This function initializes the values of NormalVectorData considering the input parameters of the 
+     *  SimulationBase object. 
+     */ 
+    void 
+    extract_local_parameters_from_global_parameters( const LevelSetParameters& level_set_solution_in);
+    
     
     void 
     compute_normal_vector_field_matrixfree( const VectorType & levelset_in,
@@ -126,6 +136,7 @@ namespace LevelSetParallel
     void 
     compute_normal_vector_field( const VectorType & level_set_solution_in,
                                  BlockVectorType & normal_vector_out);
+    
     /*
      *  This function overloads the previous one, where the normal vectors are stored as a member variable.
      */ 
@@ -152,9 +163,6 @@ namespace LevelSetParallel
                                     std::vector<Tensor<1,dim>>& normal_at_gauss ) const;
   
   private:
-    void 
-    solve_cg( VectorType & solution, const VectorType & rhs );
-
     const MPI_Comm & mpi_commun;
 
     NormalVectorData                        normal_vector_data;
@@ -162,6 +170,7 @@ namespace LevelSetParallel
     SmartPointer<const ConstraintsType>     constraints;
     IndexSet                                locally_owned_dofs;
     IndexSet                                locally_relevant_dofs;
+    double                                  min_cell_size;
 
     SparseMatrixType                        system_matrix;
     BlockVectorType                         system_rhs;

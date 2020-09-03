@@ -4,7 +4,6 @@
 #include <deal.II/distributed/tria.h>
 // multiphaseflow
 #include "levelsetparameters.hpp"
-#include "levelsetParallel.hpp"
 #include "boundaryconditions.hpp"
 #include "fieldconditions.hpp"
 // c++
@@ -35,6 +34,8 @@ namespace LevelSetParallel
         virtual void set_field_conditions() = 0;
 
         virtual void create_spatial_discretization() = 0;
+
+        // getter functions
         
         virtual MPI_Comm get_mpi_communicator() const { return this->mpi_communicator; };
         

@@ -36,6 +36,8 @@
 #include "utilityFunctions.hpp"
 #include "normalvector.hpp"
 #include "timeiterator.hpp"
+#include "problembase.hpp"
+#include "simulationbase.hpp"
 
 namespace LevelSetParallel
 {
@@ -56,7 +58,7 @@ namespace LevelSetParallel
         , degree(1)
         , max_reinit_steps(5)
         , verbosity_level(utilityFunctions::VerbosityType::silent)
-        , min_cell_size(0.0)
+        //, min_cell_size(0.0)
         , do_print_l2norm(false)
         , do_matrix_free(false)
     {
@@ -80,8 +82,6 @@ namespace LevelSetParallel
     // maximum number of reinitialization steps to be completed
     utilityFunctions::VerbosityType verbosity_level;
     
-    // minimum cell size --> to compute CFL condition
-    double min_cell_size;
     
     // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
     bool do_print_l2norm;
@@ -98,7 +98,7 @@ namespace LevelSetParallel
    */
   
   template <int dim, int degree>
-  class Reinitialization
+  class Reinitialization : public ProblemBase<dim,degree>
   {
   private:
       
@@ -108,27 +108,47 @@ namespace LevelSetParallel
 
     typedef DoFHandler<dim>                                 DoFHandlerType;
     
-    typedef DynamicSparsityPattern                          SparsityPatternType;
+    typedef TrilinosWrappers::SparsityPattern                          SparsityPatternType;
     
     typedef AffineConstraints<double>                       ConstraintsType;
 
   public:
 
     /*
-     *  Constructor
+     *  Constructor as main module
      */
-    Reinitialization(const MPI_Comm & mpi_commun_in);
-
+    Reinitialization( std::shared_ptr<SimulationBase<dim>> base );
+    
+    void 
+    initialize_module(std::shared_ptr<SimulationBase<dim>> base );
+    /*
+     *  Usage as module: this function is the "global" run function to be called from the problem base class
+     */
+    void 
+    run(); 
+    /*
+     *  Usage as module: this function is for creating paraview output
+     */
+    void 
+    output_results(const VectorType& solution, const double time=0.0); 
+    /*
+     *  Usage as submodule
+     */
+    Reinitialization(const MPI_Comm & mpi_communicator_in);
+    
+    /*
+     *  Usage as submodule
+     */
     void
     initialize( const ReinitializationData &     data_in,
                 const SparsityPatternType&       dsp_in,
-                DoFHandler<dim> const &          dof_handler_in,
+                const DoFHandlerType&            dof_handler_in,
                 const ConstraintsType&           constraints_in,
                 const IndexSet&                  locally_owned_dofs_in,
                 const IndexSet&                  locally_relevant_dofs_in);
 
     /*
-     *  This function reinitializes the solution of the level set equation for a given solution
+     *  Usage as submodule: This function reinitializes the solution of the level set equation for a given solution
      */
     void 
     solve( VectorType & solution_out );
@@ -136,9 +156,15 @@ namespace LevelSetParallel
     void 
     print_me(); 
     
+    // @ does this really need to be global??
+    void 
+    initialize_data_from_global_parameters(const LevelSetParameters& data_in); 
+    
     BlockVectorType
     get_normal_vector_field() const; 
-  
+    
+    std::string get_name() final { return "reinitialization"; };
+
   private:
     /* Olsson, Kreiss, Zahedi (2007) model 
      *
@@ -154,21 +180,38 @@ namespace LevelSetParallel
     void
     initialize_time_iterator(std::shared_ptr<TimeIterator> t);
 
-    const MPI_Comm & mpi_commun;
 
-    ReinitializationData                 reinit_data;
-    bool                                 compute_normal_vector;
+    // for submodule this is actually needed as reference
+    const MPI_Comm                             mpi_communicator;
 
-    SmartPointer<const DoFHandlerType>   dof_handler;
-    SmartPointer<const ConstraintsType>  constraints;
-    IndexSet                             locally_owned_dofs;
-    IndexSet                             locally_relevant_dofs;
+    ReinitializationData                       reinit_data;
+    bool                                       compute_normal_vector;
+    
+    // the following two could be larger objects, thus we do not want
+    // to copy them in the case of usage as a submodule
+    DoFHandlerType                             module_dof_handler;
+    ConstraintsType                            module_constraints;
+    std::shared_ptr<FieldConditions<dim>>      field_conditions;
+    //parallel::distributed::Triangulation<dim>  triangulation; // @todo: make a unique pointer???
+    /* 
+     * at the moment the implementation considers natural boundary conditions
+     */
+    //std::shared_ptr<BoundaryConditions<dim>>   boundary_conditions;
+    
+    // the following two could be larger objects, thus we do not want
+    // to copy them in the case of usage as a submodule
+    SmartPointer<const DoFHandlerType>      dof_handler;
+    SmartPointer<const ConstraintsType>     constraints;
+    IndexSet                                locally_owned_dofs;
+    IndexSet                                locally_relevant_dofs;
 
-    SparseMatrixType                     system_matrix;     // @todo: might not be a member variable
-    VectorType                           system_rhs;        // @todo: might not be member variables
-    ConditionalOStream                   pcout;
-    NormalVector<dim,degree>             normal_vector_field;
-    BlockVectorType                      solution_normal_vector;
-    TableHandler                         table;
+    SparseMatrixType                        system_matrix;     // @todo: might not be a member variable
+    VectorType                              system_rhs;        // @todo: might not be member variables
+    ConditionalOStream                      pcout;
+    NormalVector<dim,degree>                normal_vector_field;
+    BlockVectorType                         solution_normal_vector;
+    TableHandler                            table;
+    // minimum cell size --> to compute CFL condition
+    double                                  min_cell_size;
   };
 } // namespace LevelSetParallel

@@ -1,6 +1,6 @@
 #include <deal.II/base/mpi.h>
 #include <levelsetparameters.hpp>
-
+#define GET_VARIABLE_NAME(Variable) (#Variable)
 LevelSetParameters::LevelSetParameters()
   :
   dimension(numbers::invalid_unsigned_int)
@@ -41,6 +41,8 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
 {
   prm.enter_subsection ("spatial domain");
   {
+      prm.declare_entry ("problem name", "levelset", Patterns::Anything(),
+                         "Sets the base name for the problem that should be solved.");
       prm.declare_entry ("dimension", "2", Patterns::Integer(),
                          "Defines the dimension of the problem (default value=2)");
       prm.declare_entry ("global refinements","1",Patterns::Integer(),
@@ -62,6 +64,26 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
                             "Defines if reinitialization of level set function is activated (default=false)");
       prm.declare_entry    ("max reinitialization steps","2",Patterns::Integer(),
                             "Defines the maximum number of reinitialization steps (default=2)");
+  }
+  prm.leave_subsection();
+
+  prm.enter_subsection ("reinitialization");
+  {
+      prm.declare_entry    ("reinit max n steps", "1", Patterns::Integer(),
+                            "Sets the maximum number of reinitialization steps (default value=5)"); 
+      prm.declare_entry    ("reinit constant epsilon","-1.0",Patterns::Double(),
+                            "Defines the length parameter of the level set function to be constant and"
+                            "not to dependent on the mesh size (default: -1.0 --> grid size dependent");
+      prm.declare_entry    ("reinit dtau","-1.0",Patterns::Double(),
+                            "Defines the time step size of the reinitialization to be constant and"
+                            "not to dependent on the mesh size (default: -1.0 --> grid size dependent");
+      prm.declare_entry    ("reinit do print l2norm","0",Patterns::Integer(),
+                            "Defines if the l2norm of the reinitialization result should be printed) (default: false)");
+      prm.declare_entry    ("reinit do matrixfree","0",Patterns::Integer(),
+                            "Set this parameter if a matrixfree solution procedure should be performed (default=false)");
+      prm.declare_entry    ("reinit modeltype", "1", Patterns::Integer(),
+                            "Sets the type of reinitialization model that should be used (default=olsson2007)"
+                            " This string is converted to an enum value."); 
   }
   prm.leave_subsection();
 
@@ -136,44 +158,55 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
     }
 
   prm.enter_subsection("spatial domain");
+      problem_name       = prm.get ("problem name");
+      //do_matrix_free     = prm.get_integer ("do matrix free");
+  prm.leave_subsection ();
+  prm.enter_subsection("spatial domain");
       dimension          = prm.get_integer ("dimension");
       global_refinements = prm.get_integer ("global refinements");
-      do_matrix_free     = prm.get_integer ("do matrix free");
       //adaptive_refinements = prm.get_integer ("adaptive refinements");
   prm.leave_subsection ();
 
-  prm.enter_subsection("level set equation");
-      levelset_degree        =    prm.get_integer("level set degree");
-      AssertThrow (levelset_degree >= 1, ExcNotImplemented());
-      artificial_diffusivity =     prm.get_double("artificial diffusivity");
-      activate_reinitialization = prm.get_integer("activate reinitialization");
-      max_n_reinit_steps     =    prm.get_integer("max reinitialization steps");
+  prm.enter_subsection("levelset")
+      // @todo: include again when template parameter is removed
+      //levelset_degree        =    prm.get_integer("level set degree");
+      //AssertThrow (levelset_degree >= 1, ExcNotImplemented());
+      ls_artificial_diffusivity =        prm.get_double("ls artificial diffusivity");
+      ls_activate_reinitialization =    prm.get_integer("ls do reinitialization");
+      ls_theta                =          prm.get_double("ls theta");
+      ls_start_time           =          prm.get_double("ls start time");
+      ls_end_time             =          prm.get_double("ls end time");
+      ls_time_step_size       =          prm.get_double("ls time step size");
+      AssertThrow (ls_time_step_size>= 0.0, ExcNotImplemented());
+      // @todo: a critical time step according to the CFL condition should be calculated 
+      // when theta=0 (explicit euler)
+      //enable_CFL_condition = (prm.get_double ("enable CFL condition"));
   prm.leave_subsection ();
 
-  prm.enter_subsection ("time stepping");
-      theta                = (prm.get_double ("theta"));
-      start_time           = (prm.get_double ("start time"));
-      end_time             = (prm.get_double ("end time"));
-      time_step_size       = (prm.get_double ("time step size"));
-      AssertThrow (time_step_size>= 0.0, ExcNotImplemented());
-      enable_CFL_condition = (prm.get_double ("enable CFL condition"));
-  prm.leave_subsection ();
+  prm.enter_subsection("reinitialization");
+      reinit_max_n_steps      =      prm.get_integer("reinit max n steps");
+      reinit_constant_epsilon =       prm.get_double("reinit constant epsilon");
+      reinit_dtau             =       prm.get_double("reinit dtau");
+      reinit_do_print_l2norm  =      prm.get_integer("reinit do print l2norm");
+      reinit_do_matrixfree    =      prm.get_integer("reinit do matrixfree");
+      reinit_modeltype        =      prm.get_integer("reinit modeltype");
+  prm.leave_subsection();
   prm.enter_subsection ("output");
-      output_walltime =         prm.get_integer("output walltime");
-      do_compute_error =        prm.get_integer("do compute error");
-      output_norm_levelset =    prm.get_integer("output norm levelset");
-      compute_volume_output =   prm.get_integer("compute volume output");
-      filename_volume_output =          prm.get("filename volume output");
+      output_walltime =              prm.get_integer("output walltime");
+      do_compute_error =             prm.get_integer("do compute error");
+      output_norm_levelset =         prm.get_integer("output norm levelset");
+      compute_volume_output =        prm.get_integer("compute volume output");
+      filename_volume_output =               prm.get("filename volume output");
   prm.leave_subsection ();
   prm.enter_subsection ("paraview");
-      paraview_do_output = prm.get_integer("paraview do output");
-      paraview_filename  =        prm.get("paraview filename");
-      paraview_write_frequency =   prm.get_integer("paraview write frequency");
-      paraview_do_initial_state = prm.get_integer("paraview do initial state");
-      paraview_print_levelset = prm.get_integer("paraview print levelset");
+      paraview_do_output =           prm.get_integer("paraview do output");
+      paraview_filename  =                   prm.get("paraview filename");
+      paraview_write_frequency =     prm.get_integer("paraview write frequency");
+      paraview_do_initial_state =    prm.get_integer("paraview do initial state");
+      paraview_print_levelset =      prm.get_integer("paraview print levelset");
       paraview_print_normal_vector = prm.get_integer("paraview print normal vector");
-      paraview_print_curvature = prm.get_integer("paraview print curvature");
-      paraview_print_advection = prm.get_integer("paraview print advection");
+      paraview_print_curvature =     prm.get_integer("paraview print curvature");
+      paraview_print_advection =     prm.get_integer("paraview print advection");
       paraview_print_exactsolution = prm.get_integer("paraview print exactsolution");
   prm.leave_subsection ();
 
@@ -181,32 +214,58 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
 
 void LevelSetParameters::print_parameters()
 {
-    std::cout << "+----------------------------------------"                 << std::endl;
-    std::cout << "|       input protocol                  |"                 << std::endl;
-    std::cout << "+----------------------------------------"                 << std::endl;
-    std::cout << "| dimension                 " << dimension                 << std::endl;                   
-    std::cout << "| global_refinements        " << global_refinements        << std::endl;                   
-    std::cout << "| do_matrix_free            " << do_matrix_free            << std::endl;                   
-    std::cout << "| levelset_degree           " << levelset_degree           << std::endl;                   
-    std::cout << "| artificial_diffusivity    " << artificial_diffusivity    << std::endl;                   
-    std::cout << "| activate_reinitialization " << activate_reinitialization << std::endl;                   
-    std::cout << "| max_n_reinit_steps        " << max_n_reinit_steps        << std::endl;                   
-    std::cout << "| ------------ time stepping -------------"                << std::endl;    
-    std::cout << "| theta                     " << theta                     << std::endl;                   
-    std::cout << "| start_time                " << start_time                << std::endl;                   
-    std::cout << "| end_time                  " << end_time                  << std::endl;                   
-    std::cout << "| time_step_size            " << time_step_size            << std::endl;
-    std::cout << "| enable_CFL_condition      " << enable_CFL_condition      << std::endl;
-    std::cout << "| --------------- output ----------------"                 << std::endl;    
-    std::cout << "| output_walltime           " << output_walltime           << std::endl;                   
-    std::cout << "| output_norm_levelset      " << output_norm_levelset      << std::endl;                   
-    std::cout << "| do_compute_error          " << do_compute_error          << std::endl;                   
-    std::cout << "| compute_volume_output     " << compute_volume_output     << std::endl;                   
-    std::cout << "| filename_volume_output    " << filename_volume_output    << std::endl;                   
-    std::cout << "| --------------- output ----------------"                 << std::endl;    
-    std::cout << "| compute_paraview_output   " << paraview_do_output        << std::endl;                   
-    std::cout << "| filename_paraview_output  " << paraview_filename         << std::endl;                   
-    std::cout << "+----------------------------------------"                 << std::endl;
 
+  auto print_parameter = [](std::string name, auto parameter){ std::ostringstream str; 
+                                                str <<  "| " << std::setw(30) << std::left << name
+                                                    << std::left << std::setw(20) << parameter << "|" << std::endl;
+                                                 return str.str(); };
+
+  
+  auto print_header = [&](std::string name){ int length = 0;
+                                             length = print_parameter("determine length", length ).length();
+                                             std::ostringstream line; line << "+" << std::string(length-3, '-') << "+" << std::endl;
+                                             std::ostringstream str; 
+                                             str << line.str() << "| " << std::setw(10) << " " << std::setw(20) << std::left << name
+                                             << std::left << std::setw(20) << " " << "|" << std::endl << line.str();
+                                             return str.str(); };
+  
+  std::cout << print_header("input protocol");
+  std::cout << print_parameter("problem_name",              problem_name);
+  std::cout << print_parameter("dimension",                 dimension);
+  std::cout << print_parameter("global_refinements",        global_refinements);
+  std::cout << print_parameter("do_matrix_free",            do_matrix_free);
+  std::cout << print_parameter("levelset_degree",           levelset_degree);
+  std::cout << print_parameter("artificial_diffusivity",    artificial_diffusivity);
+  std::cout << print_parameter("activate_reinitialization", activate_reinitialization);
+
+  std::cout << print_header("reinitialization");
+  std::cout << print_parameter("reinit_max_n_steps",        reinit_max_n_steps );
+  std::cout << print_parameter("reinit_constant_epsilon",   reinit_constant_epsilon );
+  std::cout << print_parameter("reinit_dtau",               reinit_dtau);
+  std::cout << print_parameter("reinit_do_print_l2norm",    reinit_do_print_l2norm    );
+  std::cout << print_parameter("reinit_do_matrixfree",      reinit_do_matrixfree      );
+  std::cout << print_parameter("reinit_modeltype",          reinit_modeltype);
+
+  std::cout << print_header("paraview");
+  std::cout << print_parameter("paraview_do_output",            paraview_do_output );
+  std::cout << print_parameter("paraview_filename",             paraview_filename );
+  std::cout << print_parameter("paraview_print_normal_vector ", paraview_print_normal_vector );
+  std::cout << print_parameter("paraview_print_curvature",      paraview_print_curvature);
+  std::cout << print_parameter("paraview_print_exactsolution",  paraview_print_exactsolution    );
+  
+  std::cout << print_header("time stepping");
+  std::cout << print_parameter("theta",            theta);
+  std::cout << "| ------------ time stepping -------------"                 << std::endl;    
+  std::cout << "| theta                     " << theta                      << std::endl;                   
+  std::cout << "| start_time                " << start_time                 << std::endl;                   
+  std::cout << "| end_time                  " << end_time                   << std::endl;                   
+  std::cout << "| time_step_size            " << time_step_size             << std::endl;
+  std::cout << "| enable_CFL_condition      " << enable_CFL_condition       << std::endl;
+  std::cout << "| --------------- output ----------------"                  << std::endl;    
+  std::cout << "| output_walltime           " << output_walltime            << std::endl;                   
+  std::cout << "| output_norm_levelset      " << output_norm_levelset       << std::endl;                   
+  std::cout << "| do_compute_error          " << do_compute_error           << std::endl;                   
+  std::cout << "| compute_volume_output     " << compute_volume_output      << std::endl;                   
+  std::cout << "| filename_volume_output    " << filename_volume_output     << std::endl;                   
 }
 
