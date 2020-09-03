@@ -4,11 +4,11 @@
 
 MESSAGE("_________________________________________________________________________________")
 MESSAGE("                                                                                 ")
-MESSAGE("                              meltpoolDG                                         ")
-MESSAGE("                              multiphaseflow                                     ")
+MESSAGE("                              MeltPoolDG                                         ")
+MESSAGE("                                                                                 ")
 MESSAGE("_________________________________________________________________________________")
 
-PROJECT(multiphaseflow)
+PROJECT(MeltPoolDG)
 
 # this is the standard deal.II search mechanism, including check for Trilinos and p4est
 
@@ -25,11 +25,11 @@ IF(NOT ${deal.II_FOUND})
     )
 ENDIF()
 
-#IF(NOT DEAL_II_WITH_P4EST)
-  #MESSAGE(FATAL_ERROR
-    #"\nThis library requires a deal.II installation built with support for p4est but it appears to be missing!\n"
-    #)
-#ENDIF()
+IF(NOT DEAL_II_WITH_P4EST)
+  MESSAGE(FATAL_ERROR
+    "\nThis library requires a deal.II installation built with support for p4est but it appears to be missing!\n"
+    )
+ENDIF()
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
@@ -38,7 +38,7 @@ DEAL_II_INITIALIZE_CACHED_VARIABLES()
     #source/*.cpp
   #)
 FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
-FILE(GLOB_RECURSE TARGET_INC  "/include/*.hpp")
+FILE(GLOB_RECURSE TARGET_INC  "include/*.hpp")
 SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
 
 # Set the include directory and the name of the project
