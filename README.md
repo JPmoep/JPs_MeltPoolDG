@@ -8,3 +8,5 @@ This project depends on the following third-party libraries:
     * dealii
     * p4est
     * Trilinos
+
+![alt text](https://github.com/mschreter/MeltPoolDG/blob/master/MeltPoolDG.png?raw=true)
