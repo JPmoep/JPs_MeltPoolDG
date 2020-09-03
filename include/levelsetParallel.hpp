@@ -97,7 +97,9 @@ namespace LevelSetParallel
 
   public:
     LevelSetEquation( std::shared_ptr<SimulationBase<dim>> base );
+    
     void run() final;
+    
     std::string get_name() final { return "levelset"; };
 
   private:

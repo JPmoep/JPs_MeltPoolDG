@@ -35,6 +35,13 @@ namespace LevelSetParallel
 
         virtual void create_spatial_discretization() = 0;
 
+        virtual void create()
+        { 
+          create_spatial_discretization();
+          set_boundary_conditions();
+          set_field_conditions();
+        };
+
         // getter functions
         
         virtual MPI_Comm get_mpi_communicator() const { return this->mpi_communicator; };

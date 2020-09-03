@@ -168,7 +168,7 @@ namespace LevelSetParallel
               auto velocity_grad_phi_j = a * fe_values.shape_grad( j, q_index);  // grad_phi_j(x_q)
               cell_matrix( i, j ) += (  fe_values.shape_value( i, q_index) * 
                                        fe_values.shape_value( j, q_index) +
-                                       parameters.theta * time_step * ( parameters.artificial_diffusivity * 
+                                       parameters.ls_theta * time_step * ( parameters.ls_artificial_diffusivity * 
                                                              fe_values.shape_grad( i, q_index) * 
                                                              fe_values.shape_grad( j, q_index) +
                                                              fe_values.shape_value( i, q_index) ) *
@@ -179,9 +179,9 @@ namespace LevelSetParallel
           cell_rhs( i ) +=
             (  fe_values.shape_value( i, q_index) * phiAtQ[q_index]
                 - 
-               ( 1. - parameters.theta ) * time_step * 
+               ( 1. - parameters.ls_theta ) * time_step * 
                  (
-                   parameters.artificial_diffusivity *
+                   parameters.ls_artificial_diffusivity *
                    fe_values.shape_grad( i, q_index) *
                    phiGradAtQ[q_index]
                    +
@@ -229,14 +229,14 @@ namespace LevelSetParallel
   {
     ReinitializationData reinit_data;
     reinit_data.reinit_model        = ReinitModelType::olsson2007;
-    reinit_data.d_tau               = GridTools::minimal_cell_diameter(triangulation);
-    //reinit_data.constant_epsilon    = 0.0;
-    reinit_data.degree              = degree;
-    reinit_data.max_reinit_steps    = 5;//parameters.max_reinitializationsteps;
+    reinit_data.d_tau               = parameters.reinit_dtau > 0.0 ? 
+                                      parameters.reinit_dtau :
+                                      GridTools::minimal_cell_diameter(triangulation);
+    reinit_data.constant_epsilon    = parameters.reinit_constant_epsilon;
+    reinit_data.max_reinit_steps    = parameters.reinit_max_n_steps;
+    reinit_data.do_print_l2norm     = parameters.reinit_do_print_l2norm;
+    reinit_data.do_matrix_free      = parameters.reinit_do_matrixfree;
     reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
-    //min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
-    reinit_data.do_print_l2norm     = parameters.output_norm_levelset;
-    reinit_data.do_matrix_free      = parameters.do_matrix_free;
     
 
     TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
@@ -309,8 +309,8 @@ namespace LevelSetParallel
   {
     TimeIteratorData time_data;
     time_data.start_time       = 0.0; // @ todo: introduce parameter??
-    time_data.end_time         = parameters.end_time;
-    time_data.time_increment   = parameters.time_step_size; 
+    time_data.end_time         = parameters.ls_end_time;
+    time_data.time_increment   = parameters.ls_time_step_size; 
     time_data.max_n_time_steps = 1E10; // this criteria is set to be not relevant for the level set problem
     
     time_iterator.initialize(time_data);
@@ -405,7 +405,7 @@ namespace LevelSetParallel
     
     print_me();
 
-    if ( parameters.activate_reinitialization )    
+    if ( parameters.ls_do_reinitialization )    
     {
         initialize_reinitialization_model();
         compute_reinitialization_model();
@@ -427,13 +427,13 @@ namespace LevelSetParallel
 
         compute_levelset_model(); // @todo: insert updateFlag
 
-        if (parameters.output_norm_levelset)
+        if (parameters.ls_do_print_l2norm)
             pcout << " (not reinitialized) levelset function ||phi|| = " << std::setprecision(10) << solution_levelset.l2_norm() << std::endl;
 
-        if ( parameters.activate_reinitialization )    
+        if ( parameters.ls_do_reinitialization )    
             compute_reinitialization_model();
 
-        if (parameters.output_norm_levelset)
+        if (parameters.ls_do_print_l2norm)
             pcout << " (reinitialized) levelset function ||phi|| = " << std::setprecision(10) << solution_levelset.l2_norm() << std::endl;
 
         output_results();

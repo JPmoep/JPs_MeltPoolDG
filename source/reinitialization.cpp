@@ -59,8 +59,6 @@ namespace LevelSetParallel
                                     );
     dsp.compress();
 
-    std::cout << "my module dofs" << this->module_dof_handler.n_dofs() << std::endl;
-    
     // submodule
     initialize( this->reinit_data,
                 dsp, 
@@ -91,16 +89,16 @@ namespace LevelSetParallel
   void
   Reinitialization<dim,degree>::initialize_data_from_global_parameters(const LevelSetParameters& data_in)
   {
-    //@ todo --> fill data
     //@ todo: add parameter for paraview output
-    reinit_data.reinit_model        = ReinitModelType::olsson2007;
-    //reinit_data.d_tau               = GridTools::minimal_cell_diameter(triangulation);
-    ////reinit_data.constant_epsilon    = 0.0;
-    //reinit_data.degree              = degree;
-    reinit_data.max_reinit_steps    = data_in.max_n_reinit_steps; //parameters.max_reinitializationsteps;
+    reinit_data.reinit_model        = static_cast<ReinitModelType>(data_in.reinit_modeltype);
+    reinit_data.d_tau               = data_in.reinit_dtau > 0.0 ? 
+                                      data_in.reinit_dtau
+                                      : min_cell_size;
+    reinit_data.constant_epsilon    = data_in.reinit_constant_epsilon;
+    reinit_data.max_reinit_steps    = data_in.reinit_max_n_steps; //parameters.max_reinitializationsteps;
     //reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
-    reinit_data.do_print_l2norm     = true; //parameters.output_norm_levelset;
-    //reinit_data.do_matrix_free      = parameters.do_matrix_free;
+    reinit_data.do_print_l2norm     = data_in.reinit_do_print_l2norm; //parameters.output_norm_levelset;
+    reinit_data.do_matrix_free      = data_in.reinit_do_matrixfree;
   }
 
   /*
@@ -156,7 +154,6 @@ namespace LevelSetParallel
       NormalVectorData normal_vector_data;
       normal_vector_data.damping_parameter = min_cell_size * 0.5;
 
-      //normal_vector_data.degree            = reinit_data.degree;
       normal_vector_data.verbosity_level   = reinit_data.verbosity_level;
       //normal_vector_data.min_cell_size     = reinit_data.min_cell_size;
       normal_vector_data.do_print_l2norm   = reinit_data.do_print_l2norm;
@@ -284,9 +281,9 @@ namespace LevelSetParallel
       solution_in.update_ghost_values();
 
       
-      auto qGauss = QGauss<dim>( reinit_data.degree+1 );
+      auto qGauss = QGauss<dim>( degree+1 );
       
-      FE_Q<dim> fe( reinit_data.degree );
+      FE_Q<dim> fe( degree );
       FEValues<dim> fe_values( fe,
                                qGauss,
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
@@ -330,8 +327,9 @@ namespace LevelSetParallel
            cell_rhs    = 0.0;
            fe_values.reinit(cell);
            
-           //const double epsilon_cell = ( reinit_data.constant_epsilon>0.0 ) ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
-           const double epsilon_cell = cell->diameter() / ( std::sqrt(dim) * 2 );
+           const double epsilon_cell = reinit_data.constant_epsilon>0.0 ? reinit_data.constant_epsilon : cell->diameter() / ( std::sqrt(dim) * 2 );
+           AssertThrow(epsilon_cell>0.0, ExcMessage("Reinitialization: the value of epsilon for the reinitialization function must be larger than zero!"));
+
            fe_values.get_function_values(     solution_out, psiAtQ );     // compute values of old solution at tau_n
            fe_values.get_function_gradients(  solution_out, psiGradAtQ ); // compute gradients of old solution at tau_n
             
@@ -439,8 +437,6 @@ namespace LevelSetParallel
   void
   Reinitialization<dim,degree>::run( )
   {
-    std::cout << "this is reinitialization " << std::endl;
-
     pcout << "Number of degrees of freedom: " << dof_handler->n_dofs()           
                                  << std::endl << std::endl;
     
