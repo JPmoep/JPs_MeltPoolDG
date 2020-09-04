@@ -1,0 +1,34 @@
+subsection general
+  set problem name = reinitialization
+end
+subsection spatial domain
+  set dimension = 2
+  set global refinements = 7
+end
+subsection levelset
+  set ls artificial diffusivity = 0
+  set ls do reinitialization = 1
+  set ls do print l2norm = 1
+  set ls theta            = 0.5
+  set ls start time       = 0.0
+  set ls end time         = 1.5707963267948966
+  set ls time step size   = 0.005
+end
+subsection reinitialization
+  set reinit max n steps     = 5
+  set reinit do print l2norm = 1
+  set reinit do matrixfree   = 1
+  set reinit modeltype       = 1
+end
+subsection paraview
+  set paraview do output  = 1
+  set paraview print normal vector = 0
+  set paraview print curvature = 0
+  set paraview print exactsolution = 0
+end
+subsection output
+  set do compute error         = 1
+  set output walltime          = 0
+  set compute volume output    = 1
+  set filename volume output   = myVolumes.txt
+end
