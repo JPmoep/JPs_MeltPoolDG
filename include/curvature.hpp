@@ -26,7 +26,7 @@
 #include <deal.II/fe/mapping.h>
 
 // from multiphaseflow
-#include "utilityFunctions.hpp"
+#include "utilityfunctions.hpp"
 #include "normalvector.hpp"
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
@@ -47,7 +47,7 @@ namespace MeltPoolDG
         : damping_parameter(0.0)
         , degree(1)
         , min_cell_size(0.0)
-        , verbosity_level(utilityFunctions::VerbosityType::silent)
+        , verbosity_level(UtilityFunctions::VerbosityType::silent)
     {
     }
     
@@ -61,7 +61,7 @@ namespace MeltPoolDG
     double min_cell_size;
 
     // current verbosity level --> see possible options in utilityFunctions
-    utilityFunctions::VerbosityType verbosity_level;
+    UtilityFunctions::VerbosityType verbosity_level;
   };
   
   /*

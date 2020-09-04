@@ -33,7 +33,7 @@
 // for TableHandler
 #include <deal.II/base/table_handler.h>
 // from multiphaseflow
-#include "utilityFunctions.hpp"
+#include "utilityfunctions.hpp"
 #include "normalvector.hpp"
 #include "timeiterator.hpp"
 #include "problembase.hpp"
@@ -59,7 +59,7 @@ namespace MeltPoolDG
         , max_reinit_steps(  5)
         , do_print_l2norm(   false)
         , do_matrix_free(    false)
-        , verbosity_level(   utilityFunctions::VerbosityType::silent)
+        , verbosity_level(   UtilityFunctions::VerbosityType::silent)
     {
     }
     
@@ -82,7 +82,7 @@ namespace MeltPoolDG
     bool do_matrix_free;
     
     // maximum number of reinitialization steps to be completed
-    utilityFunctions::VerbosityType verbosity_level;
+    UtilityFunctions::VerbosityType verbosity_level;
 
     // @ add lambda function for calculating epsilon
   };

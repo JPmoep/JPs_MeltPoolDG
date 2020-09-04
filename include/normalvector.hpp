@@ -30,7 +30,7 @@
 // for FE_Q<dim> type
 #include <deal.II/fe/mapping.h>
 
-#include <utilityFunctions.hpp>
+#include "utilityfunctions.hpp"
 
 #include <levelsetparameters.hpp>
 
@@ -56,7 +56,7 @@ namespace MeltPoolDG
   {
     NormalVectorData()
         : degree(1)
-        , verbosity_level(utilityFunctions::VerbosityType::silent)
+        , verbosity_level(UtilityFunctions::VerbosityType::silent)
         , damping_parameter(1e-6)
         , do_print_l2norm(false)
     {
@@ -66,8 +66,8 @@ namespace MeltPoolDG
     // interpolation degree of normal vector interpolation
     unsigned int degree;
 
-    // current verbosity level --> see possible options in utilityFunctions
-    utilityFunctions::VerbosityType verbosity_level;
+    // current verbosity level --> see possible options in UtilityFunctions
+    UtilityFunctions::VerbosityType verbosity_level;
     
     // parameter for diffusive term in computation of normals
     double damping_parameter;

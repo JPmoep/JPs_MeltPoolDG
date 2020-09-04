@@ -74,7 +74,7 @@ ENDIF()
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
-DEAL_II_SETUP_TARGET(multiphaseflow)
+DEAL_II_SETUP_TARGET(MeltPoolDG)
 
 # applications
 ADD_SUBDIRECTORY(simulations)

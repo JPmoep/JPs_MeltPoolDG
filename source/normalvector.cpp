@@ -60,7 +60,7 @@ namespace MeltPoolDG
         /*
          * the current verbosity level is set
          */
-        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
+        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=UtilityFunctions::VerbosityType::silent));
         this->pcout.set_condition(verbosity_active);
     }
 
@@ -71,7 +71,7 @@ namespace MeltPoolDG
          //@ introduce new C++20 features --> shift to normalvector class
       NormalVectorData normal_vector_data;
       normal_vector_data.damping_parameter = this->min_cell_size * 0.5;
-      normal_vector_data.verbosity_level   = utilityFunctions::VerbosityType::major; // @ introduce verbosity levels in global parameters
+      normal_vector_data.verbosity_level   = UtilityFunctions::VerbosityType::major; // @ introduce verbosity levels in global parameters
       normal_vector_data.do_print_l2norm   = false; //@ param_in.do_print_l2norm; 
     }
 

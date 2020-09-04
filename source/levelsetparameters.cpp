@@ -272,4 +272,4 @@ void LevelSetParameters::print_parameters()
   std::cout << print_line();
 }
 
-// namespace MeltPoolDG
+} // namespace MeltPoolDG

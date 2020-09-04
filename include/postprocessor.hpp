@@ -99,7 +99,7 @@ namespace MeltPoolDG
 
           for (const unsigned int q_index : fe_values.quadrature_point_indices())
           {
-              const double phi_normalized = utilityFunctions::normalizeFunction ( phi_at_q[q_index], min_value, max_value );
+              const double phi_normalized = UtilityFunctions::normalizeFunction ( phi_at_q[q_index], min_value, max_value );
               if (phi_normalized>=threshhold)
                   vol_phase_1 += fe_values.JxW(q_index);
               else 

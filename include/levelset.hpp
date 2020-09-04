@@ -60,7 +60,7 @@
 #include "reinitialization.hpp"
 #include "curvature.hpp"
 #include "levelsetparameters.hpp"
-#include "utilityFunctions.hpp"
+#include "utilityfunctions.hpp"
 #include "problembase.hpp"
 #include "simulationbase.hpp"
 // c++

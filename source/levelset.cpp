@@ -11,7 +11,7 @@
 
 #include "levelset.hpp"
 #include "linearsolve.hpp"
-#include "reinitialization.hp"
+#include "reinitialization.hpp"
 #include "curvature.hpp"
 #include "postprocessor.hpp"
 
@@ -236,7 +236,7 @@ namespace MeltPoolDG
     reinit_data.max_reinit_steps    = parameters.reinit_max_n_steps;
     reinit_data.do_print_l2norm     = parameters.reinit_do_print_l2norm;
     reinit_data.do_matrix_free      = parameters.reinit_do_matrixfree;
-    reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
+    reinit_data.verbosity_level     = UtilityFunctions::VerbosityType::major;
     
 
     TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
@@ -274,7 +274,7 @@ namespace MeltPoolDG
     curvature_data.damping_parameter   = 0.0; //GridTools::minimal_cell_diameter(triangulation)*0.5;
     curvature_data.degree              = degree; 
     curvature_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
-    curvature_data.verbosity_level     = utilityFunctions::VerbosityType::major;
+    curvature_data.verbosity_level     = UtilityFunctions::VerbosityType::major;
     
     TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
                                               locally_owned_dofs,

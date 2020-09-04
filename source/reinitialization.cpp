@@ -23,7 +23,7 @@
 #include <deal.II/numerics/data_out.h>
 
 // MeltPoolDG
-#include "utilityFunctions.hpp"
+#include "utilityfunctions.hpp"
 #include "normalvectoroperator.hpp"
 #include "linearsolve.hpp"
 #include "reinitialization.hpp"
