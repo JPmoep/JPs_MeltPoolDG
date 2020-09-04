@@ -2,7 +2,7 @@
 // dealii
 #include <deal.II/distributed/tria.h>
 // multiphaseflow
-#include "levelsetparameters.hpp"
+#include "parameters.hpp"
 #include "boundaryconditions.hpp"
 #include "fieldconditions.hpp"
 // c++
@@ -20,7 +20,7 @@ namespace MeltPoolDG
         //virtual void set_mpi_commun() = 0;
         SimulationBase(MPI_Comm my_communicator)
         : mpi_communicator(my_communicator)
-        , triangulation(my_communicator)
+        , triangulation(this->mpi_communicator)
         {
         }
 
@@ -54,8 +54,6 @@ namespace MeltPoolDG
         parallel::distributed::Triangulation<dim> triangulation; 
         FieldConditions<dim>                      field_conditions;
         BoundaryConditions<dim>                   boundary_conditions;
-
-        LevelSetParameters                        parameters;
-
+        Parameters                                parameters;
     };
 } // namespace MeltPoolDG

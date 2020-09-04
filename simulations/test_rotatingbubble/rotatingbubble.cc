@@ -10,8 +10,6 @@
 #include <cmath>
 #include <iostream>
 // MeltPoolDG
-#include "levelset.hpp"
-#include "levelsetparameters.hpp"
 #include "utilityfunctions.hpp"
 #include "simulationbase.hpp"
 #include "problemselector.hpp"
@@ -33,19 +31,20 @@ namespace MeltPoolDG
     virtual double value( const Point<dim> & p,
                    const unsigned int component = 0) const
     {
+    (void)component;
     Point<2> center     = Point<2>(0.0,0.5); 
     const double radius = 0.25;
-    return UtilityFunctions::signFunction( 
-                UtilityFunctions::signedDistanceCircle( p, center, radius ));
+    //return UtilityFunctions::signFunction( 
+                //UtilityFunctions::signedDistanceCircle( p, center, radius ));
 
     /*
      *  Alternatively, a tanh function could be used, corresponding to the
      *  analytic solution of the reinitialization problem
      */
-    //return UtilityFunctions::tanHyperbolicusCharacteristicFunction( 
-           //UtilityFunctions::signedDistanceCircle( p, center, radius ), 
-           //this->epsInterface 
-           //);
+    return UtilityFunctions::tanHyperbolicusCharacteristicFunction( 
+           UtilityFunctions::signedDistanceCircle( p, center, radius ), 
+           this->epsInterface 
+           );
     }
 
     void setEpsInterface(double eps){ this->epsInterface = eps; }
@@ -67,8 +66,9 @@ namespace MeltPoolDG
     }
 
     double value(const Point<dim> &p,
-                         const unsigned int /*component*/ = 0) const 
+                         const unsigned int component = 0) const 
     {
+      (void)component;
       Point<2> center     = Point<2>(0.0,0.5); 
       const double radius = 0.25;
       return UtilityFunctions::tanHyperbolicusCharacteristicFunction( 
@@ -104,6 +104,9 @@ namespace MeltPoolDG
       }
   };
 
+  /* for constant Dirichlet conditions we could also use the ConstantFunction
+   * utility from dealii
+   */
   template <int dim>
   class DirichletCondition : public Function<dim> 
   {
@@ -114,8 +117,10 @@ namespace MeltPoolDG
     }
 
     double value(const Point<dim> &p,
-                         const unsigned int /*component*/ = 0) const 
+                         const unsigned int component = 0) const 
     {
+    (void)p;
+    (void)component;
       return -1.0;
     }
   };
@@ -195,8 +200,8 @@ namespace MeltPoolDG
     {   
         this->field_conditions.initial_field =        std::make_shared<InitializePhi<dim>>(); 
         this->field_conditions.advection_field =      std::make_shared<AdvectionField<dim>>(); 
-        this->field_conditions.exact_solution_field = std::make_shared<ExactSolution<dim>>(
-            GridTools::minimal_cell_diameter(this->triangulation)/(std::sqrt(dim)*2)); 
+        this->field_conditions.exact_solution_field = std::make_shared<ExactSolution<dim>>(0.01);
+            //GridTools::minimal_cell_diameter(this->triangulation)/(std::sqrt(dim)*2)); 
     }
   
   private:
@@ -208,42 +213,31 @@ namespace MeltPoolDG
   //template class Simulation<3>; //@ does not work currently
 template class Simulation<2>; 
 
-void my_run_function(const int r)
-{
-  const int degree = 1;
-
-  auto mySim = std::make_shared<Simulation<2>>();
-
-
-  if ( mySim->parameters.dimension==2 )
-  {
-    mySim->parameters.global_refinements = r;
-    mySim->parameters.global_refinements = r;
-    mySim->parameters.filename_volume_output = "volumes_refine"+std::to_string(r)+".tex";
-
-    if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
-      mySim->parameters.print_parameters();
-    mySim->create();
-    auto myProblem = ProblemSelector<2,degree>::get_problem(mySim);
-    myProblem->run();
-  }
-}
 
 } // namespace MeltPoolDG
 
 int main(int argc, char* argv[])
 {
   using namespace dealii;
+  using namespace MeltPoolDG;
 
   Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
   
-  std::vector<int> refine_levels = {7};
-  
-  for (auto r : refine_levels)
-  {
   try
     {
-        MeltPoolDG::my_run_function(r);
+      // @ todo: incorporate better way for template parameter degree
+      const int degree = 1;
+
+      auto sim = std::make_shared<Simulation<2>>();
+
+      if ( sim->parameters.dimension==2 )
+      {
+        if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+          sim->parameters.print_parameters();
+        sim->create();
+        auto problem = ProblemSelector<2,degree>::get_problem(sim);
+        problem->run();
+      }
     }
   catch (std::exception &exc)
     {
@@ -271,7 +265,6 @@ int main(int argc, char* argv[])
                 << std::endl;
       return 1;
     }
-  }
 
   return 0;
 }

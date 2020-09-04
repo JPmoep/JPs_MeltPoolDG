@@ -23,9 +23,9 @@ namespace MeltPoolDG
   LevelSetEquation<dim,degree>::LevelSetEquation( std::shared_ptr<SimulationBase<dim>> base_in )
     : mpi_communicator(    base_in->get_mpi_communicator())
     , parameters(          base_in->parameters )
-    , fe(                  parameters.levelset_degree )
+    , fe(                  degree)
     , triangulation(       base_in->triangulation )
-    , dof_handler(         triangulation )
+    , dof_handler(         base_in->triangulation )
     , pcout(               std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0) )
     , computing_timer(     base_in->mpi_communicator,
                            pcout,
@@ -41,14 +41,15 @@ namespace MeltPoolDG
   template <int dim, int degree>
   void LevelSetEquation<dim,degree>::print_me() 
   {  
-    pcout << "Number of active cells: "       << triangulation.n_active_cells() << std::endl;
-    pcout << "Number of degrees of freedom: " << dof_handler.n_dofs()           << std::endl << std::endl;
+    pcout << "Number of active cells: "       << triangulation.n_global_active_cells() << std::endl;
+    pcout << "Number of degrees of freedom: " << dof_handler.n_dofs()                  << std::endl << std::endl;
   }
 
   template <int dim, int degree>
-  void LevelSetEquation<dim,degree>::setup_system()
+  void LevelSetEquation<dim,degree>::initialize_module()
   {
-    TimerOutput::Scope t(computing_timer, "setup");
+    // @todo: structure timing of different sections
+    //TimerOutput::Scope t(computing_timer, "setup");
     dof_handler.distribute_dofs( fe );
 
     locally_owned_dofs = dof_handler.locally_owned_dofs();
@@ -78,10 +79,11 @@ namespace MeltPoolDG
 
 
     // distributed sparsity pattern --> not required for matrix-free solution algorithm 
-    TrilinosWrappers::SparsityPattern dsp( locally_owned_dofs,
-                                           locally_owned_dofs,
-                                           locally_relevant_dofs,
-                                           mpi_communicator);
+    SparsityPatternType dsp( locally_owned_dofs,
+                             locally_owned_dofs,
+                             locally_relevant_dofs,
+                             mpi_communicator);
+
     DoFTools::make_sparsity_pattern( dof_handler,
                                      dsp,
                                      constraints,
@@ -92,24 +94,26 @@ namespace MeltPoolDG
 
     system_matrix.reinit( dsp ); 
 
-    // constraints for subproblem classes --> no dirichlet conditions
+    // the following are no dirichlet constraints for submodules (reinitialization,
+    // normal vector, curvature)
     constraints_no_dirichlet.clear();
     constraints_no_dirichlet.reinit(locally_relevant_dofs);
     DoFTools::make_hanging_node_constraints(dof_handler, constraints_no_dirichlet); 
     constraints_no_dirichlet.close();   
+
+    set_initial_conditions();
   }
   
 
   template <int dim, int degree>
-  void LevelSetEquation<dim,degree>::initialize_levelset()
+  void LevelSetEquation<dim,degree>::set_initial_conditions()
   {
-    setup_system();
     // @ is there a better solution to avoid local copy??
     VectorType solutionTemp( locally_owned_dofs, mpi_communicator);
 
     VectorTools::project( dof_handler, 
                           constraints,
-                          QGauss<dim>(parameters.levelset_degree+1),
+                          QGauss<dim>(degree+1),
                           *field_conditions->initial_field,           
                           solutionTemp );
 
@@ -120,20 +124,21 @@ namespace MeltPoolDG
   template <int dim, int degree>
   void LevelSetEquation<dim,degree>::compute_levelset_model()
   {
-    TimerOutput::Scope t(computing_timer, "assembly");   
+    // @todo: support timer
+    //TimerOutput::Scope t(computing_timer, "assembly");   
     field_conditions->advection_field->set_time( time_iterator.get_current_time() );
     
     system_matrix = 0.0;
     system_rhs    = 0.0;
     
-    const auto qGauss = QGauss<dim>(parameters.levelset_degree+1);
+    const auto q_gauss = QGauss<dim>(degree+1);
     
     FEValues<dim> fe_values( fe,
-                             qGauss,
+                             q_gauss,
                              update_values | update_gradients | update_JxW_values | update_quadrature_points );
 
     const unsigned int dofs_per_cell =   fe.dofs_per_cell;
-    const unsigned int n_q_points    =   qGauss.size();
+    const unsigned int n_q_points    =   q_gauss.size();
     
     std::vector<double>         phiAtQ(     n_q_points );
     std::vector<Tensor<1,dim>>  phiGradAtQ( n_q_points, Tensor<1,dim>() );
@@ -152,8 +157,8 @@ namespace MeltPoolDG
       cell_rhs    = 0;
 
       fe_values.reinit(cell);
-      fe_values.get_function_values(     solution_levelset, phiAtQ ); // compute values of old solution
-      fe_values.get_function_gradients(  solution_levelset, phiGradAtQ ); // compute values of old solution
+      fe_values.get_function_values(     solution_levelset, phiAtQ ); 
+      fe_values.get_function_gradients(  solution_levelset, phiGradAtQ ); 
 
       for (const unsigned int q_index : fe_values.quadrature_point_indices())
       {
@@ -165,7 +170,8 @@ namespace MeltPoolDG
         {
           for (unsigned int j=0; j<dofs_per_cell; ++j)
           {
-              auto velocity_grad_phi_j = a * fe_values.shape_grad( j, q_index);  // grad_phi_j(x_q)
+              auto velocity_grad_phi_j = a * fe_values.shape_grad( j, q_index);  
+              // clang-format off
               cell_matrix( i, j ) += (  fe_values.shape_value( i, q_index) * 
                                        fe_values.shape_value( j, q_index) +
                                        parameters.ls_theta * time_step * ( parameters.ls_artificial_diffusivity * 
@@ -174,8 +180,10 @@ namespace MeltPoolDG
                                                              fe_values.shape_value( i, q_index) ) *
                                                              velocity_grad_phi_j 
                                     ) * fe_values.JxW(q_index);                                    
+              // clang-format on
           }
 
+          // clang-format off
           cell_rhs( i ) +=
             (  fe_values.shape_value( i, q_index) * phiAtQ[q_index]
                 - 
@@ -189,8 +197,9 @@ namespace MeltPoolDG
                      * fe_values.shape_value(  i, q_index)
                  )
               ) * fe_values.JxW(q_index) ;      
+          // clang-format on
         }
-      }// end gauss
+      } // end gauss
     
       // assembly
       cell->get_dof_indices(local_dof_indices);
@@ -217,7 +226,7 @@ namespace MeltPoolDG
                                                                             system_rhs,
                                                                             preconditioner);
     
-    pcout << "  with " << iter << " GMRES iterations.\t";
+    pcout << "    GMRES iterations: " << iter;
     constraints.distribute(solution_levelset);
     solution_levelset.update_ghost_values();
   }
@@ -239,10 +248,10 @@ namespace MeltPoolDG
     reinit_data.verbosity_level     = UtilityFunctions::VerbosityType::major;
     
 
-    TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
-                                              locally_owned_dofs,
-                                              locally_relevant_dofs,
-                                              mpi_communicator);
+    SparsityPatternType dsp_re( locally_owned_dofs,
+                   locally_owned_dofs,
+                   locally_relevant_dofs,
+                   mpi_communicator);
     DoFTools::make_sparsity_pattern( dof_handler,
                                      dsp_re,
                                      constraints_no_dirichlet,
@@ -251,19 +260,20 @@ namespace MeltPoolDG
                                    );
     dsp_re.compress();
 
-    reini.initialize( reinit_data , 
+    reini.initialize_as_submodule( reinit_data , 
                       dsp_re,
                       dof_handler,
                       constraints_no_dirichlet,
                       locally_owned_dofs,
-                      locally_relevant_dofs );
+                      locally_relevant_dofs,
+                      GridTools::minimal_cell_diameter(triangulation));
   }
 
   template <int dim, int degree>
   void 
   LevelSetEquation<dim,degree>::compute_reinitialization_model()
   {
-    reini.solve( solution_levelset );
+    reini.run_as_submodule( solution_levelset );
   }
 
   template <int dim, int degree>
@@ -271,9 +281,8 @@ namespace MeltPoolDG
   LevelSetEquation<dim,degree>::initialize_curvature()
   {
     CurvatureData curvature_data;
-    curvature_data.damping_parameter   = 0.0; //GridTools::minimal_cell_diameter(triangulation)*0.5;
-    curvature_data.degree              = degree; 
-    curvature_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation);
+    curvature_data.damping_parameter   = 0.0; // according to the paper by Zahedi (2012)
+    curvature_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation)/std::sqrt(dim);
     curvature_data.verbosity_level     = UtilityFunctions::VerbosityType::major;
     
     TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
@@ -311,7 +320,7 @@ namespace MeltPoolDG
     time_data.start_time       = 0.0; // @ todo: introduce parameter??
     time_data.end_time         = parameters.ls_end_time;
     time_data.time_increment   = parameters.ls_time_step_size; 
-    time_data.max_n_time_steps = 1E10; // this criteria is set to be not relevant for the level set problem
+    time_data.max_n_time_steps = 1e9; // this criteria is set to be not relevant for the level set problem
     
     time_iterator.initialize(time_data);
   }
@@ -323,20 +332,22 @@ namespace MeltPoolDG
     const double time_step = timestep >= 0.0 ? timestep : time_iterator.get_current_time_step_number();
     if (parameters.paraview_do_output)
     {
-        DataOut<dim> data_out;
-        data_out.attach_dof_handler(dof_handler);
-        data_out.add_data_vector(solution_levelset, "phi");
-        //utilityFunctions::GradientPostprocessor<dim>    gradient_postprocessor;
-        //data_out.add_data_vector(solution_levelset, gradient_postprocessor);
-        
-        BlockVectorType normal_vector_field;
-        normal_vector_field.reinit(dim);
-        for (int d=0; d<dim; ++d)
-          normal_vector_field.block(d).reinit(locally_owned_dofs,
-                            locally_relevant_dofs,
-                            mpi_communicator);
+      DataOut<dim> data_out;
+      data_out.attach_dof_handler(dof_handler);
+      data_out.add_data_vector(solution_levelset, "phi");
+      
+      BlockVectorType normal_vector_field;
+      normal_vector_field.reinit(dim);
+      for (int d=0; d<dim; ++d)
+        normal_vector_field.block(d).reinit(locally_owned_dofs,
+                          locally_relevant_dofs,
+                          mpi_communicator);
 
-        if (parameters.paraview_print_normal_vector)
+      if (parameters.paraview_print_normal_vector)
+      {
+        std::cout << "normal vectors are prnted: " << std::endl;
+        /* currently only supported when reinitialization is activated */
+        if ( parameters.ls_do_reinitialization )    
         {
           normal_vector_field = reini.get_normal_vector_field();
           for (int d=0; d<dim; d++)
@@ -344,97 +355,89 @@ namespace MeltPoolDG
             std::string name = "n_"+std::to_string(d);
             data_out.add_data_vector(dof_handler, normal_vector_field.block(d), name);
           }
-         }
-        
-        VectorType curvature_field;
-        curvature_field.reinit( locally_owned_dofs,
-                                locally_relevant_dofs,
-                                mpi_communicator);
+        }
+      }
+      
+      VectorType curvature_field;
+      curvature_field.reinit( locally_owned_dofs,
+                              locally_relevant_dofs,
+                              mpi_communicator);
     
-        if (parameters.paraview_print_curvature)
-        {
-            initialize_curvature();
-            curvature.solve(solution_levelset, curvature_field);
-            data_out.add_data_vector(dof_handler, curvature_field, "curvature");
-        }
-        
-        VectorType levelset_exact;
-        levelset_exact.reinit( locally_owned_dofs,
-                                mpi_communicator);
-        
-        if (parameters.paraview_print_exactsolution)
-        {
-            VectorTools::project( dof_handler, 
-                                  constraints_no_dirichlet,
-                                  QGauss<dim>(degree+1),
-                                  *field_conditions->exact_solution_field,           
-                                  levelset_exact);
-            data_out.add_data_vector(dof_handler, levelset_exact, "exactsolution");
-        }
+      if (parameters.paraview_print_curvature)
+      {
+          std::cout << "curvature is plotted " << std::endl;
+          initialize_curvature();
+          curvature.solve(solution_levelset, curvature_field);
+          data_out.add_data_vector(dof_handler, curvature_field, "curvature");
+      }
+      
+      VectorType levelset_exact;
+      levelset_exact.reinit( locally_owned_dofs,
+                             mpi_communicator);
+      
+      if (parameters.paraview_print_exactsolution)
+      {
+        VectorTools::project( dof_handler, 
+                              constraints,
+                              QGauss<dim>(degree+1),
+                              *field_conditions->exact_solution_field,           
+                              levelset_exact);
 
-        Vector<float> subdomain(triangulation.n_active_cells());
-        for (unsigned int i = 0; i < subdomain.size(); ++i)
-          subdomain(i) = triangulation.locally_owned_subdomain();
-        data_out.add_data_vector(subdomain, "subdomain");
-        
-        data_out.build_patches();
-        
-        const int n_digits_timestep = 2;
-        const int n_groups = 1;
-        data_out.write_vtu_with_pvtu_record(
-            "./", parameters.paraview_filename, time_step, mpi_communicator, n_digits_timestep, n_groups);
+        std::cout << "Norm of exact:" << levelset_exact.l2_norm() << std::endl;
+        data_out.add_data_vector(dof_handler, levelset_exact, "exactsolution");
+      }
+
+      Vector<float> subdomain(triangulation.n_active_cells());
+      for (unsigned int i = 0; i < subdomain.size(); ++i)
+        subdomain(i) = triangulation.locally_owned_subdomain();
+      data_out.add_data_vector(subdomain, "subdomain");
+      
+      data_out.build_patches();
+      
+      const int n_digits_timestep = 2; //@todo: add to parameters!!
+      const int n_groups = 1;          //@todo: add to parameters!!
+      data_out.write_vtu_with_pvtu_record(
+          "./", parameters.paraview_filename, time_step, mpi_communicator, n_digits_timestep, n_groups);
     }
-    //if (parameters.compute_volume_output)
-        //compute_overall_phase_volume();
   }
   
-  
+  // @todo: this function is currently a mess :) !
   template <int dim, int degree>
   void 
   LevelSetEquation<dim,degree>::run()
   {
-    timer.start();
+    // @todo: include timer
+    // timer.start();
     pcout << "Running "
           << " on " << Utilities::MPI::n_mpi_processes(mpi_communicator)
           << " MPI rank(s)..." << std::endl;
-
-    initialize_levelset();
-
-    Postprocessor<dim> postprocessor(mpi_communicator);
-    ////output_results(0.0); // print initial state
     
+    initialize_module();
+    
+    Postprocessor<dim> postprocessor(mpi_communicator);
     print_me();
-
+    
     if ( parameters.ls_do_reinitialization )    
     {
         initialize_reinitialization_model();
         compute_reinitialization_model();
     }
-
-    //output_results(0.01); // print initial state
-
-    //const int p = parameters.levelset_degree;
-    //const double CFL = 0.2/(p*p);
-    //const double dx = GridTools::minimal_cell_diameter(triangulation) / std::sqrt(dim);
+    output_results(0.0); // print initial state
 
     initialize_time_iterator(); 
 
     while ( !time_iterator.is_finished() )
     {
         time_iterator.get_next_time_increment();
-        //utilityFunctions::printLine(1, pcout.get_stream(), mpi_communicator);
         pcout << "Time step " << time_iterator.get_current_time_step_number() << " at current t=" << std::setprecision(10) << time_iterator.get_current_time() << std::endl;
 
         compute_levelset_model(); // @todo: insert updateFlag
 
         if (parameters.ls_do_print_l2norm)
-            pcout << " (not reinitialized) levelset function ||phi|| = " << std::setprecision(10) << solution_levelset.l2_norm() << std::endl;
+            pcout << " levelset function ||phi|| = " << std::setprecision(10) << solution_levelset.l2_norm() << std::endl;
 
         if ( parameters.ls_do_reinitialization )    
-            compute_reinitialization_model();
-
-        if (parameters.ls_do_print_l2norm)
-            pcout << " (reinitialized) levelset function ||phi|| = " << std::setprecision(10) << solution_levelset.l2_norm() << std::endl;
+          compute_reinitialization_model();
 
         output_results();
 
@@ -448,20 +451,21 @@ namespace MeltPoolDG
             pcout << "+" << std::string(70, '-') << "+" << std::endl;
             computing_timer.reset();  
         }
+      
+      if (parameters.compute_volume_output)
+      {
+        auto volume_frac = postprocessor.compute_volume_of_phases( degree,
+                                  degree+1,
+                                  dof_handler,
+                                  solution_levelset,
+                                  time_iterator.get_current_time(),
+                                  mpi_communicator
+                                );
 
-        if (parameters.compute_volume_output)
-        {
-          auto volume_frac = postprocessor.compute_volume_of_phases( degree,
-                                    degree+1,
-                                    dof_handler,
-                                    solution_levelset,
-                                    time_iterator.get_current_time(),
-                                    mpi_communicator
-                                  );
-
-          postprocessor.collect_volume_fraction( volume_frac );
-        }
+        postprocessor.collect_volume_fraction( volume_frac );
+      }
     }
+    
 
     if (parameters.compute_volume_output)
       postprocessor.print_volume_fraction_table(mpi_communicator, parameters.filename_volume_output);

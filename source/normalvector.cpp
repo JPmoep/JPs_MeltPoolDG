@@ -41,7 +41,6 @@ namespace MeltPoolDG
                                           const double               min_cell_size_in
                                  )
     {
-        // replace by extract_local_ ....
         normal_vector_data    = data_in;
         dof_handler           = &dof_handler_in;
         constraints           = &constraints_in;
@@ -60,19 +59,20 @@ namespace MeltPoolDG
         /*
          * the current verbosity level is set
          */
-        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=UtilityFunctions::VerbosityType::silent));
-        this->pcout.set_condition(verbosity_active);
+        //const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=UtilityFunctions::VerbosityType::silent));
+        //this->pcout.set_condition(verbosity_active);
     }
 
     template <int dim, int degree>
     void 
-    NormalVector<dim,degree>::extract_local_parameters_from_global_parameters( const LevelSetParameters& param_in)
+    NormalVector<dim,degree>::extract_local_parameters_from_global_parameters( const Parameters& param_in)
     {
-         //@ introduce new C++20 features --> shift to normalvector class
+      (void)param_in;
+      // @todo: additional global parameters need to be added -- this function is not in usage yet!
       NormalVectorData normal_vector_data;
       normal_vector_data.damping_parameter = this->min_cell_size * 0.5;
       normal_vector_data.verbosity_level   = UtilityFunctions::VerbosityType::major; // @ introduce verbosity levels in global parameters
-      normal_vector_data.do_print_l2norm   = false; //@ param_in.do_print_l2norm; 
+      normal_vector_data.do_print_l2norm   = true; //@ param_in.do_print_l2norm; 
     }
 
 
@@ -120,9 +120,14 @@ namespace MeltPoolDG
                                                                                    rhs );
       normal_vector_out.update_ghost_values();
 
+      normal_vector_out.update_ghost_values();
       if (normal_vector_data.do_print_l2norm)
+      {
+        pcout <<  "| normal vector:         "; 
         for(unsigned int d=0; d<dim; ++d)
-          pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
+          pcout << "|n_" << d << "| = " << std::setprecision(11) << std::setw(15) << std::left << normal_vector_out.block(d).l2_norm();
+        pcout << std::endl;
+      }
     }
 
     template <int dim, int degree>
@@ -149,9 +154,9 @@ namespace MeltPoolDG
           normal_vector_out.block(d) = 0.0;
       } 
 
-      auto qGauss = QGauss<dim>(normal_vector_data.degree+1);
+      auto qGauss = QGauss<dim>(degree+1);
       
-      FE_Q<dim> fe(normal_vector_data.degree);
+      FE_Q<dim> fe(degree);
       
       FEValues<dim> fe_values( fe,
                                qGauss,
@@ -202,11 +207,11 @@ namespace MeltPoolDG
                   for (unsigned int d=0; d<dim; ++d)
                   {
                       // clang-format off
-                      normal_cell_rhs[d](i) +=   phi_i
-                                                 * 
-                                                 normal_at_q[ q_index ][ d ]  
-                                                 * 
-                                                 fe_values.JxW( q_index );
+                      normal_cell_rhs[d](i) += phi_i
+                                               * 
+                                               normal_at_q[ q_index ][ d ]  
+                                               * 
+                                               fe_values.JxW( q_index );
                         // clang-format on
                     }
                 }
@@ -236,8 +241,12 @@ namespace MeltPoolDG
 
         normal_vector_out.update_ghost_values();
         if (normal_vector_data.do_print_l2norm)
+        {
+          pcout <<  "| normal vector:         "; 
           for(unsigned int d=0; d<dim; ++d)
-            pcout << std::setprecision(10) << "   normal vector: ||n_" << d << "|| = " << normal_vector_out.block(d).l2_norm() << std::endl;
+            pcout << "|n_" << d << "| = " << std::setprecision(11) << std::setw(15) << std::left << normal_vector_out.block(d).l2_norm();
+          pcout << std::endl;
+        }
     }
     
     template <int dim, int degree>
@@ -284,7 +293,6 @@ namespace MeltPoolDG
     {
         pcout << "hello from normal vector computation"                           << std::endl;   
         pcout << "damping: "              << normal_vector_data.damping_parameter << std::endl;
-        pcout << "degree: "               << normal_vector_data.degree            << std::endl;
     }
 
     // instantiation

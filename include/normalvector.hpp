@@ -30,9 +30,9 @@
 // for FE_Q<dim> type
 #include <deal.II/fe/mapping.h>
 
+// MeltPoolDG
 #include "utilityfunctions.hpp"
-
-#include <levelsetparameters.hpp>
+#include "parameters.hpp"
 
 namespace MeltPoolDG
 {
@@ -55,25 +55,21 @@ namespace MeltPoolDG
   struct NormalVectorData 
   {
     NormalVectorData()
-        : degree(1)
-        , verbosity_level(UtilityFunctions::VerbosityType::silent)
-        , damping_parameter(1e-6)
+        : damping_parameter(1e-6)
         , do_print_l2norm(false)
+        , verbosity_level(UtilityFunctions::VerbosityType::silent)
     {
     }
-    
-    
-    // interpolation degree of normal vector interpolation
-    unsigned int degree;
 
-    // current verbosity level --> see possible options in UtilityFunctions
-    UtilityFunctions::VerbosityType verbosity_level;
-    
     // parameter for diffusive term in computation of normals
     double damping_parameter;
-
+    
     // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
     bool do_print_l2norm;
+    
+    // current verbosity level --> see possible options in UtilityFunctions
+    UtilityFunctions::VerbosityType verbosity_level;
+
   };
   
   /*
@@ -118,7 +114,7 @@ namespace MeltPoolDG
      *  SimulationBase object. 
      */ 
     void 
-    extract_local_parameters_from_global_parameters( const LevelSetParameters& level_set_solution_in);
+    extract_local_parameters_from_global_parameters( const Parameters& level_set_solution_in);
     
     
     void 

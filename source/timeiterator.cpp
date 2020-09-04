@@ -65,7 +65,7 @@ namespace MeltPoolDG
     void
     TimeIterator::print_me(std::ostream & pcout)
     {
-        //pcout << "      | Time step " << n_time_steps << " at t=" << std::fixed 
-              //<< std::setprecision(5) << current_time << std::endl; 
+        pcout << "      | Time step " << n_time_steps << " at t=" << std::fixed 
+              << std::setprecision(5) << current_time << std::endl; 
     }
 }

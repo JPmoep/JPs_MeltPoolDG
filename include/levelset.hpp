@@ -59,7 +59,7 @@
 // multiphaseflow
 #include "reinitialization.hpp"
 #include "curvature.hpp"
-#include "levelsetparameters.hpp"
+#include "parameters.hpp"
 #include "utilityfunctions.hpp"
 #include "problembase.hpp"
 #include "simulationbase.hpp"
@@ -93,15 +93,12 @@ namespace MeltPoolDG
 
   private:
     void 
-    compute_error( const Function<dim>& ExactSolution );
-    
-    void 
-    setup_system();
+    initialize_module();
     /*
-     *      initialize level set equation
+     *      set the initial conditions for the level set equation
      */
     void 
-    initialize_levelset(); 
+    set_initial_conditions(); 
     /*
      *      initialize the time iterator for solving the level set problem
      *      with the given input parameters
@@ -112,7 +109,7 @@ namespace MeltPoolDG
      *      solve level set equation
      */
     void 
-    compute_levelset_model( );
+    compute_levelset_model();
     /*
      *      setup reinitialization model
      */
@@ -139,32 +136,32 @@ namespace MeltPoolDG
     void print_me();
     
     MPI_Comm                                   mpi_communicator;
-    LevelSetParameters                         parameters;
+    Parameters                                 parameters;
     FE_Q<dim>                                  fe;                         // @todo: should it stay a member variable?
     parallel::distributed::Triangulation<dim>& triangulation;
     DoFHandler<dim>                            dof_handler;
-    AffineConstraints<double>                  constraints;
-    AffineConstraints<double>                  constraints_no_dirichlet;
-
-    SparseMatrixType                           system_matrix;              // global system matrix
-    VectorType                                 system_rhs;                 // global system right-hand side
-    VectorType                                 solution_levelset;
-
-    IndexSet                                   locally_owned_dofs;
-    IndexSet                                   locally_relevant_dofs;
     ConditionalOStream                         pcout;
     TimerOutput                                computing_timer;
     Timer                                      timer;
-
-    TimeIterator                               time_iterator;
-
     std::shared_ptr<FieldConditions<dim>>      field_conditions;
     std::shared_ptr<BoundaryConditions<dim>>   boundary_conditions;
-
     /* 
      * the following are subproblem objects
     */
     Reinitialization<dim,degree>               reini;
     Curvature<dim,degree>                      curvature;
+
+    AffineConstraints<double>                  constraints;
+    AffineConstraints<double>                  constraints_no_dirichlet;
+
+    SparseMatrixType                           system_matrix;              
+    VectorType                                 system_rhs;                
+    VectorType                                 solution_levelset;
+
+    IndexSet                                   locally_owned_dofs;
+    IndexSet                                   locally_relevant_dofs;
+
+    TimeIterator                               time_iterator;
+
   };
 } // namespace MeltPoolDG

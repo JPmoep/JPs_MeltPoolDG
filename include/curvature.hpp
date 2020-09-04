@@ -45,7 +45,6 @@ namespace MeltPoolDG
   {
     CurvatureData()
         : damping_parameter(0.0)
-        , degree(1)
         , min_cell_size(0.0)
         , verbosity_level(UtilityFunctions::VerbosityType::silent)
     {
@@ -54,9 +53,6 @@ namespace MeltPoolDG
     // parameter for diffusive term in computation of normals
     double damping_parameter;
     
-    // interpolation degree of normal vector interpolation
-    unsigned int degree;
-
     // minimum size of cells --> to evaluate damping parameter @todo: should this parameter be made cell-size-dependent?
     double min_cell_size;
 

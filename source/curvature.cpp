@@ -64,7 +64,6 @@ namespace MeltPoolDG
 
         NormalVectorData normal_vector_data;
         normal_vector_data.damping_parameter = curvature_data.min_cell_size * 0.5;
-        normal_vector_data.degree            = curvature_data.degree;
         normal_vector_data.verbosity_level   = curvature_data.verbosity_level;
         //normal_vector_data.min_cell_size     = curvature_data.min_cell_size;
         //normal_vector_data.do_print_l2norm   = curvature_data.do_print_l2norm;
@@ -90,9 +89,9 @@ namespace MeltPoolDG
         system_matrix = 0.0; 
         system_rhs = 0.0;
 
-        FE_Q<dim> fe( curvature_data.degree );
+        FE_Q<dim> fe( degree );
 
-        auto qGauss = QGauss<dim>( curvature_data.degree+1 );
+        auto qGauss = QGauss<dim>( degree+1 );
 
         FEValues<dim> fe_values( fe,
                                  qGauss,
@@ -189,14 +188,11 @@ namespace MeltPoolDG
     {
         pcout << "hello from curvature computation" << std::endl;   
         pcout << "damping: "              << curvature_data.damping_parameter << std::endl;
-        pcout << "degree: "               << curvature_data.degree            << std::endl;
     }
 
     // instantiation
     template class Curvature<2,1>;
     template class Curvature<2,2>;
-    //template class Curvature<3>;
-
 } // namespace MeltPoolDG
 
 

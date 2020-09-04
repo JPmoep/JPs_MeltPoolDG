@@ -38,41 +38,42 @@ namespace MeltPoolDG
   Reinitialization<dim,degree>::Reinitialization(std::shared_ptr<SimulationBase<dim>> base_in )
   : mpi_communicator(    base_in->get_mpi_communicator())
   , pcout(               std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-  , normal_vector_field( mpi_communicator )
   , module_dof_handler(  base_in->triangulation )
-  //, triangulation(       base_in->triangulation )
+  //, triangulation(       base_in->triangulation ) // @todo is it needed in general?
   , field_conditions(    base_in->get_field_conditions()  )
+  , normal_vector_field( mpi_communicator )
   , min_cell_size(       GridTools::minimal_cell_diameter(base_in->triangulation) )
   {
     initialize_data_from_global_parameters(base_in->parameters);
-    initialize_module( base_in );
+    initialize_module();
 
     // the distributed sparsity pattern is only there to fill the system matrix once
-    TrilinosWrappers::SparsityPattern dsp( this->locally_owned_dofs,
-                                           this->locally_owned_dofs,
-                                           this->locally_relevant_dofs,
-                                           mpi_communicator);
+    dsp.reinit( locally_owned_dofs,
+                locally_owned_dofs,
+                locally_relevant_dofs,
+                mpi_communicator);
 
-    DoFTools::make_sparsity_pattern(this->module_dof_handler, 
+    DoFTools::make_sparsity_pattern(module_dof_handler, 
                                     dsp,
-                                    this->module_constraints,
+                                    module_constraints,
                                      Utilities::MPI::this_mpi_process(mpi_communicator)
                                     );
     dsp.compress();
 
     // submodule
-    initialize( this->reinit_data,
-                dsp, 
-                this->module_dof_handler,
-                this->module_constraints,
-                this->locally_owned_dofs,
-                this->locally_relevant_dofs
-                );
+    initialize_as_submodule( reinit_data,
+                             dsp, 
+                             module_dof_handler,
+                             module_constraints,
+                             locally_owned_dofs,
+                             locally_relevant_dofs,
+                             min_cell_size
+                             );
   }
 
   template <int dim, int degree>
   void
-  Reinitialization<dim,degree>::initialize_module(std::shared_ptr<SimulationBase<dim>> base_in)
+  Reinitialization<dim,degree>::initialize_module()
   {
     module_dof_handler.distribute_dofs( FE_Q<dim>(degree) );
     
@@ -83,12 +84,22 @@ namespace MeltPoolDG
     module_constraints.reinit(locally_relevant_dofs);
     DoFTools::make_hanging_node_constraints(module_dof_handler, module_constraints);
     module_constraints.close();     
-
+  }
+  
+  /*
+   *  this constructor should be only called when renitialization is used as a submodule
+   */
+  template <int dim, int degree>
+  Reinitialization<dim,degree>::Reinitialization(const MPI_Comm & mpi_communicator_in)
+  : mpi_communicator(     mpi_communicator_in )
+  , pcout(                std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+  , normal_vector_field(  mpi_communicator_in )
+  {
   }
 
   template <int dim, int degree>
   void
-  Reinitialization<dim,degree>::initialize_data_from_global_parameters(const LevelSetParameters& data_in)
+  Reinitialization<dim,degree>::initialize_data_from_global_parameters(const Parameters& data_in)
   {
     //@ todo: add parameter for paraview output
     reinit_data.reinit_model        = static_cast<ReinitModelType>(data_in.reinit_modeltype);
@@ -102,40 +113,33 @@ namespace MeltPoolDG
     reinit_data.do_matrix_free      = data_in.reinit_do_matrixfree;
   }
 
-  /*
-   *  this constructor is only called when renitialization is used as a submodule
-   */
-  template <int dim, int degree>
-  Reinitialization<dim,degree>::Reinitialization(const MPI_Comm & mpi_communicator_in)
-  : mpi_communicator(     mpi_communicator_in )
-  , pcout(                std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-  , normal_vector_field(  mpi_communicator_in )
-  {
-  }
 
   template <int dim, int degree>
   void
-  Reinitialization<dim,degree>::initialize( const ReinitializationData&           data_in,
-                                            const SparsityPatternType&            dsp_in,
-                                            const DoFHandlerType&                 dof_handler_in,
-                                            const ConstraintsType&                constraints_in,
-                                            const IndexSet&                       locally_owned_dofs_in,
-                                            const IndexSet&                       locally_relevant_dofs_in
-                                          )
+  Reinitialization<dim,degree>::initialize_as_submodule( const ReinitializationData& data_in,
+                                                         const SparsityPatternType&  dsp_in,
+                                                         const DoFHandlerType&       dof_handler_in,
+                                                         const ConstraintsType&      constraints_in,
+                                                         const IndexSet&             locally_owned_dofs_in,
+                                                         const IndexSet&             locally_relevant_dofs_in,
+                                                         const double                min_cell_size_in
+                                                       )
   {
       reinit_data           = data_in;
       dof_handler           = &dof_handler_in;
-      constraints           = &constraints_in; //@ this is a hack!!!
+      constraints           = &constraints_in; 
       locally_owned_dofs    = locally_owned_dofs_in;
       locally_relevant_dofs = locally_relevant_dofs_in;
+      min_cell_size         = min_cell_size_in;
       
-      // @todo: for matrix only
+      // @todo: setup system_matrix for non-matrixfree simulation only
       system_matrix.reinit( dsp_in );
 
       system_rhs.reinit( locally_owned_dofs, 
                          locally_relevant_dofs,
                          mpi_communicator ); 
       
+      // @todo: verbosity feature will be included in the future
       //const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
       //this->pcout.set_condition(verbosity_active);
 
@@ -151,13 +155,12 @@ namespace MeltPoolDG
                                                  locally_relevant_dofs,
                                                  mpi_communicator);
       
-      //@ introduce new C++20 features --> shift to normalvector class
+      //@todo introduce new C++20 features --> shift to normalvector class
       NormalVectorData normal_vector_data;
+      AssertThrow(min_cell_size>1e-16, ExcMessage("Reinitialization: minimum cell size is < 1e-16; however it should be larger than zero"))
       normal_vector_data.damping_parameter = min_cell_size * 0.5;
-
+      normal_vector_data.do_print_l2norm   = true; 
       normal_vector_data.verbosity_level   = reinit_data.verbosity_level;
-      //normal_vector_data.min_cell_size     = reinit_data.min_cell_size;
-      normal_vector_data.do_print_l2norm   = reinit_data.do_print_l2norm;
 
       normal_vector_field.initialize( normal_vector_data, 
                                       dsp_in,
@@ -170,7 +173,7 @@ namespace MeltPoolDG
 
   template <int dim, int degree>
   void 
-  Reinitialization<dim,degree>::solve( VectorType & solution_out )
+  Reinitialization<dim,degree>::run_as_submodule( VectorType & solution_out )
   {
       switch(reinit_data.reinit_model)
       {
@@ -190,7 +193,13 @@ namespace MeltPoolDG
   void 
   Reinitialization<dim,degree>::solve_olsson_model_matrixfree( VectorType & solution_out )
   {
-    pcout << " >>>>>>>>>>>>>>>>>>> REINITIALIZATION START (matrix-free)" << std::endl;
+    // @todo: move this function to utility functions
+    auto print_line= [&](){ int length = 77;
+                            std::ostringstream line; line << "+" << std::string(length-3, '-') << "+" << std::endl;
+                            return line.str(); };
+    
+    pcout << print_line();
+    pcout << "|" << std::setw(20) << "" << std::setw(30) << std::left << "REINITIALIZATION START (matrix-free)" << std::setw(19) << std::right << "|" << std::endl;
     normal_vector_field.compute_normal_vector_field_matrixfree( solution_out, solution_normal_vector );
     solution_normal_vector.update_ghost_values();
     
@@ -246,12 +255,14 @@ namespace MeltPoolDG
         solution += src;
         solution.update_ghost_values();
         
+  
+        if(reinit_data.do_print_l2norm)
+        {
+          pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
+          pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << src.linfty_norm();
+          pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm()/d_tau << "|" << std::endl;
+        }
 
-        pcout << "   with " << iter << " GMRES iterations.";
-        
-        pcout << "\t\t |ΔΨ|∞ = " << std::setprecision(10) << src.linfty_norm();
-        pcout << " |ΔΨ|²/dT = " << std::setprecision(10) << src.l2_norm()/d_tau << std::endl;
-        
         table.add_value("t",       time_iterator->get_current_time());
         table.add_value("iter ",    iter);
         table.add_value("|ΔΨ|∞",    src.linfty_norm());
@@ -261,27 +272,38 @@ namespace MeltPoolDG
     table.set_precision("|ΔΨ|∞",    10);
     table.set_precision("|ΔΨ|²/dT", 10);
 
+    // @todo: include nice formated output
     //if( Utilities::MPI::this_mpi_process(mpi_communicator) == 0) 
       //table.write_text(std::cout); 
     
     solution_out = solution;
     solution_out.update_ghost_values();
-    pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
+    
+    if (reinit_data.do_print_l2norm)
+      pcout << " (reinitialized) levelset function ||phi|| = " << std::setprecision(10) << solution_out.l2_norm() << std::endl;
+    
+    pcout << "|" << std::setw(20) << "" << std::setw(30) << std::left << "REINITIALIZATION END (matrix-free)" << std::setw(21) << std::right <<"|" << std::endl;
+    pcout << print_line();
   }
 
   template <int dim, int degree>
   void 
   Reinitialization<dim,degree>::solve_olsson_model( VectorType & solution_out )
   {
-      pcout << " >>>>>>>>>>>>>>>>>>> REINITIALIZATION START" << std::endl;
+    // @todo: include nice formated output
+      auto print_line= [&](){ int length = 77;
+                              std::ostringstream line; line << "+" << std::string(length-3, '-') << "+" << std::endl;
+                              return line.str(); };
+      pcout << print_line();
+      pcout << "|" << std::setw(20) << "" << std::setw(30) << std::left << "REINITIALIZATION START" << std::setw(25) << std::right << "|" << std::endl;
       VectorType solution_in; //solution_out;
+
       solution_in.reinit(locally_owned_dofs,
                          locally_relevant_dofs,
                          mpi_communicator);
       solution_in.copy_locally_owned_data_from(solution_out);
       solution_in.update_ghost_values();
 
-      
       auto qGauss = QGauss<dim>( degree+1 );
       
       FE_Q<dim> fe( degree );
@@ -314,13 +336,12 @@ namespace MeltPoolDG
 
       initialize_time_iterator(time_iterator); 
       
-      table.clear();
+      //table.clear();
       while ( !time_iterator->is_finished() )
       {
         const double d_tau = time_iterator->get_next_time_increment();
         system_rhs      = 0.0;
         system_matrix   = 0.0;
-        
         for (const auto &cell : dof_handler->active_cell_iterators())
         if (cell->is_locally_owned())
         {
@@ -338,9 +359,12 @@ namespace MeltPoolDG
                                                               solution_normal_vector,
                                                               normal_at_quadrature);
 
-           // @todo: only compute normals once during timestepping
+
+           
+           
+
            for (const unsigned int q_index : fe_values.quadrature_point_indices())
-            {
+           {
                for (const unsigned int i : fe_values.dof_indices())
                {
                    const double nTimesGradient_i = normal_at_quadrature[q_index] * fe_values.shape_grad(i, q_index);
@@ -348,6 +372,7 @@ namespace MeltPoolDG
                    for (const unsigned int j : fe_values.dof_indices())
                    {
                        const double nTimesGradient_j = normal_at_quadrature[q_index] * fe_values.shape_grad(j, q_index);
+                       // clang-format off
                        cell_matrix(i,j) += (
                                              fe_values.shape_value(i,q_index) * fe_values.shape_value(j,q_index)
                                              + 
@@ -355,18 +380,22 @@ namespace MeltPoolDG
                                            ) 
                                            * 
                                            fe_values.JxW( q_index );
+                       // clang-format on
                    }
                   
                    const double diffRhs = epsilon_cell * normal_at_quadrature[q_index] * psiGradAtQ[q_index];
 
-                   cell_rhs(i) += ( 0.5 * ( 1. - psiAtQ[q_index] * psiAtQ[q_index] ) - diffRhs )
+                   // clang-format off
+           //auto compressive_flux = [](const double psi) { return 0.5 * ( 1. - psi * psi ); };
+                   //cell_rhs(i) += ( compressive_flux(psiAtQ[q_index]) - diffRhs )
+                   cell_rhs(i) += ( 0.5 * (1 - psiAtQ[q_index] * psiAtQ[q_index]) - diffRhs )
                                    *
                                    nTimesGradient_i 
                                    *
                                    d_tau 
                                    * 
                                    fe_values.JxW( q_index );
-                   
+                   // clang-format on
                }                                    
           }// end loop over gauss points
           
@@ -383,20 +412,17 @@ namespace MeltPoolDG
         system_matrix.compress( VectorOperation::add );
         system_rhs.compress(    VectorOperation::add );
 
-        // @ here is space for improvement
-        VectorType    re_solution_u_temp( locally_owned_dofs,
-                                           mpi_communicator );
+        // @todo: here is space for improvement; at the moment a lot of copying is performed
+        VectorType    re_solution_u_temp(locally_owned_dofs,
+                                         mpi_communicator );
         VectorType    re_delta_solution_u(locally_owned_dofs,
-                                           mpi_communicator );
+                                          mpi_communicator );
         re_solution_u_temp = solution_out;
         
-        /* 
-         *  iterative solver
-         */
         TrilinosWrappers::PreconditionAMG preconditioner;     
         TrilinosWrappers::PreconditionAMG::AdditionalData data;     
         preconditioner.initialize(system_matrix, data); 
-
+        
         const int iter = LinearSolve<VectorType,
                                      SolverGMRES<VectorType>,
                                      SparseMatrixType,
@@ -415,28 +441,35 @@ namespace MeltPoolDG
         
         if(reinit_data.do_print_l2norm)
         {
-            pcout << "   with " << iter << " GMRES iterations.";
-            pcout << "\t\t |ΔΨ|∞ = " << std::setprecision(10) << re_delta_solution_u.linfty_norm();
-            pcout << " |ΔΨ|²/dT = " << std::setprecision(10) << re_delta_solution_u.l2_norm()/d_tau << std::endl;
+            pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
+            pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << re_delta_solution_u.linfty_norm();
+            pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << re_delta_solution_u.l2_norm()/d_tau << "|" << std::endl;
         }
-        table.add_value("t",       time_iterator->get_current_time());
-        table.add_value("iter ",    iter);
-        table.add_value("|ΔΨ|∞",    re_delta_solution_u.linfty_norm());
-        table.add_value("|ΔΨ|²/dT", re_delta_solution_u.l2_norm()/d_tau);
+        // @todo: nice output
+        //std::cout << "wrte table" << std::endl;
+        //table.add_value("t",       time_iterator->get_current_time());
+        //table.add_value("iter ",    iter);
+        //table.add_value("|ΔΨ|∞",    re_delta_solution_u.linfty_norm());
+        //table.add_value("|ΔΨ|²/dT", re_delta_solution_u.l2_norm()/d_tau);
       }
-      table.set_precision("t",        6);
-      table.set_precision("|ΔΨ|∞",    10);
-      table.set_precision("|ΔΨ|²/dT", 10);
-
+      //table.set_precision("t",        6);
+      //table.set_precision("|ΔΨ|∞",    10);
+      //table.set_precision("|ΔΨ|²/dT", 10);
+      
+      //@todo: nicely formatted output
       //if( Utilities::MPI::this_mpi_process(mpi_communicator) == 0) 
         //table.write_text(std::cout); 
 
-      pcout << "       >>>>>>>>>>>>>>>>>>> REINITIALIZATION END " << std::endl;
+    if (reinit_data.do_print_l2norm)
+      pcout << " (reinitialized) levelset function ||phi|| = " << std::setprecision(10) << solution_out.l2_norm() << std::endl;
+    
+    pcout << "|" << std::setw(20) << "" << std::setw(30) << std::left << "REINITIALIZATION END" << std::setw(35) << std::right <<"|" << std::endl;
+    pcout << print_line();
   }
   
   template <int dim, int degree>
   void
-  Reinitialization<dim,degree>::run( )
+  Reinitialization<dim,degree>::run()
   {
     pcout << "Number of degrees of freedom: " << dof_handler->n_dofs()           
                                  << std::endl << std::endl;
@@ -453,7 +486,7 @@ namespace MeltPoolDG
                           solution_ls );
     solution_ls.update_ghost_values();
     
-    solve(solution_ls);
+    run_as_submodule(solution_ls);
 
   }
 
@@ -462,8 +495,8 @@ namespace MeltPoolDG
   Reinitialization<dim,degree>::output_results(const VectorType& solution_in,
                                                const double      time)
   {
-    //if (parameters.paraview_do_output)
-    //{
+    if (parameters.paraview_do_output)
+    {
       DataOut<dim> data_out;
       data_out.attach_dof_handler(*dof_handler);
       data_out.add_data_vector(solution_in, "phi");
@@ -512,6 +545,7 @@ namespace MeltPoolDG
       const int n_digits_timestep = 2;
       const int n_groups = 1;
       data_out.write_vtu_with_pvtu_record("./", "solution_reinitialization", time, mpi_communicator, n_digits_timestep, n_groups);
+    }
   }
   
   
@@ -531,7 +565,7 @@ namespace MeltPoolDG
 
   template <int dim, int degree>
   void
-  Reinitialization<dim,degree>::print_me( )
+  Reinitialization<dim,degree>::print_me()
   {
       pcout << "hello from reinitialization"                                  << std::endl;   
       // @ is there a more elegant solution?

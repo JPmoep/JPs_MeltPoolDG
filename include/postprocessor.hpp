@@ -128,7 +128,7 @@ namespace MeltPoolDG
     {
       if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0) 
       {
-        volume_table.write_text(std::cout);
+        // @todo: improve that is written to a standard *txt-file
         std::ofstream out_file(filename);
         volume_table.write_tex(out_file); 
         //size_t headerWidths[2] = {

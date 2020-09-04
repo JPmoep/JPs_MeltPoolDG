@@ -28,11 +28,9 @@
 // for FE_Q<dim> type
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_values.h>
-// for FE_Q<dim> type
 #include <deal.II/fe/mapping.h>
-// for TableHandler
 #include <deal.II/base/table_handler.h>
-// from multiphaseflow
+// MeltPoolDG
 #include "utilityfunctions.hpp"
 #include "normalvector.hpp"
 #include "timeiterator.hpp"
@@ -100,11 +98,9 @@ namespace MeltPoolDG
     typedef LinearAlgebra::distributed::Vector<double>      VectorType;
     typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
     typedef TrilinosWrappers::SparseMatrix                  SparseMatrixType;
+    typedef TrilinosWrappers::SparsityPattern               SparsityPatternType;
 
     typedef DoFHandler<dim>                                 DoFHandlerType;
-    
-    typedef TrilinosWrappers::SparsityPattern               SparsityPatternType;
-    
     typedef AffineConstraints<double>                       ConstraintsType;
 
   public:
@@ -114,20 +110,10 @@ namespace MeltPoolDG
      */
     Reinitialization( std::shared_ptr<SimulationBase<dim>> base );
     /*
-     *  Usage as module: this function initials the relevant member data
-     */
-    void 
-    initialize_module(std::shared_ptr<SimulationBase<dim>> base );
-    /*
      *  Usage as module: this function is the "global" run function to be called from the problem base class
      */
     void 
     run(); 
-    /*
-     *  Usage as module: this function is for creating paraview output
-     */
-    void 
-    output_results(const VectorType& solution, const double time=0.0); 
     /*
      *  Usage as submodule
      */
@@ -137,25 +123,26 @@ namespace MeltPoolDG
      *  Usage as submodule
      */
     void
-    initialize( const ReinitializationData&      data_in,
-                const SparsityPatternType&       dsp_in,
-                const DoFHandlerType&            dof_handler_in,
-                const ConstraintsType&           constraints_in,
-                const IndexSet&                  locally_owned_dofs_in,
-                const IndexSet&                  locally_relevant_dofs_in);
+    initialize_as_submodule( const ReinitializationData& data_in,
+                             const SparsityPatternType&  dsp_in,
+                             const DoFHandlerType&       dof_handler_in,
+                             const ConstraintsType&      constraints_in,
+                             const IndexSet&             locally_owned_dofs_in,
+                             const IndexSet&             locally_relevant_dofs_in,
+                             const double                min_cell_size_in);
 
     /*
      *  Usage as submodule: This function reinitializes the solution of the level set equation for a given solution
      */
     void 
-    solve( VectorType & solution_out );
+    run_as_submodule( VectorType & solution_out );
 
     void 
     print_me(); 
     
     // @ does this really need to be global??
     void 
-    initialize_data_from_global_parameters(const LevelSetParameters& data_in); 
+    initialize_data_from_global_parameters(const Parameters& data_in); 
     
     /*
      *  this function returns the last calculated normal vector
@@ -166,6 +153,17 @@ namespace MeltPoolDG
     std::string get_name() final { return "reinitialization"; };
 
   private:
+    /*
+     *  Usage as module: this function initials the relevant member data
+     *  for the computation of the module
+     */
+    void 
+    initialize_module();
+    /*
+     *  Usage as module: this function is for creating paraview output
+     */
+    void 
+    output_results(const VectorType& solution, const double time=0.0); 
     /* 
      * This function solves the Olsson, Kreiss, Zahedi (2007) model for reinitialization 
      * of the level set equation.
@@ -184,39 +182,36 @@ namespace MeltPoolDG
     void
     initialize_time_iterator(std::shared_ptr<TimeIterator> t);
 
-
+  
     // for submodule this is actually needed as reference
     const MPI_Comm                             mpi_communicator;
-
-    ReinitializationData                       reinit_data;
-    bool                                       compute_normal_vector;
-    /*
-    * the following two could be larger objects, thus we do not want
-    * to copy them in the case of usage as a submodule
-    */
+    ConditionalOStream                         pcout;
     DoFHandlerType                             module_dof_handler;
-    ConstraintsType                            module_constraints;
     std::shared_ptr<FieldConditions<dim>>      field_conditions;
+    NormalVector<dim,degree>                   normal_vector_field;
+    double                                     min_cell_size;     // @todo: check CFL condition
+    
+    ConstraintsType                            module_constraints;
+    Parameters                                 parameters;
+    ReinitializationData                       reinit_data;
     /* 
-     * at the moment the implementation considers natural boundary conditions
+    * at the moment the implementation considers natural boundary conditions
      */
     //std::shared_ptr<BoundaryConditions<dim>>   boundary_conditions;
     
     /*
-     * the following two could be larger objects, thus we do not want
-     * to copy them in the case of usage as a submodule
-     */
+    * the following two could be larger objects, thus we do not want
+    * to copy them in the case of usage as a submodule
+    */
     SmartPointer<const DoFHandlerType>      dof_handler;
     SmartPointer<const ConstraintsType>     constraints;
     IndexSet                                locally_owned_dofs;
     IndexSet                                locally_relevant_dofs;
-
+  
+    SparsityPatternType                     dsp;
     SparseMatrixType                        system_matrix;     // @todo: might not be a member variable
     VectorType                              system_rhs;        // @todo: might not be member variables
-    ConditionalOStream                      pcout;
-    NormalVector<dim,degree>                normal_vector_field;
     BlockVectorType                         solution_normal_vector;
     TableHandler                            table;
-    double                                  min_cell_size;     // @todo: check CFL condition
   };
 } // namespace MeltPoolDG

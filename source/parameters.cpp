@@ -1,28 +1,28 @@
 #include <deal.II/base/mpi.h>
 // MeltPoolDG
-#include <levelsetparameters.hpp>
+#include <parameters.hpp>
 
 namespace MeltPoolDG
 {
 
-LevelSetParameters::LevelSetParameters()
+Parameters::Parameters()
   :
   dimension(numbers::invalid_unsigned_int)
 {
   // do nothing
 }
 
-void LevelSetParameters::
+void Parameters::
 process_parameters_file(const std::string &parameter_filename)
 {
   ParameterHandler prm;
-  LevelSetParameters::declare_parameters (prm);
+  Parameters::declare_parameters (prm);
   check_for_file(parameter_filename, prm);
   parse_parameters (parameter_filename, prm);
 }
 
 
-void LevelSetParameters::check_for_file (const std::string &parameter_filename,
+void Parameters::check_for_file (const std::string &parameter_filename,
                                      ParameterHandler  & /*prm*/) const
 {
   std::ifstream parameter_file (parameter_filename.c_str());
@@ -41,7 +41,7 @@ void LevelSetParameters::check_for_file (const std::string &parameter_filename,
 }
 
 
-void LevelSetParameters::declare_parameters (ParameterHandler &prm)
+void Parameters::declare_parameters (ParameterHandler &prm)
 {
   prm.enter_subsection ("general");
   {
@@ -64,6 +64,7 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
   
   prm.enter_subsection ("levelset");
   {
+      // @todo: find a strategy to enable degree as an input parameter (and not as a template parameter)
       //prm.declare_entry    ("level set degree", "1", Patterns::Integer(),
                             //"Sets the degree for the level set function (default value=1)"); 
       prm.declare_entry    ("ls artificial diffusivity","0.0",Patterns::Double(),
@@ -83,8 +84,8 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
       prm.declare_entry ("ls enable CFL condition", "0", Patterns::Integer(),
                          "Enables to dynamically adapt the time step to the current"
                          " mesh size");
-      prm.declare_entry    ("ls do print l2norm","0",Patterns::Integer(),
-                            "Defines if the l2norm of the levelset result should be printed) (default: false)");
+      prm.declare_entry ("ls do print l2norm","0",Patterns::Integer(),
+                         "Defines if the l2norm of the levelset result should be printed) (default: false)");
   }
   prm.leave_subsection();
 
@@ -145,7 +146,7 @@ void LevelSetParameters::declare_parameters (ParameterHandler &prm)
 }
 
 
-void LevelSetParameters::parse_parameters (const std::string parameter_file,
+void Parameters::parse_parameters (const std::string parameter_file,
                                            ParameterHandler &prm)
 {
   try
@@ -169,9 +170,6 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
   prm.leave_subsection ();
 
   prm.enter_subsection("levelset");
-      // @todo: include again when template parameter is removed
-      //levelset_degree        =    prm.get_integer("level set degree");
-      //AssertThrow (levelset_degree >= 1, ExcNotImplemented());
       ls_artificial_diffusivity =        prm.get_double("ls artificial diffusivity");
       ls_do_reinitialization =           prm.get_integer("ls do reinitialization");
       ls_do_print_l2norm  =              prm.get_integer("ls do print l2norm");
@@ -214,7 +212,7 @@ void LevelSetParameters::parse_parameters (const std::string parameter_file,
 
 }
 
-void LevelSetParameters::print_parameters()
+void Parameters::print_parameters()
 {
 
   auto print_parameter = [](std::string name, auto parameter){ std::ostringstream str; 

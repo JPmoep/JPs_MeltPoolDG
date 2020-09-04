@@ -2,6 +2,11 @@
 #include <math.h>
 #include <iomanip>
 
+/*
+ *  @todo: cleanup!!!
+ *
+ */
+
 using namespace dealii;
 
 namespace MeltPoolDG
@@ -81,6 +86,7 @@ double signedDistanceSphere(const Point<3>& P, const Point<3>& Center, const dou
 
  void printLine(const int verbosityLevel, std::ostream& str, const MPI_Comm& mpi_comm)
  {
+   (void)verbosityLevel;
      if( Utilities::MPI::this_mpi_process(mpi_comm) == 0) 
           str << "+" << std::string(68, '-') << "+" << std::endl;
  }
