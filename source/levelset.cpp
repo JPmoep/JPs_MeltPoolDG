@@ -87,7 +87,7 @@ namespace MeltPoolDG
     DoFTools::make_sparsity_pattern( dof_handler,
                                      dsp,
                                      constraints,
-                                     false,
+                                     true,
                                      Utilities::MPI::this_mpi_process(mpi_communicator)
                                    );
     dsp.compress();
@@ -255,7 +255,7 @@ namespace MeltPoolDG
     DoFTools::make_sparsity_pattern( dof_handler,
                                      dsp_re,
                                      constraints_no_dirichlet,
-                                     false,
+                                     true,
                                      Utilities::MPI::this_mpi_process(mpi_communicator)
                                    );
     dsp_re.compress();
@@ -292,7 +292,7 @@ namespace MeltPoolDG
     DoFTools::make_sparsity_pattern( dof_handler,
                                      dsp_re,
                                      constraints_no_dirichlet,
-                                     false,
+                                     true,
                                      Utilities::MPI::this_mpi_process(mpi_communicator)
                                    );
     dsp_re.compress();

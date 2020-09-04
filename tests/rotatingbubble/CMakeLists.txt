@@ -1,2 +1,0 @@
-SET(TEST_LIBRARIES multiphaseflow)
-DEAL_II_PICKUP_TESTS()

@@ -1,2 +1,0 @@
-add_subdirectory(vortexbubble)
-add_subdirectory(rotatingbubble)

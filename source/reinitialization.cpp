@@ -56,6 +56,7 @@ namespace MeltPoolDG
     DoFTools::make_sparsity_pattern(module_dof_handler, 
                                     dsp,
                                     module_constraints,
+                                    true,
                                      Utilities::MPI::this_mpi_process(mpi_communicator)
                                     );
     dsp.compress();
@@ -133,7 +134,20 @@ namespace MeltPoolDG
       min_cell_size         = min_cell_size_in;
       
       // @todo: setup system_matrix for non-matrixfree simulation only
-      system_matrix.reinit( dsp_in );
+    dsp.reinit( locally_owned_dofs,
+                locally_owned_dofs,
+                locally_relevant_dofs,
+                mpi_communicator);
+
+    DoFTools::make_sparsity_pattern(*dof_handler, 
+                                    dsp,
+                                    *constraints,
+                                    true,
+                                     Utilities::MPI::this_mpi_process(mpi_communicator)
+                                    );
+    dsp.compress();
+
+      system_matrix.reinit( dsp );
 
       system_rhs.reinit( locally_owned_dofs, 
                          locally_relevant_dofs,
@@ -163,7 +177,7 @@ namespace MeltPoolDG
       normal_vector_data.verbosity_level   = reinit_data.verbosity_level;
 
       normal_vector_field.initialize( normal_vector_data, 
-                                      dsp_in,
+                                      dsp,
                                       dof_handler_in,
                                       constraints_in,
                                       locally_owned_dofs_in,
@@ -386,9 +400,8 @@ namespace MeltPoolDG
                    const double diffRhs = epsilon_cell * normal_at_quadrature[q_index] * psiGradAtQ[q_index];
 
                    // clang-format off
-           //auto compressive_flux = [](const double psi) { return 0.5 * ( 1. - psi * psi ); };
-                   //cell_rhs(i) += ( compressive_flux(psiAtQ[q_index]) - diffRhs )
-                   cell_rhs(i) += ( 0.5 * (1 - psiAtQ[q_index] * psiAtQ[q_index]) - diffRhs )
+                   auto compressive_flux = [](const double psi) { return 0.5 * ( 1. - psi * psi ); };
+                   cell_rhs(i) += ( compressive_flux(psiAtQ[q_index]) - diffRhs )
                                    *
                                    nTimesGradient_i 
                                    *
@@ -414,8 +427,11 @@ namespace MeltPoolDG
 
         // @todo: here is space for improvement; at the moment a lot of copying is performed
         VectorType    re_solution_u_temp(locally_owned_dofs,
+                                         locally_relevant_dofs,
                                          mpi_communicator );
+
         VectorType    re_delta_solution_u(locally_owned_dofs,
+                                         locally_relevant_dofs,
                                           mpi_communicator );
         re_solution_u_temp = solution_out;
         
@@ -484,6 +500,7 @@ namespace MeltPoolDG
                           QGauss<dim>(degree+1),
                           *field_conditions->initial_field,           
                           solution_ls );
+
     solution_ls.update_ghost_values();
     
     run_as_submodule(solution_ls);

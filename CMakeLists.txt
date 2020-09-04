@@ -79,8 +79,8 @@ DEAL_II_SETUP_TARGET(MeltPoolDG)
 # applications
 ADD_SUBDIRECTORY(simulations)
 
-# tests
-enable_testing()
-ADD_SUBDIRECTORY(tests)
+# tests --> will be added asap
+#enable_testing()
+#ADD_SUBDIRECTORY(tests)
 
 
