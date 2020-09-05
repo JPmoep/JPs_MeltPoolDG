@@ -8,8 +8,6 @@ MESSAGE("                              MeltPoolDG                               
 MESSAGE("                                                                                 ")
 MESSAGE("_________________________________________________________________________________")
 
-PROJECT(MeltPoolDG)
-
 # this is the standard deal.II search mechanism, including check for Trilinos and p4est
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
@@ -31,31 +29,24 @@ IF(NOT DEAL_II_WITH_P4EST)
     )
 ENDIF()
 
+IF(NOT DEAL_II_WITH_TRILINOS)
+  MESSAGE(FATAL_ERROR
+    "\nThis library requires a deal.II installation built with support for Trilinos but it appears to be missing!\n"
+    )
+ENDIF()
+
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 # Set the source files to be compiled
-#SET( TARGET_SRC
-    #source/*.cpp
-  #)
 FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
-FILE(GLOB_RECURSE TARGET_INC  "include/*.hpp")
 SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
 
 # Set the include directory and the name of the project
 INCLUDE_DIRECTORIES(include)
 
-SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
+PROJECT(MeltPoolDG)
 
 ADD_LIBRARY(${CMAKE_PROJECT_NAME} ${TARGET_SRC})
-
-#option(USE_DEAL_SPECTRUM "Use deal.spectrum" OFF)
-#IF(${USE_DEAL_SPECTRUM})
-    #add_definitions(-DUSE_DEAL_SPECTRUM)
-    #include_directories(${FFTW_INC} $ENV{FFTW_INC})
-    #FIND_LIBRARY(FFTW3 fftw3 HINTS ${FFTW_LIB} $ENV{FFTW_LIB})
-    #MESSAGE(${FFTW3})
-    #target_link_libraries(exadg ${FFTW3})
-#ENDIF()
 
 # Define custom targets to easily switch the build type:
 ADD_CUSTOM_TARGET(debug
@@ -68,13 +59,13 @@ ADD_CUSTOM_TARGET(release
   COMMENT "Switch CMAKE_BUILD_TYPE to Release\nPlease call 'make' to build the release project"
   )
 
-IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
-  SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
-ENDIF()
-
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 DEAL_II_SETUP_TARGET(MeltPoolDG)
+
+IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
+  SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
+ENDIF()
 
 # applications
 ADD_SUBDIRECTORY(simulations)
