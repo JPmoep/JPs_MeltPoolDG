@@ -78,11 +78,12 @@ namespace MeltPoolDG
   class LevelSetEquation : public ProblemBase<dim,degree>
   {
   private:
-    typedef LinearAlgebra::distributed::Vector<double>         VectorType;
-    typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
-    typedef TrilinosWrappers::SparseMatrix                     SparseMatrixType;
-    typedef AffineConstraints<double>                          ConstraintsType;
-    typedef TrilinosWrappers::SparsityPattern                  SparsityPatternType;
+    using VectorType          = LinearAlgebra::distributed::Vector<double>;         
+    using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
+    using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
+    using DoFHandlerType      = DoFHandler<dim>;                                    
+    using SparsityPatternType = TrilinosWrappers::SparsityPattern;
+    using ConstraintsType     = AffineConstraints<double>;
 
   public:
     LevelSetEquation( std::shared_ptr<SimulationBase<dim>> base );

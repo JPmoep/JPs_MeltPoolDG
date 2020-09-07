@@ -24,21 +24,20 @@
 #include <deal.II/fe/fe_values.h>
 // for FE_Q<dim> type
 #include <deal.II/fe/mapping.h>
-
-// from multiphaseflow
-#include "utilityfunctions.hpp"
-#include "normalvector.hpp"
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
-
 #include <deal.II/lac/trilinos_sparsity_pattern.h>
+
+// from MeltPoolDG
+#include "utilityfunctions.hpp"
+#include "normalvector.hpp"
 
 namespace MeltPoolDG
 {
   using namespace dealii; 
 
   /*
-   *    Data for computing curvature of a given level set function
+   *    Data for computing the curvature of a given level set function
    */
   
   struct CurvatureData
@@ -61,29 +60,22 @@ namespace MeltPoolDG
   };
   
   /*
-   *     Curvature model for reobtaining the signed-distance 
-   *     property of the  level set equation
+   *     Curvature model
    */
   
   template <int dim, int degree>
   class Curvature
   {
   private:
-    typedef LinearAlgebra::distributed::Vector<double>         VectorType;
-    typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
-    typedef TrilinosWrappers::SparseMatrix                     SparseMatrixType;
-    
-    typedef DoFHandler<dim>                                    DoFHandlerType;
-    
-    typedef TrilinosWrappers::SparsityPattern                  SparsityPatternType;
-    
-    typedef AffineConstraints<double>                          ConstraintsType;
+    using VectorType          = LinearAlgebra::distributed::Vector<double>;         
+    using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
+    using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
+    using DoFHandlerType      = DoFHandler<dim>;                                    
+    using SparsityPatternType = TrilinosWrappers::SparsityPattern;
+    using ConstraintsType     = AffineConstraints<double>;                          
 
   public:
 
-    /*
-     *  Constructor
-     */
     Curvature(const MPI_Comm & mpi_commun_in);
 
     void
@@ -95,8 +87,15 @@ namespace MeltPoolDG
                 const IndexSet&             locally_relevant_dofs_in);
 
     /*
-     *  This function calculates the curvature of the current level set function according
-     *  to
+     *  This function calculates the curvature of the current level set function being
+     *  the solution of an intermediate projection step 
+     *   
+     *              (w, κ)   +   η_κ (∇w, ∇κ)  = (w,∇·n_ϕ)
+     *                    Ω                  Ω            Ω            
+     *  
+     *  with test function w, curvature κ, damping parameter η_κ and the normal to the
+     *  level set function n_ϕ.
+     *
      */
     void 
     solve( const VectorType & levelset_solution_in,

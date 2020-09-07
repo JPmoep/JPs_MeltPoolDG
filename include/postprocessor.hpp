@@ -20,7 +20,7 @@ namespace MeltPoolDG
   class Postprocessor
   {
     private:
-      typedef LinearAlgebra::distributed::Vector<double>      VectorType;
+      using VectorType = LinearAlgebra::distributed::Vector<double>;
       std::vector<std::vector<double>>                        volumes;
       TableHandler                                            volume_table;
       ConditionalOStream                         pcout;

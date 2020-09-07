@@ -16,11 +16,11 @@ template<int dim, int degree, typename number = double>
 class ReinitializationOperator
 {
     public:
-      typedef LinearAlgebra::distributed::Vector<number>       VectorType;
-      typedef LinearAlgebra::distributed::BlockVector<number>  BlockVectorType;
-      typedef VectorizedArray<number>                          VectorizedArrayType;
-      typedef Tensor<1, dim, VectorizedArray<number>>          vector;
-      typedef VectorizedArray<number>                          scalar;
+      using VectorType = LinearAlgebra::distributed::Vector<number>;          
+      using BlockVectorType = LinearAlgebra::distributed::BlockVector<number>;
+      using VectorizedArrayType = VectorizedArray<number>;                   
+      using vector = Tensor<1, dim, VectorizedArray<number>>;                  
+      using scalar = VectorizedArray<number>;                                  
       
       ReinitializationOperator
         (const MatrixFree<dim, number, VectorizedArrayType> &matrix_free,
@@ -81,8 +81,8 @@ class ReinitializationOperator
                const VectorType & src,
                const BlockVectorType& normals) const
     {
-      AssertThrow(d_tau>0.0, ExcMessage("reinitialization operator: d_tau must be set"));
-      AssertThrow(eps>0.0, ExcMessage("reinitialization operator: epsilon must be set"));
+      AssertThrow(d_tau>0.0, ExcMessage("reinitialization matrix-free operator: d_tau must be set"));
+      AssertThrow(eps>0.0, ExcMessage("reinitialization matrix-free operator: epsilon must be set"));
       
       const auto compressive_flux = [&](const auto &phi) 
       {

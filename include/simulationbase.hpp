@@ -1,7 +1,7 @@
 #pragma once
 // dealii
 #include <deal.II/distributed/tria.h>
-// multiphaseflow
+// MeltPoolDG
 #include "parameters.hpp"
 #include "parameters_refactored.hpp"
 #include "boundaryconditions.hpp"

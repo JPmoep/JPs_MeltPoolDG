@@ -18,11 +18,11 @@ namespace MeltPoolDG
     class NormalVectorOperator // @ interface to be added : public MatrixFreeOperator<number, BlockVectorType, BlockVectorType>
     {
       public:
-        typedef LinearAlgebra::distributed::Vector<number>       VectorType;
-        typedef LinearAlgebra::distributed::BlockVector<number>  BlockVectorType;
-        typedef VectorizedArray<number>                          VectorizedArrayType;
-        typedef Tensor<1, dim, VectorizedArray<number>>          vector;
-        typedef VectorizedArray<number>                          scalar;
+        using VectorType = LinearAlgebra::distributed::Vector<number>;
+        using BlockVectorType = LinearAlgebra::distributed::BlockVector<number>;
+        using VectorizedArrayType = VectorizedArray<number>;
+        using vector = Tensor<1, dim, VectorizedArray<number>>;
+        using scalar = VectorizedArray<number>;
         
         NormalVectorOperator
           ( const MatrixFree<dim, number, VectorizedArrayType> &matrix_free,

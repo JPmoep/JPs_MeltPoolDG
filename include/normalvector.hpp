@@ -81,16 +81,12 @@ namespace MeltPoolDG
   class NormalVector
   {
   private:
-
-    typedef LinearAlgebra::distributed::Vector<double>      VectorType;
-    typedef LinearAlgebra::distributed::BlockVector<double> BlockVectorType;
-    typedef TrilinosWrappers::SparseMatrix                  SparseMatrixType;
-
-    typedef DoFHandler<dim>                                 DoFHandlerType;
-    
-    typedef TrilinosWrappers::SparsityPattern               SparsityPatternType;
-    
-    typedef AffineConstraints<double>                       ConstraintsType;
+    using VectorType          = LinearAlgebra::distributed::Vector<double>;         
+    using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
+    using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
+    using DoFHandlerType      = DoFHandler<dim>;                                    
+    using SparsityPatternType = TrilinosWrappers::SparsityPattern;
+    using ConstraintsType     = AffineConstraints<double>;
 
   public:
 

@@ -10,11 +10,13 @@ using namespace dealii;
 
 namespace TypeDefs
 {
-  typedef enum {silent=0, major=1, detailed=2} VerbosityType;
+  enum class VerbosityType {silent, major, detailed};
 } // namespace TypeDefs
 
 namespace UtilityFunctions
 {
+
+
 namespace CharacteristicFunctions
 {
   inline double tanh_characteristic_function(const double& distance, const double& eps)
@@ -32,9 +34,7 @@ namespace CharacteristicFunctions
         return ( distance + eps ) / ( 2.*eps )+ 1. / ( 2. * numbers::PI ) * std::sin(numbers::PI * distance / eps);
   }
   
-  inline
-  template <typename T> int sgn(T val) { return (T(0) < val) - (val < T(0)); }
-  //inline double sign_function(const double& x) { return (x<0) ? -1 : 1; }
+  inline int sgn(const double& x) { return (x<0) ? -1 : 1; }
 
   inline double normalize(const double& x, const double& x_min, const double& x_max)
   {
