@@ -3,6 +3,7 @@
 #include <deal.II/distributed/tria.h>
 // multiphaseflow
 #include "parameters.hpp"
+#include "parameters_refactored.hpp"
 #include "boundaryconditions.hpp"
 #include "fieldconditions.hpp"
 // c++
@@ -24,8 +25,7 @@ namespace MeltPoolDG
         {
         }
 
-        virtual ~SimulationBase()
-        {}
+        virtual ~SimulationBase() = default;
 
         virtual void set_parameters() = 0;
         
@@ -55,5 +55,6 @@ namespace MeltPoolDG
         FieldConditions<dim>                      field_conditions;
         BoundaryConditions<dim>                   boundary_conditions;
         Parameters                                parameters;
+        //LevelsetParameters<dim>                   ls_parameters;
     };
 } // namespace MeltPoolDG
