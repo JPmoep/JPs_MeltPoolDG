@@ -4,8 +4,6 @@
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
-// constraints
-#include <deal.II/lac/affine_constraints.h>
 // solvers
 #include <deal.II/lac/solver_cg.h> // only for symmetric matrices
 #include <deal.II/lac/solver_gmres.h>
@@ -26,9 +24,6 @@ template<typename VectorType,
          typename PreconditionerType = PreconditionIdentity>
 class LinearSolve
 {
-  private:
-    typedef AffineConstraints<double>         ConstraintsType;
-
   public:
     static int solve( const OperatorType&       system_matrix,
                        VectorType&               solution,
