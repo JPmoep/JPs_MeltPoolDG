@@ -1,7 +1,6 @@
 #pragma once
 #include <deal.II/base/function.h>
 #include <deal.II/base/tensor_function.h>
-#include <deal.II/base/config.h> // for types::
 
 #include <memory>
 #include <map>
@@ -12,17 +11,16 @@ namespace MeltPoolDG
 
     enum class BoundaryTypesLevelSet
     {
-        dirichlet_bc = 1,
-        outflow      = 2,        /* do nothing */
-        undefined    = 42   
-        //neumann_bc,   /* currently not implemented */
-        //wall_bc,      /* currently not implemented */
+        dirichlet_bc,
+        outflow     ,        /* do nothing */
+        undefined      
+        //neumann_bc,            /* currently not implemented */
+        //wall_bc,               /* currently not implemented */
     };
 
     template<int dim>
     struct BoundaryConditions
     {
-        unsigned int total_number_of_bc = 0;
         // specify 
         std::map<types::boundary_id, std::shared_ptr<Function<dim>>>         dirichlet_bc;
         //std::map<types::boundary_id, std::shared_ptr<TensorFunction<1,dim>> neumann_bc;
@@ -46,7 +44,6 @@ namespace MeltPoolDG
                 return BoundaryTypesLevelSet::outflow;
             else 
             {
-                // @ how to get current boundary_id into ExecMessage??
                 AssertThrow(false, ExcMessage("for specified boundary_id: " + std::string(id)));
 
                 return BoundaryTypesLevelSet::undefined;
@@ -55,6 +52,7 @@ namespace MeltPoolDG
 
         void verify_boundaries(const unsigned int & total_number_of_bc )
         {
+            // @todo: add a procedure to verify if boundary conditions are set correctly
             AssertThrow(false, ExcMessage("The number of assigned boundary conditions does not match the total number of boundary dofs" ));
         }
     };

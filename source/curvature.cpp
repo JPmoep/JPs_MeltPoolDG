@@ -54,7 +54,7 @@ namespace MeltPoolDG
         /*
          * here the current verbosity level is set
          */
-        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (curvature_data.verbosity_level!=UtilityFunctions::VerbosityType::silent));
+        const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (curvature_data.verbosity_level!=TypeDefs::VerbosityType::silent));
         this->pcout.set_condition(verbosity_active);
 
         /*

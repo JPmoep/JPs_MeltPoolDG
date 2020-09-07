@@ -57,7 +57,7 @@ namespace MeltPoolDG
         , max_reinit_steps(  5)
         , do_print_l2norm(   false)
         , do_matrix_free(    false)
-        , verbosity_level(   UtilityFunctions::VerbosityType::silent)
+        , verbosity_level(   TypeDefs::VerbosityType::silent)
     {
     }
     
@@ -80,7 +80,7 @@ namespace MeltPoolDG
     bool do_matrix_free;
     
     // maximum number of reinitialization steps to be completed
-    UtilityFunctions::VerbosityType verbosity_level;
+    TypeDefs::VerbosityType verbosity_level;
 
     // @ add lambda function for calculating epsilon
   };

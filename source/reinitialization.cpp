@@ -109,7 +109,7 @@ namespace MeltPoolDG
                                       : min_cell_size;
     reinit_data.constant_epsilon    = data_in.reinit_constant_epsilon;
     reinit_data.max_reinit_steps    = data_in.reinit_max_n_steps; //parameters.max_reinitializationsteps;
-    //reinit_data.verbosity_level     = utilityFunctions::VerbosityType::major;
+    //reinit_data.verbosity_level     = TypeDefs::VerbosityType::major;
     reinit_data.do_print_l2norm     = data_in.reinit_do_print_l2norm; //parameters.output_norm_levelset;
     reinit_data.do_matrix_free      = data_in.reinit_do_matrixfree;
   }
@@ -154,7 +154,7 @@ namespace MeltPoolDG
                          mpi_communicator ); 
       
       // @todo: verbosity feature will be included in the future
-      //const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=utilityFunctions::VerbosityType::silent));
+      //const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (reinit_data.verbosity_level!=TypeDefs::VerbosityType::silent));
       //this->pcout.set_condition(verbosity_active);
 
       /*
@@ -233,7 +233,6 @@ namespace MeltPoolDG
                       min_cell_size / ( std::sqrt(2)*2. ));
 
     VectorType src, rhs, solution;
-    BlockVectorType normals(dim); 
 
     rei.initialize_dof_vector(src);
     rei.initialize_dof_vector(rhs);
@@ -602,7 +601,6 @@ namespace MeltPoolDG
   // instantiation
   template class Reinitialization<2,1>;
   template class Reinitialization<2,2>;
-  //template class Reinitialization<3>; // temporarily disabled to work on matrixfree implementation
 } // namespace MeltPoolDG
 
 

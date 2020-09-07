@@ -57,7 +57,7 @@ namespace MeltPoolDG
     NormalVectorData()
         : damping_parameter(1e-6)
         , do_print_l2norm(false)
-        , verbosity_level(UtilityFunctions::VerbosityType::silent)
+        , verbosity_level(TypeDefs::VerbosityType::silent)
     {
     }
 
@@ -68,7 +68,7 @@ namespace MeltPoolDG
     bool do_print_l2norm;
     
     // current verbosity level --> see possible options in UtilityFunctions
-    UtilityFunctions::VerbosityType verbosity_level;
+    TypeDefs::VerbosityType verbosity_level;
 
   };
   

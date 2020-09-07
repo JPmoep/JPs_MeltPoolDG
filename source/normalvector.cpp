@@ -59,7 +59,7 @@ namespace MeltPoolDG
         /*
          * the current verbosity level is set
          */
-        //const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=UtilityFunctions::VerbosityType::silent));
+        //const bool verbosity_active = ((Utilities::MPI::this_mpi_process(mpi_commun) == 0) && (normal_vector_data.verbosity_level!=TypeDefs::VerbosityType::silent));
         //this->pcout.set_condition(verbosity_active);
     }
 
@@ -71,7 +71,7 @@ namespace MeltPoolDG
       // @todo: additional global parameters need to be added -- this function is not in usage yet!
       NormalVectorData normal_vector_data;
       normal_vector_data.damping_parameter = this->min_cell_size * 0.5;
-      normal_vector_data.verbosity_level   = UtilityFunctions::VerbosityType::major; // @ introduce verbosity levels in global parameters
+      normal_vector_data.verbosity_level   = TypeDefs::VerbosityType::major; // @ introduce verbosity levels in global parameters
       normal_vector_data.do_print_l2norm   = true; //@ param_in.do_print_l2norm; 
     }
 
@@ -118,9 +118,6 @@ namespace MeltPoolDG
       LinearSolve<BlockVectorType,SolverCG<BlockVectorType>, OperatorType>::solve( normal_operator,
                                                                                    normal_vector_out,
                                                                                    rhs );
-      normal_vector_out.update_ghost_values();
-
-      normal_vector_out.update_ghost_values();
       if (normal_vector_data.do_print_l2norm)
       {
         pcout <<  "| normal vector:         "; 

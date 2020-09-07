@@ -46,7 +46,7 @@ namespace MeltPoolDG
     CurvatureData()
         : damping_parameter(0.0)
         , min_cell_size(0.0)
-        , verbosity_level(UtilityFunctions::VerbosityType::silent)
+        , verbosity_level(TypeDefs::VerbosityType::silent)
     {
     }
     
@@ -57,7 +57,7 @@ namespace MeltPoolDG
     double min_cell_size;
 
     // current verbosity level --> see possible options in utilityFunctions
-    UtilityFunctions::VerbosityType verbosity_level;
+    TypeDefs::VerbosityType verbosity_level;
   };
   
   /*

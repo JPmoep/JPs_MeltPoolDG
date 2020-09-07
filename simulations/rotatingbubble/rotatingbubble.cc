@@ -34,15 +34,15 @@ namespace MeltPoolDG
     (void)component;
     Point<2> center     = Point<2>(0.0,0.5); 
     const double radius = 0.25;
-    //return UtilityFunctions::signFunction( 
-                //UtilityFunctions::signedDistanceCircle( p, center, radius ));
+    //return UtilityFunctions::CharacteristicFunctions::sgn( 
+                //UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ));
 
     /*
      *  Alternatively, a tanh function could be used, corresponding to the
      *  analytic solution of the reinitialization problem
      */
-    return UtilityFunctions::tanHyperbolicusCharacteristicFunction( 
-           UtilityFunctions::signedDistanceCircle( p, center, radius ), 
+    return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function( 
+           UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ), 
            this->epsInterface 
            );
     }
@@ -71,8 +71,8 @@ namespace MeltPoolDG
       (void)component;
       Point<2> center     = Point<2>(0.0,0.5); 
       const double radius = 0.25;
-      return UtilityFunctions::tanHyperbolicusCharacteristicFunction( 
-             UtilityFunctions::signedDistanceCircle( p, center, radius ), 
+      return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function( 
+             UtilityFunctions::DistanceFunctions::spherical_manifold( p, center, radius ), 
              eps_interface 
              );
     }
@@ -142,8 +142,22 @@ namespace MeltPoolDG
     void set_parameters()
     {
       std::string paramfile;
-      paramfile = "rotatingbubble.prm";;
+      paramfile = "rotatingbubble.prm";
       this->parameters.process_parameters_file(paramfile);
+
+      /*
+       * @todo (wip)
+       * new parameter handling
+       *
+       * LevelsetParameters<dim> my_parameters;
+       * std::string paramfile_new;
+       * paramfile_new = "rotatingbubble_new.prm";
+       * ParameterAcceptor::initialize(paramfile_new);
+       * this->ls_parameters.run();
+       * std::cout << " level set read " << std::endl;
+       * this->ls_parameters.print_parameters();
+      */
+
     }
 
     void create_spatial_discretization()

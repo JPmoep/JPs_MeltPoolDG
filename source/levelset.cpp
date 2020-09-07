@@ -245,7 +245,7 @@ namespace MeltPoolDG
     reinit_data.max_reinit_steps    = parameters.reinit_max_n_steps;
     reinit_data.do_print_l2norm     = parameters.reinit_do_print_l2norm;
     reinit_data.do_matrix_free      = parameters.reinit_do_matrixfree;
-    reinit_data.verbosity_level     = UtilityFunctions::VerbosityType::major;
+    reinit_data.verbosity_level     = TypeDefs::VerbosityType::major;
     
 
     SparsityPatternType dsp_re( locally_owned_dofs,
@@ -283,7 +283,7 @@ namespace MeltPoolDG
     CurvatureData curvature_data;
     curvature_data.damping_parameter   = 0.0; // according to the paper by Zahedi (2012)
     curvature_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation)/std::sqrt(dim);
-    curvature_data.verbosity_level     = UtilityFunctions::VerbosityType::major;
+    curvature_data.verbosity_level     = TypeDefs::VerbosityType::major;
     
     TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
                                               locally_owned_dofs,
