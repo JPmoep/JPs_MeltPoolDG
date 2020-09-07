@@ -38,7 +38,7 @@ namespace MeltPoolDG
   using namespace dealii; 
 
   /*
-   *    Data for computing curvature of the level set function
+   *    Data for computing curvature of a given level set function
    */
   
   struct CurvatureData
@@ -73,11 +73,11 @@ namespace MeltPoolDG
     typedef LinearAlgebra::distributed::BlockVector<double>    BlockVectorType;
     typedef TrilinosWrappers::SparseMatrix                     SparseMatrixType;
     
-    typedef DoFHandler<dim>                           DoFHandlerType;
+    typedef DoFHandler<dim>                                    DoFHandlerType;
     
-    typedef TrilinosWrappers::SparsityPattern                    SparsityPatternType;
+    typedef TrilinosWrappers::SparsityPattern                  SparsityPatternType;
     
-    typedef AffineConstraints<double>                 ConstraintsType;
+    typedef AffineConstraints<double>                          ConstraintsType;
 
   public:
 
@@ -99,11 +99,11 @@ namespace MeltPoolDG
      *  to
      */
     void 
-    solve( const VectorType & solution_in,
+    solve( const VectorType & levelset_solution_in,
                  VectorType & curvature_solution_out );
     
     void 
-    solve( const VectorType & solution_in );
+    solve( const VectorType & levelset_solution_in );
     
     VectorType 
     get_curvature_values() const; 

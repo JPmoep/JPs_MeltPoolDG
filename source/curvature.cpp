@@ -79,12 +79,12 @@ namespace MeltPoolDG
     
     template <int dim, int degree>
     void 
-    Curvature<dim,degree>::solve( const VectorType & solution_in,
+    Curvature<dim,degree>::solve( const VectorType & levelset_solution_in,
                                  VectorType & curvature_out )
     {
         //TimerOutput::Scope timer (computing_timer, "Curvature computation.");
         
-        normal_vector_field.compute_normal_vector_field(solution_in);
+        normal_vector_field.compute_normal_vector_field(levelset_solution_in);
 
         system_matrix = 0.0; 
         system_rhs = 0.0;
@@ -166,13 +166,13 @@ namespace MeltPoolDG
     
     template <int dim, int degree>
     void 
-    Curvature<dim,degree>::solve( const VectorType & solution_in )
+    Curvature<dim,degree>::solve( const VectorType & levelset_solution_in )
     {
         curvature_field.reinit( locally_owned_dofs, 
                                 locally_relevant_dofs,
                                 mpi_commun ); 
 
-        solve( solution_in, curvature_field);
+        solve( levelset_solution_in, curvature_field);
     }
     
     template <int dim, int degree>
