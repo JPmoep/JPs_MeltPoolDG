@@ -6,9 +6,9 @@ subsection spatial domain
   set global refinements = 5
 end
 subsection levelset
-  set ls do reinitialization    = 1
+  set ls do reinitialization    = true
   set ls artificial diffusivity = 0
-  set ls do print l2norm        = 1
+  set ls do print l2norm        = true
   set ls theta                  = 0.5
   set ls start time             = 0.0
   set ls end time               = 1.5707963267948966
@@ -17,16 +17,16 @@ end
 subsection reinitialization
   set reinit max n steps     = 5
   set reinit modeltype       = 1
-  set reinit do matrixfree   = 1
-  set reinit do print l2norm = 1
+  set reinit do matrixfree   = true 
+  set reinit do print l2norm = true 
 end
 subsection paraview
-  set paraview do output           = 0
-  set paraview print normal vector = 1
-  set paraview print curvature     = 1
+  set paraview do output           = false
+  set paraview print normal vector = true
+  set paraview print curvature     = true
 end
 subsection output
-  set do compute error         = 1
-  set compute volume output    = 1
+  set do compute error         = true
+  set compute volume output    = true
   set filename volume output   = myVolumes.txt
 end

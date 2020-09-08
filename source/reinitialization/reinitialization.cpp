@@ -100,7 +100,7 @@ namespace MeltPoolDG
 
   template <int dim, int degree>
   void
-  Reinitialization<dim,degree>::initialize_data_from_global_parameters(const Parameters& data_in)
+  Reinitialization<dim,degree>::initialize_data_from_global_parameters(const Parameters<double>& data_in)
   {
     //@ todo: add parameter for paraview output
     reinit_data.reinit_model        = static_cast<ReinitModelType>(data_in.reinit_modeltype);
@@ -503,7 +503,6 @@ namespace MeltPoolDG
     solution_ls.update_ghost_values();
     
     run_as_submodule(solution_ls);
-
   }
 
   template <int dim, int degree>

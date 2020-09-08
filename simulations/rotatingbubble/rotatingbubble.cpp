@@ -142,21 +142,19 @@ namespace MeltPoolDG
     void set_parameters()
     {
       std::string paramfile;
-      paramfile = "rotatingbubble.prm";
+      paramfile = "rotatingbubble.json";
       this->parameters.process_parameters_file(paramfile);
 
       /*
        * @todo (wip)
        * new parameter handling
-       *
-       * LevelsetParameters<dim> my_parameters;
-       * std::string paramfile_new;
-       * paramfile_new = "rotatingbubble_new.prm";
-       * ParameterAcceptor::initialize(paramfile_new);
-       * this->ls_parameters.run();
-       * std::cout << " level set read " << std::endl;
-       * this->ls_parameters.print_parameters();
-      */
+       */
+      
+           //dealii::ParameterHandler prm;
+
+      //std::string file_name;
+      //file_name = "rotatingbubble_newinterface.prm";
+      //this->ls_parameters.process_parameters_file(file_name);
 
     }
 
@@ -167,6 +165,14 @@ namespace MeltPoolDG
                                  right_domain );
 
       this->triangulation.refine_global( this->parameters.global_refinements );
+      /* 
+       * alternative with shared pointer
+       * */
+      this->triangulation_shared = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+      GridGenerator::hyper_cube( *this->triangulation_shared, 
+                                 left_domain, 
+                                 right_domain );
+      this->triangulation_shared->refine_global( this->parameters.global_refinements );
     }
 
     void set_boundary_conditions()
@@ -246,8 +252,6 @@ int main(int argc, char* argv[])
 
       if ( sim->parameters.dimension==2 )
       {
-        if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
-          sim->parameters.print_parameters();
         sim->create();
         auto problem = ProblemSelector<2,degree>::get_problem(sim);
         problem->run();

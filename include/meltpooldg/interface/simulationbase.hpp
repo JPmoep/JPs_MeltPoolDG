@@ -3,7 +3,6 @@
 #include <deal.II/distributed/tria.h>
 // MeltPoolDG
 #include <meltpooldg/interface/parameters.hpp>
-#include <meltpooldg/interface/parameters_refactored.hpp>
 #include <meltpooldg/interface/boundaryconditions.hpp>
 #include <meltpooldg/interface/fieldconditions.hpp>
 // c++
@@ -52,9 +51,10 @@ namespace MeltPoolDG
 
         const MPI_Comm                            mpi_communicator;
         parallel::distributed::Triangulation<dim> triangulation; 
+        std::shared_ptr<parallel::TriangulationBase<dim>> triangulation_shared; 
         FieldConditions<dim>                      field_conditions;
         BoundaryConditions<dim>                   boundary_conditions;
-        Parameters                                parameters;
+        Parameters<double>                        parameters;
         //LevelsetParameters<dim>                   ls_parameters;
     };
 } // namespace MeltPoolDG

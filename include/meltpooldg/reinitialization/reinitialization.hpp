@@ -140,7 +140,7 @@ namespace MeltPoolDG
     
     // @ does this really need to be global??
     void 
-    initialize_data_from_global_parameters(const Parameters& data_in); 
+    initialize_data_from_global_parameters(const Parameters<double>& data_in); 
     
     /*
      *  this function returns the last calculated normal vector
@@ -190,7 +190,7 @@ namespace MeltPoolDG
     double                                     min_cell_size;     // @todo: check CFL condition
     
     ConstraintsType                            module_constraints;
-    Parameters                                 parameters;
+    Parameters<double>                         parameters;
     ReinitializationData                       reinit_data;
     /* 
     * at the moment the implementation considers natural boundary conditions

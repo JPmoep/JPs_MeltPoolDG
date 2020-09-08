@@ -110,7 +110,7 @@ namespace MeltPoolDG
      *  SimulationBase object. 
      */ 
     void 
-    extract_local_parameters_from_global_parameters( const Parameters& level_set_solution_in);
+    extract_local_parameters_from_global_parameters( const Parameters<double>& level_set_solution_in);
     
     
     void 
