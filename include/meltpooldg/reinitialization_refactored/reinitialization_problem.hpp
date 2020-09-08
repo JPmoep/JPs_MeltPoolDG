@@ -98,9 +98,9 @@ namespace ReinitializationNew
     {
       initialize();
       
-      pcout << "Hello from reinitialization problem " << std::endl;
       while ( !time_iterator.is_finished() )
       {
+        pcout << "t= " << time_iterator.get_current_time() << std::endl;
         reinit_operation.reinit_data.d_tau = time_iterator.get_next_time_increment();   
         reinit_operation.solve();
       }
@@ -122,7 +122,6 @@ namespace ReinitializationNew
       dof_handler.distribute_dofs( fe );
       locally_owned_dofs = dof_handler.locally_owned_dofs(); 
 
-      locally_owned_dofs.print(std::cout);
       DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
       
       /*

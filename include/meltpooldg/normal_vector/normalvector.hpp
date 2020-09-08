@@ -146,11 +146,11 @@ namespace MeltPoolDG
      *  For a given (non-normalized) vector field calculate the (normalized) vector field at the quadrature
      *  points.
      */
-
+    static
     void
     get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
                                     const BlockVectorType& normal_vector_in, 
-                                    std::vector<Tensor<1,dim>>& normal_at_gauss ) const;
+                                    std::vector<Tensor<1,dim>>& normal_at_gauss );
     /*
      * This function overloads the previous function by using the stored vector field as a member variable
      */

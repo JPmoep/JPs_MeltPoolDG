@@ -135,6 +135,10 @@ namespace ReinitializationNew
       set_reinitialization_parameters(data_in);
       
       /*
+       *   create operator
+       */
+      create_operator();
+      /*
        *    initialize normal_vector_field
        */
       initialize_normal_vector_field(data_in);
@@ -142,16 +146,13 @@ namespace ReinitializationNew
        *    update normal vector field
        */
       update_normal_vector_field();
-      /*
-       *   create operator
-       */
-      create_operator();
     }
 
     void 
     update_normal_vector_field()
     {
       normal_vector_field.compute_normal_vector_field( solution_levelset );
+      reinit_operator->set_normal_vector_field(normal_vector_field.normal_vector_field);
     }
     
     void
@@ -163,70 +164,59 @@ namespace ReinitializationNew
       reinit_operator->initialize_dof_vector(rhs);
       reinit_operator->initialize_dof_vector(solution);
 
-      //pcout << "src" << std::endl;
-      //src.locally_owned_elements().print(std::cout);
-      //pcout << "solution_levelset " << std::endl;
-      //solution_levelset.locally_owned_elements().print(std::cout);
-      pcout << "solution_normal_vector_field " << std::endl;
-      normal_vector_field.normal_vector_field.block(0).locally_owned_elements().print(std::cout);
-      
-      /* this step might not be necessary */
+      /* @todo: this step might not be necessary */
       solution.copy_locally_owned_data_from(solution_levelset);
       solution.update_ghost_values();
 
-      pcout << "norm of input solution: " << solution.l2_norm() << std::endl;
-      pcout << "norm of solution levelset: " << solution_levelset.l2_norm() << std::endl;
-      pcout << "norm of solution normal_vector: " << normal_vector_field.normal_vector_field.l2_norm() << std::endl;
-      
       reinit_operator->set_time_increment(reinit_data.d_tau);
       
       if (reinit_data.do_matrix_free)
       {
-        //// create right hand side
         reinit_operator->create_rhs( rhs, solution );
-        pcout << "norm of rhs: " << rhs.l2_norm() << std::endl;
-
-        //const int iter = LinearSolve< VectorType,
-                                      //SolverCG<VectorType>,
-                                      //ReinitializationOperatorBase<dim,degree,double>>
-                                      //::solve( *reinit_operator,
-                                                //src,
-                                                //rhs );
-        //if(reinit_data.do_print_l2norm)
-        //{
-          //pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
-          //pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << src.linfty_norm();
-          //pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm()/reinit_data.d_tau << "|" << std::endl;
-        //}
+        const int iter = LinearSolve< VectorType,
+                                      SolverCG<VectorType>,
+                                      ReinitializationOperatorBase<dim,degree,double>>
+                                      ::solve( *reinit_operator,
+                                                src,
+                                                rhs );
+        pcout << "| CG: i=" << std::setw(5) << std::left << iter;
       }
-      //else
-      //{
-        //TrilinosWrappers::PreconditionAMG preconditioner;     
-        //TrilinosWrappers::PreconditionAMG::AdditionalData data;     
-
-        //preconditioner.initialize(system_matrix, data); 
+      else
+      {
+        system_matrix.reinit( dsp );
         
-        //const int iter = LinearSolve<VectorType,
-                                     //SolverGMRES<VectorType>,
-                                     //SparseMatrixType,
-                                     //TrilinosWrappers::PreconditionAMG>::solve( system_matrix,
-                                                                                //re_delta_solution_u,
-                                                                                //system_rhs,
-                                                                                //preconditioner);
-      //}
+        TrilinosWrappers::PreconditionAMG preconditioner;     
+        TrilinosWrappers::PreconditionAMG::AdditionalData data;     
 
-      //constraints->distribute(src);
+        preconditioner.initialize(system_matrix, data); 
+        
+        reinit_operator->assemble_matrixbased( solution, system_matrix, rhs );
+        const int iter = LinearSolve<VectorType,
+                                     SolverGMRES<VectorType>,
+                                     SparseMatrixType,
+                                     TrilinosWrappers::PreconditionAMG>::solve( system_matrix,
+                                                                                src,
+                                                                                rhs,
+                                                                                preconditioner);
+        //pcout << "| CG: i=" << std::setw(5) << std::left << iter;
+      }
 
-      //solution_levelset += src;
-      //solution.update_ghost_values();
-    }
+      constraints->distribute(src);
+      if(reinit_data.do_print_l2norm)
+      {
+        pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << src.linfty_norm();
+        pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm()/reinit_data.d_tau << "|" << std::endl;
+      }
+
+      solution_levelset += src;
+      solution_levelset.update_ghost_values();
+  }
 
   private:
     void 
     set_reinitialization_parameters(const Parameters<double>& data_in)
     {
         //@ todo: add parameter for paraview output
-      pcout << "my chosen d_tau: " << data_in.reinit_dtau << std::endl;
       reinit_data.reinit_model        = static_cast<ReinitModelType>(data_in.reinit_modeltype);
       reinit_data.d_tau               = data_in.reinit_dtau > 0.0 ? 
                                         data_in.reinit_dtau
@@ -278,7 +268,7 @@ namespace ReinitializationNew
       {
        reinit_operator = 
           std::make_shared<OlssonOperator<dim, degree, double>>( reinit_data.d_tau,
-                                                                 normal_vector_field,
+                                                                 //normal_vector_field,
                                                                  fe,
                                                                  mapping,
                                                                  q_gauss,
@@ -289,7 +279,6 @@ namespace ReinitializationNew
       else
         AssertThrow(false, ExcMessage("Requested reinitialization model not implemented."))
 
-      
       reinit_operator->print_me();
     }
 

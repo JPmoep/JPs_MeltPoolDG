@@ -25,7 +25,7 @@ namespace ReinitializationNew
       public:
         
         ReinitializationOperatorBase( const double d_tau_in,
-                                      const NormalVector<dim,degree>& n_in,
+                                      //const NormalVector<dim,degree>& n_in,
                                       const FE_Q<dim>&  fe_in,
                                       const MappingQGeneric<dim>& mapping_in,
                                       const QGauss<dim>& q_gauss_in,
@@ -33,7 +33,7 @@ namespace ReinitializationNew
                                       SmartPointer<const AffineConstraints<number>> constraints_in
                                     )
         : d_tau               ( d_tau_in   )
-        , normal_vector_field ( n_in       )
+        //, normal_vector_field ( n_in       )
         , fe                  ( fe_in      )
         , mapping             ( mapping_in )
         , q_gauss             ( q_gauss_in ) 
@@ -48,21 +48,46 @@ namespace ReinitializationNew
         void
         initialize_dof_vector(VectorType &dst) const = 0;
         
+        void
+        set_normal_vector_field(const BlockVectorType &normal_vector) 
+        {
+          n.reinit(dim);
+          for (unsigned int d=0; d<dim; ++d)
+          {
+            initialize_dof_vector(n.block(d));
+            n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
+          }
+        }
+        
+        virtual void assemble_matrixbased(const VectorType & levelset_old,
+                                          SparseMatrixType & matrix,
+                                          VectorType & rhs) const
+        {
+          (void)levelset_old;
+          (void)matrix;
+          (void)rhs;
+          AssertThrow(false, ExcMessage("assemble_matrixbased for the requested operator not implemented"));
+        }
+
         virtual void create_rhs(VectorType & dst,
                                const VectorType & src) const
         {
+          (void)dst;
+          (void)src;
           AssertThrow(false, ExcMessage("create_rhs for the requested operator not implemented"));
         }
 
         virtual void vmult(VectorType & dst,
                            const VectorType & src) const
         {
+          (void)dst;
+          (void)src;
           AssertThrow(false, ExcMessage("vmult for the requested operator not implemented"));
         }
   
         virtual void print_me()
         {
-          std::cout << "hello from base class" << std::endl;
+          std::cout << "hello from reinitializationoperatorbase" << std::endl;
         }
 
         void 
@@ -72,7 +97,8 @@ namespace ReinitializationNew
         }
 
         double                                          d_tau; 
-        const NormalVector<dim,degree>&                 normal_vector_field;
+        //const NormalVector<dim,degree>&                 normal_vector_field;
+        BlockVectorType                                 n;
         const FE_Q<dim>&                                fe;
         const MappingQGeneric<dim>&                     mapping;
         const QGauss<dim>&                              q_gauss;
