@@ -57,6 +57,7 @@ namespace MeltPoolDG
     NormalVectorData()
         : damping_parameter(1e-6)
         , do_print_l2norm(false)
+        , do_matrix_free(false)
         , verbosity_level(TypeDefs::VerbosityType::silent)
     {
     }
@@ -66,6 +67,9 @@ namespace MeltPoolDG
     
     // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
     bool do_print_l2norm;
+    
+    // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
+    bool do_matrix_free;
     
     // current verbosity level --> see possible options in UtilityFunctions
     TypeDefs::VerbosityType verbosity_level;
@@ -153,7 +157,8 @@ namespace MeltPoolDG
     void
     get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
                                     std::vector<Tensor<1,dim>>& normal_at_gauss ) const;
-  
+  public:
+    BlockVectorType                         normal_vector_field;
   private:
     const MPI_Comm & mpi_commun;
 
@@ -166,7 +171,6 @@ namespace MeltPoolDG
 
     SparseMatrixType                        system_matrix;
     BlockVectorType                         system_rhs;
-    BlockVectorType                         normal_vector_field;
     ConditionalOStream                      pcout;
   };
 } // namespace MeltPoolDG

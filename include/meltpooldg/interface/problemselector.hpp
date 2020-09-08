@@ -2,6 +2,7 @@
 // MeltPoolDG
 #include <meltpooldg/levelset/levelset.hpp>
 #include <meltpooldg/reinitialization/reinitialization.hpp>
+#include <meltpooldg/reinitialization_refactored/reinitialization_problem.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/interface/problembase.hpp>
 
@@ -24,6 +25,8 @@ namespace MeltPoolDG
           return std::make_shared<LevelSetEquation<dim,degree>>(sim);     
         if( sim->parameters.problem_name == "reinitialization" )
           return std::make_shared<Reinitialization<dim,degree>>(sim);     
+        if( sim->parameters.problem_name == "reinitializationproblem" )
+          return std::make_shared<ReinitializationNew::ReinitializationProblem<dim,degree>>(sim);     
         else
           AssertThrow(false, ExcMessage("The solver for your requested problem type does not exist"));
       }  
