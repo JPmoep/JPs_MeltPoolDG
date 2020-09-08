@@ -1,6 +1,6 @@
 #include <deal.II/base/mpi.h>
 // MeltPoolDG
-#include <parameters.hpp>
+#include <meltpooldg/interface/parameters.hpp>
 
 namespace MeltPoolDG
 {

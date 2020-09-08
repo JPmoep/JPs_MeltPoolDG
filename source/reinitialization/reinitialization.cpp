@@ -23,12 +23,12 @@
 #include <deal.II/numerics/data_out.h>
 
 // MeltPoolDG
-#include "utilityfunctions.hpp"
-#include "normalvectoroperator.hpp"
-#include "linearsolve.hpp"
-#include "reinitialization.hpp"
-#include "timeiterator.hpp"
-#include "reinitializationoperator.hpp"
+#include <meltpooldg/utilities/utilityfunctions.hpp>
+#include <meltpooldg/utilities/linearsolve.hpp>
+#include <meltpooldg/utilities/timeiterator.hpp>
+#include <meltpooldg/normal_vector/normalvectoroperator.hpp>
+#include <meltpooldg/reinitialization/reinitialization.hpp>
+#include <meltpooldg/reinitialization/reinitializationoperator.hpp>
 
 namespace MeltPoolDG
 {

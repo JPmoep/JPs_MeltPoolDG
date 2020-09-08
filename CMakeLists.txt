@@ -38,7 +38,7 @@ ENDIF()
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 # Set the source files to be compiled
-FILE(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
+FILE(GLOB_RECURSE TARGET_SRC  "source/**/*.cpp")
 SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
 
 # Set the include directory and the name of the project

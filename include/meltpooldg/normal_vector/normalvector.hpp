@@ -31,8 +31,8 @@
 #include <deal.II/fe/mapping.h>
 
 // MeltPoolDG
-#include "utilityfunctions.hpp"
-#include "parameters.hpp"
+#include <meltpooldg/utilities/utilityfunctions.hpp>
+#include <meltpooldg/interface/parameters.hpp>
 
 namespace MeltPoolDG
 {

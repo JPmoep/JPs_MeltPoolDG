@@ -10,9 +10,9 @@
 #include <cmath>
 #include <iostream>
 // MeltPoolDG
-#include "utilityfunctions.hpp"
-#include "simulationbase.hpp"
-#include "problemselector.hpp"
+#include <meltpooldg/utilities/utilityfunctions.hpp>
+#include <meltpooldg/interface/simulationbase.hpp>
+#include <meltpooldg/interface/problemselector.hpp>
 
 namespace MeltPoolDG
 {

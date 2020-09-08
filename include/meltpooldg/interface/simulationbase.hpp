@@ -2,10 +2,10 @@
 // dealii
 #include <deal.II/distributed/tria.h>
 // MeltPoolDG
-#include "parameters.hpp"
-#include "parameters_refactored.hpp"
-#include "boundaryconditions.hpp"
-#include "fieldconditions.hpp"
+#include <meltpooldg/interface/parameters.hpp>
+#include <meltpooldg/interface/parameters_refactored.hpp>
+#include <meltpooldg/interface/boundaryconditions.hpp>
+#include <meltpooldg/interface/fieldconditions.hpp>
 // c++
 #include <memory>
 

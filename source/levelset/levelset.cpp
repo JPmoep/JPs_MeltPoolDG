@@ -9,11 +9,11 @@
 
 #include <deal.II/fe/mapping_q.h>
 
-#include "levelset.hpp"
-#include "linearsolve.hpp"
-#include "reinitialization.hpp"
-#include "curvature.hpp"
-#include "postprocessor.hpp"
+#include <meltpooldg/levelset/levelset.hpp>
+#include <meltpooldg/reinitialization/reinitialization.hpp>
+#include <meltpooldg/curvature/curvature.hpp>
+#include <meltpooldg/utilities/linearsolve.hpp>
+#include <meltpooldg/utilities/postprocessor.hpp>
 
 namespace MeltPoolDG
 {

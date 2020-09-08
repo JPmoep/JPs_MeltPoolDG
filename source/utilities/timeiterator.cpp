@@ -1,7 +1,7 @@
 #include <deal.II/base/conditional_ostream.h> 
 #include <iostream>
 // MeltPoolDG
-#include "timeiterator.hpp"
+#include <meltpooldg/utilities/timeiterator.hpp>
 
 namespace MeltPoolDG
 {

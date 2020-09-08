@@ -1,9 +1,9 @@
 #pragma once
 // MeltPoolDG
-#include <levelset.hpp>
-#include <reinitialization.hpp>
-#include <simulationbase.hpp>
-#include <problembase.hpp>
+#include <meltpooldg/levelset/levelset.hpp>
+#include <meltpooldg/reinitialization/reinitialization.hpp>
+#include <meltpooldg/interface/simulationbase.hpp>
+#include <meltpooldg/interface/problembase.hpp>
 
 //@todo: merge this file with problembase.hpp
 

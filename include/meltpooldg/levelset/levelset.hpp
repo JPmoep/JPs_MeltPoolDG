@@ -56,19 +56,20 @@
 #include <deal.II/base/utilities.h>
 #include <deal.II/base/data_out_base.h>
 
-// multiphaseflow
-#include "reinitialization.hpp"
-#include "curvature.hpp"
-#include "parameters.hpp"
-#include "utilityfunctions.hpp"
-#include "problembase.hpp"
-#include "simulationbase.hpp"
 // c++
 #include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <algorithm> // for enum ::All
 #include <cmath>
+
+// meltpooldg
+#include <meltpooldg/reinitialization/reinitialization.hpp>
+#include <meltpooldg/curvature/curvature.hpp>
+#include <meltpooldg/utilities/utilityfunctions.hpp>
+#include <meltpooldg/interface/problembase.hpp>
+#include <meltpooldg/interface/simulationbase.hpp>
+#include <meltpooldg/interface/parameters.hpp>
 
 namespace MeltPoolDG
 {

@@ -13,9 +13,9 @@
 #include <deal.II/lac/solver_cg.h> // only for symmetric matrices
 #include <deal.II/lac/trilinos_sparsity_pattern.h>
 // MeltPoolDG
-#include "normalvector.hpp"
-#include "curvature.hpp"
-#include "linearsolve.hpp"
+#include <meltpooldg/normal_vector/normalvector.hpp>
+#include <meltpooldg/curvature/curvature.hpp>
+#include <meltpooldg/utilities/linearsolve.hpp>
 
 namespace MeltPoolDG
 {

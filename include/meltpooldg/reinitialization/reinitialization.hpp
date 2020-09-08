@@ -31,11 +31,11 @@
 #include <deal.II/fe/mapping.h>
 #include <deal.II/base/table_handler.h>
 // MeltPoolDG
-#include "utilityfunctions.hpp"
-#include "normalvector.hpp"
-#include "timeiterator.hpp"
-#include "problembase.hpp"
-#include "simulationbase.hpp"
+#include <meltpooldg/utilities/utilityfunctions.hpp>
+#include <meltpooldg/normal_vector/normalvector.hpp>
+#include <meltpooldg/utilities/timeiterator.hpp>
+#include <meltpooldg/interface/problembase.hpp>
+#include <meltpooldg/interface/simulationbase.hpp>
 
 namespace MeltPoolDG
 {

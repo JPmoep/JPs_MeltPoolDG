@@ -29,8 +29,8 @@
 #include <deal.II/lac/trilinos_sparsity_pattern.h>
 
 // from MeltPoolDG
-#include "utilityfunctions.hpp"
-#include "normalvector.hpp"
+#include <meltpooldg/utilities/utilityfunctions.hpp>
+#include <meltpooldg/normal_vector/normalvector.hpp>
 
 namespace MeltPoolDG
 {
