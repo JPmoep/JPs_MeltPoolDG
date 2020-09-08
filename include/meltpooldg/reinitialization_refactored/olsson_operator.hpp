@@ -5,7 +5,7 @@
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
-#include <meltpooldg/reinitialization_refactored/reinitializationoperatorbase.hpp>
+#include <meltpooldg/reinitialization_refactored/reinitialization_operator_base.hpp>
 #include <meltpooldg/normal_vector/normalvector.hpp>
 
 using namespace dealii;

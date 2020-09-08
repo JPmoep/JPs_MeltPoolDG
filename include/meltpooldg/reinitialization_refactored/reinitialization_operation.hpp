@@ -39,7 +39,7 @@
 #include <meltpooldg/normal_vector/normalvector.hpp>
 #include <meltpooldg/reinitialization_refactored/olsson_operator.hpp>
 // MeltPoolDG
-#include <meltpooldg/reinitialization_refactored/reinitializationoperatorbase.hpp>
+#include <meltpooldg/reinitialization_refactored/reinitialization_operator_base.hpp>
 
 
 namespace MeltPoolDG
@@ -192,13 +192,13 @@ namespace ReinitializationNew
         
         reinit_operator->assemble_matrixbased( solution, system_matrix, rhs );
         const int iter = LinearSolve<VectorType,
-                                     SolverGMRES<VectorType>,
+                                     SolverCG<VectorType>,
                                      SparseMatrixType,
                                      TrilinosWrappers::PreconditionAMG>::solve( system_matrix,
                                                                                 src,
                                                                                 rhs,
                                                                                 preconditioner);
-        //pcout << "| CG: i=" << std::setw(5) << std::left << iter;
+        pcout << "| CG: i=" << std::setw(5) << std::left << iter;
       }
 
       constraints->distribute(src);
