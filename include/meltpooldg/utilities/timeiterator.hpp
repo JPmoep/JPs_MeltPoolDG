@@ -3,7 +3,6 @@
 
 namespace MeltPoolDG
 {
-
     struct TimeIteratorData
     {
         TimeIteratorData()
@@ -31,7 +30,7 @@ namespace MeltPoolDG
         TimeIterator();
         
         void
-        initialize(const TimeIteratorData& );
+        initialize(const TimeIteratorData&);
         
         bool
         is_finished();
