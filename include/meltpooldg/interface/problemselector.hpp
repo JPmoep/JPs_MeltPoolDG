@@ -1,5 +1,6 @@
 #pragma once
 // MeltPoolDG
+#include <meltpooldg/advection_diffusion_refactored/advection_diffusion_problem.hpp>
 #include <meltpooldg/levelset/levelset.hpp>
 #include <meltpooldg/reinitialization/reinitialization.hpp>
 #include <meltpooldg/reinitialization_refactored/reinitialization_problem.hpp>
@@ -27,6 +28,8 @@ namespace MeltPoolDG
           return std::make_shared<Reinitialization<dim,degree>>(sim);     
         if( sim->parameters.problem_name == "reinitializationproblem" )
           return std::make_shared<ReinitializationNew::ReinitializationProblem<dim,degree>>(sim);     
+        if( sim->parameters.problem_name == "advection_diffusion_problem" )
+          return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim,degree>>(sim);     
         else
           AssertThrow(false, ExcMessage("The solver for your requested problem type does not exist"));
       }  

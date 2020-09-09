@@ -1,10 +1,8 @@
 #pragma once
 #include <deal.II/base/parameter_handler.h>
-
+// c++
 #include <fstream>
 #include <iostream>
-
-//@ put struct into namespace
 
 namespace MeltPoolDG
 {
@@ -83,6 +81,42 @@ struct Parameters
                          );
     }
     prm.leave_subsection();
+    /*
+     *   levelset 
+     */
+    prm.enter_subsection("advection_diffusion");
+    {
+      prm.add_parameter("advec diff diffusivity",
+                         advec_diff_diffusivity,
+                        "Defines the diffusivity for the advection diffusion equation "
+                        );
+      prm.add_parameter("advec diff theta", 
+                         advec_diff_theta,
+                        "Sets the theta value for the time stepping scheme: 0=explicit euler; "
+                        "1=implicit euler; 0.5=Crank-Nicholson; (default=0.5)"
+                        );
+      prm.add_parameter("advec diff start time", 
+                         advec_diff_start_time,
+                        "Defines the start time for the solution of the levelset problem (default=0.0)"
+                        );
+      prm.add_parameter("advec diff end time", 
+                         advec_diff_end_time,
+                        "Sets the end time for the solution of the advection diffusion problem (default=1.0)"
+                        );
+      prm.add_parameter("advec diff time step size", 
+                         advec_diff_time_step_size,
+                        "Sets the step size for time stepping (default=0.01). For non-uniform "
+                        "time stepping, this parameter determines the size of the first time step."
+                        );
+      prm.add_parameter("advec diff do print l2norm",
+                         advec_diff_do_print_l2norm,
+                        "Defines if the l2norm of the advected field should be printed) "
+                        "(default=false)");
+      prm.add_parameter("advec diff do matrixfree",
+                         advec_diff_do_matrixfree,
+                        "Set this parameter if a matrixfree solution procedure should be performed (default=false)");
+    }
+    prm.leave_subsection();
     
     /*
      *   levelset 
@@ -115,8 +149,7 @@ struct Parameters
       prm.add_parameter("ls time step size", 
                          ls_time_step_size,
                         "Sets the step size for time stepping (default=0.01). For non-uniform "
-                        "time stepping, this sets the size of the first time "
-                        "step."
+                        "time stepping, this parameter determines the size of the first time step."
                         );
       prm.add_parameter("ls enable CFL condition", 
                          ls_enable_CFL_condition,
@@ -239,7 +272,16 @@ struct Parameters
   unsigned int        reinit_modeltype          = 1;  //@ readability could be improved by using a string variable
   bool                reinit_do_matrixfree      = false;
   bool                reinit_do_print_l2norm    = false;
-  
+
+  // advection diffusion specific parameters
+  number              advec_diff_diffusivity    = 0.0;
+  number              advec_diff_theta          = 0.5;
+  number              advec_diff_start_time     = 0.0;
+  number              advec_diff_end_time       = 1.0;
+  number              advec_diff_time_step_size = 0.01;
+  bool                advec_diff_do_print_l2norm= false;
+  bool                advec_diff_do_matrixfree  = false;
+
   // normal vector    specific parameters
   // @todo
   
