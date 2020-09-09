@@ -23,11 +23,10 @@ class OlssonOperator : public OperatorBase<number,
     private:
         using VectorType              = LinearAlgebra::distributed::Vector<number>;          
         using BlockVectorType         = LinearAlgebra::distributed::BlockVector<number>;
+        using SparseMatrixType        = TrilinosWrappers::SparseMatrix;
         using VectorizedArrayType     = VectorizedArray<number>;                   
         using vector                  = Tensor<1, dim, VectorizedArray<number>>;                  
         using scalar                  = VectorizedArray<number>;                                  
-        using SparsityPatternType     = TrilinosWrappers::SparsityPattern; 
-        using SparseMatrixType        = TrilinosWrappers::SparseMatrix;
   public:
       OlssonOperator
         ( const double                                  time_increment,
@@ -113,9 +112,9 @@ class OlssonOperator : public OperatorBase<number,
 
           fe_values.get_function_values(     levelset_old, psi_at_q );     // compute values of old solution at tau_n
           fe_values.get_function_gradients(  levelset_old, grad_psi_at_q ); // compute gradients of old solution at tau_n
-          NormalVector<dim,degree>::get_unit_normals_at_quadrature(fe_values,
-                                                            n,
-                                                            normal_at_q);
+          get_unit_normals_at_quadrature(fe_values,
+                                         n,
+                                         normal_at_q);
 
           for (const unsigned int q_index : fe_values.quadrature_point_indices())
           {
@@ -279,6 +278,23 @@ class OlssonOperator : public OperatorBase<number,
           n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
         }
         n.update_ghost_values();
+      }
+
+      static
+      void
+      get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
+                                      const BlockVectorType& normal_vector_field_in, 
+                                      std::vector<Tensor<1,dim>>& unit_normal_at_quadrature)
+      {
+        for (unsigned int d=0; d<dim; ++d )
+        {
+            std::vector<double> temp ( unit_normal_at_quadrature.size() );
+            fe_values.get_function_values(  normal_vector_field_in.block(d), temp); // compute normals from level set solution at tau=0
+            for (const unsigned int q_index : fe_values.quadrature_point_indices())
+                unit_normal_at_quadrature[ q_index ][ d ] = temp[ q_index ];
+        }
+        for (auto& n : unit_normal_at_quadrature)
+            n /= n.norm(); //@todo: add exception if norm is zero
       }
 
       const FE_Q<dim>&                                fe;

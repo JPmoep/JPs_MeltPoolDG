@@ -15,6 +15,8 @@
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/normal_vector/normalvector.hpp>
+#include <meltpooldg/normal_vector_refactored/normal_vector_operation.hpp>
+#include <meltpooldg/normal_vector/normalvector.hpp>
 #include <meltpooldg/reinitialization_refactored/olsson_operator.hpp>
 
 namespace MeltPoolDG
@@ -79,27 +81,32 @@ namespace ReinitializationNew
      */
     VectorType                                 solution_levelset;
 
-    ReinitializationOperation(
-                const DoFHandlerType&       dof_handler_in,
-                const MappingQGeneric<dim>& mapping_in,
-                const FE_Q<dim>&            fe_in,
-                const QGauss<dim>&          q_gauss_in,
-                const ConstraintsType&      constraints_in,
-                const IndexSet&             locally_owned_dofs_in,
-                const IndexSet&             locally_relevant_dofs_in,
-                const double                min_cell_size_in)
-      :
-      fe                    ( fe_in),
-      mapping               ( mapping_in),
-      q_gauss               ( q_gauss_in),
-      dof_handler           ( &dof_handler_in ),
-      constraints           ( &constraints_in ),
-      locally_owned_dofs    ( locally_owned_dofs_in ),
-      locally_relevant_dofs ( locally_relevant_dofs_in ),
-      min_cell_size         ( min_cell_size_in ),
-      mpi_communicator      ( UtilityFunctions::get_mpi_comm(*dof_handler) ),
-      pcout                 ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0),
-      normal_vector_field   ( mpi_communicator )
+    ReinitializationOperation( const DoFHandlerType&       dof_handler_in,
+                               const MappingQGeneric<dim>& mapping_in,
+                               const FE_Q<dim>&            fe_in,
+                               const QGauss<dim>&          q_gauss_in,
+                               const ConstraintsType&      constraints_in,
+                               const IndexSet&             locally_owned_dofs_in,
+                               const IndexSet&             locally_relevant_dofs_in,
+                               const double                min_cell_size_in)
+      : fe                    ( fe_in )
+      , mapping               ( mapping_in )
+      , q_gauss               ( q_gauss_in )
+      , dof_handler           ( &dof_handler_in )
+      , constraints           ( &constraints_in )
+      , locally_owned_dofs    ( locally_owned_dofs_in )
+      , locally_relevant_dofs ( locally_relevant_dofs_in )
+      , min_cell_size         ( min_cell_size_in )
+      , mpi_communicator      ( UtilityFunctions::get_mpi_comm(*dof_handler) )
+      , pcout                 ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+      , normal_vector_field   ( dof_handler_in,
+                                mapping_in,
+                                fe_in,
+                                q_gauss_in,
+                                constraints_in,
+                                locally_owned_dofs_in,
+                                locally_relevant_dofs_in,
+                                min_cell_size_in )
     {
     }
     
@@ -112,6 +119,7 @@ namespace ReinitializationNew
                                mpi_communicator);
 
       solution_levelset.copy_locally_owned_data_from(solution_in);
+      solution_levelset.update_ghost_values();
 
       set_reinitialization_parameters(data_in);
       
@@ -154,8 +162,9 @@ namespace ReinitializationNew
       }
       else
       {
-        system_matrix.reinit( dsp );
         
+        system_matrix.reinit( dsp );  
+
         TrilinosWrappers::PreconditionAMG preconditioner;     
         TrilinosWrappers::PreconditionAMG::AdditionalData data;     
 
@@ -203,50 +212,40 @@ namespace ReinitializationNew
     void 
     initialize_normal_vector_field(const Parameters<double>& data_in)
     {
-      NormalVectorData normal_vector_data;
-      AssertThrow(min_cell_size>1e-16, ExcMessage("Reinitialization: minimum cell size is < 1e-16; however it should be larger than zero"))
-      normal_vector_data.damping_parameter = min_cell_size * 0.5;
-      normal_vector_data.do_print_l2norm   = true; 
-      normal_vector_data.verbosity_level   = reinit_data.verbosity_level;
-      normal_vector_data.do_matrix_free    = reinit_data.do_matrix_free;
-
-
-      /* todo: this will be shifted to normal_vector later */
-      dsp.reinit( locally_owned_dofs,
-                  locally_owned_dofs,
-                  locally_relevant_dofs,
-                  mpi_communicator);
-
-      DoFTools::make_sparsity_pattern(*dof_handler, 
-                                      dsp,
-                                      *constraints,
-                                      true,
-                                      Utilities::MPI::this_mpi_process(mpi_communicator)
-                                      );
-      dsp.compress();
-
-      normal_vector_field.initialize( normal_vector_data, 
-                                      dsp,
-                                      *dof_handler,
-                                      *constraints,
-                                      locally_owned_dofs,
-                                      locally_relevant_dofs,
-                                      min_cell_size);
+      normal_vector_field.initialize(data_in);
     }
     
     void 
     update_normal_vector_field()
     {
-      normal_vector_field.compute_normal_vector_field_matrixfree( solution_levelset );
+      normal_vector_field.solve( solution_levelset );
     }
     
     void create_operator()
     {
+      if (!reinit_data.do_matrix_free)
+      {
+        dsp.reinit( locally_owned_dofs,
+                    locally_owned_dofs,
+                    locally_relevant_dofs,
+                    mpi_communicator);
+
+        DoFTools::make_sparsity_pattern(*dof_handler, 
+                                        dsp,
+                                        *constraints,
+                                        true,
+                                        Utilities::MPI::this_mpi_process(mpi_communicator)
+                                        );
+        dsp.compress();
+        
+        system_matrix.reinit( dsp );  
+      }
+      
       if (reinit_data.reinit_model == ReinitModelType::olsson2007)
       {
        reinit_operator = 
           std::make_shared<OlssonOperator<dim, degree, double>>( reinit_data.d_tau,
-                                                                 normal_vector_field.normal_vector_field,
+                                                                 normal_vector_field.solution_normal_vector,
                                                                  fe,
                                                                  mapping,
                                                                  q_gauss,
@@ -286,8 +285,7 @@ namespace ReinitializationNew
     /*
      *   Computation of the normal vectors
      */
-    NormalVector<dim,degree>                   normal_vector_field;
-    
+    NormalVectorNew::NormalVectorOperation<dim,degree> normal_vector_field;
     /*
     * the following are prototypes for matrix-based operators
     */
