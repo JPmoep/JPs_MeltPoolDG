@@ -4,36 +4,25 @@
  *
  * ---------------------------------------------------------------------*/
 #pragma once
-
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
-#include <deal.II/lac/trilinos_sparse_matrix.h>
-#include <deal.II/lac/la_parallel_vector.h>
-#include <deal.II/lac/la_parallel_block_vector.h>
 // enabling conditional ostreams
 #include <deal.II/base/conditional_ostream.h> 
 // for index set
 #include <deal.II/base/index_set.h>
-// for mpi
-#include <deal.II/base/mpi.h> 
-// for quadrature points
-#include <deal.II/base/quadrature_lib.h>
-// for using smart pointers
-#include <deal.II/base/smartpointer.h>
 //// for distributed triangulation
 #include <deal.II/distributed/tria_base.h>
 // for dof_handler type
 #include <deal.II/dofs/dof_handler.h>
 // for FE_Q<dim> type
 #include <deal.II/fe/fe_q.h>
+// for mapping
 #include <deal.II/fe/mapping.h>
 
 // MeltPoolDG
-#include <meltpooldg/utilities/utilityfunctions.hpp>
-#include <meltpooldg/utilities/timeiterator.hpp>
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
-#include <meltpooldg/normal_vector/normalvector.hpp>
+#include <meltpooldg/utilities/timeiterator.hpp>
 #include <meltpooldg/reinitialization_refactored/reinitialization_operation.hpp>
 
 namespace MeltPoolDG
@@ -52,8 +41,6 @@ namespace ReinitializationNew
   {
   private:
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
-    using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
-    using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
     using DoFHandlerType      = DoFHandler<dim>;                                    
     using SparsityPatternType = TrilinosWrappers::SparsityPattern;
 

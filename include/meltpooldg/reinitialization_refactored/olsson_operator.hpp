@@ -4,20 +4,16 @@
  *
  * ---------------------------------------------------------------------*/
 #pragma once
-#include <deal.II/lac/generic_linear_algebra.h>
-#include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
 #include <meltpooldg/interface/operator_base.hpp>
-#include <meltpooldg/normal_vector/normalvector.hpp>
-
-using namespace dealii;
 
 namespace MeltPoolDG
 {
 namespace ReinitializationNew
 {
+using namespace dealii;
 
 template<int dim, int degree, typename number = double>
 class OlssonOperator : public OperatorBase<number, 
@@ -75,7 +71,7 @@ class OlssonOperator : public OperatorBase<number,
 
       /*
        *    this is the matrix-based implementation of the rhs and the system_matrix
-       *      
+       *    @todo: this could be improved by using the WorkStream functionality of dealii
        */
       
       void

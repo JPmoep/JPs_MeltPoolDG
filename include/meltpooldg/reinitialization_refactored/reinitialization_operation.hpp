@@ -7,40 +7,15 @@
 
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
-#include <deal.II/lac/trilinos_sparse_matrix.h>
-#include <deal.II/lac/la_parallel_vector.h>
-#include <deal.II/lac/la_parallel_block_vector.h>
-
-// enabling conditional ostreams
-#include <deal.II/base/conditional_ostream.h> 
-// for index set
-#include <deal.II/base/index_set.h>
-// for mpi
-#include <deal.II/base/mpi.h> 
-// for quadrature points
-#include <deal.II/base/quadrature_lib.h>
-// for using smart pointers
+ //for using smart pointers
 #include <deal.II/base/smartpointer.h>
-//// for distributed triangulation
-//#include <deal.II/distributed/tria.h>
-// for dof_handler type
-#include <deal.II/dofs/dof_handler.h>
-// for FE_Q<dim> type
-#include <deal.II/fe/fe_q.h>
-#include <deal.II/fe/fe_values.h>
-#include <deal.II/fe/mapping.h>
-#include <deal.II/base/table_handler.h>
+
 // MeltPoolDG
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
-#include <meltpooldg/utilities/timeiterator.hpp>
-#include <meltpooldg/interface/problembase.hpp>
-#include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/normal_vector/normalvector.hpp>
 #include <meltpooldg/reinitialization_refactored/olsson_operator.hpp>
-// MeltPoolDG
-
 
 namespace MeltPoolDG
 {
@@ -53,6 +28,7 @@ namespace ReinitializationNew
    */
   
   enum class ReinitModelType { olsson2007 = 1,  //@ todo: number can be removed when input parameter of model type is changed to string
+                               /* ... your reinitialization operator ...*/
                                undefined  };
   
   struct ReinitializationData
@@ -98,8 +74,8 @@ namespace ReinitializationNew
   public:
     ReinitializationData                       reinit_data;
     /*
-     *    This is the characteristic solution of this module and will be also publically accessible for 
-     *    output_results.
+     *    This is the primary solution variable of this module, which will be also publically 
+     *    accessible for output_results.
      */
     VectorType                                 solution_levelset;
 
@@ -318,5 +294,5 @@ namespace ReinitializationNew
     SparsityPatternType                       dsp;
     SparseMatrixType                          system_matrix;     // @todo: might not be a member variable
   };
-} // namespace Reinitialization
+} // namespace ReinitializationNew
 } // namespace MeltPoolDG
