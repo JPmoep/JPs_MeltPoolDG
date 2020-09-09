@@ -157,23 +157,18 @@ namespace ReinitializationNew
     void
     solve()
     {
-      VectorType src, rhs, solution;
+      VectorType src, rhs;
 
       reinit_operator->initialize_dof_vector(src);
       reinit_operator->initialize_dof_vector(rhs);
-      reinit_operator->initialize_dof_vector(solution);
-
-      /* @todo: this step might not be necessary */
-      solution.copy_locally_owned_data_from(solution_levelset);
-      solution.update_ghost_values();
-
+      
       reinit_operator->set_time_increment(reinit_data.d_tau);
 
       int iter = 0;
       
       if (reinit_data.do_matrix_free)
       {
-        reinit_operator->create_rhs( rhs, solution );
+        reinit_operator->create_rhs( rhs, solution_levelset );
         iter = LinearSolve< VectorType,
                                       SolverCG<VectorType>,
                                       OperatorBase<double>>
@@ -189,7 +184,7 @@ namespace ReinitializationNew
         TrilinosWrappers::PreconditionAMG::AdditionalData data;     
 
         preconditioner.initialize(system_matrix, data); 
-        reinit_operator->assemble_matrixbased( solution, system_matrix, rhs );
+        reinit_operator->assemble_matrixbased( solution_levelset, system_matrix, rhs );
         iter = LinearSolve<VectorType,
                                      SolverCG<VectorType>,
                                      SparseMatrixType,
@@ -202,7 +197,9 @@ namespace ReinitializationNew
       constraints->distribute(src);
 
       solution_levelset += src;
+      
       solution_levelset.update_ghost_values();
+
       if(reinit_data.do_print_l2norm)
       {
         pcout << "| CG: i=" << std::setw(5) << std::left << iter;
@@ -282,6 +279,12 @@ namespace ReinitializationNew
                                                                  min_cell_size
                                                                 );
       }
+      /* 
+       * add your desired operators
+       *
+       * else if (reinit_data.reinitmodel == ReinitModelType::mymodel
+       *    ....
+       */
       else
         AssertThrow(false, ExcMessage("Requested reinitialization model not implemented."))
 
@@ -297,23 +300,23 @@ namespace ReinitializationNew
     const IndexSet&                            locally_relevant_dofs;
     double                                     min_cell_size;           // @todo: check CFL condition
     const MPI_Comm                             mpi_communicator;
-    ConditionalOStream                         pcout;                   // reference
-    
-    std::shared_ptr<OperatorBase<double>> reinit_operator;
+    ConditionalOStream                         pcout;                   // @todo: reference
     
     /*
-     *   Normal vector computation
+     *  This shared pointer will point to your user-defined reinitialization operator.
+     */
+    std::shared_ptr<OperatorBase<double>>      reinit_operator;
+    
+    /*
+     *   Computation of the normal vectors
      */
     NormalVector<dim,degree>                   normal_vector_field;
     
     /*
-    * the following two could be larger objects, thus we do not want
-    * to copy them in the case of usage as a submodule
+    * the following are prototypes for matrix-based operators
     */
     SparsityPatternType                       dsp;
     SparseMatrixType                          system_matrix;     // @todo: might not be a member variable
-    VectorType                                system_rhs;        // @todo: might not be member variables
-    TableHandler                              table;
   };
 } // namespace Reinitialization
 } // namespace MeltPoolDG
