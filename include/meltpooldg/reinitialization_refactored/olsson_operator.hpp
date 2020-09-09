@@ -1,11 +1,15 @@
-// for parallelization
+/* ---------------------------------------------------------------------
+ *
+ * Author: Magdalena Schreter, TUM, September 2020
+ *
+ * ---------------------------------------------------------------------*/
 #pragma once
 #include <deal.II/lac/generic_linear_algebra.h>
 #include <deal.II/lac/la_parallel_vector.h>
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
-#include <meltpooldg/reinitialization_refactored/reinitialization_operator_base.hpp>
+#include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/normal_vector/normalvector.hpp>
 
 using namespace dealii;
@@ -16,7 +20,9 @@ namespace ReinitializationNew
 {
 
 template<int dim, int degree, typename number = double>
-class OlssonOperator : public ReinitializationOperatorBase<dim,degree,number>
+class OlssonOperator : public OperatorBase<number, 
+                              LinearAlgebra::distributed::Vector<number>, 
+                              LinearAlgebra::distributed::Vector<number>>
 {
     private:
         using VectorType              = LinearAlgebra::distributed::Vector<number>;          
@@ -28,28 +34,25 @@ class OlssonOperator : public ReinitializationOperatorBase<dim,degree,number>
         using SparseMatrixType        = TrilinosWrappers::SparseMatrix;
   public:
       OlssonOperator
-        (
-         const double                         time_increment,
-         //const NormalVector<dim,degree>&      n_in,
-         const FE_Q<dim>&                     fe_in,
-         const MappingQGeneric<dim>&          mapping_in,
-         const QGauss<dim>&                   q_gauss_in,
-         SmartPointer<const DoFHandler<dim>>  dof_handler_in,
-         SmartPointer<const AffineConstraints<number>> constraints_in
-         )
-        :
-         //eps(diffusion),
-         ReinitializationOperatorBase<dim,degree,number>(time_increment, 
-                                                         //n_in,
-                                                         fe_in,
-                                                         mapping_in,
-                                                         q_gauss_in,
-                                                         dof_handler_in,
-                                                         constraints_in
-                                                         ) 
+        ( const double                                  time_increment,
+          const BlockVectorType&                        n_in,
+          const FE_Q<dim>&                              fe_in,
+          const MappingQGeneric<dim>&                   mapping_in,
+          const QGauss<dim>&                            q_gauss_in,
+          SmartPointer<const DoFHandler<dim>>           dof_handler_in,
+          SmartPointer<const AffineConstraints<number>> constraints_in,
+          const double                                  min_cell_size
+        )
+        : fe                  ( fe_in      )
+        , mapping             ( mapping_in )
+        , q_gauss             ( q_gauss_in ) 
+        , dof_handler         ( dof_handler_in) 
+        , constraints         ( constraints_in)
+        , eps                 ( min_cell_size / (std::sqrt(dim) * 2))
         {
+          this->set_time_increment(time_increment);
           /*
-           * initialize MatrixFree; this is done also in case of a matrix-based simulation
+           * initialize MatrixFree; this is also used in case of a matrix-based simulation
            * to provide the utility "initialize_dof_vector"
            */
           QGauss<1>     quad_1d(degree + 1);
@@ -57,17 +60,21 @@ class OlssonOperator : public ReinitializationOperatorBase<dim,degree,number>
           typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData  additional_data;
           additional_data.mapping_update_flags = update_values | update_gradients;
         
-          matrix_free.reinit(this->mapping, *this->dof_handler, *this->constraints, quad_1d, additional_data);
-        
+          matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
+          /*
+           *  initialize normal_vector
+           */
+          set_normal_vector_field(n_in);
         }
       
       void
-      print_me()
+      print_me() const override
       {
+        //std::cout << "hello from olsson operator; eps: " << eps << std::endl;
       }
 
       /*
-       *    matrix-based implementation version
+       *    this is the matrix-based implementation of the rhs and the system_matrix
        *      
        */
       
@@ -77,28 +84,28 @@ class OlssonOperator : public ReinitializationOperatorBase<dim,degree,number>
                             VectorType & rhs ) const override
       {
         levelset_old.update_ghost_values();
-        FEValues<dim> fe_values( this->mapping,
-                   this->fe,
-                   this->q_gauss,
-                   update_values | update_gradients | update_quadrature_points | update_JxW_values
-                   );// @todo: potentially move this call to own init call
+        FEValues<dim> fe_values( mapping,
+                                 fe,
+                                 q_gauss,
+                                 update_values | update_gradients | update_quadrature_points | update_JxW_values
+                                 );// @todo: potentially move this call to own init call
         
-        FullMatrix<double>   cell_matrix( this->fe.dofs_per_cell, this->fe.dofs_per_cell );
-        Vector<double>       cell_rhs(    this->fe.dofs_per_cell );
+        FullMatrix<double>   cell_matrix( fe.dofs_per_cell, fe.dofs_per_cell );
+        Vector<double>       cell_rhs(    fe.dofs_per_cell );
         
         const unsigned int n_q_points = fe_values.get_quadrature().size();
-        std::vector<double>         psi_at_q(     n_q_points );
+        std::vector<double>         psi_at_q(      n_q_points );
         std::vector<Tensor<1,dim>>  grad_psi_at_q( n_q_points, Tensor<1,dim>() );
-        std::vector<Tensor<1,dim>>  normal_at_q(  n_q_points, Tensor<1,dim>() );
+        std::vector<Tensor<1,dim>>  normal_at_q(   n_q_points, Tensor<1,dim>() );
         
-        std::vector<types::global_dof_index> local_dof_indices( this->fe.dofs_per_cell );
+        std::vector<types::global_dof_index> local_dof_indices( fe.dofs_per_cell );
 
         rhs      = 0.0;
         matrix   = 0.0;
         
         this->n.update_ghost_values();
 
-        for (const auto &cell : this->dof_handler->active_cell_iterators())
+        for (const auto &cell : dof_handler->active_cell_iterators())
         if (cell->is_locally_owned())
         {
           cell_matrix = 0.0;
@@ -111,7 +118,7 @@ class OlssonOperator : public ReinitializationOperatorBase<dim,degree,number>
           fe_values.get_function_values(     levelset_old, psi_at_q );     // compute values of old solution at tau_n
           fe_values.get_function_gradients(  levelset_old, grad_psi_at_q ); // compute gradients of old solution at tau_n
           NormalVector<dim,degree>::get_unit_normals_at_quadrature(fe_values,
-                                                            this->n,
+                                                            n,
                                                             normal_at_q);
 
           for (const unsigned int q_index : fe_values.quadrature_point_indices())
@@ -238,7 +245,7 @@ class OlssonOperator : public ReinitializationOperatorBase<dim,degree,number>
             psi.gather_evaluate(src, true, true);
             
             normal_vector.reinit(cell);
-            normal_vector.read_dof_values(this->n);
+            normal_vector.read_dof_values(n);
             normal_vector.evaluate(true, false);
 
             for (unsigned int q_index = 0; q_index < psi.n_q_points; ++q_index)
@@ -266,9 +273,27 @@ class OlssonOperator : public ReinitializationOperatorBase<dim,degree,number>
     }
 
     private:
-      double eps = 0.01; 
-      MatrixFree<dim, number, VectorizedArrayType> matrix_free;
+      void
+      set_normal_vector_field(const BlockVectorType & normal_vector) 
+      {
+        n.reinit(dim);
+        for (unsigned int d=0; d<dim; ++d)
+        {
+          initialize_dof_vector(n.block(d));
+          n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
+        }
+        n.update_ghost_values();
+      }
 
+      const FE_Q<dim>&                                fe;
+      const MappingQGeneric<dim>&                     mapping;
+      const QGauss<dim>&                              q_gauss;
+      SmartPointer<const DoFHandler<dim>>             dof_handler;
+      SmartPointer<const AffineConstraints<number>>   constraints;
+      
+      double eps = -1.0; 
+      MatrixFree<dim, number, VectorizedArrayType>    matrix_free;
+      BlockVectorType                                 n;
 };
-}   // namespace ReinitializationNew
+}   // namespace Reinitialization
 } // namespace MeltPoolDG

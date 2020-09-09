@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Author: Magdalena Schreter, TUM, August 2020
+ * Author: Magdalena Schreter, TUM, September 2020
  *
  * ---------------------------------------------------------------------*/
 #pragma once
@@ -21,15 +21,12 @@
 // for using smart pointers
 #include <deal.II/base/smartpointer.h>
 //// for distributed triangulation
-//#include <deal.II/distributed/tria.h>
+#include <deal.II/distributed/tria_base.h>
 // for dof_handler type
 #include <deal.II/dofs/dof_handler.h>
 // for FE_Q<dim> type
 #include <deal.II/fe/fe_q.h>
-#include <deal.II/fe/fe_values.h>
 #include <deal.II/fe/mapping.h>
-#include <deal.II/base/table_handler.h>
-#include <deal.II/distributed/tria_base.h>
 
 // MeltPoolDG
 #include <meltpooldg/utilities/utilityfunctions.hpp>
@@ -94,15 +91,18 @@ namespace ReinitializationNew
      */
 
     void 
-    run()
+    run() final
     {
       initialize();
-      
       while ( !time_iterator.is_finished() )
       {
-        pcout << "t= " << time_iterator.get_current_time() << std::endl;
+        pcout << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
         reinit_operation.reinit_data.d_tau = time_iterator.get_next_time_increment();   
         reinit_operation.solve();
+        /*
+         *  do paraview output if requested
+         */
+        output_results(time_iterator.get_current_time_step_number());
       }
     }
 
@@ -132,6 +132,17 @@ namespace ReinitializationNew
       DoFTools::make_hanging_node_constraints(dof_handler, constraints);
       constraints.close();
       
+      /*  
+       *  initialize the time iterator
+       */
+      TimeIteratorData time_data;
+      time_data.start_time       = 0.0;
+      time_data.end_time         = 100.;
+      time_data.time_increment   = parameters.reinit_dtau; 
+      time_data.max_n_time_steps = parameters.reinit_max_n_steps;
+      
+      time_iterator.initialize(time_data);
+      
       /*
        *  set initial conditions of the levelset function
        */
@@ -147,43 +158,37 @@ namespace ReinitializationNew
                             solution_levelset );
 
       solution_levelset.update_ghost_values();
+
       /*
        *    initialize the reinitialization operation class
        */
       reinit_operation.initialize(solution_levelset, parameters);
       
-      /*  
-       *  initialize the time iterator
-       */
-      TimeIteratorData time_data;
-      time_data.start_time       = 0.0;
-      time_data.end_time         = 100.;
-      time_data.time_increment   = parameters.reinit_dtau; 
-      time_data.max_n_time_steps = parameters.reinit_max_n_steps;
-      
-      time_iterator.initialize(time_data);
     }
 
     /*
      *  Creating paraview output
      */
     void 
-    output_results(const double time=0.0)
+    output_results(const unsigned int time_step=0) const
     {
       if (parameters.paraview_do_output)
       {
         DataOut<dim> data_out;
-        data_out.attach_dof_handler(*dof_handler);
-        data_out.add_data_vector(reinit_operation.solution_levelset, "phi");
-
+        data_out.attach_dof_handler(dof_handler);
+        data_out.add_data_vector(reinit_operation.solution_levelset, "psi");
+        
+        /*
+         *  @todo: add_data_vector(exact_solution)
+         */
         VectorType levelset_exact;
         levelset_exact.reinit( locally_owned_dofs,
-                                mpi_communicator);
+                               mpi_communicator);
         data_out.build_patches();
       
-        const int n_digits_timestep = 2;
-        const int n_groups = 1;
-        data_out.write_vtu_with_pvtu_record("./", "solution_reinitialization", time, mpi_communicator, n_digits_timestep, n_groups);
+        //const int n_digits_timestep = 4;
+        //const int n_groups = 1;
+        data_out.write_vtu_with_pvtu_record("./", "solution_reinitialization", time_step, mpi_communicator); // n_digits_timestep, n_groups);
       }
     }
   
@@ -207,9 +212,8 @@ namespace ReinitializationNew
     IndexSet                                             locally_owned_dofs;
     IndexSet                                             locally_relevant_dofs;
     
-    //VectorType                                           solution_levelset;        // @todo: might not be member variables
     TimeIterator                                         time_iterator;
     ReinitializationOperation<dim, degree>               reinit_operation;
   };
-} // namespace ReinitializationNew
+} // namespace Reinitialization
 } // namespace MeltPoolDG

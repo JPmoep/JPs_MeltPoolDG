@@ -36,10 +36,10 @@
 #include <meltpooldg/utilities/timeiterator.hpp>
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
+#include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/normal_vector/normalvector.hpp>
 #include <meltpooldg/reinitialization_refactored/olsson_operator.hpp>
 // MeltPoolDG
-#include <meltpooldg/reinitialization_refactored/reinitialization_operator_base.hpp>
 
 
 namespace MeltPoolDG
@@ -52,7 +52,7 @@ namespace ReinitializationNew
    *    Data for reinitialization of level set equation
    */
   
-  enum class ReinitModelType { olsson2007 = 1, 
+  enum class ReinitModelType { olsson2007 = 1,  //@ todo: number can be removed when input parameter of model type is changed to string
                                undefined  };
   
   struct ReinitializationData
@@ -97,6 +97,11 @@ namespace ReinitializationNew
 
   public:
     ReinitializationData                       reinit_data;
+    /*
+     *    This is the characteristic solution of this module and will be also publically accessible for 
+     *    output_results.
+     */
+    VectorType                                 solution_levelset;
 
     ReinitializationOperation(
                 const DoFHandlerType&       dof_handler_in,
@@ -135,10 +140,6 @@ namespace ReinitializationNew
       set_reinitialization_parameters(data_in);
       
       /*
-       *   create operator
-       */
-      create_operator();
-      /*
        *    initialize normal_vector_field
        */
       initialize_normal_vector_field(data_in);
@@ -146,14 +147,12 @@ namespace ReinitializationNew
        *    update normal vector field
        */
       update_normal_vector_field();
+      /*
+       *   create operator
+       */
+      create_operator();
     }
 
-    void 
-    update_normal_vector_field()
-    {
-      normal_vector_field.compute_normal_vector_field( solution_levelset );
-      reinit_operator->set_normal_vector_field(normal_vector_field.normal_vector_field);
-    }
     
     void
     solve()
@@ -169,17 +168,18 @@ namespace ReinitializationNew
       solution.update_ghost_values();
 
       reinit_operator->set_time_increment(reinit_data.d_tau);
+
+      int iter = 0;
       
       if (reinit_data.do_matrix_free)
       {
         reinit_operator->create_rhs( rhs, solution );
-        const int iter = LinearSolve< VectorType,
+        iter = LinearSolve< VectorType,
                                       SolverCG<VectorType>,
-                                      ReinitializationOperatorBase<dim,degree,double>>
+                                      OperatorBase<double>>
                                       ::solve( *reinit_operator,
                                                 src,
                                                 rhs );
-        pcout << "| CG: i=" << std::setw(5) << std::left << iter;
       }
       else
       {
@@ -189,27 +189,26 @@ namespace ReinitializationNew
         TrilinosWrappers::PreconditionAMG::AdditionalData data;     
 
         preconditioner.initialize(system_matrix, data); 
-        
         reinit_operator->assemble_matrixbased( solution, system_matrix, rhs );
-        const int iter = LinearSolve<VectorType,
+        iter = LinearSolve<VectorType,
                                      SolverCG<VectorType>,
                                      SparseMatrixType,
                                      TrilinosWrappers::PreconditionAMG>::solve( system_matrix,
                                                                                 src,
                                                                                 rhs,
                                                                                 preconditioner);
-        pcout << "| CG: i=" << std::setw(5) << std::left << iter;
       }
 
       constraints->distribute(src);
-      if(reinit_data.do_print_l2norm)
-      {
-        pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << src.linfty_norm();
-        pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm()/reinit_data.d_tau << "|" << std::endl;
-      }
 
       solution_levelset += src;
       solution_levelset.update_ghost_values();
+      if(reinit_data.do_print_l2norm)
+      {
+        pcout << "| CG: i=" << std::setw(5) << std::left << iter;
+        pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << src.linfty_norm();
+        pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm()/reinit_data.d_tau << "|" << std::endl;
+      }
   }
 
   private:
@@ -236,7 +235,7 @@ namespace ReinitializationNew
       normal_vector_data.damping_parameter = min_cell_size * 0.5;
       normal_vector_data.do_print_l2norm   = true; 
       normal_vector_data.verbosity_level   = reinit_data.verbosity_level;
-      normal_vector_data.do_matrix_free     = reinit_data.do_matrix_free;
+      normal_vector_data.do_matrix_free    = reinit_data.do_matrix_free;
 
 
       /* todo: this will be shifted to normal_vector later */
@@ -262,18 +261,25 @@ namespace ReinitializationNew
                                       min_cell_size);
     }
     
+    void 
+    update_normal_vector_field()
+    {
+      normal_vector_field.compute_normal_vector_field_matrixfree( solution_levelset );
+    }
+    
     void create_operator()
     {
       if (reinit_data.reinit_model == ReinitModelType::olsson2007)
       {
        reinit_operator = 
           std::make_shared<OlssonOperator<dim, degree, double>>( reinit_data.d_tau,
-                                                                 //normal_vector_field,
+                                                                 normal_vector_field.normal_vector_field,
                                                                  fe,
                                                                  mapping,
                                                                  q_gauss,
                                                                  dof_handler,
-                                                                 constraints
+                                                                 constraints,
+                                                                 min_cell_size
                                                                 );
       }
       else
@@ -281,8 +287,6 @@ namespace ReinitializationNew
 
       reinit_operator->print_me();
     }
-
-
     
     const FE_Q<dim>&                           fe;
     const MappingQGeneric<dim>&                mapping;
@@ -295,13 +299,8 @@ namespace ReinitializationNew
     const MPI_Comm                             mpi_communicator;
     ConditionalOStream                         pcout;                   // reference
     
-    std::shared_ptr<ReinitializationOperatorBase<dim,degree,double>> reinit_operator;
+    std::shared_ptr<OperatorBase<double>> reinit_operator;
     
-    /*
-     *    This is the characteristic solution of this module and will be also publically accessible for 
-     *    output_results.
-     */
-    VectorType                                 solution_levelset;
     /*
      *   Normal vector computation
      */
@@ -316,5 +315,5 @@ namespace ReinitializationNew
     VectorType                                system_rhs;        // @todo: might not be member variables
     TableHandler                              table;
   };
-} // namespace ReinitializationNew
+} // namespace Reinitialization
 } // namespace MeltPoolDG
