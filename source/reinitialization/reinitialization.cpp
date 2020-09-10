@@ -126,6 +126,8 @@ namespace MeltPoolDG
                                                          const double                min_cell_size_in
                                                        )
   {
+      (void) dsp_in;
+      
       reinit_data           = data_in;
       dof_handler           = &dof_handler_in;
       constraints           = &constraints_in; 

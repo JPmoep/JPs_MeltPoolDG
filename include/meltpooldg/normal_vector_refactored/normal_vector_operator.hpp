@@ -223,7 +223,7 @@ namespace NormalVectorNew
     }
     
     void
-    initialize_dof_vector(BlockVectorType &dst) const override
+    initialize_block_dof_vector(BlockVectorType &dst) const override
     {
       dst.reinit(dim);
       for (unsigned int d=0; d<dim; ++d)

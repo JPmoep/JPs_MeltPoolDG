@@ -78,10 +78,6 @@ namespace ReinitializationNew
      *    accessible for output_results.
      */
     VectorType           solution_levelset;
-    /*
-     *   Computation of the normal vectors
-     */
-    NormalVectorNew::NormalVectorOperation<dim,degree> normal_vector_field;
 
     ReinitializationOperation( const DoFHandlerType&       dof_handler_in,
                                const MappingQGeneric<dim>& mapping_in,
@@ -281,7 +277,14 @@ namespace ReinitializationNew
     double                                     min_cell_size;           // @todo: check CFL condition
     const MPI_Comm                             mpi_communicator;
     ConditionalOStream                         pcout;                   // @todo: reference
+  
+  public:
+    /*
+     *   Computation of the normal vectors
+     */
+    NormalVectorNew::NormalVectorOperation<dim,degree> normal_vector_field;
     
+  private:
     /*
      *  This shared pointer will point to your user-defined reinitialization operator.
      */

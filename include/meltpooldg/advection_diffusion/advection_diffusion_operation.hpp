@@ -21,27 +21,6 @@ namespace MeltPoolDG
 namespace AdvectionDiffusion
 {
   using namespace dealii; 
-
-  struct AdvectionDiffusionData 
-  {
-    // time step for AdvectionDiffusion
-    double dt = 0.01;
-    
-    // choose the diffusivity parameter
-    double diffusivity = 0.0;
-    
-    // choose theta from the generaliezd time-stepping included
-    double theta = 0.5;
-
-    // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
-    bool do_print_l2norm = false;
-    
-    // this parameter activates the matrix free cell loop procedure
-    bool do_matrix_free = false;
-    
-    // maximum number of AdvectionDiffusion steps to be completed
-    TypeDefs::VerbosityType verbosity_level = TypeDefs::VerbosityType::silent;
-  };
   
   /*
    *     AdvectionDiffusion model 
