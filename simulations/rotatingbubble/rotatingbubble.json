@@ -1,35 +1,33 @@
 {
   "general" : { 
-    "problem name" : "reinitializationproblem" 
+    "problem name" : "level_set" 
   },
   "spatial domain" : { 
       "dimension" : "2",
-      "global refinements" : "5"
+      "global refinements" : "6"
   },
   "levelset" : {
     "ls do reinitialization"    : "true",
-    "ls artificial diffusivity" : "0",
+    "ls artificial diffusivity" : "0.0",
     "ls do print l2norm"        : "true",
     "ls theta"                  : "0.5",
     "ls start time"             : "0.0",
     "ls end time"               : "1.5707963267948966",
-    "ls time step size"         : "0.005"
+    "ls time step size"         : "0.01"
   },
   "reinitialization" : {
     "reinit max n steps"     : "5",
     "reinit modeltype"       : "1",
-    "reinit dtau"           : "0.01",
-    "reinit do matrixfree"   : "false", 
+    "reinit do matrixfree"   : "true", 
     "reinit do print l2norm" : "true" 
   },
-  "paraview" : {
-    "paraview do output"           : "false",
-    "paraview print normal vector" : "true",
-    "paraview print curvature"     : "true"
+  "normal vector" : {
+    "normal vec damping scale factor" : "0.5"
   },
-  "output" : {
-    "do compute error"      : "true",
-    "compute volume output" : "true",
-    "filename volume output": "myVolumes.txt"
+  "paraview" : {
+    "paraview do output"           : "true",
+    "paraview print normal vector" : "true",
+    "paraview print advection" : "true",
+    "paraview print boundary id"   : "true"
   }
 }
