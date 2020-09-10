@@ -9,8 +9,6 @@
 #include <meltpooldg/interface/simulationbase.hpp>
 /* add your problem here*/
 
-//@todo: merge this file with problembase.hpp
-
 namespace MeltPoolDG
 {
   using namespace dealii;
