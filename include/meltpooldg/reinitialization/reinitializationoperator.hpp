@@ -60,8 +60,7 @@ class ReinitializationOperator
                   
                   const vector grad_phi = levelset.get_gradient( q_index );
                   
-                  vector n_phi = normal_vector.get_value( q_index );
-                  n_phi /= n_phi.norm();
+                  const auto n_phi = normalize(normal_vector.get_value(q_index));
                   
                   levelset.submit_value(phi, q_index);
                   levelset.submit_gradient(d_tau * eps * scalar_product(grad_phi, n_phi) * n_phi, q_index);
@@ -108,8 +107,7 @@ class ReinitializationOperator
             for (unsigned int q_index = 0; q_index < psi.n_q_points; ++q_index)
             {
               const scalar val = psi.get_value(q_index);
-              vector n_phi = normal_vector.get_value(q_index);
-                     n_phi /= n_phi.norm();
+              const auto n_phi = normalize(normal_vector.get_value(q_index));
               psi.submit_gradient( d_tau * compressive_flux(val) * n_phi 
                                    - 
                                    d_tau * eps * scalar_product( psi.get_gradient(q_index), n_phi ) * n_phi, q_index);
@@ -146,6 +144,25 @@ class ReinitializationOperator
     {
       d_tau = dt;
     }
+      
+      static
+      vector
+      normalize(const scalar & in)
+      {
+          vector vec;
+          
+          for(unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
+            vec[0][v] = in[v] >= 0.0 ? 1.0 : -1.0;
+          
+          return vec;
+      }
+      
+      static
+      vector
+      normalize(const vector & in)
+      {
+          return in / in.norm();
+      }
 
     private:
       const MatrixFree<dim, number, VectorizedArrayType> &matrix_free;

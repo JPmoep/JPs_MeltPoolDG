@@ -478,6 +478,7 @@ namespace MeltPoolDG
   }
   
   // instantiation
+  template class LevelSetEquation<1,1>; 
   template class LevelSetEquation<2,1>; 
   template class LevelSetEquation<2,2>; 
 
