@@ -9,7 +9,7 @@ This project depends on the following third-party libraries:
     * p4est
     * Trilinos
 
-![alt text](https://github.com/mschreter/MeltPoolDG/blob/master/MeltPoolDG.png?raw=true)
+![alt text](doc/MeltPoolDG.png?raw=true)
 
 ## How to add and run a new simulation
 
