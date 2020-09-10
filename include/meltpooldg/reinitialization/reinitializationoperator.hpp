@@ -9,8 +9,8 @@ using namespace dealii;
 
 namespace MeltPoolDG
 {
-    namespace LevelSetMatrixFree
-    {
+namespace LevelSetMatrixFree
+{
 
 template<int dim, int degree, typename number = double>
 class ReinitializationOperator
@@ -132,6 +132,7 @@ class ReinitializationOperator
         matrix_free.initialize_dof_vector(n.block(d));
         n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
       }
+      n.update_ghost_values();
     }
 
     void
@@ -153,5 +154,5 @@ class ReinitializationOperator
       BlockVectorType n;
 
 };
-}   // namespace LevelSetMatrixFree
+}   // namespace OlssonOperator
 } // namespace MeltPoolDG

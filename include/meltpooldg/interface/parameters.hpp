@@ -84,7 +84,7 @@ struct Parameters
     /*
      *   levelset 
      */
-    prm.enter_subsection("advection_diffusion");
+    prm.enter_subsection("advection diffusion");
     {
       prm.add_parameter("advec diff diffusivity",
                          advec_diff_diffusivity,
@@ -108,13 +108,13 @@ struct Parameters
                         "Sets the step size for time stepping (default=0.01). For non-uniform "
                         "time stepping, this parameter determines the size of the first time step."
                         );
+      prm.add_parameter("advec diff do matrixfree",
+                         advec_diff_do_matrixfree,
+                        "Set this parameter if a matrixfree solution procedure should be performed (default=false)");
       prm.add_parameter("advec diff do print l2norm",
                          advec_diff_do_print_l2norm,
                         "Defines if the l2norm of the advected field should be printed) "
                         "(default=false)");
-      prm.add_parameter("advec diff do matrixfree",
-                         advec_diff_do_matrixfree,
-                        "Set this parameter if a matrixfree solution procedure should be performed (default=false)");
     }
     prm.leave_subsection();
     
@@ -249,7 +249,7 @@ struct Parameters
   }
 
   // general
-  std::string         problem_name              = "levelset";
+  std::string         problem_name              = "advection_diffusion";
   // spatial
   unsigned int        dimension                 = 2;
   unsigned int        global_refinements        = 1;
@@ -274,13 +274,13 @@ struct Parameters
   bool                reinit_do_print_l2norm    = false;
 
   // advection diffusion specific parameters
-  number              advec_diff_diffusivity    = 0.0;
-  number              advec_diff_theta          = 0.5;
-  number              advec_diff_start_time     = 0.0;
-  number              advec_diff_end_time       = 1.0;
-  number              advec_diff_time_step_size = 0.01;
-  bool                advec_diff_do_print_l2norm= false;
-  bool                advec_diff_do_matrixfree  = false;
+  number              advec_diff_diffusivity     = 0.0;
+  number              advec_diff_theta           = 0.5;
+  number              advec_diff_start_time      = 0.0;
+  number              advec_diff_end_time        = 1.0;
+  number              advec_diff_time_step_size  = 0.01;
+  bool                advec_diff_do_print_l2norm = false;
+  bool                advec_diff_do_matrixfree   = false;
 
   // normal vector    specific parameters
   // @todo

@@ -144,35 +144,15 @@ namespace MeltPoolDG
       std::string paramfile;
       paramfile = "rotatingbubble.json";
       this->parameters.process_parameters_file(paramfile);
-
-      /*
-       * @todo (wip)
-       * new parameter handling
-       */
-      
-           //dealii::ParameterHandler prm;
-
-      //std::string file_name;
-      //file_name = "rotatingbubble_newinterface.prm";
-      //this->ls_parameters.process_parameters_file(file_name);
-
     }
 
     void create_spatial_discretization()
     {
-      GridGenerator::hyper_cube( this->triangulation, 
+      this->triangulation = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+      GridGenerator::hyper_cube( *this->triangulation, 
                                  left_domain, 
                                  right_domain );
-
-      this->triangulation.refine_global( this->parameters.global_refinements );
-      /* 
-       * alternative with shared pointer
-       * */
-      this->triangulation_shared = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
-      GridGenerator::hyper_cube( *this->triangulation_shared, 
-                                 left_domain, 
-                                 right_domain );
-      this->triangulation_shared->refine_global( this->parameters.global_refinements );
+      this->triangulation->refine_global( this->parameters.global_refinements );
     }
 
     void set_boundary_conditions()
@@ -180,29 +160,31 @@ namespace MeltPoolDG
       /*
        *  create a pair of (boundary_id, dirichlet_function)
        */
-      const unsigned int inflow_bc = 1; // @  this should be replaced by an Enum
-      //face->set_boundary_id( BoundaryTypesLevelSet::dirichlet_bc ); //@ does not work currently
+      const unsigned int inflow_bc = 42; 
+      const unsigned int do_nothing = 0; 
+
       this->boundary_conditions.dirichlet_bc.emplace(std::make_pair(inflow_bc, std::make_shared<DirichletCondition<dim>>()));
       /*
        *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
        *  due to the hyperbolic nature of the analyzed problem
        *
-                  in      out
-              -----------------
-              |       :       |
-        out   |       :       | in
-              |_______________|
+                  out    in
+      (-1,1)  +---------------+ (1,1)
               |       :       |
         in    |       :       | out
+              |_______________|
               |       :       |
-              -----------------
-       *         out     in        
+        out   |       :       | in
+              |       :       |
+              +---------------+
+       * (-1,-1)  in     out   (1,-1)       
        */         
-      for (auto &face : this->triangulation.active_face_iterators())
+      for (auto &face : this->triangulation->active_face_iterators())
       if ( (face->at_boundary() ) ) 
       {
-          const double half_line = (left_domain - right_domain) / 2;
-          if ( face->center()[0] == left_domain && face->center()[1]>half_line )
+          const double half_line = (right_domain + left_domain) / 2;
+
+          if (      face->center()[0] == left_domain && face->center()[1]>half_line )
             face->set_boundary_id( inflow_bc );
           else if ( face->center()[0] == right_domain && face->center()[1]<half_line )
             face->set_boundary_id( inflow_bc );
@@ -211,9 +193,8 @@ namespace MeltPoolDG
           else if ( face->center()[1] == left_domain && face->center()[0]<half_line )
             face->set_boundary_id( inflow_bc );
           else
-            face->set_boundary_id( inflow_bc );
+            face->set_boundary_id( do_nothing );
       }  
-
     }
 
     void set_field_conditions()
@@ -221,7 +202,6 @@ namespace MeltPoolDG
         this->field_conditions.initial_field =        std::make_shared<InitializePhi<dim>>(); 
         this->field_conditions.advection_field =      std::make_shared<AdvectionField<dim>>(); 
         this->field_conditions.exact_solution_field = std::make_shared<ExactSolution<dim>>(0.01);
-            //GridTools::minimal_cell_diameter(this->triangulation)/(std::sqrt(dim)*2)); 
     }
   
   private:
@@ -230,10 +210,7 @@ namespace MeltPoolDG
 
   };
 
-  //template class Simulation<3>; //@ does not work currently
 template class Simulation<2>; 
-
-
 } // namespace MeltPoolDG
 
 int main(int argc, char* argv[])

@@ -38,11 +38,11 @@ namespace MeltPoolDG
   Reinitialization<dim,degree>::Reinitialization(std::shared_ptr<SimulationBase<dim>> base_in )
   : mpi_communicator(    base_in->get_mpi_communicator())
   , pcout(               std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-  , module_dof_handler(  base_in->triangulation )
+  , module_dof_handler(  *base_in->triangulation )
   //, triangulation(       base_in->triangulation ) // @todo is it needed in general?
   , field_conditions(    base_in->get_field_conditions()  )
   , normal_vector_field( mpi_communicator )
-  , min_cell_size(       GridTools::minimal_cell_diameter(base_in->triangulation) )
+  , min_cell_size(       GridTools::minimal_cell_diameter(*base_in->triangulation) )
   {
     initialize_data_from_global_parameters(base_in->parameters);
     initialize_module();
@@ -108,9 +108,9 @@ namespace MeltPoolDG
                                       data_in.reinit_dtau
                                       : min_cell_size;
     reinit_data.constant_epsilon    = data_in.reinit_constant_epsilon;
-    reinit_data.max_reinit_steps    = data_in.reinit_max_n_steps; //parameters.max_reinitializationsteps;
+    reinit_data.max_reinit_steps    = data_in.reinit_max_n_steps; 
     //reinit_data.verbosity_level     = TypeDefs::VerbosityType::major;
-    reinit_data.do_print_l2norm     = data_in.reinit_do_print_l2norm; //parameters.output_norm_levelset;
+    reinit_data.do_print_l2norm     = data_in.reinit_do_print_l2norm;
     reinit_data.do_matrix_free      = data_in.reinit_do_matrixfree;
   }
 
@@ -214,6 +214,7 @@ namespace MeltPoolDG
     
     pcout << print_line();
     pcout << "|" << std::setw(20) << "" << std::setw(30) << std::left << "REINITIALIZATION START (matrix-free)" << std::setw(19) << std::right << "|" << std::endl;
+    
     normal_vector_field.compute_normal_vector_field_matrixfree( solution_out, solution_normal_vector );
     solution_normal_vector.update_ghost_values();
     
@@ -246,17 +247,19 @@ namespace MeltPoolDG
 
     std::shared_ptr<TimeIterator> time_iterator = std::make_shared<TimeIterator>();
     initialize_time_iterator(time_iterator); 
-
+    std::cout << "|psi| t=0: " << solution.l2_norm();
     table.clear();
     while ( !time_iterator->is_finished() )
     {
         const double d_tau = time_iterator->get_next_time_increment();  
         rei.set_time_increment(d_tau);
+
+        pcout << "t=" << time_iterator->get_current_time() << std::endl;
         
         // create right hand side
         matrix_free.initialize_dof_vector(rhs);
         rei.create_rhs(rhs, solution,solution_normal_vector);
-        
+        std::cout << "|rhs|" << rhs.l2_norm() << std::endl;
         matrix_free.initialize_dof_vector(src);
         
         // @ todo: how to introduce preconditioner for matrix-free solution?
@@ -271,7 +274,7 @@ namespace MeltPoolDG
   
         if(reinit_data.do_print_l2norm)
         {
-          pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
+          pcout << "| CG: i=" << std::setw(5) << std::left << iter;
           pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << src.linfty_norm();
           pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm()/d_tau << "|" << std::endl;
         }
@@ -341,7 +344,6 @@ namespace MeltPoolDG
        * @todo: is there an option that normal vectors are also accessible from the base level set class 
        *        for output routines?
        */
-      
       normal_vector_field.compute_normal_vector_field( solution_in, solution_normal_vector );
       solution_normal_vector.update_ghost_values();
       

@@ -2,11 +2,9 @@
  * Author: Magdalena Schreter, TUM, 2020
  */
 #include <deal.II/lac/solver_gmres.h>
-
 #include <deal.II/grid/grid_out.h>
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/data_out_dof_data.h>
-
 #include <deal.II/fe/mapping_q.h>
 
 #include <meltpooldg/levelset/levelset.hpp>
@@ -25,7 +23,7 @@ namespace MeltPoolDG
     , parameters(          base_in->parameters )
     , fe(                  degree)
     , triangulation(       base_in->triangulation )
-    , dof_handler(         base_in->triangulation )
+    , dof_handler(         *this->triangulation )
     , pcout(               std::cout,(Utilities::MPI::this_mpi_process(mpi_communicator) == 0) )
     , computing_timer(     base_in->mpi_communicator,
                            pcout,
@@ -41,7 +39,7 @@ namespace MeltPoolDG
   template <int dim, int degree>
   void LevelSetEquation<dim,degree>::print_me() 
   {  
-    pcout << "Number of active cells: "       << triangulation.n_global_active_cells() << std::endl;
+    pcout << "Number of active cells: "       << triangulation->n_global_active_cells() << std::endl;
     pcout << "Number of degrees of freedom: " << dof_handler.n_dofs()                  << std::endl << std::endl;
   }
 
@@ -240,7 +238,7 @@ namespace MeltPoolDG
     reinit_data.reinit_model        = ReinitModelType::olsson2007;
     reinit_data.d_tau               = parameters.reinit_dtau > 0.0 ? 
                                       parameters.reinit_dtau :
-                                      GridTools::minimal_cell_diameter(triangulation);
+                                      GridTools::minimal_cell_diameter(*triangulation);
     reinit_data.constant_epsilon    = parameters.reinit_constant_epsilon;
     reinit_data.max_reinit_steps    = parameters.reinit_max_n_steps;
     reinit_data.do_print_l2norm     = parameters.reinit_do_print_l2norm;
@@ -266,7 +264,7 @@ namespace MeltPoolDG
                       constraints_no_dirichlet,
                       locally_owned_dofs,
                       locally_relevant_dofs,
-                      GridTools::minimal_cell_diameter(triangulation));
+                      GridTools::minimal_cell_diameter(*triangulation));
   }
 
   template <int dim, int degree>
@@ -282,7 +280,7 @@ namespace MeltPoolDG
   {
     CurvatureData curvature_data;
     curvature_data.damping_parameter   = 0.0; // according to the paper by Zahedi (2012)
-    curvature_data.min_cell_size       = GridTools::minimal_cell_diameter(triangulation)/std::sqrt(dim);
+    curvature_data.min_cell_size       = GridTools::minimal_cell_diameter(*triangulation)/std::sqrt(dim);
     curvature_data.verbosity_level     = TypeDefs::VerbosityType::major;
     
     TrilinosWrappers::SparsityPattern dsp_re( locally_owned_dofs,
@@ -387,9 +385,9 @@ namespace MeltPoolDG
         data_out.add_data_vector(dof_handler, levelset_exact, "exactsolution");
       }
 
-      Vector<float> subdomain(triangulation.n_active_cells());
+      Vector<float> subdomain(triangulation->n_active_cells());
       for (unsigned int i = 0; i < subdomain.size(); ++i)
-        subdomain(i) = triangulation.locally_owned_subdomain();
+        subdomain(i) = triangulation->locally_owned_subdomain();
       data_out.add_data_vector(subdomain, "subdomain");
       
       data_out.build_patches();
@@ -468,14 +466,15 @@ namespace MeltPoolDG
     
 
     if (parameters.compute_volume_output)
-      postprocessor.print_volume_fraction_table(mpi_communicator, parameters.filename_volume_output);
-    if (parameters.do_compute_error)
-      postprocessor.compute_error( degree+1,
-                                   solution_levelset,
-                                   *field_conditions->exact_solution_field,  
-                                    dof_handler,
-                                   triangulation         
-                                   );
+      postprocessor.print_volume_fraction_table(mpi_communicator, 
+                                                parameters.filename_volume_output);
+    //if (parameters.do_compute_error)
+      //postprocessor.compute_error( degree+1,
+                                   //solution_levelset,
+                                   //*field_conditions->exact_solution_field,  
+                                    //dof_handler,
+                                   //*this->triangulation         
+                                   //);
   }
   
   // instantiation

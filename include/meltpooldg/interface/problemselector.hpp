@@ -1,6 +1,6 @@
 #pragma once
 // MeltPoolDG
-#include <meltpooldg/advection_diffusion_refactored/advection_diffusion_problem.hpp>
+#include <meltpooldg/advection_diffusion/advection_diffusion_problem.hpp>
 #include <meltpooldg/levelset/levelset.hpp>
 #include <meltpooldg/reinitialization/reinitialization.hpp>
 #include <meltpooldg/reinitialization_refactored/reinitialization_problem.hpp>

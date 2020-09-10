@@ -74,12 +74,12 @@ namespace ReinitializationNew
     using ConstraintsType     = AffineConstraints<double>;   
 
   public:
-    ReinitializationData                       reinit_data;
+    ReinitializationData reinit_data;
     /*
      *    This is the primary solution variable of this module, which will be also publically 
      *    accessible for output_results.
      */
-    VectorType                                 solution_levelset;
+    VectorType           solution_levelset;
 
     ReinitializationOperation( const DoFHandlerType&       dof_handler_in,
                                const MappingQGeneric<dim>& mapping_in,
@@ -244,7 +244,7 @@ namespace ReinitializationNew
       if (reinit_data.reinit_model == ReinitModelType::olsson2007)
       {
        reinit_operator = 
-          std::make_shared<OlssonOperator<dim, degree, double>>( reinit_data.d_tau,
+          std::make_unique<OlssonOperator<dim, degree, double>>( reinit_data.d_tau,
                                                                  normal_vector_field.solution_normal_vector,
                                                                  fe,
                                                                  mapping,
@@ -280,7 +280,7 @@ namespace ReinitializationNew
     /*
      *  This shared pointer will point to your user-defined reinitialization operator.
      */
-    std::shared_ptr<OperatorBase<double>>      reinit_operator;
+    std::unique_ptr<OperatorBase<double>>      reinit_operator;
     
     /*
      *   Computation of the normal vectors

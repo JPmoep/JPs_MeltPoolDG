@@ -36,7 +36,6 @@ namespace MeltPoolDG
               const BlockVectorType & src) const
         {
           const int n_q_points_1d = degree+1; // @ todo: not hard code
-          
           FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal(      matrix_free );
 
           matrix_free.template cell_loop<BlockVectorType, BlockVectorType>( [&] 

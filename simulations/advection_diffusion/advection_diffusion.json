@@ -1,19 +1,19 @@
 {
   "general" : { 
-    "problem name" : "reinitializationproblem" 
+    "problem name" : "advection_diffusion_problem" 
   },
   "spatial domain" : { 
       "dimension" : "2",
       "global refinements" : "5"
   },
-  "levelset" : {
-    "ls do reinitialization"    : "true",
-    "ls artificial diffusivity" : "0",
-    "ls do print l2norm"        : "true",
-    "ls theta"                  : "0.5",
-    "ls start time"             : "0.0",
-    "ls end time"               : "1.5707963267948966",
-    "ls time step size"         : "0.005"
+  "advection diffusion" : {
+    "advec diff diffusivity"     : "0.000",
+    "advec diff theta"           : "0.5",
+    "advec diff start time"      : "0.0",
+    "advec diff end time"        : "1.5707963267948966",
+    "advec diff time step size"  : "0.01",
+    "advec diff do matrixfree"   : "false", 
+    "advec diff do print l2norm" : "true" 
   },
   "reinitialization" : {
     "reinit max n steps"     : "5",
@@ -23,7 +23,7 @@
     "reinit do print l2norm" : "true" 
   },
   "paraview" : {
-    "paraview do output"           : "false",
+    "paraview do output"           : "true",
     "paraview print normal vector" : "true",
     "paraview print curvature"     : "true"
   },

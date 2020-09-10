@@ -79,6 +79,52 @@ namespace MeltPoolDG
     private:
       double eps_interface;
   };
+
+
+  template <int dim>
+  class AdvectionField : public TensorFunction<1,dim> 
+  {
+    public:
+      AdvectionField()
+        : TensorFunction<1, dim>()
+      {
+      }
+
+      Tensor<1, dim> value(const Point<dim> & p) const 
+      {
+        Tensor<1, dim> value_;
+        
+        const double x = p[0];
+        const double y = p[1];
+        
+        value_[0] = 4*y;
+        value_[1] = -4*x;
+        
+        return value_;
+      }
+  };
+
+  /* for constant Dirichlet conditions we could also use the ConstantFunction
+   * utility from dealii
+   */
+  template <int dim>
+  class DirichletCondition : public Function<dim> 
+  {
+    public:
+    DirichletCondition()
+    : Function<dim>()
+    {
+    }
+
+    double value(const Point<dim> &p,
+                         const unsigned int component = 0) const 
+    {
+    (void)p;
+    (void)component;
+      return -1.0;
+    }
+  };
+  
   /*
    *      This class collects all relevant input data for the level set simulation
    */
@@ -96,7 +142,7 @@ namespace MeltPoolDG
     void set_parameters()
     {
       std::string paramfile;
-      paramfile = "reinit_circle.json";
+      paramfile = "advection_diffusion.json";
       this->parameters.process_parameters_file(paramfile);
     }
 
@@ -111,24 +157,61 @@ namespace MeltPoolDG
 
     void set_boundary_conditions()
     {
+      /*
+       *  create a pair of (boundary_id, dirichlet_function)
+       */
+      const unsigned int inflow_bc = 42; 
+      const unsigned int do_nothing = 0; 
+      
+      this->boundary_conditions.dirichlet_bc.emplace(std::make_pair(inflow_bc, std::make_shared<DirichletCondition<dim>>()));
+      /*
+       *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
+       *  due to the hyperbolic nature of the analyzed problem
+       *
+                  out    in
+      (-1,1)  +---------------+ (1,1)
+              |       :       |
+        in    |       :       | out
+              |_______________|
+              |       :       |
+        out   |       :       | in
+              |       :       |
+              +---------------+
+       * (-1,-1)  in     out   (1,-1)       
+       */         
+      for (auto &face : this->triangulation->active_face_iterators())
+      if ( (face->at_boundary() ) ) 
+      {
+          const double half_line = (right_domain + left_domain) / 2;
+
+          if (      face->center()[0] == left_domain && face->center()[1]>half_line )
+            face->set_boundary_id( inflow_bc );
+          else if ( face->center()[0] == right_domain && face->center()[1]<half_line )
+            face->set_boundary_id( inflow_bc );
+          else if ( face->center()[1] == right_domain && face->center()[0]>half_line )
+            face->set_boundary_id( inflow_bc );
+          else if ( face->center()[1] == left_domain && face->center()[0]<half_line )
+            face->set_boundary_id( inflow_bc );
+          else
+            face->set_boundary_id( do_nothing );
+      }  
+
     }
 
     void set_field_conditions()
     {   
         this->field_conditions.initial_field =        std::make_shared<InitializePhi<dim>>(); 
+        this->field_conditions.advection_field =      std::make_shared<AdvectionField<dim>>(); 
         this->field_conditions.exact_solution_field = std::make_shared<ExactSolution<dim>>(0.01);
     }
   
   private:
-    double left_domain = -1.0;
-    double right_domain = 1.0;
+    const double left_domain = -1.0;
+    const double right_domain = 1.0;
 
   };
 
-  //template class Simulation<3>; //@ does not work currently
 template class Simulation<2>; 
-
-
 } // namespace MeltPoolDG
 
 int main(int argc, char* argv[])

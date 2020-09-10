@@ -54,7 +54,7 @@ namespace ReinitializationNew
     : fe(                  degree )
     , mapping(             degree )
     , q_gauss(             degree+1 )
-    , triangulation(       base_in->triangulation_shared)
+    , triangulation(       base_in->triangulation)
     , dof_handler(         *triangulation )
     , parameters(          base_in->parameters )
     , field_conditions(    base_in->get_field_conditions()  )

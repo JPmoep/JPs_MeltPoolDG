@@ -1,3 +1,8 @@
+/* ---------------------------------------------------------------------
+ *
+ * Author: Magdalena Schreter, TUM, September 2020
+ *
+ * ---------------------------------------------------------------------*/
 #pragma once
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
@@ -61,7 +66,8 @@ namespace NormalVectorNew
                             BlockVectorType & rhs ) const override
       {
 
-      FEValues<dim> fe_values( fe,
+      FEValues<dim> fe_values( mapping,
+                               fe,
                                q_gauss,
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
 

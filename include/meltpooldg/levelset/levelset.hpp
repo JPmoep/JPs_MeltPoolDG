@@ -139,8 +139,8 @@ namespace MeltPoolDG
     
     MPI_Comm                                   mpi_communicator;
     Parameters<double>                         parameters;
-    FE_Q<dim>                                  fe;                         // @todo: should it stay a member variable?
-    parallel::distributed::Triangulation<dim>& triangulation;
+    FE_Q<dim>                                  fe;                         
+    std::shared_ptr<parallel::TriangulationBase<dim>>    triangulation;
     DoFHandler<dim>                            dof_handler;
     ConditionalOStream                         pcout;
     TimerOutput                                computing_timer;
