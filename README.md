@@ -11,7 +11,7 @@ This project depends on the following third-party libraries:
 
 ![alt text](doc/MeltPoolDG.png?raw=true)
 
-## How to add and run a new simulation
+### How to add and run a new simulation
 
 In the ./simulations folder you find some example simulations. If you would like to create a simulation "vortex_bubble", follow the subsequent steps:
 
