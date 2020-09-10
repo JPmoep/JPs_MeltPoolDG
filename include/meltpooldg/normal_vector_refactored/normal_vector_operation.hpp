@@ -70,7 +70,7 @@ namespace NormalVectorNew
      *    This is the primary solution variable of this module, which will be also publically 
      *    accessible for output_results.
      */
-    BlockVectorType  solution_normal_vector;
+    BlockVectorType solution_normal_vector;
     
     NormalVectorOperation( const DoFHandlerType&       dof_handler_in,
                            const MappingQGeneric<dim>& mapping_in,
@@ -100,12 +100,10 @@ namespace NormalVectorNew
       /*
        *  initialize normal_vector data
        */
-      normal_vector_data.damping_parameter = min_cell_size * 0.5;
+      normal_vector_data.damping_parameter = min_cell_size * data_in.normal_vec_damping_scale_factor;
       normal_vector_data.verbosity_level   = TypeDefs::VerbosityType::major;
       normal_vector_data.do_print_l2norm   = true;
 
-      std::cout << "normalvector: n_dofs: " << dof_handler->n_dofs() << std::endl;
-    
       /*
        *  initialize operator
        */
@@ -120,7 +118,6 @@ namespace NormalVectorNew
       normal_vector_operator->initialize_dof_vector(rhs);
       normal_vector_operator->initialize_dof_vector(solution_normal_vector);
       
-      pcout << "start solution of normal vector " << solution_levelset_in.l2_norm() << std::endl;
       int iter = 0;
       
       if (normal_vector_data.do_matrix_free)
@@ -132,6 +129,7 @@ namespace NormalVectorNew
                             ::solve( *normal_vector_operator,
                                      solution_normal_vector,
                                      rhs );
+        solution_normal_vector.update_ghost_values();
       }
       else
       {
@@ -192,7 +190,7 @@ namespace NormalVectorNew
                                                           q_gauss,
                                                           dof_handler,
                                                           constraints,
-                                                          min_cell_size * 0.5 );
+                                                          normal_vector_data.damping_parameter );
     }
 
     const FE_Q<dim>&                           fe;

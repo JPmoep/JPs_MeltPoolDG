@@ -7,7 +7,7 @@
 #include <deal.II/numerics/data_out_dof_data.h>
 #include <deal.II/fe/mapping_q.h>
 
-#include <meltpooldg/levelset/levelset.hpp>
+#include <meltpooldg/level_set/levelset.hpp>
 #include <meltpooldg/reinitialization/reinitialization.hpp>
 #include <meltpooldg/curvature/curvature.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>

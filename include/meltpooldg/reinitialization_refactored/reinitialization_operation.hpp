@@ -14,9 +14,7 @@
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
-#include <meltpooldg/normal_vector/normalvector.hpp>
 #include <meltpooldg/normal_vector_refactored/normal_vector_operation.hpp>
-#include <meltpooldg/normal_vector/normalvector.hpp>
 #include <meltpooldg/reinitialization_refactored/olsson_operator.hpp>
 
 namespace MeltPoolDG
@@ -80,6 +78,10 @@ namespace ReinitializationNew
      *    accessible for output_results.
      */
     VectorType           solution_levelset;
+    /*
+     *   Computation of the normal vectors
+     */
+    NormalVectorNew::NormalVectorOperation<dim,degree> normal_vector_field;
 
     ReinitializationOperation( const DoFHandlerType&       dof_handler_in,
                                const MappingQGeneric<dim>& mapping_in,
@@ -152,7 +154,11 @@ namespace ReinitializationNew
       
       if (reinit_data.do_matrix_free)
       {
-        reinit_operator->create_rhs( rhs, solution_levelset );
+        VectorType src_rhs;
+        reinit_operator->initialize_dof_vector(src_rhs);
+        src_rhs.copy_locally_owned_data_from(solution_levelset);
+        src_rhs.update_ghost_values();
+        reinit_operator->create_rhs( rhs, src_rhs);
         iter = LinearSolve< VectorType,
                                       SolverCG<VectorType>,
                                       OperatorBase<double>>
@@ -162,7 +168,6 @@ namespace ReinitializationNew
       }
       else
       {
-        
         system_matrix.reinit( dsp );  
 
         TrilinosWrappers::PreconditionAMG preconditioner;     
@@ -282,10 +287,6 @@ namespace ReinitializationNew
      */
     std::unique_ptr<OperatorBase<double>>      reinit_operator;
     
-    /*
-     *   Computation of the normal vectors
-     */
-    NormalVectorNew::NormalVectorOperation<dim,degree> normal_vector_field;
     /*
     * the following are prototypes for matrix-based operators
     */

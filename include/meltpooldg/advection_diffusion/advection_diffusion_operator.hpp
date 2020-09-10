@@ -57,14 +57,6 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
       
       matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
     }
-    
-    void
-    print_me() const override
-    {
-      std::cout << "hello from advection_diffusion operator; " << data.diffusivity << std::endl;
-
-    }
-
     /*
      *    this is the matrix-based implementation of the rhs and the matrix
      *    @todo: this could be improved by using the WorkStream functionality of dealii

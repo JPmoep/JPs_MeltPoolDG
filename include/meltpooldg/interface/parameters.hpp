@@ -191,6 +191,26 @@ struct Parameters
                         "Defines if the l2norm of the reinitialization result should be printed) (default: false)");
     }
     prm.leave_subsection();
+    /*
+     *   normal vector
+     */
+    prm.enter_subsection("normal vector");
+    {
+      prm.add_parameter ("normal vec damping scale factor", 
+                          normal_vec_damping_scale_factor,
+                         "normal vector computation: damping = cell_size * normal_vec_damping_scale_factor (default=0.5)");
+    }
+    prm.leave_subsection();
+    /*
+     *   curvature
+     */
+    prm.enter_subsection("curvature");
+    {
+      prm.add_parameter ("curv damping scale factor", 
+                          curv_damping_scale_factor,
+                         "curvature computation: damping = cell_size * curv_damping_scale_factor (default=0.0)");
+    }
+    prm.leave_subsection();
     
     /*
      *   paraview
@@ -224,6 +244,9 @@ struct Parameters
       prm.add_parameter ("paraview print exactsolution", 
                           paraview_print_exactsolution,
                          "boolean for writing the exact solution into the paraview output file");
+      prm.add_parameter ("paraview print boundary id", 
+                          paraview_print_boundary_id,
+                         "boolean for printing a vtk-file with the boundary id");
     }
     prm.leave_subsection();
     
@@ -283,10 +306,9 @@ struct Parameters
   bool                advec_diff_do_matrixfree   = false;
 
   // normal vector    specific parameters
-  // @todo
-  
+  number              normal_vec_damping_scale_factor = 0.5;
   // curvature        specific parameters
-  // @todo
+  number              curv_damping_scale_factor = 0.0;
   
   // paraview options
   bool                paraview_do_output            = false;
@@ -298,6 +320,7 @@ struct Parameters
   bool                paraview_print_curvature      = false;
   bool                paraview_print_advection      = false;
   bool                paraview_print_exactsolution  = false;
+  bool                paraview_print_boundary_id    = false;
   
   // output options
   bool                output_walltime               = 0;

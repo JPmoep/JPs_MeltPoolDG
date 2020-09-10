@@ -164,18 +164,22 @@ namespace ReinitializationNew
         DataOut<dim> data_out;
         data_out.attach_dof_handler(dof_handler);
         data_out.add_data_vector(reinit_operation.solution_levelset, "psi");
-        
+        if (parameters.paraview_print_normal_vector)
+        {
+          for (unsigned int d=0; d<dim; ++d)
+            data_out.add_data_vector(reinit_operation.normal_vector_field.solution_normal_vector.block(d), "normal_"+std::to_string(d));
+        }
         /*
          *  @todo: add_data_vector(exact_solution)
          */
-        VectorType levelset_exact;
-        levelset_exact.reinit( locally_owned_dofs,
-                               mpi_communicator);
-        data_out.build_patches();
+        //VectorType levelset_exact;
+        //levelset_exact.reinit( locally_owned_dofs,
+                               //mpi_communicator);
       
-        //const int n_digits_timestep = 4;
-        //const int n_groups = 1;
-        data_out.write_vtu_with_pvtu_record("./", "solution_reinitialization", time_step, mpi_communicator); // n_digits_timestep, n_groups);
+        const int n_digits_timestep = 4;
+        const int n_groups = 1;
+        data_out.build_patches();
+        data_out.write_vtu_with_pvtu_record("./", "solution_reinitialization", time_step, mpi_communicator, n_digits_timestep, n_groups);
       }
     }
   

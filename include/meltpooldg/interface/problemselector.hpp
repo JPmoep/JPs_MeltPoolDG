@@ -1,11 +1,13 @@
 #pragma once
 // MeltPoolDG
+#include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_problem.hpp>
-#include <meltpooldg/levelset/levelset.hpp>
+#include <meltpooldg/level_set/levelset.hpp>
+#include <meltpooldg/level_set_refactored/level_set_problem.hpp>
 #include <meltpooldg/reinitialization/reinitialization.hpp>
 #include <meltpooldg/reinitialization_refactored/reinitialization_problem.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
-#include <meltpooldg/interface/problembase.hpp>
+/* add your problem here*/
 
 //@todo: merge this file with problembase.hpp
 
@@ -22,14 +24,23 @@ namespace MeltPoolDG
       get_problem( std::shared_ptr<SimulationBase<dim>> sim )
       {
         std::shared_ptr<ProblemBase<dim,degree>> problem;
-        if( sim->parameters.problem_name == "levelset" )
-          return std::make_shared<LevelSetEquation<dim,degree>>(sim);     
-        if( sim->parameters.problem_name == "reinitialization" )
+        if( sim->parameters.problem_name == "level_set_deprecated" )
+          return std::make_shared<LevelSetEquation<dim,degree>>(sim); 
+
+        else if( sim->parameters.problem_name == "level_set" )
+          return std::make_shared<LevelSet::LevelSetProblem<dim,degree>>(sim); 
+
+        else if( sim->parameters.problem_name == "reinitialization_deprecated" )
           return std::make_shared<Reinitialization<dim,degree>>(sim);     
-        if( sim->parameters.problem_name == "reinitializationproblem" )
+
+        else if( sim->parameters.problem_name == "reinitialization" )
           return std::make_shared<ReinitializationNew::ReinitializationProblem<dim,degree>>(sim);     
-        if( sim->parameters.problem_name == "advection_diffusion_problem" )
+        
+        else if( sim->parameters.problem_name == "advection_diffusion" )
           return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim,degree>>(sim);     
+        
+        /* add your problem here*/
+        
         else
           AssertThrow(false, ExcMessage("The solver for your requested problem type does not exist"));
       }  

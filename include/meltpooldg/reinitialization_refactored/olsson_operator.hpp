@@ -62,12 +62,6 @@ class OlssonOperator : public OperatorBase<number,
           set_normal_vector_field(n_in);
         }
       
-      void
-      print_me() const override
-      {
-        //std::cout << "hello from olsson operator; eps: " << eps << std::endl;
-      }
-
       /*
        *    this is the matrix-based implementation of the rhs and the system_matrix
        *    @todo: this could be improved by using the WorkStream functionality of dealii

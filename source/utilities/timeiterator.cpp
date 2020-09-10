@@ -21,7 +21,7 @@ namespace MeltPoolDG
     }
 
     bool
-    TimeIterator::is_finished() 
+    TimeIterator::is_finished() const
     {
         if (n_time_steps>=time_data.max_n_time_steps)
             return true;
@@ -63,7 +63,15 @@ namespace MeltPoolDG
     }
 
     void
-    TimeIterator::print_me(std::ostream & pcout)
+    TimeIterator::reset()
+    {
+      n_time_steps = 0;
+      current_time = time_data.start_time;
+      current_time_increment = time_data.time_increment;
+    }
+
+    void
+    TimeIterator::print_me(std::ostream & pcout) const
     {
         pcout << "      | Time step " << n_time_steps << " at t=" << std::fixed 
               << std::setprecision(5) << current_time << std::endl; 

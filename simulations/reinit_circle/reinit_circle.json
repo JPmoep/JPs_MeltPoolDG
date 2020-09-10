@@ -1,6 +1,6 @@
 {
   "general" : { 
-    "problem name" : "reinitializationproblem" 
+    "problem name" : "reinitialization" 
   },
   "spatial domain" : { 
     "dimension" : "2",

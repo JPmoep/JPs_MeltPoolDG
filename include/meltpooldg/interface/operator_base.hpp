@@ -63,7 +63,6 @@ namespace MeltPoolDG
   
         virtual void print_me() const
         {
-          std::cout << "hello from reinitializationoperatorbase" << std::endl;
         }
 
         void 

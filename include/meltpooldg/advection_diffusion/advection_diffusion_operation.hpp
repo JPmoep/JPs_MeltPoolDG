@@ -154,11 +154,10 @@ namespace AdvectionDiffusion
         solution_advected_field.update_ghost_values();
       }
 
-
       if(advec_diff_data.do_print_l2norm)
       {
-        pcout << "| CG: i=" << std::setw(5) << std::left << iter;
-        pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << src.linfty_norm() << std::endl;
+        pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
+        pcout << "\t |Δϕ|2 = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm() << std::endl;
       }
   }
 
@@ -205,7 +204,6 @@ namespace AdvectionDiffusion
                                                                             advection_velocity,
                                                                             advec_diff_data
                                                                           );
-      advec_diff_operator->print_me();
     }
     
     const FE_Q<dim>&                           fe;

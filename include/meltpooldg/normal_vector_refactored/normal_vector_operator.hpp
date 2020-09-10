@@ -55,12 +55,6 @@ namespace NormalVectorNew
       }
 
       void
-      print_me() const override
-      {
-        std::cout << "hello from normal vector operator; damping: " << damping << std::endl;
-      }
-
-      void
       assemble_matrixbased( const VectorType & levelset_in, 
                             SparseMatrixType & matrix, 
                             BlockVectorType & rhs ) const override
