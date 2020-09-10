@@ -16,5 +16,5 @@
   "paraview" : {
     "paraview do output"           : "true",
     "paraview print normal vector" : "true"
-  },
+  }
 }
