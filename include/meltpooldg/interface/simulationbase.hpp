@@ -50,7 +50,7 @@ namespace MeltPoolDG
         std::shared_ptr<BoundaryConditions<dim>>  get_boundary_conditions() const { return std::make_shared<BoundaryConditions<dim>>(this->boundary_conditions); }
 
         const MPI_Comm                                    mpi_communicator;
-        std::shared_ptr<parallel::TriangulationBase<dim>> triangulation; 
+        std::shared_ptr<Triangulation<dim>>               triangulation; 
         FieldConditions<dim>                              field_conditions;
         BoundaryConditions<dim>                           boundary_conditions;
         Parameters<double>                                parameters;

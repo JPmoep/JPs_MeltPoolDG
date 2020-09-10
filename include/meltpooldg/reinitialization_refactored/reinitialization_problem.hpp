@@ -187,7 +187,7 @@ namespace ReinitializationNew
     FE_Q<dim>                                            fe;
     MappingQGeneric<dim>                                 mapping;
     QGauss<dim>                                          q_gauss;
-    std::shared_ptr<parallel::TriangulationBase<dim>>    triangulation;
+    std::shared_ptr<Triangulation<dim>>                  triangulation;
     DoFHandlerType                                       dof_handler;
     Parameters<double>                                   parameters;
     std::shared_ptr<FieldConditions<dim>>                field_conditions;

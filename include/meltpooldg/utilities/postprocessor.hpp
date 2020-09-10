@@ -34,10 +34,10 @@ namespace MeltPoolDG
     void compute_error( const int                                          n_q_points,
                         const VectorType&                                  approximate_solution,
                         const Function<dim>&                               ExactSolution,
-                        const DoFHandler<dim>&                             dof_handler,
-                        const parallel::distributed::Triangulation<dim>&   triangulation)
+                        const DoFHandler<dim>&                             dof_handler)
     {
-      
+      const auto & triangulation = dof_handler.get_triangulation();
+        
       const auto qGauss = QGauss<dim>(n_q_points);
       Vector<double> norm_per_cell(triangulation.n_active_cells());
 
