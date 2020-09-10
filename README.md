@@ -16,7 +16,7 @@ This project depends on the following third-party libraries:
 In the ./simulations folder you find some example simulations. If you would like to create a simulation "vortex_bubble", follow the subsequent steps:
 
     * cd simulations
-    * echo "ADD_SUBDIRECTORY(vortex_bubble)" << CMakeLists.txt
+    * echo "ADD_SUBDIRECTORY(vortex_bubble)" >> CMakeLists.txt
     * mkdir vortex_bubble
     * cd vortex_bubble    
     * touch vortex_bubble.cpp
