@@ -20,7 +20,7 @@ namespace MeltPoolDG
         //virtual void set_mpi_commun() = 0;
         SimulationBase(MPI_Comm my_communicator)
         : mpi_communicator(my_communicator)
-        //, triangulation(this->mpi_communicator)
+        , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0 )
         {
         }
 
@@ -49,10 +49,12 @@ namespace MeltPoolDG
         
         std::shared_ptr<BoundaryConditions<dim>>  get_boundary_conditions() const { return std::make_shared<BoundaryConditions<dim>>(this->boundary_conditions); }
 
-        const MPI_Comm                                    mpi_communicator;
-        std::shared_ptr<Triangulation<dim>>               triangulation; 
-        FieldConditions<dim>                              field_conditions;
-        BoundaryConditions<dim>                           boundary_conditions;
-        Parameters<double>                                parameters;
+        const MPI_Comm                            mpi_communicator;
+        std::shared_ptr<Triangulation<dim>>       triangulation; 
+        Parameters<double>                        parameters;
+        const dealii::ConditionalOStream          pcout;
+      protected:
+        FieldConditions<dim>                      field_conditions;
+        BoundaryConditions<dim>                   boundary_conditions;
     };
 } // namespace MeltPoolDG

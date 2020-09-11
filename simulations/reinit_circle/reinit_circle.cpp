@@ -88,7 +88,7 @@ namespace MeltPoolDG
     {
       std::string paramfile;
       paramfile = "reinit_circle.json";
-      this->parameters.process_parameters_file(paramfile);
+      this->parameters.process_parameters_file(paramfile,this->pcout);
     }
 
     void create_spatial_discretization()

@@ -53,14 +53,13 @@ namespace NormalVectorNew
    *     @ todo: add equation 
    */
   
-  template <int dim, int degree>
+  template <int dim, int degree, unsigned int comp=0>
   class NormalVectorOperation
   {
   private:
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
     using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
-    using DoFHandlerType      = DoFHandler<dim>;                                    
     using SparsityPatternType = TrilinosWrappers::SparsityPattern;
     using ConstraintsType     = AffineConstraints<double>;
 
@@ -72,25 +71,14 @@ namespace NormalVectorNew
      */
     BlockVectorType solution_normal_vector;
     
-    NormalVectorOperation( const DoFHandlerType&       dof_handler_in,
-                           const MappingQGeneric<dim>& mapping_in,
-                           const FE_Q<dim>&            fe_in,
-                           const QGauss<dim>&          q_gauss_in, 
-                           const ConstraintsType&      constraints_in,
-                           const IndexSet&             locally_owned_dofs_in,
-                           const IndexSet&             locally_relevant_dofs_in,
-                           const double                min_cell_size_in)
-    :
-    fe                    ( fe_in),
-    mapping               ( mapping_in),
-    q_gauss               ( q_gauss_in),
-    dof_handler           ( &dof_handler_in ),
-    constraints           ( &constraints_in ),
-    locally_owned_dofs    ( locally_owned_dofs_in ),
-    locally_relevant_dofs ( locally_relevant_dofs_in ),
-    min_cell_size         ( min_cell_size_in ),
-    mpi_communicator      ( UtilityFunctions::get_mpi_comm(*dof_handler) ),
-    pcout                 ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+    NormalVectorOperation(  MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
+                           const ConstraintsType&   constraints_in,
+                           const double             min_cell_size_in)
+    : scratch_data    ( scratch_data_in )
+    , constraints     ( &constraints_in )
+    , min_cell_size   ( min_cell_size_in )
+    , mpi_communicator( MPI_COMM_WORLD )   // @todo: fix this!!
+    , pcout           ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
     {
     }
 
@@ -168,12 +156,18 @@ namespace NormalVectorNew
     {
       if (!normal_vector_data.do_matrix_free)
       {
+        IndexSet locally_owned_dofs;
+        IndexSet locally_relevant_dofs;
+        
+        locally_owned_dofs = scratch_data.get_dof_handler(comp).locally_owned_dofs(); 
+        DoFTools::extract_locally_relevant_dofs(scratch_data.get_dof_handler(comp), locally_relevant_dofs);
+
         dsp.reinit( locally_owned_dofs,
                     locally_owned_dofs,
                     locally_relevant_dofs,
                     mpi_communicator);
 
-        DoFTools::make_sparsity_pattern(*dof_handler, 
+        DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(0), 
                                         dsp,
                                         *constraints,
                                         true,
@@ -185,28 +179,21 @@ namespace NormalVectorNew
       }
 
       normal_vector_operator = std::make_unique<NormalVectorOperator<dim, degree>>(
-                                                          fe,
-                                                          mapping,
-                                                          q_gauss,
-                                                          dof_handler,
+                                                          scratch_data,
                                                           constraints,
                                                           normal_vector_data.damping_parameter );
     }
 
-    const FE_Q<dim>&                           fe;
-    const MappingQGeneric<dim>&                mapping;
-    const QGauss<dim>&                         q_gauss;
-    SmartPointer<const DoFHandlerType>         dof_handler;
-    SmartPointer<const ConstraintsType>        constraints;
-    const IndexSet&                            locally_owned_dofs;
-    const IndexSet&                            locally_relevant_dofs;
-    double                                     min_cell_size;           // @todo: check CFL condition
-    const MPI_Comm                             mpi_communicator;
-    ConditionalOStream                         pcout;                   // @todo: reference
+    MatrixFree<dim, double, VectorizedArray<double>>& scratch_data;
+    SmartPointer<const ConstraintsType>               constraints;
+    double                                            min_cell_size;           // @todo: check CFL condition
+    const MPI_Comm                                    mpi_communicator;
+    ConditionalOStream                                pcout;                   // @todo: refe
+
     /* 
      *  This pointer will point to your user-defined normal vector operator.
      */
-    std::unique_ptr<OperatorBase<double, BlockVectorType, VectorType>>     
+    std::unique_ptr<OperatorBase<double, BlockVectorType, VectorType>>    
                                                normal_vector_operator;    
     
     SparseMatrixType                           system_matrix;

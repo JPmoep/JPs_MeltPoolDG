@@ -1,5 +1,6 @@
 #pragma once
 #include <deal.II/base/parameter_handler.h>
+#include <deal.II/base/conditional_ostream.h>
 // c++
 #include <fstream>
 #include <iostream>
@@ -13,9 +14,10 @@ template <typename number=double>
 struct Parameters
 {
   void 
-  process_parameters_file(const std::string &parameter_filename)
+  process_parameters_file(const std::string &parameter_filename,
+                          const dealii::ConditionalOStream &pcout
+      )
   {
-    
     ParameterHandler prm;
     add_parameters(prm);
     
@@ -30,7 +32,7 @@ struct Parameters
       prm.parse_input(parameter_filename);
     else
       AssertThrow(false, ExcMessage("Parameterhandler cannot handle current file ending"));
-    prm.print_parameters(std::cout,
+    prm.print_parameters(pcout.get_stream(),
                          ParameterHandler::OutputStyle::Text);
   }
   

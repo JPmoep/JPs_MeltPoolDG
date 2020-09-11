@@ -143,7 +143,7 @@ namespace MeltPoolDG
     {
       std::string paramfile;
       paramfile = "advection_diffusion.json";
-      this->parameters.process_parameters_file(paramfile);
+      this->parameters.process_parameters_file(paramfile, this->pcout);
     }
 
     void create_spatial_discretization()

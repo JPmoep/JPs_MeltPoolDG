@@ -1,6 +1,6 @@
 {
   "general" : { 
-    "problem name" : "reinitialization" 
+    "problem name" : "problem_new" 
   },
   "spatial domain" : { 
     "dimension" : "2",
@@ -10,7 +10,7 @@
     "reinit max n steps"     : "30",
     "reinit modeltype"       : "1",
     "reinit dtau"            : "0.005",
-    "reinit do matrixfree"   : "true", 
+    "reinit do matrixfree"   : "false", 
     "reinit do print l2norm" : "true" 
   },
   "paraview" : {

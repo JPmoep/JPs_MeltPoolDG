@@ -30,12 +30,12 @@ namespace MeltPoolDG
 namespace ReinitializationNew
 {
   using namespace dealii; 
-
+ 	
   /*
    *     Reinitialization model for reobtaining the signed-distance 
    *     property of the level set equation
    */
-  
+
   template <int dim, int degree>
   class ReinitializationProblem : public ProblemBase<dim,degree>
   {
@@ -54,22 +54,19 @@ namespace ReinitializationNew
     : fe(                  degree )
     , mapping(             degree )
     , q_gauss(             degree+1 )
+    , quad_1d(             degree+1 )
     , triangulation(       base_in->triangulation)
     , dof_handler(         *triangulation )
     , parameters(          base_in->parameters )
     , field_conditions(    base_in->get_field_conditions()  )
     , min_cell_size(       GridTools::minimal_cell_diameter(*triangulation) )
     , mpi_communicator(    base_in->get_mpi_communicator())
-    , pcout(               std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-    , reinit_operation(    dof_handler,
-                           mapping,
-                           fe,
-                           q_gauss,
+    , pcout(               base_in->pcout.get_stream() )
+    , reinit_operation(    matrix_free,
                            constraints,
-                           locally_owned_dofs,
-                           locally_relevant_dofs,
                            min_cell_size )
     {
+      initialize();
     }
 
     /*
@@ -80,11 +77,12 @@ namespace ReinitializationNew
     void 
     run() final
     {
-      initialize();
+      //initialize();
       while ( !time_iterator.is_finished() )
       {
         pcout << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
         reinit_operation.reinit_data.d_tau = time_iterator.get_next_time_increment();   
+        
         reinit_operation.solve();
         /*
          *  do paraview output if requested
@@ -104,20 +102,9 @@ namespace ReinitializationNew
     initialize()
     {
       /*
-       *  setup DoFHandler
+       *  setup scratch data
        */
-      dof_handler.distribute_dofs( fe );
-      locally_owned_dofs = dof_handler.locally_owned_dofs(); 
-
-      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
-      
-      /*
-       *  make hanging nodes constraints
-       */
-      constraints.clear();
-      constraints.reinit(locally_relevant_dofs);
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-      constraints.close();
+      create_scratch_data(/*base_in*/);
       
       /*  
        *  initialize the time iterator
@@ -134,10 +121,7 @@ namespace ReinitializationNew
        *  set initial conditions of the levelset function
        */
       VectorType solution_levelset;
-      solution_levelset.reinit( locally_owned_dofs, 
-                                locally_relevant_dofs,
-                                mpi_communicator);
-
+      matrix_free.initialize_dof_vector(solution_levelset);
       VectorTools::project( dof_handler, 
                             constraints,
                             q_gauss,
@@ -153,6 +137,46 @@ namespace ReinitializationNew
       
     }
 
+    void
+    create_scratch_data(/*std::shared_ptr<SimulationBase<dim>> base_in*/)
+    {
+
+      /*
+       *  setup DoFHandler
+       */
+      dof_handler.distribute_dofs( fe );
+
+      IndexSet locally_relevant_dofs;
+      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
+      
+      /*
+       *  make hanging nodes constraints
+       */
+      constraints.clear();
+      constraints.reinit(locally_relevant_dofs);
+      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
+      constraints.close();
+      
+      /*
+       *  create the matrix-free object
+       */
+      typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData additional_data;
+      additional_data.mapping_update_flags = update_values | update_gradients;
+      /*
+       *  create vector of dof_handlers
+       */
+      dof_handler_comp.emplace_back(&dof_handler);
+      /*
+       *  create vector of constraints
+       */
+      constraints_comp.emplace_back(&constraints);
+      /*
+       *  create vector of quadrature rules
+       */
+      quad_comp.emplace_back(quad_1d);
+
+      matrix_free.reinit(mapping, dof_handler_comp, constraints_comp, quad_comp, additional_data);
+    }
     /*
      *  Creating paraview output
      */
@@ -162,16 +186,14 @@ namespace ReinitializationNew
       if (parameters.paraview_do_output)
       {
         DataOut<dim> data_out;
-        data_out.attach_dof_handler(dof_handler);
+        data_out.attach_dof_handler(matrix_free.get_dof_handler());
         data_out.add_data_vector(reinit_operation.solution_levelset, "psi");
         if (parameters.paraview_print_normal_vector)
         {
           for (unsigned int d=0; d<dim; ++d)
             data_out.add_data_vector(reinit_operation.normal_vector_field.solution_normal_vector.block(d), "normal_"+std::to_string(d));
         }
-        /*
-         *  @todo: add_data_vector(exact_solution)
-         */
+          //@todo: add_data_vector(exact_solution)
         //VectorType levelset_exact;
         //levelset_exact.reinit( locally_owned_dofs,
                                //mpi_communicator);
@@ -182,29 +204,32 @@ namespace ReinitializationNew
         data_out.write_vtu_with_pvtu_record("./", "solution_reinitialization", time_step, mpi_communicator, n_digits_timestep, n_groups);
       }
     }
-  
-    // for submodule this is actually needed as reference
+
     FE_Q<dim>                                            fe;
     MappingQGeneric<dim>                                 mapping;
     QGauss<dim>                                          q_gauss;
+    QGauss<1>                                            quad_1d;
     std::shared_ptr<Triangulation<dim>>                  triangulation;
     DoFHandlerType                                       dof_handler;
     Parameters<double>                                   parameters;
     std::shared_ptr<FieldConditions<dim>>                field_conditions;
-    double                                               min_cell_size;     // @todo: check CFL condition
+    const double                                         min_cell_size;     // @todo: check CFL condition
     const MPI_Comm                                       mpi_communicator;
-    ConditionalOStream                                   pcout;
+    const ConditionalOStream                             pcout;
+
+    AffineConstraints<double>                            constraints;
+    std::vector<QGauss<1>>                               quad_comp; 
+    std::vector<const AffineConstraints<double>*>        constraints_comp; 
+    std::vector<const DoFHandler<dim>*>                  dof_handler_comp; 
+    MatrixFree<dim, double, VectorizedArray<double>>     matrix_free;
     /* 
     * at the moment the implementation considers natural boundary conditions
      */
     //std::shared_ptr<BoundaryConditions<dim>>   boundary_conditions;
     
-    AffineConstraints<double>                            constraints;
-    IndexSet                                             locally_owned_dofs;
-    IndexSet                                             locally_relevant_dofs;
-    
     TimeIterator                                         time_iterator;
     ReinitializationOperation<dim, degree>               reinit_operation;
+    
   };
 } // namespace Reinitialization
 } // namespace MeltPoolDG

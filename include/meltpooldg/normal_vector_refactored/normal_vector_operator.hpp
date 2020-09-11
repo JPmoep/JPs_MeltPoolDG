@@ -29,29 +29,18 @@ namespace NormalVectorNew
       using BlockVectorType = LinearAlgebra::distributed::BlockVector<number>;
       using VectorizedArrayType = VectorizedArray<number>;
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
+      using DoFHandlerType    = DoFHandler<dim>;
 
       
       NormalVectorOperator
-      ( const FE_Q<dim>&                              fe_in,
-        const MappingQGeneric<dim>&                   mapping_in,
-        const QGauss<dim>&                            q_gauss_in,
-        SmartPointer<const DoFHandler<dim>>           dof_handler_in,
-        SmartPointer<const AffineConstraints<number>> constraints_in,
-        const double                                  damping_in
+      ( MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
+        SmartPointer<const AffineConstraints<number>>     constraints_in,
+        const double                                      damping_in
       )
-      : fe          ( fe_in      )
-      , mapping     ( mapping_in )
-      , q_gauss     ( q_gauss_in ) 
-      , dof_handler ( dof_handler_in ) 
+      : matrix_free ( scratch_data_in )
       , constraints ( constraints_in )
       , damping     ( damping_in )
       {
-        QGauss<1>     quad_1d(degree + 1);
-      
-        typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData  additional_data;
-        additional_data.mapping_update_flags = update_values | update_gradients;
-      
-        matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
       }
 
       void
@@ -59,24 +48,29 @@ namespace NormalVectorNew
                             SparseMatrixType & matrix, 
                             BlockVectorType & rhs ) const override
       {
+        
+      const auto mapping = matrix_free.get_mapping_info().mapping;
 
-      FEValues<dim> fe_values( mapping,
-                               fe,
-                               q_gauss,
+      auto q_gauss = QGauss<dim>(degree+1);
+      FEValues<dim> fe_values( *mapping,
+                               matrix_free.get_dof_handler().get_fe(),
+                               matrix_free.get_quadrature(),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
 
-      const unsigned int                    dofs_per_cell = fe.dofs_per_cell;
+      const unsigned int                    dofs_per_cell =matrix_free.get_dofs_per_cell();
+
       FullMatrix<double>                    normal_cell_matrix( dofs_per_cell, dofs_per_cell );
       std::vector<Vector<double>>           normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
       std::vector<types::global_dof_index>  local_dof_indices(  dofs_per_cell );
       
-      const unsigned int n_q_points         = q_gauss.size();
+      const unsigned int n_q_points = fe_values.get_quadrature().size();
+
       std::vector<Tensor<1,dim>>            normal_at_q(  n_q_points, Tensor<1,dim>() );
       
       matrix = 0.0;
       rhs = 0.0;
 
-      for (const auto &cell : dof_handler->active_cell_iterators())
+      for (const auto &cell : matrix_free.get_dof_handler().active_cell_iterators())
       if (cell->is_locally_owned())
       {
         fe_values.reinit(cell);
@@ -86,7 +80,7 @@ namespace NormalVectorNew
         for(auto& normal_cell : normal_cell_rhs)
             normal_cell =    0.0;
 
-        fe_values.get_function_gradients( levelset_in, normal_at_q ); // compute normals from level set solution at tau=0
+        fe_values.get_function_gradients( levelset_in, normal_at_q );  //compute normals from level set solution at tau=0
         for (const unsigned int q_index : fe_values.quadrature_point_indices())
         {
           for (unsigned int i=0; i<dofs_per_cell; ++i)
@@ -99,7 +93,7 @@ namespace NormalVectorNew
                 const double phi_j             = fe_values.shape_value(j, q_index);
                 const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(j, q_index);
                 
-                // clang-format off
+                 //clang-format off
                 normal_cell_matrix( i, j ) += ( 
                                                 phi_i * phi_j 
                                                 + 
@@ -107,23 +101,23 @@ namespace NormalVectorNew
                                               )
                                               * 
                                               fe_values.JxW( q_index ) ;
-                // clang-format on
+                 //clang-format on
             }
      
             for (unsigned int d=0; d<dim; ++d)
             {
-                // clang-format off
+                 //clang-format off
                 normal_cell_rhs[d](i) += phi_i
                                          * 
                                          normal_at_q[ q_index ][ d ]  
                                          * 
                                          fe_values.JxW( q_index );
-                  // clang-format on
+                   //clang-format on
             }
           }
         }
         
-        // assembly
+         //assembly
         cell->get_dof_indices(local_dof_indices);
 
         constraints->distribute_local_to_global( normal_cell_matrix,
@@ -149,7 +143,7 @@ namespace NormalVectorNew
           const BlockVectorType & src) const override
     {
       const int n_q_points_1d = degree+1; // @ todo: not hard code
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal(      matrix_free );
+      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal( matrix_free );
 
       matrix_free.template cell_loop<BlockVectorType, BlockVectorType>( [&] 
         (const auto&, auto& dst, const auto& src, auto cell_range) {
@@ -232,14 +226,10 @@ namespace NormalVectorNew
 
 
     private:
-      // geometry data
-      const FE_Q<dim>&                                fe;
-      const MappingQGeneric<dim>&                     mapping;
-      const QGauss<dim>&                              q_gauss;
-      SmartPointer<const DoFHandler<dim>>             dof_handler;
+      MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
+
       SmartPointer<const AffineConstraints<number>>   constraints;
 
-      MatrixFree<dim, number, VectorizedArrayType>    matrix_free;
       double damping; 
 
   };
