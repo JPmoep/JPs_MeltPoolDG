@@ -602,6 +602,7 @@ namespace MeltPoolDG
   }
 
   // instantiation
+  template class Reinitialization<1,1>;
   template class Reinitialization<2,1>;
   template class Reinitialization<2,2>;
 } // namespace MeltPoolDG

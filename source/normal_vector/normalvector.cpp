@@ -299,6 +299,7 @@ namespace MeltPoolDG
     }
 
     // instantiation
+    template class NormalVector<1,1>;
     template class NormalVector<2,1>;
     template class NormalVector<2,2>;
 

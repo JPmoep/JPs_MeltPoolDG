@@ -32,7 +32,7 @@ namespace MeltPoolDG
                    const unsigned int component = 0) const
     {
     (void)component;
-    Point<2> center     = Point<2>(0.0,0.5); 
+    Point<dim> center     = dim == 1 ? Point<dim>(0.0) : Point<dim>(0.0,0.5); 
     const double radius = 0.25;
     return UtilityFunctions::CharacteristicFunctions::sgn( 
                 UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ));
@@ -60,7 +60,7 @@ namespace MeltPoolDG
                          const unsigned int component = 0) const 
     {
       (void)component;
-      Point<2> center     = Point<2>(0.0,0.5); 
+      Point<dim> center     = Point<dim>(0.0,0.5); 
       const double radius = 0.25;
       return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function( 
              UtilityFunctions::DistanceFunctions::spherical_manifold( p, center, radius ), 
@@ -93,7 +93,13 @@ namespace MeltPoolDG
 
     void create_spatial_discretization()
     {
-      this->triangulation = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+      if(dim == 1)
+      {
+        AssertDimension(Utilities::MPI::n_mpi_processes(this->mpi_communicator), 1);
+        this->triangulation = std::make_shared<Triangulation<dim>>();
+      }
+      else
+        this->triangulation = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
       GridGenerator::hyper_cube( *this->triangulation, 
                                  left_domain, 
                                  right_domain );
@@ -130,13 +136,25 @@ int main(int argc, char* argv[])
       // @ todo: incorporate better way for template parameter degree
       const int degree = 1;
 
-      auto sim = std::make_shared<Simulation<2>>();
+      const auto dim = std::make_shared<Simulation<1>>()->parameters.dimension;
 
-      if ( sim->parameters.dimension==2 )
+      if ( dim == 1)
       {
+        auto sim = std::make_shared<Simulation<1>>();
+        sim->create();
+        auto problem = ProblemSelector<1,degree>::get_problem(sim);
+        problem->run();
+      }
+      else if ( dim == 2)
+      {
+        auto sim = std::make_shared<Simulation<2>>();
         sim->create();
         auto problem = ProblemSelector<2,degree>::get_problem(sim);
         problem->run();
+      }
+      else
+      {
+        AssertThrow(false, ExcMessage("Dimension must be 1 or 2."));
       }
     }
   catch (std::exception &exc)

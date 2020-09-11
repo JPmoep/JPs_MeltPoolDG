@@ -191,6 +191,7 @@ namespace MeltPoolDG
     }
 
     // instantiation
+    template class Curvature<1,1>;
     template class Curvature<2,1>;
     template class Curvature<2,2>;
 } // namespace MeltPoolDG

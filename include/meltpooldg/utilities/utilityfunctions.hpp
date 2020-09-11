@@ -63,9 +63,11 @@ namespace DistanceFunctions
       return -std::sqrt( std::pow(p[0]-center[0],2) + std::pow(p[1]-center[1],2) + std::pow(p[2]-center[2],2)) + radius;
     else if (dim==2)
       return -std::sqrt(std::pow(p[0]-center[0],2) + std::pow(p[1]-center[1],2)) + radius;
+    else if (dim==1)
+      return -std::sqrt(std::pow(p[0]-center[0],2)) + radius;
     else
-      AssertThrow(false, ExcMessage("Spherical manifold: dim must be 2 or 3."))
-  }
+      AssertThrow(false, ExcMessage("Spherical manifold: dim must be 1, 2 or 3."));
+}
   
   //@todo: this function should be added to accept lines and planar surfaces
   template <int dim>
