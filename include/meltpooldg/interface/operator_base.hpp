@@ -23,11 +23,15 @@ namespace MeltPoolDG
 
         virtual
         void
-        initialize_dof_vector(VectorType &dst) const = 0;
+        initialize_dof_vector(VectorType &dst) const
+        {
+          (void)dst;
+          AssertThrow(false, ExcMessage("initialize_dof_vector for the requested operator not implemented"));
+        }
         
         virtual
         void
-        initialize_dof_vector(BlockVectorType &dst) const
+        initialize_block_dof_vector(BlockVectorType &dst) const
         {
           (void)dst;
           AssertThrow(false, ExcMessage("initialize_dof_vector for the requested operator not implemented"));

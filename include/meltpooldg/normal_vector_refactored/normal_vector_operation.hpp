@@ -115,8 +115,8 @@ namespace NormalVectorNew
     {
       BlockVectorType rhs;
       normal_vector_operator->print_me();
-      normal_vector_operator->initialize_dof_vector(rhs);
-      normal_vector_operator->initialize_dof_vector(solution_normal_vector);
+      normal_vector_operator->initialize_block_dof_vector(rhs);
+      normal_vector_operator->initialize_block_dof_vector(solution_normal_vector);
       
       int iter = 0;
       

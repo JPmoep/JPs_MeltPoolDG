@@ -116,10 +116,6 @@ namespace MeltPoolDG
 
   };
 
-  //template class Simulation<3>; //@ does not work currently
-template class Simulation<2>; 
-
-
 } // namespace MeltPoolDG
 
 int main(int argc, char* argv[])

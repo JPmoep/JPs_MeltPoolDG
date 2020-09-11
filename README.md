@@ -5,9 +5,9 @@ The aim of this project is to provide solvers for simulating the thermo-hydrodyn
 
 This project depends on the following third-party libraries:
 
-    * dealii
-    * p4est
-    * Trilinos
+- deal.II
+- p4est
+- Trilinos
 
 ![alt text](doc/MeltPoolDG.png?raw=true)
 
@@ -15,20 +15,23 @@ This project depends on the following third-party libraries:
 
 In the ./simulations folder you find some example simulations. If you would like to create a simulation "vortex_bubble", follow the subsequent steps:
 
-    * cd simulations
-    * echo "ADD_SUBDIRECTORY(vortex_bubble)" >> CMakeLists.txt
-    * mkdir vortex_bubble
-    * cd vortex_bubble    
-    * touch vortex_bubble.cpp
-    * touch vortex_bubble.json
-    * cd ../rotating_bubble/CMakeLists .
+```bash
+cd simulations
+echo "ADD_SUBDIRECTORY(vortex_bubble)" >> CMakeLists.txt
+mkdir vortex_bubble
+cd vortex_bubble    
+touch vortex_bubble.cpp
+touch vortex_bubble.json
+cp ../rotating_bubble/CMakeLists .
+```
    
-In the CMakeLists file change the project name and the *.cpp-file name containing the main function. You can build an run your simulation (with e.g. 4 cores) using the folllowing commands:
-     
-     * cmake -D DEAL_II_DIR=/myDealIIBuildDir ../../.
-     * make -j 6 
-     * mpirun -np 4 ./vortexbubble
-
+In the CMakeLists file change the project name and the *.cpp-file name containing the main function. You can build an run your simulation (with e.g. 4 processes) using the following commands:
+   
+```bash  
+cmake -D DEAL_II_DIR=/myDealIIBuildDir ../../.
+make -j 6 
+mpirun -np 4 ./vortexbubble
+```
 
 
 

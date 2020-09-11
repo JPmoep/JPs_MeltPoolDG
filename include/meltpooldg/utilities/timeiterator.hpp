@@ -8,7 +8,7 @@ namespace MeltPoolDG
       double start_time       = 0.0;
       double end_time         = 1.0;
       double time_increment   = 0.01;
-      int max_n_time_steps    = 1000;
+      unsigned int max_n_time_steps    = 1000;
       bool CFL_condition      = false;
   };
   /*
