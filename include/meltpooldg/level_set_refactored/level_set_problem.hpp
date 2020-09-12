@@ -73,13 +73,12 @@ namespace LevelSet
                                *field_conditions->advection_field,
                                min_cell_size )
     {
+      initialize();
     }
     
     void 
     run() final
     {
-      initialize();
-
       while ( !time_iterator.is_finished() )
       {
         pcout << "| ls: t= " << std::setw(10) << std::left << time_iterator.get_current_time();
@@ -120,7 +119,7 @@ namespace LevelSet
       VectorType initial_solution;
       matrix_free.initialize_dof_vector(initial_solution);
       VectorTools::project( dof_handler, 
-                            constraints,
+                            constraints_dirichlet,
                             q_gauss,
                             *field_conditions->initial_field,           
                             initial_solution );
@@ -163,7 +162,7 @@ namespace LevelSet
                                                   *bc.second,
                                                   constraints_dirichlet );
       }
-      constraints.close();
+      constraints_dirichlet.close();
 
       /*
        *  make hanging nodes constraints

@@ -91,8 +91,8 @@ namespace LevelSet
                            constraints_in,
                            min_cell_size )
       , curvature_operation( scratch_data_in,
-                         constraints_in,
-                         min_cell_size )
+                             constraints_in,
+                             min_cell_size )
     {
     }
     
