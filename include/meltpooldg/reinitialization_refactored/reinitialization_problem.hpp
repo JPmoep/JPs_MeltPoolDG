@@ -109,14 +109,11 @@ namespace ReinitializationNew
       /*  
        *  initialize the time iterator
        */
-      TimeIteratorData time_data;
-      time_data.start_time       = 0.0;
-      time_data.end_time         = 100.;
-      time_data.time_increment   = parameters.reinit_dtau; 
-      time_data.max_n_time_steps = parameters.reinit_max_n_steps;
-      
-      time_iterator.initialize(time_data);
-      
+      time_iterator.initialize(TimeIteratorData{ 0.0,
+                                                 10000.,
+                                                 parameters.reinit_dtau,
+                                                 parameters.reinit_max_n_steps,
+                                                 false });
       /*
        *  set initial conditions of the levelset function
        */

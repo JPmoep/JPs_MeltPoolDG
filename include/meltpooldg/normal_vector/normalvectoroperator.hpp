@@ -117,7 +117,6 @@ namespace MeltPoolDG
             matrix_free.initialize_dof_vector(dst.block(d));
         }
 
-
         private:
           const MatrixFree<dim, number, VectorizedArrayType> &matrix_free;
           double damping; 

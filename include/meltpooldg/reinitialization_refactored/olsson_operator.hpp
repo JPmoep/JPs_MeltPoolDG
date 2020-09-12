@@ -8,6 +8,7 @@
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
 #include <meltpooldg/interface/operator_base.hpp>
+#include <meltpooldg/normal_vector_refactored/normal_vector_operator.hpp>
 
 namespace MeltPoolDG
 {
@@ -96,7 +97,7 @@ class OlssonOperator : public OperatorBase<number,
 
           fe_values.get_function_values(     levelset_old, psi_at_q );     // compute values of old solution at tau_n
           fe_values.get_function_gradients(  levelset_old, grad_psi_at_q ); // compute gradients of old solution at tau_n
-          get_unit_normals_at_quadrature(fe_values,
+          NormalVectorNew::NormalVectorOperator<dim,degree>::get_unit_normals_at_quadrature(fe_values,
                                          n,
                                          normal_at_q);
 
@@ -258,22 +259,6 @@ class OlssonOperator : public OperatorBase<number,
         n.update_ghost_values();
       }
 
-      static
-      void
-      get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
-                                      const BlockVectorType& normal_vector_field_in, 
-                                      std::vector<Tensor<1,dim>>& unit_normal_at_quadrature)
-      {
-        for (unsigned int d=0; d<dim; ++d )
-        {
-            std::vector<double> temp ( unit_normal_at_quadrature.size() );
-            fe_values.get_function_values(  normal_vector_field_in.block(d), temp); // compute normals from level set solution at tau=0
-            for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                unit_normal_at_quadrature[ q_index ][ d ] = temp[ q_index ];
-        }
-        for (auto& n : unit_normal_at_quadrature)
-            n /= n.norm(); //@todo: add exception if norm is zero
-      }
       
       static
       vector
@@ -293,6 +278,7 @@ class OlssonOperator : public OperatorBase<number,
       {
           return in / in.norm();
       }
+
       SmartPointer<const AffineConstraints<number>>     constraints;
       const MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
       

@@ -224,6 +224,22 @@ namespace NormalVectorNew
         matrix_free.initialize_dof_vector(dst.block(d));
     }
 
+    static
+    void
+    get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
+                                    const BlockVectorType& normal_vector_field_in, 
+                                    std::vector<Tensor<1,dim>>& unit_normal_at_quadrature)
+    {
+      for (unsigned int d=0; d<dim; ++d )
+      {
+          std::vector<double> temp ( unit_normal_at_quadrature.size() );
+          fe_values.get_function_values(  normal_vector_field_in.block(d), temp); // compute normals from level set solution at tau=0
+          for (const unsigned int q_index : fe_values.quadrature_point_indices())
+              unit_normal_at_quadrature[ q_index ][ d ] = temp[ q_index ];
+      }
+      for (auto& n : unit_normal_at_quadrature)
+          n /= n.norm(); //@todo: add exception if norm is zero
+    }
 
     private:
       MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;

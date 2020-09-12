@@ -58,6 +58,7 @@ namespace AdvectionDiffusion
     : fe(                      degree )
     , mapping(                 degree )
     , q_gauss(                 degree+1 )
+    , quad_1d(                 degree+1 )      
     , triangulation(           base_in->triangulation)
     , dof_handler(             *triangulation)
     , parameters(              base_in->parameters )
@@ -65,17 +66,13 @@ namespace AdvectionDiffusion
     , boundary_conditions(     base_in->get_boundary_conditions()  )
     , min_cell_size(           GridTools::minimal_cell_diameter(*triangulation) )
     , mpi_communicator(        base_in->get_mpi_communicator())
-    , pcout(                   std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-    , advec_diff_operation(    dof_handler,
-                               mapping,
-                               fe,
-                               q_gauss,
+    , pcout(                   base_in->pcout.get_stream() )
+    , advec_diff_operation(    matrix_free,
                                constraints,
-                               locally_owned_dofs,                   //  @todo: locally_owned_dofs is not initialized
-                               locally_relevant_dofs,
                                min_cell_size,
                                *field_conditions->advection_field)
     {
+      initialize();
     }
 
     /*
@@ -86,7 +83,6 @@ namespace AdvectionDiffusion
     void 
     run() final
     {
-      initialize();
 
       while ( !time_iterator.is_finished() )
       {
@@ -111,28 +107,9 @@ namespace AdvectionDiffusion
     initialize()
     {
       /*
-       *  setup DoFHandler
+       *  setup scratch data
        */
-      dof_handler.distribute_dofs( fe );
-      locally_owned_dofs = dof_handler.locally_owned_dofs(); 
-
-      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
-      
-      /*
-       *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
-       *  dirichlet constraints are supported)
-       */
-      constraints.clear();
-      constraints.reinit(locally_relevant_dofs);
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-      for (const auto & bc : boundary_conditions->dirichlet_bc)
-      {
-        VectorTools::interpolate_boundary_values( dof_handler,
-                                                  bc.first,
-                                                  *bc.second,
-                                                  constraints );
-      }
-      constraints.close();
+      create_scratch_data(/*base_in*/);
       /*  
        *  initialize the time iterator
        */
@@ -148,9 +125,7 @@ namespace AdvectionDiffusion
        *  set initial conditions of the levelset function
        */
       VectorType initial_solution;
-      initial_solution.reinit( locally_owned_dofs, 
-                                locally_relevant_dofs,
-                                mpi_communicator);
+      matrix_free.initialize_dof_vector(initial_solution);
 
       VectorTools::project( dof_handler, 
                             constraints,
@@ -169,6 +144,54 @@ namespace AdvectionDiffusion
     /*
      *  This function is to create paraview output
      */
+    void
+    create_scratch_data(/*std::shared_ptr<SimulationBase<dim>> base_in*/)
+    {
+
+      /*
+       *  setup DoFHandler
+       */
+      dof_handler.distribute_dofs( fe );
+
+      IndexSet locally_relevant_dofs;
+      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
+      
+      /*
+       *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
+       *  dirichlet constraints are supported)
+       */
+      constraints.clear();
+      constraints.reinit(locally_relevant_dofs);
+      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
+      for (const auto & bc : boundary_conditions->dirichlet_bc)
+      {
+        VectorTools::interpolate_boundary_values( dof_handler,
+                                                  bc.first,
+                                                  *bc.second,
+                                                  constraints );
+      }
+      constraints.close();
+      /*
+       *  create the matrix-free object
+       */
+      typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData additional_data;
+      additional_data.mapping_update_flags = update_values | update_gradients;
+      /*
+       *  create vector of dof_handlers
+       */
+      dof_handler_comp.emplace_back(&dof_handler);
+      /*
+       *  create vector of constraints
+       */
+      constraints_comp.emplace_back(&constraints);
+      /*
+       *  create vector of quadrature rules
+       */
+      quad_comp.emplace_back(quad_1d);
+
+      matrix_free.reinit(mapping, dof_handler_comp, constraints_comp, quad_comp, additional_data);
+    }
+
     void 
     output_results(const unsigned int time_step=0) const
     {
@@ -235,6 +258,7 @@ namespace AdvectionDiffusion
     FE_Q<dim>                                            fe;
     MappingQGeneric<dim>                                 mapping;
     QGauss<dim>                                          q_gauss;
+    QGauss<1>                                            quad_1d;
     std::shared_ptr<Triangulation<dim>>                  triangulation;
     DoFHandlerType                                       dof_handler;
     Parameters<double>                                   parameters;
@@ -246,9 +270,11 @@ namespace AdvectionDiffusion
     ConditionalOStream                                   pcout;
     
     AffineConstraints<double>                            constraints;
-    IndexSet                                             locally_owned_dofs;
-    IndexSet                                             locally_relevant_dofs;
-    
+    std::vector<QGauss<1>>                               quad_comp; 
+    std::vector<const AffineConstraints<double>*>        constraints_comp; 
+    std::vector<const DoFHandler<dim>*>                  dof_handler_comp; 
+    MatrixFree<dim, double, VectorizedArray<double>>     matrix_free; 
+
     TimeIterator                                         time_iterator;
     AdvectionDiffusionOperation<dim, degree>             advec_diff_operation;
   };

@@ -15,6 +15,7 @@
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
 #include <meltpooldg/reinitialization_refactored/reinitialization_operation.hpp>
+#include <meltpooldg/curvature/curvature_operation.hpp>
 
 namespace MeltPoolDG
 {
@@ -48,7 +49,7 @@ namespace LevelSet
   /*
    *     LevelSet model 
    */
-  template <int dim, int degree>
+  template <int dim, int degree, int comp=0>
   class LevelSetOperation 
   {
   private:
@@ -69,45 +70,29 @@ namespace LevelSet
      *    accessible for output_results.
      */
     VectorType solution_level_set;
+    VectorType& solution_curvature = curvature_operation.solution_curvature;
 
-    LevelSetOperation( const DoFHandlerType&       dof_handler_in,
-                                 const MappingQGeneric<dim>& mapping_in,
-                                 const FE_Q<dim>&            fe_in,
-                                 const QGauss<dim>&          q_gauss_in,
-                                 const ConstraintsType&      constraints_in,
-                                 const IndexSet&             locally_owned_dofs_in,
-                                 const IndexSet&             locally_relevant_dofs_in,
-                                 const double                min_cell_size_in,
-                                 const TensorFunction<1,dim> & advection_velocity_in,
-                                 const ConstraintsType&      constraints_no_dirichlet_in
-        )
-      : fe                    ( fe_in )
-      , mapping               ( mapping_in )
-      , q_gauss               ( q_gauss_in )
-      , dof_handler           ( &dof_handler_in )
-      , locally_owned_dofs    ( locally_owned_dofs_in )
-      , locally_relevant_dofs ( locally_relevant_dofs_in )
+    LevelSetOperation( MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
+                       const ConstraintsType&                            constraints_dir_in,
+                       const ConstraintsType&                            constraints_in,
+                       TensorFunction<1,dim>&                            advection_velocity_in,
+                       const double                                      min_cell_size_in)
+      : scratch_data          ( scratch_data_in )
       , min_cell_size         ( min_cell_size_in )
-      , mpi_communicator      ( UtilityFunctions::get_mpi_comm(*dof_handler) )
+      , mpi_communicator      ( MPI_COMM_WORLD ) 
+      //, mpi_communicator      ( UtilityFunctions::get_mpi_comm(*dof_handler) )
       , pcout                 ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
       , advection_velocity    ( advection_velocity_in )
-      , advec_diff_operation(  *dof_handler,
-                           mapping,
-                           fe,
-                           q_gauss,
-                           constraints_in,
-                           locally_owned_dofs,
-                           locally_relevant_dofs,
+      , advec_diff_operation(  scratch_data_in,
+                           constraints_dir_in,
                            min_cell_size,
                            advection_velocity )
-      , reinit_operation(  *dof_handler,
-                           mapping,
-                           fe,
-                           q_gauss,
-                           constraints_no_dirichlet_in,
-                           locally_owned_dofs,
-                           locally_relevant_dofs,
+      , reinit_operation(  scratch_data_in,
+                           constraints_in,
                            min_cell_size )
+      , curvature_operation( scratch_data_in,
+                         constraints_in,
+                         min_cell_size )
     {
     }
     
@@ -118,9 +103,7 @@ namespace LevelSet
       /*
        *  set initiali conditions
        */
-      solution_level_set.reinit(locally_owned_dofs,
-                               locally_relevant_dofs,
-                               mpi_communicator);
+      scratch_data.initialize_dof_vector(solution_level_set,comp);
 
       solution_level_set.copy_locally_owned_data_from(solution_in);
       solution_level_set.update_ghost_values();
@@ -157,6 +140,7 @@ namespace LevelSet
        */
         reinit_operation.initialize(solution_level_set, 
                                     data_in);
+
         while ( !reinit_time_iterator.is_finished() )
         {
           pcout << std::setw(4) << "" << "| reini: τ= " << std::setw(10) << std::left << reinit_time_iterator.get_current_time();
@@ -165,6 +149,11 @@ namespace LevelSet
         }
         reinit_time_iterator.reset();
       }
+      /*
+       *    initialize the curvature operation class
+       */
+      curvature_operation.initialize(solution_level_set, data_in);
+      curvature_operation.solve();
     }  
   
 
@@ -192,30 +181,25 @@ namespace LevelSet
 
     }
 
-    const FE_Q<dim>&                           fe;
-    const MappingQGeneric<dim>&                mapping;
-    const QGauss<dim>&                         q_gauss;
-    SmartPointer<const DoFHandlerType>         dof_handler;
-    const IndexSet&                            locally_owned_dofs;
-    const IndexSet&                            locally_relevant_dofs;
-    double                                     min_cell_size;           // @todo: check CFL condition
-    const MPI_Comm                             mpi_communicator;
-    ConditionalOStream                         pcout;                   // @todo: reference
+    MatrixFree<dim, double, VectorizedArray<double>>&  scratch_data;
+    double                                             min_cell_size;           
+    const MPI_Comm                                     mpi_communicator;
+    ConditionalOStream                                 pcout;                   
     
-    const TensorFunction<1,dim> &              advection_velocity;
+    const TensorFunction<1,dim> &                      advection_velocity;
      /*
      *  This pointer will point to your user-defined advection_diffusion operator.
      */
-    AdvectionDiffusionOperation<dim, degree>   advec_diff_operation;
-    ReinitializationOperation<dim, degree>     reinit_operation;
+    AdvectionDiffusionOperation<dim, degree>           advec_diff_operation;
+    ReinitializationOperation<dim, degree>             reinit_operation;
+    CurvatureNew::CurvatureOperation<dim, degree>         curvature_operation;
 
-
-    TimeIterator                               reinit_time_iterator;
+    TimeIterator                                       reinit_time_iterator;
     /*
     * the following are prototypes for matrix-based operators
     */
-    SparsityPatternType                        dsp;
-    SparseMatrixType                           system_matrix;     // @todo: might not be a member variable
+    SparsityPatternType                                dsp;
+    SparseMatrixType                                   system_matrix;     // @todo: might not be a member variable
   };
 } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

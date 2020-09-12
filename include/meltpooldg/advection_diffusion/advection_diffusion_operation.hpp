@@ -25,7 +25,7 @@ namespace AdvectionDiffusion
   /*
    *     AdvectionDiffusion model 
    */
-  template <int dim, int degree>
+  template <int dim, int degree, int comp=0>
   class AdvectionDiffusionOperation 
   {
   private:
@@ -46,25 +46,14 @@ namespace AdvectionDiffusion
      *    accessible for output_results.
      */
     VectorType solution_advected_field;
-
-    AdvectionDiffusionOperation( const DoFHandlerType&       dof_handler_in,
-                                 const MappingQGeneric<dim>& mapping_in,
-                                 const FE_Q<dim>&            fe_in,
-                                 const QGauss<dim>&          q_gauss_in,
+    AdvectionDiffusionOperation( MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
                                  const ConstraintsType&      constraints_in,
-                                 const IndexSet&             locally_owned_dofs_in,
-                                 const IndexSet&             locally_relevant_dofs_in,
                                  const double                min_cell_size_in,
                                  const TensorFunction<1,dim> & advection_velocity_in )
-      : fe                    ( fe_in )
-      , mapping               ( mapping_in )
-      , q_gauss               ( q_gauss_in )
-      , dof_handler           ( &dof_handler_in )
+      : scratch_data          ( scratch_data_in )
       , constraints           ( &constraints_in )
-      , locally_owned_dofs    ( locally_owned_dofs_in )
-      , locally_relevant_dofs ( locally_relevant_dofs_in )
       , min_cell_size         ( min_cell_size_in )
-      , mpi_communicator      ( UtilityFunctions::get_mpi_comm(*dof_handler) )
+      , mpi_communicator      ( MPI_COMM_WORLD )
       , pcout                 ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
       , advection_velocity    ( advection_velocity_in )
     {
@@ -74,9 +63,7 @@ namespace AdvectionDiffusion
     initialize(const VectorType & solution_in,
                const Parameters<double>& data_in )
     {
-      solution_advected_field.reinit(locally_owned_dofs,
-                               locally_relevant_dofs,
-                               mpi_communicator);
+      scratch_data.initialize_dof_vector(solution_advected_field,comp);
 
       solution_advected_field.copy_locally_owned_data_from(solution_in);
       solution_advected_field.update_ghost_values();
@@ -158,12 +145,18 @@ namespace AdvectionDiffusion
     {
       if (!advec_diff_data.do_matrix_free)
       {
+        IndexSet locally_owned_dofs;
+        IndexSet locally_relevant_dofs;
+        
+        locally_owned_dofs = scratch_data.get_dof_handler(comp).locally_owned_dofs(); 
+        DoFTools::extract_locally_relevant_dofs(scratch_data.get_dof_handler(comp), locally_relevant_dofs);
+
         dsp.reinit( locally_owned_dofs,
                     locally_owned_dofs,
                     locally_relevant_dofs,
                     mpi_communicator);
 
-        DoFTools::make_sparsity_pattern(*dof_handler, 
+        DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(comp), 
                                         dsp,
                                         *constraints,
                                         true,
@@ -175,23 +168,15 @@ namespace AdvectionDiffusion
       }
       
       advec_diff_operator = 
-         std::make_unique<AdvectionDiffusionOperator<dim, degree, double>>( fe,
-                                                                            mapping,
-                                                                            q_gauss,
-                                                                            dof_handler,
+         std::make_unique<AdvectionDiffusionOperator<dim, degree, double>>( scratch_data,
                                                                             constraints,
                                                                             advection_velocity,
                                                                             advec_diff_data
                                                                           );
     }
-    
-    const FE_Q<dim>&                           fe;
-    const MappingQGeneric<dim>&                mapping;
-    const QGauss<dim>&                         q_gauss;
-    SmartPointer<const DoFHandlerType>         dof_handler;
+
+    MatrixFree<dim, double, VectorizedArray<double>>&       scratch_data;
     SmartPointer<const ConstraintsType>        constraints;
-    const IndexSet&                            locally_owned_dofs;
-    const IndexSet&                            locally_relevant_dofs;
     double                                     min_cell_size;           // @todo: check CFL condition
     const MPI_Comm                             mpi_communicator;
     ConditionalOStream                         pcout;                   // @todo: reference

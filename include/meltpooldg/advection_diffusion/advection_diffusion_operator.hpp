@@ -50,33 +50,18 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
     using vector                  = Tensor<1, dim, VectorizedArray<number>>;                  
     using scalar                  = VectorizedArray<number>;                                  
   public:
-    AdvectionDiffusionOperator( const FE_Q<dim>&                 fe_in,
-      const MappingQGeneric<dim>&                                mapping_in,
-      const QGauss<dim>&                                         q_gauss_in,
-      SmartPointer<const DoFHandler<dim>>                        dof_handler_in,
+    AdvectionDiffusionOperator( const MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in, 
       SmartPointer<const AffineConstraints<number>>              constraints_in,
       const TensorFunction<1,dim>&                               advection_velocity_in,
       const AdvectionDiffusionData& data_in )
-    : fe                  ( fe_in                 )
-    , mapping             ( mapping_in            )
-    , q_gauss             ( q_gauss_in            ) 
-    , dof_handler         ( dof_handler_in        ) 
+    : matrix_free ( scratch_data_in )
     , constraints         ( constraints_in        )
     , advection_velocity  ( advection_velocity_in )
     , data                ( data_in               )
     {
       this->set_time_increment(data.dt);
-      /*
-       * initialize MatrixFree; this is also used in case of a matrix-based simulation
-       * to provide the utility "initialize_dof_vector" --> not 
-       */
-      QGauss<1>     quad_1d(degree + 1);
-      
-      typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData  additional_data;
-      additional_data.mapping_update_flags = update_values | update_gradients;
-      
-      matrix_free.reinit(mapping, *dof_handler, *constraints, quad_1d, additional_data);
     }
+
     /*
      *    this is the matrix-based implementation of the rhs and the matrix
      *    @todo: this could be improved by using the WorkStream functionality of dealii
@@ -90,29 +75,30 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
       AssertThrow(data.diffusivity>=0.0, ExcMessage("Advection diffusion operator: diffusivity is smaller than zero!"));
 
       advected_field_old.update_ghost_values();
-      
-      FEValues<dim> fe_values( mapping,
-                               fe,
-                               q_gauss,
+      const auto mapping = matrix_free.get_mapping_info().mapping;     
+      FEValues<dim> fe_values( *mapping,
+                               matrix_free.get_dof_handler().get_fe(),
+                               matrix_free.get_quadrature(),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values
                                );
+      const unsigned int                    dofs_per_cell =matrix_free.get_dofs_per_cell();      
       
-      FullMatrix<double>   cell_matrix( fe.dofs_per_cell, fe.dofs_per_cell );
-      Vector<double>       cell_rhs(    fe.dofs_per_cell );
+      FullMatrix<double>   cell_matrix( dofs_per_cell, dofs_per_cell );
+      Vector<double>       cell_rhs(    dofs_per_cell );
       
       const unsigned int n_q_points = fe_values.get_quadrature().size();
 
       std::vector<double>                  phi_at_q(      n_q_points );
       std::vector<Tensor<1,dim>>           grad_phi_at_q( n_q_points, Tensor<1,dim>() );
-      std::vector<types::global_dof_index> local_dof_indices( fe.dofs_per_cell );
+      std::vector<types::global_dof_index> local_dof_indices( dofs_per_cell );
 
       rhs      = 0.0;
       matrix   = 0.0;
       
       // advection velocity
       Tensor<1, dim> a;
-
-      for (const auto &cell : dof_handler->active_cell_iterators())
+      
+      for (const auto &cell : matrix_free.get_dof_handler().active_cell_iterators())
       if (cell->is_locally_owned())
       {
         cell_matrix = 0;
@@ -127,9 +113,9 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
           auto qCoord = fe_values.get_quadrature_points()[q_index];
           a =  advection_velocity.value( qCoord );
   
-          for (unsigned int i=0; i<fe.dofs_per_cell; ++i)
+          for (unsigned int i=0; i<dofs_per_cell; ++i)
           {
-            for (unsigned int j=0; j<fe.dofs_per_cell; ++j)
+            for (unsigned int j=0; j<dofs_per_cell; ++j)
             {
                 auto velocity_grad_phi_j = a * fe_values.shape_grad( j, q_index);  
                 // clang-format off
@@ -205,17 +191,10 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
     }
 
     private:
-
-      const FE_Q<dim>&                                fe;
-      const MappingQGeneric<dim>&                     mapping;
-      const QGauss<dim>&                              q_gauss;
-      SmartPointer<const DoFHandler<dim>>             dof_handler;
-      SmartPointer<const AffineConstraints<number>>   constraints;
-      const TensorFunction<1,dim>&                    advection_velocity;
-      const AdvectionDiffusionData&                   data;
-      
-      MatrixFree<dim, number, VectorizedArrayType>    matrix_free;
-      BlockVectorType                                 n;
+      const MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
+      SmartPointer<const AffineConstraints<number>>           constraints;
+      const TensorFunction<1,dim>&                            advection_velocity;
+      const AdvectionDiffusionData&                           data;
 };
 }   // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

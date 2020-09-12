@@ -51,13 +51,14 @@ namespace LevelSet
   public:
 
     /*
-     *  Constructor of advection-diffusion problem
+     *  Constructor of the levelset problem
      */
 
     LevelSetProblem( std::shared_ptr<SimulationBase<dim>> base_in )
     : fe(                      degree )
     , mapping(                 degree )
     , q_gauss(                 degree+1 )
+    , quad_1d(                 degree+1 )
     , triangulation(           base_in->triangulation)
     , dof_handler(             *triangulation)
     , parameters(              base_in->parameters )
@@ -65,17 +66,12 @@ namespace LevelSet
     , boundary_conditions(     base_in->get_boundary_conditions()  )
     , min_cell_size(           GridTools::minimal_cell_diameter(*triangulation) )
     , mpi_communicator(        base_in->get_mpi_communicator())
-    , pcout(                   std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-    , level_set_operation(     dof_handler,
-                               mapping,
-                               fe,
-                               q_gauss,
+    , pcout(                   base_in->pcout.get_stream() )
+    , level_set_operation(     matrix_free,
+                               constraints_dirichlet,
                                constraints,
-                               locally_owned_dofs,                   //  @todo: locally_owned_dofs is not initialized
-                               locally_relevant_dofs,
-                               min_cell_size,
                                *field_conditions->advection_field,
-                               constraints_no_dirichlet)
+                               min_cell_size )
     {
     }
     
@@ -107,36 +103,9 @@ namespace LevelSet
     initialize()
     {
       /*
-       *  setup DoFHandler
+       *  setup scratch data
        */
-      dof_handler.distribute_dofs( fe );
-      locally_owned_dofs = dof_handler.locally_owned_dofs(); 
-
-      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
-      
-      /*
-       *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
-       *  dirichlet constraints are supported)
-       */
-      //constraints.emplace_back(AffineConstraints<double>());
-      constraints.clear();
-      constraints.reinit(locally_relevant_dofs);
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-      for (const auto & bc : boundary_conditions->dirichlet_bc)
-      {
-        VectorTools::interpolate_boundary_values( dof_handler,
-                                                  bc.first,
-                                                  *bc.second,
-                                                  constraints );
-      }
-      constraints.close();
-      /*
-       *  make hanging nodes 
-       */
-      constraints_no_dirichlet.clear();
-      constraints_no_dirichlet.reinit(locally_relevant_dofs);
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints_no_dirichlet);
-      constraints_no_dirichlet.close();
+      create_scratch_data(/*base_in*/);
       /*  
        *  initialize the time iterator
        */
@@ -149,9 +118,7 @@ namespace LevelSet
        *  set initial conditions of the levelset function
        */
       VectorType initial_solution;
-      initial_solution.reinit( locally_owned_dofs, 
-                                locally_relevant_dofs,
-                                mpi_communicator);
+      matrix_free.initialize_dof_vector(initial_solution);
       VectorTools::project( dof_handler, 
                             constraints,
                             q_gauss,
@@ -161,11 +128,75 @@ namespace LevelSet
       initial_solution.update_ghost_values();
 
       /*
-       *    initialize the reinitialization operation class
+       *    initialize the levelset operation class
        */
       level_set_operation.initialize(initial_solution, parameters);
       
+      
     }
+    /*
+     *  Container of relevant data
+     */
+    void
+    create_scratch_data(/*std::shared_ptr<SimulationBase<dim>> base_in*/)
+    {
+
+      /*
+       *  setup DoFHandler
+       */
+      dof_handler.distribute_dofs( fe );
+
+      IndexSet locally_relevant_dofs;
+      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
+      
+      /*
+       *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
+       *  dirichlet constraints are supported)
+       */
+      constraints_dirichlet.clear();
+      constraints_dirichlet.reinit(locally_relevant_dofs);
+      DoFTools::make_hanging_node_constraints(dof_handler, constraints_dirichlet);
+      for (const auto & bc : boundary_conditions->dirichlet_bc)
+      {
+        VectorTools::interpolate_boundary_values( dof_handler,
+                                                  bc.first,
+                                                  *bc.second,
+                                                  constraints_dirichlet );
+      }
+      constraints.close();
+
+      /*
+       *  make hanging nodes constraints
+       */
+      constraints.clear();
+      constraints.reinit(locally_relevant_dofs);
+      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
+      constraints.close();
+      
+      /*
+       *  create the matrix-free object
+       */
+      typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData additional_data;
+      additional_data.mapping_update_flags = update_values | update_gradients;
+      /*
+       *  create vector of dof_handlers
+       */
+      dof_handler_comp.emplace_back(&dof_handler);
+      dof_handler_comp.emplace_back(&dof_handler);
+      /*
+       *  create vector of constraints
+       */
+      constraints_comp.emplace_back(&constraints_dirichlet);
+      constraints_comp.emplace_back(&constraints);
+      /*
+       *  create vector of quadrature rules
+       */
+      quad_comp.emplace_back(quad_1d);
+      quad_comp.emplace_back(quad_1d);
+
+      matrix_free.reinit(mapping, dof_handler_comp, constraints_comp, quad_comp, additional_data);
+    }
+
     /*
      *  This function is to create paraview output
      */
@@ -178,7 +209,7 @@ namespace LevelSet
          *  output advected field
          */
         DataOut<dim> data_out;
-        data_out.attach_dof_handler(dof_handler);
+        data_out.attach_dof_handler(matrix_free.get_dof_handler());
         data_out.add_data_vector(level_set_operation.solution_level_set, "level_set");
         
         /*
@@ -189,14 +220,15 @@ namespace LevelSet
         BlockVectorType advection;
         advection.reinit(dim);
         for(auto d=0; d<dim; ++d)
-          advection.block(d).reinit(dof_handler.n_dofs() ); 
+          advection.block(d).reinit(matrix_free.get_dof_handler().n_dofs() ); 
         
         if (parameters.paraview_print_advection)
         {
           field_conditions->advection_field->set_time( time_iterator.get_current_time() );
           std::map<types::global_dof_index, Point<dim> > supportPoints;
-          DoFTools::map_dofs_to_support_points<dim,dim>(mapping,dof_handler,supportPoints);
-
+          DoFTools::map_dofs_to_support_points<dim,dim>(mapping,
+                                                        matrix_free.get_dof_handler(),
+                                                        supportPoints);
           for(auto& global_dof : supportPoints)
           {
               auto a = field_conditions->advection_field->value(global_dof.second);
@@ -206,7 +238,9 @@ namespace LevelSet
 
 
           for(auto d=0; d<dim; ++d)
-            data_out.add_data_vector(dof_handler,advection.block(d), "advection_velocity_"+std::to_string(d));
+            data_out.add_data_vector(matrix_free.get_dof_handler(),
+                                     advection.block(d), 
+                                     "advection_velocity_"+std::to_string(d));
         }
         /*
         * write data to vtu file
@@ -238,10 +272,10 @@ namespace LevelSet
         }
       }
     }
-    
     FE_Q<dim>                                            fe;
     MappingQGeneric<dim>                                 mapping;
     QGauss<dim>                                          q_gauss;
+    QGauss<1>                                            quad_1d;
     std::shared_ptr<Triangulation<dim>>                  triangulation;
     DoFHandlerType                                       dof_handler;
     Parameters<double>                                   parameters;
@@ -252,11 +286,12 @@ namespace LevelSet
     const MPI_Comm                                       mpi_communicator;
     ConditionalOStream                                   pcout;
     
+    AffineConstraints<double>                            constraints_dirichlet;
     AffineConstraints<double>                            constraints;
-    AffineConstraints<double>                            constraints_no_dirichlet;
-    //std::vector<AffineConstraints<double>>               constraints_vec; // @todo
-    IndexSet                                             locally_owned_dofs;
-    IndexSet                                             locally_relevant_dofs;
+    std::vector<QGauss<1>>                               quad_comp; 
+    std::vector<const AffineConstraints<double>*>        constraints_comp; 
+    std::vector<const DoFHandler<dim>*>                  dof_handler_comp; 
+    MatrixFree<dim, double, VectorizedArray<double>>     matrix_free;
     
     TimeIterator                                         time_iterator;
     LevelSetOperation<dim, degree>                       level_set_operation;

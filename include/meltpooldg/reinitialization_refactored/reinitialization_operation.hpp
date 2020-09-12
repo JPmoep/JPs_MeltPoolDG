@@ -164,9 +164,8 @@ namespace ReinitializationNew
                                                                                 src,
                                                                                 rhs,
                                                                                 preconditioner);
+        constraints->distribute(src);
       }
-
-      constraints->distribute(src);
 
       solution_levelset += src;
       
@@ -201,19 +200,18 @@ namespace ReinitializationNew
     {
       if (!reinit_data.do_matrix_free)
       {
-        const unsigned int idx = 0;
 
         IndexSet locally_owned_dofs;
         IndexSet locally_relevant_dofs;
         
-        locally_owned_dofs = scratch_data.get_dof_handler(idx).locally_owned_dofs(); 
-        DoFTools::extract_locally_relevant_dofs(scratch_data.get_dof_handler(idx), locally_relevant_dofs);
+        locally_owned_dofs = scratch_data.get_dof_handler(comp).locally_owned_dofs(); 
+        DoFTools::extract_locally_relevant_dofs(scratch_data.get_dof_handler(comp), locally_relevant_dofs);
         
         dsp.reinit( locally_owned_dofs,
                     locally_owned_dofs,
                     locally_relevant_dofs,
                     mpi_communicator);
-        DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(0), 
+        DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(comp), 
                                         dsp,
                                         *constraints,
                                         true,
