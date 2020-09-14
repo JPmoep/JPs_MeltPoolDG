@@ -55,8 +55,7 @@ namespace LevelSet
      */
 
     LevelSetProblem( std::shared_ptr<SimulationBase<dim>> base_in )
-    : fe(                      degree )
-    , mapping(                 degree )
+    : mapping(                 degree )
     , q_gauss(                 degree+1 )
     , quad_1d(                 degree+1 )
     , triangulation(           base_in->triangulation)
@@ -77,13 +76,14 @@ namespace LevelSet
     }
     
     void 
-    run() final
+    run( std::shared_ptr<SimulationBase<dim>> base_in ) final
     {
+      (void)base_in;
       while ( !time_iterator.is_finished() )
       {
+        const double dt = time_iterator.get_next_time_increment();   
         pcout << "| ls: t= " << std::setw(10) << std::left << time_iterator.get_current_time();
-        level_set_operation.level_set_data.dt = time_iterator.get_next_time_increment();   
-        level_set_operation.solve(parameters);
+        level_set_operation.solve(parameters, dt);
         /*
          *  do paraview output if requested
          */
@@ -139,7 +139,7 @@ namespace LevelSet
     void
     create_scratch_data(/*std::shared_ptr<SimulationBase<dim>> base_in*/)
     {
-
+      FE_Q<dim> fe(degree);
       /*
        *  setup DoFHandler
        */
@@ -257,7 +257,7 @@ namespace LevelSet
 
           const unsigned int n_digits = static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
 
-          std::string filename = "./solution_advection_diffusion_boundary_IDs" + Utilities::int_to_string(rank, n_digits) + ".vtk";
+          std::string filename = "./solution_levelset_boundary_IDs" + Utilities::int_to_string(rank, n_digits) + ".vtk";
           std::ofstream output(filename.c_str());
 
           GridOut           grid_out;
@@ -271,7 +271,7 @@ namespace LevelSet
         }
       }
     }
-    FE_Q<dim>                                            fe;
+    //FE_Q<dim>                                            fe;
     MappingQGeneric<dim>                                 mapping;
     QGauss<dim>                                          q_gauss;
     QGauss<1>                                            quad_1d;

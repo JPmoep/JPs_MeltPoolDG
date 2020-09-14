@@ -61,7 +61,6 @@ namespace NormalVectorNew
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
     using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
     using SparsityPatternType = TrilinosWrappers::SparsityPattern;
-    using ConstraintsType     = AffineConstraints<double>;
 
   public:
     NormalVectorData normal_vector_data;
@@ -70,25 +69,18 @@ namespace NormalVectorNew
      *    accessible for output_results.
      */
     BlockVectorType solution_normal_vector;
-    
-    NormalVectorOperation(  MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
-                           const ConstraintsType&   constraints_in,
-                           const double             min_cell_size_in)
-    : scratch_data    ( scratch_data_in )
-    , constraints     ( &constraints_in )
-    , min_cell_size   ( min_cell_size_in )
-    , mpi_communicator( MPI_COMM_WORLD )   // @todo: fix this!!
-    , pcout           ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-    {
-    }
 
+    NormalVectorOperation(){}
+    
     void
-    initialize( const Parameters<double>& data_in )
+    initialize( const std::shared_ptr<const ScratchData<dim>> & scratch_data_in,
+                const Parameters<double>& data_in )
     {
+      scratch_data = scratch_data_in;
       /*
        *  initialize normal_vector data
        */
-      normal_vector_data.damping_parameter = min_cell_size * data_in.normal_vec_damping_scale_factor;
+      normal_vector_data.damping_parameter = scratch_data_in->get_min_cell_size() * data_in.normal_vec_damping_scale_factor;
       normal_vector_data.verbosity_level   = TypeDefs::VerbosityType::major;
       normal_vector_data.do_print_l2norm   = true;
 
@@ -134,17 +126,17 @@ namespace NormalVectorNew
                                                        solution_normal_vector.block(d),
                                                        rhs.block(d) );
 
-          constraints->distribute(solution_normal_vector.block(d));
+          scratch_data->get_constraint().distribute(solution_normal_vector.block(d));
           solution_normal_vector.block(d).update_ghost_values();
         }
       }
 
       if (normal_vector_data.do_print_l2norm)
       {
-        pcout <<  "| normal vector:         i=" << iter << " \t"; 
+        scratch_data->get_pcout() <<  "| normal vector:         i=" << iter << " \t"; 
         for(unsigned int d=0; d<dim; ++d)
-          pcout << "|n_" << d << "| = " << std::setprecision(11) << std::setw(15) << std::left << solution_normal_vector.block(d).l2_norm();
-        pcout << std::endl;
+          scratch_data->get_pcout() << "|n_" << d << "| = " << std::setprecision(11) << std::setw(15) << std::left << solution_normal_vector.block(d).l2_norm();
+        scratch_data->get_pcout() << std::endl;
       }
     }
 
@@ -156,20 +148,21 @@ namespace NormalVectorNew
     {
       if (!normal_vector_data.do_matrix_free)
       {
+        const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm(comp);
         IndexSet locally_owned_dofs;
         IndexSet locally_relevant_dofs;
         
-        locally_owned_dofs = scratch_data.get_dof_handler(comp).locally_owned_dofs(); 
-        DoFTools::extract_locally_relevant_dofs(scratch_data.get_dof_handler(comp), locally_relevant_dofs);
+        locally_owned_dofs = scratch_data->get_dof_handler(comp).locally_owned_dofs(); 
+        DoFTools::extract_locally_relevant_dofs(scratch_data->get_dof_handler(comp), locally_relevant_dofs);
 
         dsp.reinit( locally_owned_dofs,
                     locally_owned_dofs,
                     locally_relevant_dofs,
                     mpi_communicator);
 
-        DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(0), 
+        DoFTools::make_sparsity_pattern(scratch_data->get_dof_handler(0), 
                                         dsp,
-                                        *constraints,
+                                        scratch_data->get_constraint(),
                                         true,
                                         Utilities::MPI::this_mpi_process(mpi_communicator)
                                         );
@@ -178,17 +171,11 @@ namespace NormalVectorNew
         system_matrix.reinit( dsp );  
       }
 
-      normal_vector_operator = std::make_unique<NormalVectorOperator<dim, degree>>(
-                                                          scratch_data,
-                                                          constraints,
+      normal_vector_operator = std::make_unique<NormalVectorOperator<dim, degree>>( *scratch_data,
                                                           normal_vector_data.damping_parameter );
     }
-
-    MatrixFree<dim, double, VectorizedArray<double>>& scratch_data;
-    SmartPointer<const ConstraintsType>               constraints;
-    double                                            min_cell_size;           // @todo: check CFL condition
-    const MPI_Comm                                    mpi_communicator;
-    ConditionalOStream                                pcout;                   // @todo: refe
+  private:
+    std::shared_ptr<const ScratchData<dim>> scratch_data;
 
     /* 
      *  This pointer will point to your user-defined normal vector operator.
@@ -198,7 +185,6 @@ namespace NormalVectorNew
     
     SparseMatrixType                           system_matrix;
     SparsityPatternType                        dsp;
-    //BlockVectorType                          system_rhs;
   };
 } // namespace NormalVectorNew
 } // namespace MeltPoolDG

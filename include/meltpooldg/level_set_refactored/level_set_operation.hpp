@@ -30,9 +30,6 @@ namespace LevelSet
     // this parameter activates the reinitialization of the level set field
     bool do_reinitialization = false;
     
-    // time step for LevelSet
-    double dt = 0.01;
-    
     // choose the diffusivity parameter
     double artificial_diffusivity = 0.0;
     
@@ -87,9 +84,9 @@ namespace LevelSet
                            constraints_dir_in,
                            min_cell_size,
                            advection_velocity )
-      , reinit_operation(  scratch_data_in,
-                           constraints_in,
-                           min_cell_size )
+      //, reinit_operation(  scratch_data_in,
+                           //constraints_in,
+                           //min_cell_size )
       , curvature_operation( scratch_data_in,
                              constraints_in,
                              min_cell_size )
@@ -122,37 +119,42 @@ namespace LevelSet
 
     
     void
-    solve(const Parameters<double>& data_in ) // data_in is needed for reinitialization
+    solve(const Parameters<double>& data_in,
+          const double dt ) // data_in is needed for reinitialization
     {
       
       /*
        *  solve the advection step of the levelset 
        *    
        */
-      advec_diff_operation.solve();
+      advec_diff_operation.solve( dt );
       solution_level_set = advec_diff_operation.solution_advected_field; // @ could be defined by reference
 
-      if(level_set_data.do_reinitialization)
-      {
+      //if(level_set_data.do_reinitialization)
+      //{
       /*
        *  solve the reinitialization step
        *  
        */
-        reinit_operation.initialize(solution_level_set, 
-                                    data_in);
+        //reinit_operation.initialize(solution_level_set, 
+                                    //data_in);
 
-        while ( !reinit_time_iterator.is_finished() )
-        {
-          pcout << std::setw(4) << "" << "| reini: τ= " << std::setw(10) << std::left << reinit_time_iterator.get_current_time();
-          reinit_operation.reinit_data.d_tau = reinit_time_iterator.get_next_time_increment();   
-          reinit_operation.solve();
-        }
-        reinit_time_iterator.reset();
-      }
+        //while ( !reinit_time_iterator.is_finished() )
+        //{
+          //const double d_tau = reinit_time_iterator.get_next_time_increment();   
+          //pcout << std::setw(4) << "" << "| reini: τ= " << std::setw(10) << std::left << reinit_time_iterator.get_current_time();
+          //reinit_operation.solve(d_tau);
+        //}
+        //solution_level_set = reinit_operation.solution_levelset; // @ could be defined by reference
+        //reinit_time_iterator.reset();
+      //}
       /*
        *    initialize the curvature operation class
        */
       curvature_operation.initialize(solution_level_set, data_in);
+      /*
+       *    compute the curvature
+       */
       curvature_operation.solve();
     }  
   
@@ -164,9 +166,6 @@ namespace LevelSet
     {
       level_set_data.do_reinitialization = data_in.ls_do_reinitialization;
         //@ todo: add parameter for paraview output
-      advec_diff_operation.advec_diff_data.dt               = data_in.ls_time_step_size > 0.0 ? 
-                                         data_in.ls_time_step_size
-                                        : min_cell_size;
       advec_diff_operation.advec_diff_data.diffusivity      = data_in.ls_artificial_diffusivity;
       advec_diff_operation.advec_diff_data.do_print_l2norm  = true; 
       advec_diff_operation.advec_diff_data.do_matrix_free   = false; // @ todo  

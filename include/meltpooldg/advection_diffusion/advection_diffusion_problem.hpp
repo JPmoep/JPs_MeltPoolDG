@@ -81,14 +81,14 @@ namespace AdvectionDiffusion
      */
 
     void 
-    run() final
+    run( std::shared_ptr<SimulationBase<dim>> base_in ) final
     {
+      (void)base_in;
 
       while ( !time_iterator.is_finished() )
       {
         pcout << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
-        advec_diff_operation.advec_diff_data.dt = time_iterator.get_next_time_increment();   
-        advec_diff_operation.solve();
+        advec_diff_operation.solve(time_iterator.get_next_time_increment());
         /*
          *  do paraview output if requested
          */

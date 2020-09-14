@@ -1,4 +1,5 @@
 #pragma once
+#include <meltpooldg/interface/simulationbase.hpp>
 
 namespace MeltPoolDG
 {
@@ -11,7 +12,7 @@ namespace MeltPoolDG
       virtual ~ProblemBase()
       {}
 
-      virtual void run() = 0;
+      virtual void run( std::shared_ptr<SimulationBase<dim>> base_in ) = 0;
       virtual std::string get_name() = 0;
       virtual void perform_convergence_study() {};
   };

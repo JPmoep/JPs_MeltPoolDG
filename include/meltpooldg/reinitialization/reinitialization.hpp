@@ -111,7 +111,7 @@ namespace MeltPoolDG
      *  Usage as module: this function is the "global" run function to be called from the problem base class
      */
     void 
-    run(); 
+    run(std::shared_ptr<SimulationBase<dim>> base); 
     /*
      *  Usage as submodule
      */

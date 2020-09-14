@@ -143,14 +143,14 @@ int main(int argc, char* argv[])
         auto sim = std::make_shared<Simulation<1>>();
         sim->create();
         auto problem = ProblemSelector<1,degree>::get_problem(sim);
-        problem->run();
+        problem->run(sim);
       }
       else if ( dim == 2)
       {
         auto sim = std::make_shared<Simulation<2>>();
         sim->create();
         auto problem = ProblemSelector<2,degree>::get_problem(sim);
-        problem->run();
+        problem->run(sim);
       }
       else
       {

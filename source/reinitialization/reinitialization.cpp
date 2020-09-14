@@ -261,7 +261,6 @@ namespace MeltPoolDG
         // create right hand side
         matrix_free.initialize_dof_vector(rhs);
         rei.create_rhs(rhs, solution,solution_normal_vector);
-        std::cout << "|rhs|" << rhs.l2_norm() << std::endl;
         matrix_free.initialize_dof_vector(src);
         
         // @ todo: how to introduce preconditioner for matrix-free solution?
@@ -488,8 +487,9 @@ namespace MeltPoolDG
   
   template <int dim, int degree>
   void
-  Reinitialization<dim,degree>::run()
+  Reinitialization<dim,degree>::run(std::shared_ptr<SimulationBase<dim>> base_in )
   {
+    (void)base_in;
     pcout << "Number of degrees of freedom: " << dof_handler->n_dofs()           
                                  << std::endl << std::endl;
     

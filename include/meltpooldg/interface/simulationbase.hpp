@@ -12,7 +12,7 @@ namespace MeltPoolDG
 {
     using namespace dealii;
 
-    template <int dim>
+    template <int dim, int spacedim=dim>
     class SimulationBase
     {
       public:
@@ -50,9 +50,10 @@ namespace MeltPoolDG
         std::shared_ptr<BoundaryConditions<dim>>  get_boundary_conditions() const { return std::make_shared<BoundaryConditions<dim>>(this->boundary_conditions); }
 
         const MPI_Comm                            mpi_communicator;
-        std::shared_ptr<Triangulation<dim>>       triangulation; 
+        std::shared_ptr<Triangulation<dim,spacedim>>       triangulation; 
         Parameters<double>                        parameters;
         const dealii::ConditionalOStream          pcout;
+        //FiniteElement<dim,spacedim>               fe;
       protected:
         FieldConditions<dim>                      field_conditions;
         BoundaryConditions<dim>                   boundary_conditions;

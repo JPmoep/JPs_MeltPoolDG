@@ -33,12 +33,10 @@ namespace NormalVectorNew
 
       
       NormalVectorOperator
-      ( MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
-        SmartPointer<const AffineConstraints<number>>     constraints_in,
-        const double                                      damping_in
+      ( const ScratchData<dim>& scratch_data_in,
+        const double            damping_in
       )
-      : matrix_free ( scratch_data_in )
-      , constraints ( constraints_in )
+      : scratch_data( scratch_data_in )
       , damping     ( damping_in )
       {
       }
@@ -49,15 +47,15 @@ namespace NormalVectorNew
                             BlockVectorType & rhs ) const override
       {
         
-      const auto mapping = matrix_free.get_mapping_info().mapping;
+      const auto& mapping = scratch_data.get_mapping();
 
       auto q_gauss = QGauss<dim>(degree+1);
-      FEValues<dim> fe_values( *mapping,
-                               matrix_free.get_dof_handler().get_fe(),
-                               matrix_free.get_quadrature(),
+      FEValues<dim> fe_values( mapping,
+                               scratch_data.get_matrix_free().get_dof_handler().get_fe(),
+                               scratch_data.get_matrix_free().get_quadrature(),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
 
-      const unsigned int                    dofs_per_cell =matrix_free.get_dofs_per_cell();
+      const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell();
 
       FullMatrix<double>                    normal_cell_matrix( dofs_per_cell, dofs_per_cell );
       std::vector<Vector<double>>           normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
@@ -70,7 +68,7 @@ namespace NormalVectorNew
       matrix = 0.0;
       rhs = 0.0;
 
-      for (const auto &cell : matrix_free.get_dof_handler().active_cell_iterators())
+      for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler().active_cell_iterators())
       if (cell->is_locally_owned())
       {
         fe_values.reinit(cell);
@@ -120,11 +118,11 @@ namespace NormalVectorNew
          //assembly
         cell->get_dof_indices(local_dof_indices);
 
-        constraints->distribute_local_to_global( normal_cell_matrix,
+        scratch_data.get_constraint().distribute_local_to_global( normal_cell_matrix,
                                                  local_dof_indices,
                                                  matrix);
         for (unsigned int d=0; d<dim; ++d)
-            constraints->distribute_local_to_global( normal_cell_rhs[d],
+            scratch_data.get_constraint().distribute_local_to_global( normal_cell_rhs[d],
                                                      local_dof_indices,
                                                      rhs.block(d) );
          
@@ -143,9 +141,9 @@ namespace NormalVectorNew
           const BlockVectorType & src) const override
     {
       const int n_q_points_1d = degree+1; // @ todo: not hard code
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal( matrix_free );
+      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal( scratch_data.get_matrix_free() );
 
-      matrix_free.template cell_loop<BlockVectorType, BlockVectorType>( [&] 
+      scratch_data.get_matrix_free().template cell_loop<BlockVectorType, BlockVectorType>( [&] 
         (const auto&, auto& dst, const auto& src, auto cell_range) {
           for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
           {
@@ -183,10 +181,10 @@ namespace NormalVectorNew
     {
       const int n_q_points_1d = degree+1;
 
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal_vector( matrix_free );
-      FEEvaluation<dim, degree, n_q_points_1d, 1, number>     levelset( matrix_free );
+      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal_vector( scratch_data.get_matrix_free() );
+      FEEvaluation<dim, degree, n_q_points_1d, 1, number>     levelset(      scratch_data.get_matrix_free() );
 
-      matrix_free.template cell_loop<BlockVectorType, VectorType>(
+      scratch_data.get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
           for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
           {
@@ -213,7 +211,7 @@ namespace NormalVectorNew
     void
     initialize_dof_vector(VectorType &dst) const override
     {
-      matrix_free.initialize_dof_vector(dst);
+      scratch_data.initialize_dof_vector(dst);
     }
     
     void
@@ -221,7 +219,7 @@ namespace NormalVectorNew
     {
       dst.reinit(dim);
       for (unsigned int d=0; d<dim; ++d)
-        matrix_free.initialize_dof_vector(dst.block(d));
+        scratch_data.initialize_dof_vector(dst.block(d));
     }
 
     static
@@ -242,9 +240,7 @@ namespace NormalVectorNew
     }
 
     private:
-      MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
-
-      SmartPointer<const AffineConstraints<number>>   constraints;
+      const ScratchData<dim>& scratch_data;
 
       double damping; 
 

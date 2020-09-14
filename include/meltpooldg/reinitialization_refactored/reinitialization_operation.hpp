@@ -14,6 +14,7 @@
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
+#include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/normal_vector_refactored/normal_vector_operation.hpp>
 #include <meltpooldg/reinitialization_refactored/olsson_operator.hpp>
 
@@ -68,38 +69,30 @@ namespace ReinitializationNew
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
     using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
     using SparsityPatternType = TrilinosWrappers::SparsityPattern;
-    using ConstraintsType     = AffineConstraints<double>;   
 
   public:
-    ReinitializationData reinit_data;
+    ReinitializationData      reinit_data;
     /*
      *    This is the primary solution variable of this module, which will be also publically 
      *    accessible for output_results.
      */
-    VectorType           solution_levelset;
+    VectorType       solution_levelset;
+    BlockVectorType& solution_normal_vector = normal_vector_field.solution_normal_vector;
 
-    ReinitializationOperation( MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
-                               const ConstraintsType&                            constraints_in,
-                               const double                                      min_cell_size_in)
-      : scratch_data(           scratch_data_in )
-      , constraints           ( &constraints_in )
-      , min_cell_size         ( min_cell_size_in )
-      , mpi_communicator      ( MPI_COMM_WORLD ) // @todo!!!!!!!!!!!!
-      //, mpi_communicator      ( UtilityFunctions::get_mpi_comm(scratch_data_in.get_dof_handler(0)) )
-      , pcout                 ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0 )
-      , normal_vector_field   ( scratch_data_in,
-                                constraints_in,
-                                min_cell_size_in )
+    ReinitializationOperation()
     {
     }
     
     void 
-    initialize(const VectorType & solution_in,
-               const Parameters<double>& data_in )
+    initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
+               const VectorType &                             solution_levelset_in,
+               const Parameters<double>&                      data_in )
     {
-      scratch_data.initialize_dof_vector(solution_levelset,comp); 
+      scratch_data = scratch_data_in;
+
+      scratch_data->initialize_dof_vector(solution_levelset,comp); 
       
-      solution_levelset.copy_locally_owned_data_from(solution_in);
+      solution_levelset.copy_locally_owned_data_from(solution_levelset_in);
       solution_levelset.update_ghost_values();
       /*
        *    initialize the (local) parameters of the reinitialization
@@ -109,7 +102,7 @@ namespace ReinitializationNew
       /*
        *    initialize normal_vector_field
        */
-      normal_vector_field.initialize( data_in );
+      normal_vector_field.initialize( scratch_data_in, data_in );
       /*
        *    update normal vector field
        */
@@ -120,24 +113,23 @@ namespace ReinitializationNew
        */
       create_operator();
     }
-
     
     void
-    solve()
+    solve(const double d_tau)
     {
       VectorType src, rhs;
 
-      scratch_data.initialize_dof_vector(src);
-      scratch_data.initialize_dof_vector(rhs);
+      scratch_data->get_matrix_free().initialize_dof_vector(src);
+      scratch_data->get_matrix_free().initialize_dof_vector(rhs);
       
-      reinit_operator->set_time_increment(reinit_data.d_tau);
+      reinit_operator->set_time_increment(d_tau);
 
       int iter = 0;
       
       if (reinit_data.do_matrix_free)
       {
         VectorType src_rhs;
-        scratch_data.initialize_dof_vector(src_rhs);
+        scratch_data->get_matrix_free().initialize_dof_vector(src_rhs);
         src_rhs.copy_locally_owned_data_from(solution_levelset);
         src_rhs.update_ghost_values();
         reinit_operator->create_rhs( rhs, src_rhs);
@@ -164,13 +156,14 @@ namespace ReinitializationNew
                                                                                 src,
                                                                                 rhs,
                                                                                 preconditioner);
-        constraints->distribute(src);
+        scratch_data->get_constraint().distribute(src);
       }
 
       solution_levelset += src;
       
       solution_levelset.update_ghost_values();
-
+      
+      const ConditionalOStream& pcout = scratch_data->get_pcout();
       if(reinit_data.do_print_l2norm)
       {
         pcout << "| CG: i=" << std::setw(5) << std::left << iter;
@@ -183,15 +176,14 @@ namespace ReinitializationNew
     void 
     set_reinitialization_parameters(const Parameters<double>& data_in)
     {
-        //@ todo: add parameter for paraview output
       reinit_data.reinit_model        = static_cast<ReinitModelType>(data_in.reinit_modeltype);
       reinit_data.d_tau               = data_in.reinit_dtau > 0.0 ? 
                                         data_in.reinit_dtau
-                                        : min_cell_size;
+                                        : scratch_data->get_min_cell_size();
       reinit_data.constant_epsilon    = data_in.reinit_constant_epsilon;
-      reinit_data.max_reinit_steps    = data_in.reinit_max_n_steps; //parameters.max_reinitializationsteps;
+      reinit_data.max_reinit_steps    = data_in.reinit_max_n_steps; 
       //reinit_data.verbosity_level     = TypeDefs::VerbosityType::major;
-      reinit_data.do_print_l2norm     = data_in.reinit_do_print_l2norm; //parameters.output_norm_levelset;
+      reinit_data.do_print_l2norm     = data_in.reinit_do_print_l2norm; 
       reinit_data.do_matrix_free      = data_in.reinit_do_matrixfree;  
     }
 
@@ -200,20 +192,21 @@ namespace ReinitializationNew
     {
       if (!reinit_data.do_matrix_free)
       {
-
+        const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm(comp);
         IndexSet locally_owned_dofs;
         IndexSet locally_relevant_dofs;
         
-        locally_owned_dofs = scratch_data.get_dof_handler(comp).locally_owned_dofs(); 
-        DoFTools::extract_locally_relevant_dofs(scratch_data.get_dof_handler(comp), locally_relevant_dofs);
+        locally_owned_dofs = scratch_data->get_dof_handler(comp).locally_owned_dofs(); 
+        DoFTools::extract_locally_relevant_dofs(scratch_data->get_dof_handler(comp), locally_relevant_dofs);
         
         dsp.reinit( locally_owned_dofs,
                     locally_owned_dofs,
                     locally_relevant_dofs,
-                    mpi_communicator);
-        DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(comp), 
+                    mpi_communicator
+                    );
+        DoFTools::make_sparsity_pattern(scratch_data->get_dof_handler(comp), 
                                         dsp,
-                                        *constraints,
+                                        scratch_data->get_constraint(comp),
                                         true,
                                         Utilities::MPI::this_mpi_process(mpi_communicator)
                                         );
@@ -224,12 +217,10 @@ namespace ReinitializationNew
       
       if (reinit_data.reinit_model == ReinitModelType::olsson2007)
       {
+
        reinit_operator = 
-          std::make_unique<OlssonOperator<dim, degree, double>>( reinit_data.d_tau,
-                                                                 normal_vector_field.solution_normal_vector, 
-                                                                 scratch_data,
-                                                                 constraints,
-                                                                 min_cell_size
+          std::make_unique<OlssonOperator<dim, degree, double>>( *scratch_data,
+                                                                  normal_vector_field.solution_normal_vector
                                                                 );
       }
       /* 
@@ -243,26 +234,20 @@ namespace ReinitializationNew
     }
   
   private:
-    MatrixFree<dim, double, VectorizedArray<double>>&       scratch_data;
-    SmartPointer<const ConstraintsType>                     constraints;
-    double                                                  min_cell_size;           
-    const MPI_Comm                                          mpi_communicator;
-    ConditionalOStream                                      pcout;                   // @todo: reference
-    /*
-     *  This shared pointer will point to your user-defined reinitialization operator.
-     */
-    std::unique_ptr<OperatorBase<double>>      reinit_operator;
-    
+    std::shared_ptr<const ScratchData<dim>>                 scratch_data;
     /*
     * the following are prototypes for matrix-based operators
     */
-    SparsityPatternType                        dsp;
-    SparseMatrixType                           system_matrix;     // @todo: might not be a member variable
-  public:
+    SparsityPatternType                                     dsp;
+    SparseMatrixType                                        system_matrix;     // @todo: might not be a member variable
+    /*
+     *  This shared pointer will point to your user-defined reinitialization operator.
+     */
+    std::unique_ptr<OperatorBase<double>>                   reinit_operator;
     /*
      *   Computation of the normal vectors
      */
-    NormalVectorNew::NormalVectorOperation<dim,degree> normal_vector_field;
+    NormalVectorNew::NormalVectorOperation<dim,degree>      normal_vector_field;
     
   };
 } // namespace ReinitializationNew

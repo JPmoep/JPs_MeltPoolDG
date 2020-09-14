@@ -343,7 +343,6 @@ namespace MeltPoolDG
 
       if (parameters.paraview_print_normal_vector)
       {
-        std::cout << "normal vectors are prnted: " << std::endl;
         /* currently only supported when reinitialization is activated */
         if ( parameters.ls_do_reinitialization )    
         {
@@ -363,7 +362,6 @@ namespace MeltPoolDG
     
       if (parameters.paraview_print_curvature)
       {
-          std::cout << "curvature is plotted " << std::endl;
           initialize_curvature();
           curvature.solve(solution_levelset, curvature_field);
           data_out.add_data_vector(dof_handler, curvature_field, "curvature");
@@ -381,7 +379,6 @@ namespace MeltPoolDG
                               *field_conditions->exact_solution_field,           
                               levelset_exact);
 
-        std::cout << "Norm of exact:" << levelset_exact.l2_norm() << std::endl;
         data_out.add_data_vector(dof_handler, levelset_exact, "exactsolution");
       }
 
@@ -402,8 +399,9 @@ namespace MeltPoolDG
   // @todo: this function is currently a mess :) !
   template <int dim, int degree>
   void 
-  LevelSetEquation<dim,degree>::run()
+  LevelSetEquation<dim,degree>::run( std::shared_ptr<SimulationBase<dim>> base_in )
   {
+    (void)base_in;
     // @todo: include timer
     // timer.start();
     pcout << "Running "

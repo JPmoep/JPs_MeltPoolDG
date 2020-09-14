@@ -89,7 +89,7 @@ namespace MeltPoolDG
   public:
     LevelSetEquation( std::shared_ptr<SimulationBase<dim>> base );
     
-    void run() final;
+    void run(std::shared_ptr<SimulationBase<dim>> base) final;
     
     std::string get_name() final { return "levelset"; };
 

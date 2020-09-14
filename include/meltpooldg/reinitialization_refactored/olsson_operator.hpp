@@ -30,17 +30,12 @@ class OlssonOperator : public OperatorBase<number,
         using scalar                  = VectorizedArray<number>;                                  
   public:
       OlssonOperator
-        ( const double                                            time_increment,
-          const BlockVectorType&                                  n_in,
-          const MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
-          SmartPointer<const AffineConstraints<number>>           constraints_in,
-          const double                                            min_cell_size
+        (  const ScratchData<dim>&                                scratch_data_in,
+           const BlockVectorType&                                  n_in
         )
-        : constraints         ( constraints_in)
-        , matrix_free(          scratch_data_in ) 
-        , eps                 ( min_cell_size / (std::sqrt(dim) * 2))
+        : scratch_data(          scratch_data_in ) 
+        , eps         ( scratch_data_in.get_min_cell_size()/(std::sqrt(dim) *2) ) 
         {
-          this->set_time_increment(time_increment);
           /*
            *  initialize normal_vector
            */
@@ -60,14 +55,15 @@ class OlssonOperator : public OperatorBase<number,
         
         levelset_old.update_ghost_values();
 
-        const auto mapping = matrix_free.get_mapping_info().mapping;
+        const auto& mapping = scratch_data.get_mapping();
+        //const auto mapping = matrix_free.get_mapping_info().mapping;
 
-        FEValues<dim> fe_values( *mapping,
-                                 matrix_free.get_dof_handler().get_fe(),
-                                 matrix_free.get_quadrature(),
+        FEValues<dim> fe_values( mapping,
+                                 scratch_data.get_matrix_free().get_dof_handler().get_fe(),
+                                 scratch_data.get_matrix_free().get_quadrature(),
                                  update_values | update_gradients | update_quadrature_points | update_JxW_values
                                  );
-        const unsigned int                    dofs_per_cell =matrix_free.get_dofs_per_cell();
+        const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell();
         
         FullMatrix<double>   cell_matrix( dofs_per_cell, dofs_per_cell );
         Vector<double>       cell_rhs(    dofs_per_cell );
@@ -85,7 +81,7 @@ class OlssonOperator : public OperatorBase<number,
         
         this->n.update_ghost_values();
 
-        for (const auto &cell : matrix_free.get_dof_handler().active_cell_iterators())
+        for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler().active_cell_iterators())
         if (cell->is_locally_owned())
         {
           cell_matrix = 0.0;
@@ -138,7 +134,7 @@ class OlssonOperator : public OperatorBase<number,
           // assembly
           cell->get_dof_indices( local_dof_indices );
           
-          this->constraints->distribute_local_to_global( cell_matrix,
+          scratch_data.get_constraint().distribute_local_to_global( cell_matrix,
                                                    cell_rhs,
                                                    local_dof_indices,
                                                    matrix,
@@ -165,10 +161,10 @@ class OlssonOperator : public OperatorBase<number,
         
         const int n_q_points_1d = degree+1; //@ get out of matrixfree?
         
-        FEEvaluation<dim, degree, n_q_points_1d, 1, number>   levelset(      matrix_free );
-        FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( matrix_free );
+        FEEvaluation<dim, degree, n_q_points_1d, 1, number>   levelset(      scratch_data.get_matrix_free() );
+        FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( scratch_data.get_matrix_free() );
 
-        matrix_free.template cell_loop<VectorType, VectorType>( [&] 
+        scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>( [&] 
           (const auto&, auto& dst, const auto& src, auto cell_range) {
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
             {
@@ -214,10 +210,10 @@ class OlssonOperator : public OperatorBase<number,
 
       const int n_q_points_1d = degree+1;
       
-      FEEvaluation<dim, degree, n_q_points_1d, 1, number>   psi(           matrix_free);
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( matrix_free);
+      FEEvaluation<dim, degree, n_q_points_1d, 1, number>   psi(           scratch_data.get_matrix_free());
+      FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( scratch_data.get_matrix_free());
   
-      matrix_free.template cell_loop<VectorType, VectorType>(
+      scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
           for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
           {
@@ -253,7 +249,7 @@ class OlssonOperator : public OperatorBase<number,
         n.reinit(dim);
         for (unsigned int d=0; d<dim; ++d)
         {
-          matrix_free.initialize_dof_vector(n.block(d));
+          scratch_data.initialize_dof_vector(n.block(d));
           n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
         }
         n.update_ghost_values();
@@ -279,11 +275,12 @@ class OlssonOperator : public OperatorBase<number,
           return in / in.norm();
       }
 
-      SmartPointer<const AffineConstraints<number>>     constraints;
-      const MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
+      const ScratchData<dim>& scratch_data;
+      //const MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
       
       double eps = -1.0; 
       BlockVectorType                                 n;
+
 };
 }   // namespace Reinitialization
 } // namespace MeltPoolDG

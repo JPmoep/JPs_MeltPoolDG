@@ -78,14 +78,14 @@ namespace AdvectionDiffusion
 
     
     void
-    solve()
+    solve(const double dt)
     {
       VectorType src, rhs;
 
       advec_diff_operator->initialize_dof_vector(src);
       advec_diff_operator->initialize_dof_vector(rhs);
       
-      advec_diff_operator->set_time_increment(advec_diff_data.dt);
+      advec_diff_operator->set_time_increment(dt);
 
       int iter = 0;
       
@@ -133,9 +133,6 @@ namespace AdvectionDiffusion
     set_advection_diffusion_parameters(const Parameters<double>& data_in)
     {
         //@ todo: add parameter for paraview output
-      advec_diff_data.dt               = data_in.advec_diff_time_step_size > 0.0 ? 
-                                         data_in.advec_diff_time_step_size
-                                        : min_cell_size;
       advec_diff_data.diffusivity      = data_in.advec_diff_diffusivity;
       advec_diff_data.do_print_l2norm  = data_in.advec_diff_do_print_l2norm; //parameters.output_norm_levelset;
       advec_diff_data.do_matrix_free   = data_in.advec_diff_do_matrixfree;  

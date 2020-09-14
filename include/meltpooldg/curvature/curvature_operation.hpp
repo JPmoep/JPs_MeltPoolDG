@@ -85,9 +85,9 @@ namespace CurvatureNew
     , min_cell_size   ( min_cell_size_in )
     , mpi_communicator( MPI_COMM_WORLD )   // @todo: fix this!!
     , pcout           ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-    , normal_vector_field   ( scratch_data_in,
-                              constraints_in,
-                              min_cell_size_in )
+    //, normal_vector_field   ( scratch_data_in,
+                              //constraints_in,
+                              //min_cell_size_in )
     {
     }
 
@@ -98,11 +98,11 @@ namespace CurvatureNew
       /*
        *    initialize normal_vector_field
        */
-      normal_vector_field.initialize( data_in );
+      //normal_vector_field.initialize( data_in );
       /*
        *    update normal vector field
        */
-      normal_vector_field.solve( solution_levelset );
+      //normal_vector_field.solve( solution_levelset );
       /*
        *  initialize operator
        */
@@ -134,23 +134,23 @@ namespace CurvatureNew
       else
       {
         
-        curvature_oeprator->assemble_matrixbased( normal_vector_field.solution_normal_vector, 
-                                                      system_matrix, 
-                                                      rhs );
+        //curvature_oeprator->assemble_matrixbased( normal_vector_field.solution_normal_vector, 
+                                                      //system_matrix, 
+                                                      //rhs );
 
-          iter = LinearSolve<VectorType,
-                             SolverCG<VectorType>,
-                             SparseMatrixType>::solve( system_matrix,
-                                                       solution_curvature,
-                                                       rhs );
+          //iter = LinearSolve<VectorType,
+                             //SolverCG<VectorType>,
+                             //SparseMatrixType>::solve( system_matrix,
+                                                       //solution_curvature,
+                                                       //rhs );
 
-          constraints->distribute(solution_curvature);
-          solution_curvature.update_ghost_values();
+          //constraints->distribute(solution_curvature);
+          //solution_curvature.update_ghost_values();
       }
 
       if (curvature_data.do_print_l2norm)
       {
-        pcout <<  "| normal vector:         i=" << iter << " \t"; 
+        pcout <<  "| curvature:         i=" << iter << " \t"; 
         pcout << "|k| = " << std::setprecision(11) << std::setw(15) << std::left << solution_curvature.l2_norm();
         pcout << std::endl;
       }

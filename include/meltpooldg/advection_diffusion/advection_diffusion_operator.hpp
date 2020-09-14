@@ -18,9 +18,6 @@ using namespace dealii;
 
 struct AdvectionDiffusionData 
 {
-  // time step for AdvectionDiffusion
-  double dt = 0.01;
-  
   // choose the diffusivity parameter
   double diffusivity = 0.0;
   
@@ -59,7 +56,6 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
     , advection_velocity  ( advection_velocity_in )
     , data                ( data_in               )
     {
-      this->set_time_increment(data.dt);
     }
 
     /*
