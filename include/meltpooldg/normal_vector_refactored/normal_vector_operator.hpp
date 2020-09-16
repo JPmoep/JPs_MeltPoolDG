@@ -19,7 +19,7 @@ namespace MeltPoolDG
 namespace NormalVectorNew
 {
 
-  template<int dim, int degree, typename number = double>
+  template<int dim, int degree, unsigned int comp=0, typename number = double>
   class NormalVectorOperator: public OperatorBase<number, 
                                 LinearAlgebra::distributed::BlockVector<number>, 
                                 LinearAlgebra::distributed::Vector<number>>
@@ -29,8 +29,6 @@ namespace NormalVectorNew
       using BlockVectorType = LinearAlgebra::distributed::BlockVector<number>;
       using VectorizedArrayType = VectorizedArray<number>;
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
-      using DoFHandlerType    = DoFHandler<dim>;
-
       
       NormalVectorOperator
       ( const ScratchData<dim>& scratch_data_in,
@@ -49,7 +47,6 @@ namespace NormalVectorNew
         
       const auto& mapping = scratch_data.get_mapping();
 
-      auto q_gauss = QGauss<dim>(degree+1);
       FEValues<dim> fe_values( mapping,
                                scratch_data.get_matrix_free().get_dof_handler().get_fe(),
                                scratch_data.get_matrix_free().get_quadrature(),
@@ -118,11 +115,11 @@ namespace NormalVectorNew
          //assembly
         cell->get_dof_indices(local_dof_indices);
 
-        scratch_data.get_constraint().distribute_local_to_global( normal_cell_matrix,
+        scratch_data.get_constraint(comp).distribute_local_to_global( normal_cell_matrix,
                                                  local_dof_indices,
                                                  matrix);
         for (unsigned int d=0; d<dim; ++d)
-            scratch_data.get_constraint().distribute_local_to_global( normal_cell_rhs[d],
+            scratch_data.get_constraint(comp).distribute_local_to_global( normal_cell_rhs[d],
                                                      local_dof_indices,
                                                      rhs.block(d) );
          
@@ -206,20 +203,6 @@ namespace NormalVectorNew
         dst,
         src,
         true);
-    }
-
-    void
-    initialize_dof_vector(VectorType &dst) const override
-    {
-      scratch_data.initialize_dof_vector(dst);
-    }
-    
-    void
-    initialize_block_dof_vector(BlockVectorType &dst) const override
-    {
-      dst.reinit(dim);
-      for (unsigned int d=0; d<dim; ++d)
-        scratch_data.initialize_dof_vector(dst.block(d));
     }
 
     static

@@ -95,8 +95,8 @@ namespace NormalVectorNew
     {
       BlockVectorType rhs;
       normal_vector_operator->print_me();
-      normal_vector_operator->initialize_block_dof_vector(rhs);
-      normal_vector_operator->initialize_block_dof_vector(solution_normal_vector);
+      scratch_data->initialize_block_dof_vector(rhs);
+      scratch_data->initialize_block_dof_vector(solution_normal_vector);
       
       int iter = 0;
       
@@ -126,7 +126,7 @@ namespace NormalVectorNew
                                                        solution_normal_vector.block(d),
                                                        rhs.block(d) );
 
-          scratch_data->get_constraint().distribute(solution_normal_vector.block(d));
+          scratch_data->get_constraint(comp).distribute(solution_normal_vector.block(d));
           solution_normal_vector.block(d).update_ghost_values();
         }
       }
@@ -171,7 +171,7 @@ namespace NormalVectorNew
         system_matrix.reinit( dsp );  
       }
 
-      normal_vector_operator = std::make_unique<NormalVectorOperator<dim, degree>>( *scratch_data,
+      normal_vector_operator = std::make_unique<NormalVectorOperator<dim, degree, comp>>( *scratch_data,
                                                           normal_vector_data.damping_parameter );
     }
   private:

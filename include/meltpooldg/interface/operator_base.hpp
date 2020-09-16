@@ -20,22 +20,6 @@ namespace MeltPoolDG
       public:
 
         virtual ~OperatorBase() = default;
-
-        virtual
-        void
-        initialize_dof_vector(VectorType &dst) const
-        {
-          (void)dst;
-          AssertThrow(false, ExcMessage("initialize_dof_vector for the requested operator not implemented"));
-        }
-        
-        virtual
-        void
-        initialize_block_dof_vector(BlockVectorType &dst) const
-        {
-          (void)dst;
-          AssertThrow(false, ExcMessage("initialize_dof_vector for the requested operator not implemented"));
-        }
         
         virtual 
         void 

@@ -19,9 +19,7 @@
 #include <deal.II/fe/fe_q.h>
 // for mapping
 #include <deal.II/fe/mapping.h>
-
-// MeltPoolDG
-#include <meltpooldg/interface/simulationbase.hpp>
+ #include <deal.II/grid/grid_tools.h>
 
 namespace MeltPoolDG{
   /**
@@ -35,7 +33,8 @@ template <int dim,
 class ScratchData
 { 
   private:
-    using VectorType          = LinearAlgebra::distributed::Vector<double>;    
+    using VectorType          = LinearAlgebra::distributed::Vector<number>;    
+    using BlockVectorType     = LinearAlgebra::distributed::BlockVector<number>;    
   public:
     ScratchData()
     {
@@ -189,6 +188,14 @@ class ScratchData
     initialize_dof_vector(VectorType & vec, const unsigned int dof_idx=0) const
     {
       matrix_free.initialize_dof_vector(vec,dof_idx);
+    }
+
+    void
+    initialize_block_dof_vector(BlockVectorType & vec) const
+    {
+      vec.reinit(dim);
+      for (unsigned int d=0; d<dim; ++d)
+        this->initialize_dof_vector(vec.block(d));
     }
 
     void

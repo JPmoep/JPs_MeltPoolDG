@@ -22,7 +22,7 @@ namespace MeltPoolDG
     struct BoundaryConditions
     {
         // specify 
-        std::map<types::boundary_id, std::shared_ptr<Function<dim>>>         dirichlet_bc;
+        std::map<unsigned int, std::shared_ptr<Function<dim>>>         dirichlet_bc;
         //std::map<types::boundary_id, std::shared_ptr<TensorFunction<1,dim>> neumann_bc;
         //std::map<types::boundary_id, std::shared_ptr<Function<dim>>>        wall_bc;
         std::map<types::boundary_id, std::shared_ptr<Function<dim>>>         outflow;

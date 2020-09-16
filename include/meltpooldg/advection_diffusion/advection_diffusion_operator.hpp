@@ -34,7 +34,7 @@ struct AdvectionDiffusionData
   TypeDefs::VerbosityType verbosity_level = TypeDefs::VerbosityType::silent;
 };
   
-template<int dim, int degree, typename number = double>
+template<int dim, int degree, int comp=0, typename number = double>
 class AdvectionDiffusionOperator : public OperatorBase<number, 
                               LinearAlgebra::distributed::Vector<number>, 
                               LinearAlgebra::distributed::Vector<number>>
@@ -47,12 +47,10 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
     using vector                  = Tensor<1, dim, VectorizedArray<number>>;                  
     using scalar                  = VectorizedArray<number>;                                  
   public:
-    AdvectionDiffusionOperator( const MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in, 
-      SmartPointer<const AffineConstraints<number>>              constraints_in,
-      const TensorFunction<1,dim>&                               advection_velocity_in,
-      const AdvectionDiffusionData& data_in )
-    : matrix_free ( scratch_data_in )
-    , constraints         ( constraints_in        )
+    AdvectionDiffusionOperator( const ScratchData<dim>&       scratch_data_in, 
+                                const TensorFunction<1,dim>&  advection_velocity_in,
+                                const AdvectionDiffusionData& data_in )
+    : scratch_data        ( scratch_data_in )
     , advection_velocity  ( advection_velocity_in )
     , data                ( data_in               )
     {
@@ -69,15 +67,15 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
                           VectorType & rhs ) const override
     {
       AssertThrow(data.diffusivity>=0.0, ExcMessage("Advection diffusion operator: diffusivity is smaller than zero!"));
-
       advected_field_old.update_ghost_values();
-      const auto mapping = matrix_free.get_mapping_info().mapping;     
-      FEValues<dim> fe_values( *mapping,
-                               matrix_free.get_dof_handler().get_fe(),
-                               matrix_free.get_quadrature(),
+      
+      const auto& mapping = scratch_data.get_mapping();
+      FEValues<dim> fe_values( mapping,
+                               scratch_data.get_matrix_free().get_dof_handler(comp).get_fe(),
+                               scratch_data.get_matrix_free().get_quadrature(comp),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values
                                );
-      const unsigned int                    dofs_per_cell =matrix_free.get_dofs_per_cell();      
+      const unsigned int   dofs_per_cell = scratch_data.get_matrix_free().get_dofs_per_cell();      
       
       FullMatrix<double>   cell_matrix( dofs_per_cell, dofs_per_cell );
       Vector<double>       cell_rhs(    dofs_per_cell );
@@ -94,7 +92,7 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
       // advection velocity
       Tensor<1, dim> a;
       
-      for (const auto &cell : matrix_free.get_dof_handler().active_cell_iterators())
+      for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
       if (cell->is_locally_owned())
       {
         cell_matrix = 0;
@@ -150,7 +148,7 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
     
         // assembly
         cell->get_dof_indices(local_dof_indices);
-        constraints->distribute_local_to_global(cell_matrix,
+        scratch_data.get_constraint(comp).distribute_local_to_global(cell_matrix,
                                                cell_rhs,
                                                local_dof_indices,
                                                matrix,
@@ -180,17 +178,10 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
     //{
     //}
 
-    void
-    initialize_dof_vector(VectorType &dst) const
-    {
-      matrix_free.initialize_dof_vector(dst);
-    }
-
     private:
-      const MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
-      SmartPointer<const AffineConstraints<number>>           constraints;
-      const TensorFunction<1,dim>&                            advection_velocity;
-      const AdvectionDiffusionData&                           data;
+      const ScratchData<dim>&       scratch_data;
+      const TensorFunction<1,dim>&  advection_velocity;
+      const AdvectionDiffusionData& data;
 };
 }   // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

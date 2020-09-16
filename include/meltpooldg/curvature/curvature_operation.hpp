@@ -67,7 +67,6 @@ namespace CurvatureNew
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
     using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
     using SparsityPatternType = TrilinosWrappers::SparsityPattern;
-    using ConstraintsType     = AffineConstraints<double>;
 
   public:
     CurvatureData curvature_data;
@@ -77,32 +76,19 @@ namespace CurvatureNew
      */
     VectorType solution_curvature;
     
-    CurvatureOperation( MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
-                        const ConstraintsType&   constraints_in,
-                        const double             min_cell_size_in)
-    : scratch_data    ( scratch_data_in )
-    , constraints     ( &constraints_in )
-    , min_cell_size   ( min_cell_size_in )
-    , mpi_communicator( MPI_COMM_WORLD )   // @todo: fix this!!
-    , pcout           ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-    //, normal_vector_field   ( scratch_data_in,
-                              //constraints_in,
-                              //min_cell_size_in )
+    CurvatureOperation()
     {
     }
 
     void
-    initialize( const VectorType & solution_levelset,
+    initialize( const std::shared_ptr<const ScratchData<dim>> & scratch_data_in,
                 const Parameters<double>& data_in )
     {
+      scratch_data = scratch_data_in;
       /*
        *    initialize normal_vector_field
        */
-      //normal_vector_field.initialize( data_in );
-      /*
-       *    update normal vector field
-       */
-      //normal_vector_field.solve( solution_levelset );
+      normal_vector_field.initialize( scratch_data, data_in );
       /*
        *  initialize operator
        */
@@ -110,12 +96,17 @@ namespace CurvatureNew
     }
 
     void
-    solve()
+    solve( const VectorType& solution_levelset )
     {
+      /*
+       *    update normal vector field
+       */
+      normal_vector_field.solve( solution_levelset );
+      
       VectorType rhs;
 
-      scratch_data.initialize_dof_vector(rhs);
-      scratch_data.initialize_dof_vector(solution_curvature);
+      scratch_data->initialize_dof_vector(rhs);
+      scratch_data->initialize_dof_vector(solution_curvature);
       
       int iter = 0;
       
@@ -134,22 +125,23 @@ namespace CurvatureNew
       else
       {
         
-        //curvature_oeprator->assemble_matrixbased( normal_vector_field.solution_normal_vector, 
-                                                      //system_matrix, 
-                                                      //rhs );
+        curvature_operator->assemble_matrixbased( normal_vector_field.solution_normal_vector, 
+                                                      system_matrix, 
+                                                      rhs );
 
-          //iter = LinearSolve<VectorType,
-                             //SolverCG<VectorType>,
-                             //SparseMatrixType>::solve( system_matrix,
-                                                       //solution_curvature,
-                                                       //rhs );
+        iter = LinearSolve<VectorType,
+                             SolverCG<VectorType>,
+                             SparseMatrixType>::solve( system_matrix,
+                                                       solution_curvature,
+                                                       rhs );
 
-          //constraints->distribute(solution_curvature);
-          //solution_curvature.update_ghost_values();
+        scratch_data->get_constraint(comp).distribute(solution_curvature);
+        solution_curvature.update_ghost_values();
       }
 
       if (curvature_data.do_print_l2norm)
       {
+        const ConditionalOStream& pcout = scratch_data->get_pcout();
         pcout <<  "| curvature:         i=" << iter << " \t"; 
         pcout << "|k| = " << std::setprecision(11) << std::setw(15) << std::left << solution_curvature.l2_norm();
         pcout << std::endl;
@@ -164,20 +156,20 @@ namespace CurvatureNew
     {
       if (!curvature_data.do_matrix_free)
       {
+        const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm(comp);
         IndexSet locally_owned_dofs;
         IndexSet locally_relevant_dofs;
         
-        locally_owned_dofs = scratch_data.get_dof_handler(comp).locally_owned_dofs(); 
-        DoFTools::extract_locally_relevant_dofs(scratch_data.get_dof_handler(comp), locally_relevant_dofs);
+        locally_owned_dofs = scratch_data->get_dof_handler(comp).locally_owned_dofs(); 
+        DoFTools::extract_locally_relevant_dofs(scratch_data->get_dof_handler(comp), locally_relevant_dofs);
 
         dsp.reinit( locally_owned_dofs,
                     locally_owned_dofs,
                     locally_relevant_dofs,
                     mpi_communicator);
-
-        DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(0), 
+        DoFTools::make_sparsity_pattern(scratch_data->get_dof_handler(comp), 
                                         dsp,
-                                        *constraints,
+                                        scratch_data->get_constraint(comp),
                                         true,
                                         Utilities::MPI::this_mpi_process(mpi_communicator)
                                         );
@@ -186,24 +178,20 @@ namespace CurvatureNew
         system_matrix.reinit( dsp );  
       }
 
-      curvature_oeprator = std::make_unique<CurvatureOperator<dim, degree>>(
-                                                          scratch_data,
-                                                          constraints,
+      curvature_operator = std::make_unique<CurvatureOperator<dim, degree, comp>>(
+                                                          *scratch_data,
                                                           curvature_data.damping_parameter );
     }
-
-    MatrixFree<dim, double, VectorizedArray<double>>& scratch_data;
-    SmartPointer<const ConstraintsType>               constraints;
-    double                                            min_cell_size;           // @todo: check CFL condition
-    const MPI_Comm                                    mpi_communicator;
-    ConditionalOStream                                pcout;                   // @todo: refe
+    
+    std::shared_ptr<const ScratchData<dim>> scratch_data;
+    
     NormalVectorNew::NormalVectorOperation<dim,degree> normal_vector_field;
 
     /* 
-     *  This pointer will point to your user-defined normal vector operator.
+     *  This pointer will point to your user-defined curvature operator.
      */
     std::unique_ptr<OperatorBase<double, VectorType, BlockVectorType>>    
-                                               curvature_oeprator;    
+                                               curvature_operator;    
     
     SparseMatrixType                           system_matrix;
     SparsityPatternType                        dsp;

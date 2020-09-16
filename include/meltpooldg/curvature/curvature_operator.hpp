@@ -30,7 +30,7 @@ namespace CurvatureNew
      *  level set function n_ϕ.
      *
      */
-  template<int dim, int degree, typename number = double>
+  template<int dim, int degree, unsigned int comp=0, typename number = double>
   class CurvatureOperator: public OperatorBase<number, 
                                 LinearAlgebra::distributed::Vector<number>, 
                                 LinearAlgebra::distributed::BlockVector<number>>
@@ -42,12 +42,10 @@ namespace CurvatureNew
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
       
       CurvatureOperator
-      ( const MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
-        SmartPointer<const AffineConstraints<number>>     constraints_in,
-        const double                                      damping_in
+       ( const ScratchData<dim>& scratch_data_in,
+        const double            damping_in
       )
-      : matrix_free ( scratch_data_in )
-      , constraints ( constraints_in )
+      : scratch_data( scratch_data_in )
       , damping     ( damping_in )
       {
       }
@@ -57,16 +55,13 @@ namespace CurvatureNew
                             SparseMatrixType & matrix, 
                             VectorType & rhs ) const override
       {
-        
-      const auto mapping = matrix_free.get_mapping_info().mapping;
-
-      auto q_gauss = QGauss<dim>(degree+1);
-      FEValues<dim> fe_values( *mapping,
-                               matrix_free.get_dof_handler().get_fe(),
-                               matrix_free.get_quadrature(),
+      const auto& mapping = scratch_data.get_mapping();     
+      FEValues<dim> fe_values( mapping,
+                               scratch_data.get_matrix_free().get_dof_handler().get_fe(),
+                               scratch_data.get_matrix_free().get_quadrature(),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
 
-      const unsigned int                    dofs_per_cell = matrix_free.get_dofs_per_cell();
+      const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell();
 
       FullMatrix<double>                    curvature_cell_matrix( dofs_per_cell, dofs_per_cell );
       Vector<double>           curvature_cell_rhs(dofs_per_cell) ;
@@ -79,7 +74,7 @@ namespace CurvatureNew
       matrix = 0.0;
       rhs = 0.0;
 
-      for (const auto &cell : matrix_free.get_dof_handler().active_cell_iterators())
+      for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler().active_cell_iterators())
       if (cell->is_locally_owned())
       {
         fe_values.reinit(cell);
@@ -121,7 +116,7 @@ namespace CurvatureNew
         
          //assembly
         cell->get_dof_indices(local_dof_indices);
-        constraints->distribute_local_to_global( curvature_cell_matrix,
+        scratch_data.get_constraint(comp).distribute_local_to_global( curvature_cell_matrix,
                                                  curvature_cell_rhs,
                                                  local_dof_indices,
                                                  matrix,
@@ -208,28 +203,10 @@ namespace CurvatureNew
         ////true);
     //}
 
-    void
-    initialize_dof_vector(VectorType &dst) const override
-    {
-      matrix_free.initialize_dof_vector(dst);
-    }
-    
-    void
-    initialize_block_dof_vector(BlockVectorType &dst) const override
-    {
-      dst.reinit(dim);
-      for (unsigned int d=0; d<dim; ++d)
-        matrix_free.initialize_dof_vector(dst.block(d));
-    }
-
-
     private:
-      const MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
+      const ScratchData<dim>& scratch_data;
 
-      SmartPointer<const AffineConstraints<number>>   constraints;
-
-      const double damping; 
-
+      double damping; 
   };
 }   // Curvature
 } // MeltPoolDG

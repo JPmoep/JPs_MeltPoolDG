@@ -22,9 +22,11 @@
 // for mapping
 #include <deal.II/fe/mapping.h>
 #include <deal.II/grid/grid_out.h>
+
 // MeltPoolDG
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
+#include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
 
@@ -46,7 +48,6 @@ namespace AdvectionDiffusion
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;         
     using DoFHandlerType      = DoFHandler<dim>;                                    
-    using SparsityPatternType = TrilinosWrappers::SparsityPattern;
 
   public:
 
@@ -54,27 +55,9 @@ namespace AdvectionDiffusion
      *  Constructor of advection-diffusion problem
      */
 
-    AdvectionDiffusionProblem( std::shared_ptr<SimulationBase<dim>> base_in )
-    : fe(                      degree )
-    , mapping(                 degree )
-    , q_gauss(                 degree+1 )
-    , quad_1d(                 degree+1 )      
-    , triangulation(           base_in->triangulation)
-    , dof_handler(             *triangulation)
-    , parameters(              base_in->parameters )
-    , field_conditions(        base_in->get_field_conditions()  )
-    , boundary_conditions(     base_in->get_boundary_conditions()  )
-    , min_cell_size(           GridTools::minimal_cell_diameter(*triangulation) )
-    , mpi_communicator(        base_in->get_mpi_communicator())
-    , pcout(                   base_in->pcout.get_stream() )
-    , advec_diff_operation(    matrix_free,
-                               constraints,
-                               min_cell_size,
-                               *field_conditions->advection_field)
+    AdvectionDiffusionProblem()
     {
-      initialize();
     }
-
     /*
      *  This function is the global run function overriding the run() function from the ProblemBase
      *  class
@@ -83,12 +66,13 @@ namespace AdvectionDiffusion
     void 
     run( std::shared_ptr<SimulationBase<dim>> base_in ) final
     {
-      (void)base_in;
+      initialize(base_in);
 
       while ( !time_iterator.is_finished() )
       {
-        pcout << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
-        advec_diff_operation.solve(time_iterator.get_next_time_increment());
+        const double dt = time_iterator.get_next_time_increment();
+        scratch_data->get_pcout() << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
+        advec_diff_operation.solve(dt);
         /*
          *  do paraview output if requested
          */
@@ -96,20 +80,64 @@ namespace AdvectionDiffusion
       }
     }
 
-    std::string get_name() final { return "reinitialization"; };
+    std::string get_name() final { return "advection-diffusion problem"; };
 
   private:
     /*
      *  This function initials the relevant member data
-     *  for the computation of a reinitialization problem
+     *  for the computation of the advection-diffusion problem
      */
     void 
-    initialize()
+    initialize( std::shared_ptr<SimulationBase<dim>> base_in )
     {
+      parameters = base_in->parameters;
       /*
        *  setup scratch data
        */
-      create_scratch_data(/*base_in*/);
+      scratch_data = std::make_shared<ScratchData<dim>>();
+      /*
+       *  setup mapping
+       */
+      const auto& mapping = MappingQGeneric<dim>(degree);
+      scratch_data->set_mapping(mapping);
+      /*
+       *  setup DoFHandler
+       */
+      FE_Q<dim>    fe(degree);
+      
+      dof_handler.initialize(*base_in->triangulation, fe );
+      IndexSet locally_relevant_dofs;
+      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
+      scratch_data->attach_dof_handler(dof_handler);
+
+      /*
+       *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
+       *  dirichlet constraints are supported)
+       */
+      constraints.clear();
+      constraints.reinit(locally_relevant_dofs);
+      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
+      //
+      for (const auto& bc : base_in->get_boundary_conditions().dirichlet_bc) 
+      {
+        VectorTools::interpolate_boundary_values( dof_handler,
+                                                  bc.first,
+                                                  *bc.second,
+                                                  constraints );
+      }
+      constraints.close();
+      
+      scratch_data->attach_constraint_matrix(constraints);
+      /*
+       *  create quadrature rule
+       */
+      QGauss<1> quad_1d_temp(degree+1) ; // evt. nicht mehr
+      
+      scratch_data->attach_quadrature(quad_1d_temp);
+      /*
+       *  create the matrix-free object
+       */
+      scratch_data->build();
       /*  
        *  initialize the time iterator
        */
@@ -121,82 +149,44 @@ namespace AdvectionDiffusion
       
       time_iterator.initialize(time_data);
       
+      /*  
+       *  @todo: only advection field needs to be stored
+       *  initialize the field conditions
+       */
       /*
        *  set initial conditions of the levelset function
        */
       VectorType initial_solution;
-      matrix_free.initialize_dof_vector(initial_solution);
+      scratch_data->initialize_dof_vector(initial_solution);
 
       VectorTools::project( dof_handler, 
                             constraints,
-                            q_gauss,
-                            *field_conditions->initial_field,           
+                            scratch_data->get_quadrature(),
+                            *base_in->get_field_conditions()->initial_field,           
                             initial_solution );
 
       initial_solution.update_ghost_values();
 
       /*
-       *    initialize the reinitialization operation class
+       *    initialize the advection-diffusion operation class
        */
-      advec_diff_operation.initialize(initial_solution, parameters);
-      
+      advection_velocity = base_in->get_advection_field();
+      advec_diff_operation.initialize(scratch_data, 
+                                      initial_solution, 
+                                      parameters, 
+                                      advection_velocity);
     }
     /*
      *  This function is to create paraview output
      */
-    void
-    create_scratch_data(/*std::shared_ptr<SimulationBase<dim>> base_in*/)
-    {
-
-      /*
-       *  setup DoFHandler
-       */
-      dof_handler.distribute_dofs( fe );
-
-      IndexSet locally_relevant_dofs;
-      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
-      
-      /*
-       *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
-       *  dirichlet constraints are supported)
-       */
-      constraints.clear();
-      constraints.reinit(locally_relevant_dofs);
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-      for (const auto & bc : boundary_conditions->dirichlet_bc)
-      {
-        VectorTools::interpolate_boundary_values( dof_handler,
-                                                  bc.first,
-                                                  *bc.second,
-                                                  constraints );
-      }
-      constraints.close();
-      /*
-       *  create the matrix-free object
-       */
-      typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData additional_data;
-      additional_data.mapping_update_flags = update_values | update_gradients;
-      /*
-       *  create vector of dof_handlers
-       */
-      dof_handler_comp.emplace_back(&dof_handler);
-      /*
-       *  create vector of constraints
-       */
-      constraints_comp.emplace_back(&constraints);
-      /*
-       *  create vector of quadrature rules
-       */
-      quad_comp.emplace_back(quad_1d);
-
-      matrix_free.reinit(mapping, dof_handler_comp, constraints_comp, quad_comp, additional_data);
-    }
 
     void 
-    output_results(const unsigned int time_step=0) const
+    output_results(const unsigned int time_step=0) 
     {
       if (parameters.paraview_do_output)
       {
+        const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
+          
         /*
          *  output advected field
          */
@@ -212,13 +202,16 @@ namespace AdvectionDiffusion
         for(auto d=0; d<dim; ++d)
           advection.block(d).reinit(dof_handler.n_dofs() ); 
         
-        field_conditions->advection_field->set_time( time_iterator.get_current_time() );
+        advection_velocity->set_time( time_iterator.get_current_time() );
+        
         std::map<types::global_dof_index, Point<dim> > supportPoints;
+
+        const auto& mapping = scratch_data->get_mapping();
         DoFTools::map_dofs_to_support_points<dim,dim>(mapping,dof_handler,supportPoints);
 
         for(auto& global_dof : supportPoints)
         {
-            auto a = field_conditions->advection_field->value(global_dof.second);
+            auto a = advection_velocity->value(global_dof.second);
             for(auto d=0; d<dim; ++d)
               advection.block(d)[global_dof.first] = a[d];
         } 
@@ -250,33 +243,20 @@ namespace AdvectionDiffusion
         flags.output_edges         = false;
         flags.output_only_relevant = false;
         grid_out.set_flags(flags);
-        grid_out.write_vtk(*triangulation, output);
+        grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
       
       }
     }
-    
-    FE_Q<dim>                                            fe;
-    MappingQGeneric<dim>                                 mapping;
-    QGauss<dim>                                          q_gauss;
-    QGauss<1>                                            quad_1d;
-    std::shared_ptr<Triangulation<dim>>                  triangulation;
-    DoFHandlerType                                       dof_handler;
-    Parameters<double>                                   parameters;
-    std::shared_ptr<FieldConditions<dim>>                field_conditions;
-    std::shared_ptr<BoundaryConditions<dim>>             boundary_conditions;
-    
-    double                                               min_cell_size;     // @todo: check CFL condition
-    const MPI_Comm                                       mpi_communicator;
-    ConditionalOStream                                   pcout;
-    
-    AffineConstraints<double>                            constraints;
-    std::vector<QGauss<1>>                               quad_comp; 
-    std::vector<const AffineConstraints<double>*>        constraints_comp; 
-    std::vector<const DoFHandler<dim>*>                  dof_handler_comp; 
-    MatrixFree<dim, double, VectorizedArray<double>>     matrix_free; 
+  private:
+    DoFHandler<dim>                                      dof_handler;
+    Parameters<double>                                   parameters; //evt. nicht mehr
+    AffineConstraints<double>                            constraints;    
+    std::shared_ptr<ScratchData<dim>>                    scratch_data; 
+
+    std::shared_ptr<TensorFunction<1,dim>>                advection_velocity;
 
     TimeIterator                                         time_iterator;
     AdvectionDiffusionOperation<dim, degree>             advec_diff_operation;
   };
-} // namespace Reinitialization
+} // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

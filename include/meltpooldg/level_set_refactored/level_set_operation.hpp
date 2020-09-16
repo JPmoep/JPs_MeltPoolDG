@@ -53,9 +53,7 @@ namespace LevelSet
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
     using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
-    using DoFHandlerType      = DoFHandler<dim>;                                    
     using SparsityPatternType = TrilinosWrappers::SparsityPattern;
-    using ConstraintsType     = AffineConstraints<double>;   
 
   public:
     /*
@@ -67,131 +65,114 @@ namespace LevelSet
      *    accessible for output_results.
      */
     VectorType solution_level_set;
-    VectorType& solution_curvature = curvature_operation.solution_curvature;
+    //VectorType& solution_curvature = curvature_operation.solution_curvature;
 
-    LevelSetOperation( MatrixFree<dim, double, VectorizedArray<double>>& scratch_data_in,
-                       const ConstraintsType&                            constraints_dir_in,
-                       const ConstraintsType&                            constraints_in,
-                       TensorFunction<1,dim>&                            advection_velocity_in,
-                       const double                                      min_cell_size_in)
-      : scratch_data          ( scratch_data_in )
-      , min_cell_size         ( min_cell_size_in )
-      , mpi_communicator      ( MPI_COMM_WORLD ) 
-      //, mpi_communicator      ( UtilityFunctions::get_mpi_comm(*dof_handler) )
-      , pcout                 ( std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-      , advection_velocity    ( advection_velocity_in )
-      , advec_diff_operation(  scratch_data_in,
-                           constraints_dir_in,
-                           min_cell_size,
-                           advection_velocity )
-      //, reinit_operation(  scratch_data_in,
-                           //constraints_in,
-                           //min_cell_size )
-      , curvature_operation( scratch_data_in,
-                             constraints_in,
-                             min_cell_size )
+    LevelSetOperation( )
     {
     }
     
     void 
-    initialize(const VectorType & solution_in,
-               const Parameters<double>& data_in )
+    initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
+               const VectorType &                             solution_level_set_in,
+               const Parameters<double>&                      data_in,
+               const std::shared_ptr<TensorFunction<1,dim>>  &advection_velocity_in )
     {
       /*
        *  set initiali conditions
        */
-      scratch_data.initialize_dof_vector(solution_level_set,comp);
+      scratch_data = scratch_data_in;
+      advection_velocity = advection_velocity_in;
+      parameters=data_in;
 
-      solution_level_set.copy_locally_owned_data_from(solution_in);
+      scratch_data->initialize_dof_vector(solution_level_set,comp);
+
+      solution_level_set.copy_locally_owned_data_from(solution_level_set_in);
       solution_level_set.update_ghost_values();
 
       /*
        *  initialize the advection_diffusion problem
        */
-      advec_diff_operation.initialize(solution_level_set, 
-                                      data_in);
+      advec_diff_operation.initialize(scratch_data,
+                                      solution_level_set, 
+                                      data_in,
+                                      advection_velocity_in);
       /*
        *  set the parameters for the levelset problem; already determined parameters
        *  from the initialize call are overwritten.
        */
-      set_parameters(data_in);
+      set_level_set_parameters(data_in);
     }
 
     
     void
-    solve(const Parameters<double>& data_in,
-          const double dt ) // data_in is needed for reinitialization
+    solve(const double dt ) // data_in is needed for reinitialization
     {
       
       /*
        *  solve the advection step of the levelset 
-       *    
        */
       advec_diff_operation.solve( dt );
       solution_level_set = advec_diff_operation.solution_advected_field; // @ could be defined by reference
 
-      //if(level_set_data.do_reinitialization)
-      //{
       /*
-       *  solve the reinitialization step
-       *  
+       *  solve the reinitialization of the level set equation
        */
-        //reinit_operation.initialize(solution_level_set, 
-                                    //data_in);
+      if(level_set_data.do_reinitialization)
+      {
+        reinit_operation.initialize(scratch_data,
+                                    solution_level_set, 
+                                    parameters);
 
-        //while ( !reinit_time_iterator.is_finished() )
-        //{
-          //const double d_tau = reinit_time_iterator.get_next_time_increment();   
-          //pcout << std::setw(4) << "" << "| reini: τ= " << std::setw(10) << std::left << reinit_time_iterator.get_current_time();
-          //reinit_operation.solve(d_tau);
-        //}
-        //solution_level_set = reinit_operation.solution_levelset; // @ could be defined by reference
-        //reinit_time_iterator.reset();
-      //}
+        while ( !reinit_time_iterator.is_finished() )
+        {
+          const double d_tau = reinit_time_iterator.get_next_time_increment();   
+          scratch_data->get_pcout() << std::setw(4) << "" << "| reini: τ= " << std::setw(10) << std::left << reinit_time_iterator.get_current_time();
+          reinit_operation.solve(d_tau);
+        }
+        solution_level_set = reinit_operation.solution_level_set; // @ could be defined by reference
+        reinit_time_iterator.reset();
+      }
       /*
        *    initialize the curvature operation class
        */
-      curvature_operation.initialize(solution_level_set, data_in);
+      curvature_operation.initialize(scratch_data, parameters);
       /*
        *    compute the curvature
        */
-      curvature_operation.solve();
+      curvature_operation.solve(solution_level_set);
     }  
   
 
   private:
     // @ todo: migrate this function to data struct
     void 
-    set_parameters(const Parameters<double>& data_in)
+    set_level_set_parameters(const Parameters<double>& data_in)
     {
-      level_set_data.do_reinitialization = data_in.ls_do_reinitialization;
+      level_set_data.do_reinitialization = true; //data_in.ls_do_reinitialization;
         //@ todo: add parameter for paraview output
       advec_diff_operation.advec_diff_data.diffusivity      = data_in.ls_artificial_diffusivity;
       advec_diff_operation.advec_diff_data.do_print_l2norm  = true; 
-      advec_diff_operation.advec_diff_data.do_matrix_free   = false; // @ todo  
+      advec_diff_operation.advec_diff_data.do_matrix_free   = false; 
       /*
        *  setup the time iterator for the reinitialization
        */
       reinit_time_iterator.initialize(TimeIteratorData{0.0,
                                                        100000.,
-                                                       data_in.reinit_dtau > 0.0 ? data_in.reinit_dtau : min_cell_size,
+                                                       data_in.reinit_dtau > 0.0 ? data_in.reinit_dtau : scratch_data->get_min_cell_size(),
                                                        data_in.reinit_max_n_steps,
                                                        false});
 
     }
 
-    MatrixFree<dim, double, VectorizedArray<double>>&  scratch_data;
-    double                                             min_cell_size;           
-    const MPI_Comm                                     mpi_communicator;
-    ConditionalOStream                                 pcout;                   
-    
-    const TensorFunction<1,dim> &                      advection_velocity;
+    std::shared_ptr<const ScratchData<dim>>             scratch_data;    
+    std::shared_ptr<TensorFunction<1,dim>>              advection_velocity;
+    Parameters<double>                                  parameters; //evt. nicht mehr
      /*
      *  This pointer will point to your user-defined advection_diffusion operator.
      */
-    AdvectionDiffusionOperation<dim, degree>           advec_diff_operation;
-    ReinitializationOperation<dim, degree>             reinit_operation;
-    CurvatureNew::CurvatureOperation<dim, degree>         curvature_operation;
+    AdvectionDiffusionOperation<dim, degree,1>           advec_diff_operation;
+    ReinitializationOperation<dim, degree,0>             reinit_operation;
+    CurvatureNew::CurvatureOperation<dim, degree, 0>      curvature_operation;
 
     TimeIterator                                       reinit_time_iterator;
     /*

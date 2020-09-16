@@ -26,7 +26,7 @@ namespace MeltPoolDG
           //return std::make_shared<LevelSetEquation<dim,degree>>(sim); 
 
         if( sim->parameters.problem_name == "level_set" )
-          return std::make_shared<LevelSet::LevelSetProblem<dim,degree>>(sim); 
+          return std::make_shared<LevelSet::LevelSetProblem<dim,degree>>(); 
 
         //else if( sim->parameters.problem_name == "reinitialization_deprecated" )
           //return std::make_shared<Reinitialization<dim,degree>>(sim);     
@@ -35,7 +35,7 @@ namespace MeltPoolDG
           return std::make_shared<ReinitializationNew::ReinitializationProblem<dim,degree>>();     
         
         else if( sim->parameters.problem_name == "advection_diffusion" )
-          return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim,degree>>(sim);     
+          return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim,degree>>();     
         
         /* add your problem here*/
         

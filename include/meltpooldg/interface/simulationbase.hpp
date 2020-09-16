@@ -15,9 +15,8 @@ namespace MeltPoolDG
     template <int dim, int spacedim=dim>
     class SimulationBase
     {
-      public:
-        
-        //virtual void set_mpi_commun() = 0;
+        public:
+
         SimulationBase(MPI_Comm my_communicator)
         : mpi_communicator(my_communicator)
         , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0 )
@@ -41,21 +40,24 @@ namespace MeltPoolDG
           set_field_conditions();
         };
 
-        // getter functions
-        
-        virtual MPI_Comm get_mpi_communicator() const { return this->mpi_communicator; };
+        /*
+         * getter functions
+        */
+
+        virtual MPI_Comm                          get_mpi_communicator() const { return this->mpi_communicator; };
         
         std::shared_ptr<FieldConditions<dim>>     get_field_conditions() const { return std::make_shared<FieldConditions<dim>>(this->field_conditions); }
+        std::shared_ptr<TensorFunction<1,dim>>    get_advection_field()  const { return this->field_conditions.advection_field; }
         
-        std::shared_ptr<BoundaryConditions<dim>>  get_boundary_conditions() const { return std::make_shared<BoundaryConditions<dim>>(this->boundary_conditions); }
+        const BoundaryConditions<dim>&            get_boundary_conditions() const { return this->boundary_conditions; }
 
-        const MPI_Comm                            mpi_communicator;
-        std::shared_ptr<Triangulation<dim,spacedim>>       triangulation; 
-        Parameters<double>                        parameters;
-        const dealii::ConditionalOStream          pcout;
-        //FiniteElement<dim,spacedim>               fe;
-      protected:
-        FieldConditions<dim>                      field_conditions;
-        BoundaryConditions<dim>                   boundary_conditions;
+        const MPI_Comm                                 mpi_communicator;
+        const dealii::ConditionalOStream               pcout;          // @todo: make protected
+        Parameters<double>                             parameters;
+        std::shared_ptr<Triangulation<dim,spacedim>>   triangulation;  // @todo: make protected
+
+      //protected:
+        FieldConditions<dim>                           field_conditions;
+        BoundaryConditions<dim>                        boundary_conditions;
     };
 } // namespace MeltPoolDG

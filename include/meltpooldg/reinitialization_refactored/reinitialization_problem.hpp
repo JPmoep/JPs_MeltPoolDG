@@ -20,7 +20,7 @@
 #include <deal.II/fe/mapping.h>
 
 // MeltPoolDG
-#include <meltpooldg/interface/test_object.hpp>
+#include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
@@ -89,11 +89,11 @@ namespace ReinitializationNew
       /*
        *  setup scratch data
        */
+      scratch_data = std::make_shared<ScratchData<dim>>();
       /*
        *  setup mapping
        */
       auto mapping = MappingQGeneric<dim>(degree);
-      scratch_data = std::make_shared<ScratchData<dim>>();
       scratch_data->set_mapping(mapping);
       /*
        *  setup DoFHandler
@@ -136,20 +136,20 @@ namespace ReinitializationNew
       /*
        *  set initial conditions of the levelset function
        */
-      VectorType solution_levelset;
-      scratch_data->initialize_dof_vector(solution_levelset);
+      VectorType solution_level_set;
+      scratch_data->initialize_dof_vector(solution_level_set);
       VectorTools::project( dof_handler, 
                             constraints,
                             scratch_data->get_quadrature(),
                             *base_in->get_field_conditions()->initial_field,           
-                            solution_levelset );
+                            solution_level_set );
 
-      solution_levelset.update_ghost_values();
+      solution_level_set.update_ghost_values();
 
       /*
        *    initialize the reinitialization operation class
        */
-      reinit_operation.initialize(scratch_data, solution_levelset, parameters);
+      reinit_operation.initialize(scratch_data, solution_level_set, parameters);
     }
 
     /*
@@ -162,7 +162,7 @@ namespace ReinitializationNew
       {
         DataOut<dim> data_out;
         data_out.attach_dof_handler(scratch_data->get_matrix_free().get_dof_handler());
-        data_out.add_data_vector(reinit_operation.solution_levelset, "psi");
+        data_out.add_data_vector(reinit_operation.solution_level_set, "psi");
 
         //if (parameters.paraview_print_normal_vector)
         //{
