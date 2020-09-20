@@ -16,7 +16,7 @@ using namespace dealii;
 
 namespace MeltPoolDG
 {
-namespace NormalVectorNew
+namespace NormalVector
 {
 
   template<int dim, int degree, unsigned int comp=0, typename number = double>
@@ -228,5 +228,5 @@ namespace NormalVectorNew
       double damping; 
 
   };
-}   // NormalVectorNew
+}   // NormalVector
 } // MeltPoolDG

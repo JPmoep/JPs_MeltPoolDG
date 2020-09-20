@@ -8,11 +8,11 @@
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
 #include <meltpooldg/interface/operator_base.hpp>
-#include <meltpooldg/normal_vector_refactored/normal_vector_operator.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operator.hpp>
 
 namespace MeltPoolDG
 {
-namespace ReinitializationNew
+namespace Reinitialization
 {
 using namespace dealii;
 
@@ -90,7 +90,7 @@ class OlssonOperator : public OperatorBase<number,
 
           fe_values.get_function_values(     levelset_old, psi_at_q );     // compute values of old solution at tau_n
           fe_values.get_function_gradients(  levelset_old, grad_psi_at_q ); // compute gradients of old solution at tau_n
-          NormalVectorNew::NormalVectorOperator<dim,degree>::get_unit_normals_at_quadrature(fe_values,
+          NormalVector::NormalVectorOperator<dim,degree>::get_unit_normals_at_quadrature(fe_values,
                                          n,
                                          normal_at_q);
 

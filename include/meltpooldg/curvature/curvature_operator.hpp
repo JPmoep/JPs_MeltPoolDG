@@ -11,13 +11,13 @@
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
 #include "meltpooldg/interface/operator_base.hpp"
-#include "meltpooldg/reinitialization_refactored/olsson_operator.hpp"
+#include "meltpooldg/reinitialization/olsson_operator.hpp"
 
 using namespace dealii;
 
 namespace MeltPoolDG
 {
-namespace CurvatureNew
+namespace Curvature
 {
     /*
      *  This function calculates the curvature of the current level set function being
@@ -83,7 +83,7 @@ namespace CurvatureNew
         curvature_cell_matrix = 0.0;
         curvature_cell_rhs    = 0.0;
               
-        NormalVectorNew::NormalVectorOperator<dim,degree>::get_unit_normals_at_quadrature( fe_values,
+        NormalVector::NormalVectorOperator<dim,degree>::get_unit_normals_at_quadrature( fe_values,
                                         solution_normal_vector_in,
                                         normal_at_q );
                  

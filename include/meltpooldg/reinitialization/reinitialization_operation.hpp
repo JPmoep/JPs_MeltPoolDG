@@ -15,12 +15,12 @@
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/interface/scratch_data.hpp>
-#include <meltpooldg/normal_vector_refactored/normal_vector_operation.hpp>
-#include <meltpooldg/reinitialization_refactored/olsson_operator.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operation.hpp>
+#include <meltpooldg/reinitialization/olsson_operator.hpp>
 
 namespace MeltPoolDG
 {
-namespace ReinitializationNew
+namespace Reinitialization
 {
   using namespace dealii; 
 
@@ -264,8 +264,8 @@ namespace ReinitializationNew
     /*
      *   Computation of the normal vectors
      */
-    NormalVectorNew::NormalVectorOperation<dim,degree>      normal_vector_operation;
+    NormalVector::NormalVectorOperation<dim,degree>      normal_vector_operation;
     
   };
-} // namespace ReinitializationNew
+} // namespace Reinitialization
 } // namespace MeltPoolDG

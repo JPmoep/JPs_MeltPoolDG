@@ -24,11 +24,11 @@
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
-#include <meltpooldg/reinitialization_refactored/reinitialization_operation.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation.hpp>
 
 namespace MeltPoolDG
 {
-namespace ReinitializationNew
+namespace Reinitialization
 {
   using namespace dealii; 
  	

@@ -6,6 +6,7 @@
 #include <deal.II/numerics/error_estimator.h>
 #include <deal.II/numerics/vector_tools.h>
 #include <deal.II/distributed/tria.h>
+#include <deal.II/grid/grid_generator.h>
 // c++
 #include <cmath>
 #include <iostream>

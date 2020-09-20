@@ -10,7 +10,7 @@
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
-#include <meltpooldg/reinitialization_refactored/reinitialization_operation.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation.hpp>
 #include <meltpooldg/curvature/curvature_operation.hpp>
 
 namespace MeltPoolDG
@@ -18,7 +18,7 @@ namespace MeltPoolDG
 namespace LevelSet
 {
   using namespace dealii; 
-  using namespace ReinitializationNew; 
+  using namespace Reinitialization; 
   using namespace AdvectionDiffusion; 
 
   struct LevelSetData 
@@ -169,7 +169,7 @@ namespace LevelSet
      */
     AdvectionDiffusionOperation<dim, degree,1>           advec_diff_operation;
     ReinitializationOperation<dim, degree,0>             reinit_operation;
-    CurvatureNew::CurvatureOperation<dim, degree, 0>     curvature_operation;
+    Curvature::CurvatureOperation<dim, degree, 0>        curvature_operation;
 
      /*
      *  The reinitialization of the level set function is a "pseudo"-time-dependent

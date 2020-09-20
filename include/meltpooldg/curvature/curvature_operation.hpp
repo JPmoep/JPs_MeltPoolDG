@@ -13,12 +13,12 @@
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
-#include <meltpooldg/normal_vector_refactored/normal_vector_operation.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operation.hpp>
 #include <meltpooldg/curvature/curvature_operator.hpp>
 
 namespace MeltPoolDG
 {
-namespace CurvatureNew
+namespace Curvature
 {
   using namespace dealii; 
 
@@ -185,7 +185,7 @@ namespace CurvatureNew
     
     std::shared_ptr<const ScratchData<dim>> scratch_data;
     
-    NormalVectorNew::NormalVectorOperation<dim,degree> normal_vector_field;
+    NormalVector::NormalVectorOperation<dim,degree> normal_vector_field;
 
     /* 
      *  This pointer will point to your user-defined curvature operator.

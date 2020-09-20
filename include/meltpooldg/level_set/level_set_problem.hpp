@@ -26,7 +26,7 @@
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
-#include <meltpooldg/level_set_refactored/level_set_operation.hpp>
+#include <meltpooldg/level_set/level_set_operation.hpp>
 
 namespace MeltPoolDG
 {

@@ -2,10 +2,8 @@
 // MeltPoolDG
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_problem.hpp>
-#include <meltpooldg/level_set/levelset.hpp>
-#include <meltpooldg/level_set_refactored/level_set_problem.hpp>
-#include <meltpooldg/reinitialization/reinitialization.hpp>
-#include <meltpooldg/reinitialization_refactored/reinitialization_problem.hpp>
+#include <meltpooldg/level_set/level_set_problem.hpp>
+#include <meltpooldg/reinitialization/reinitialization_problem.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 /* add your problem here*/
 
@@ -26,7 +24,7 @@ namespace MeltPoolDG
           return std::make_shared<LevelSet::LevelSetProblem<dim,degree>>(); 
 
         else if( sim->parameters.problem_name == "reinitialization" )
-          return std::make_shared<ReinitializationNew::ReinitializationProblem<dim,degree>>();     
+          return std::make_shared<Reinitialization::ReinitializationProblem<dim,degree>>();     
         
         else if( sim->parameters.problem_name == "advection_diffusion" )
           return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim,degree>>();     

@@ -13,11 +13,11 @@
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
-#include <meltpooldg/normal_vector_refactored/normal_vector_operator.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operator.hpp>
 
 namespace MeltPoolDG
 {
-namespace NormalVectorNew
+namespace NormalVector
 {
   using namespace dealii; 
 
@@ -186,5 +186,5 @@ namespace NormalVectorNew
     SparseMatrixType                           system_matrix;
     SparsityPatternType                        dsp;
   };
-} // namespace NormalVectorNew
+} // namespace NormalVector
 } // namespace MeltPoolDG
