@@ -16,7 +16,7 @@ namespace ReinitializationNew
 {
 using namespace dealii;
 
-template<int dim, int degree, typename number = double, unsigned int comp=0>
+template<int dim, int degree, unsigned int comp=0, typename number = double>
 class OlssonOperator : public OperatorBase<number, 
                               LinearAlgebra::distributed::Vector<number>, 
                               LinearAlgebra::distributed::Vector<number>>
@@ -30,16 +30,16 @@ class OlssonOperator : public OperatorBase<number,
         using scalar                  = VectorizedArray<number>;                                  
   public:
       OlssonOperator
-        (  const ScratchData<dim>&                                scratch_data_in,
-           const BlockVectorType&                                  n_in
+        (  const ScratchData<dim>& scratch_data_in,
+           const BlockVectorType&  n_in,
+           const double&      constant_epsilon,
+           const double&      eps_scale_factor
         )
-        : scratch_data(          scratch_data_in ) 
-        , eps         ( scratch_data_in.get_min_cell_size()/(std::sqrt(dim) *2) ) 
+        : scratch_data     (  scratch_data_in ) 
+        , eps              ( constant_epsilon )
+        , eps_scale_factor ( eps_scale_factor )
+        , n                ( n_in             )
         {
-          /*
-           *  initialize normal_vector
-           */
-          set_normal_vector_field(n_in);
         }
       
       /*
@@ -55,15 +55,12 @@ class OlssonOperator : public OperatorBase<number,
         
         levelset_old.update_ghost_values();
 
-        const auto& mapping = scratch_data.get_mapping();
-        //const auto mapping = matrix_free.get_mapping_info().mapping;
-
-        FEValues<dim> fe_values( mapping,
-                                 scratch_data.get_matrix_free().get_dof_handler().get_fe(),
-                                 scratch_data.get_matrix_free().get_quadrature(),
+        FEValues<dim> fe_values( scratch_data.get_mapping(),
+                                 scratch_data.get_matrix_free().get_dof_handler(comp).get_fe(),
+                                 scratch_data.get_matrix_free().get_quadrature(comp),
                                  update_values | update_gradients | update_quadrature_points | update_JxW_values
                                  );
-        const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell();
+        const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell(comp);
         
         FullMatrix<double>   cell_matrix( dofs_per_cell, dofs_per_cell );
         Vector<double>       cell_rhs(    dofs_per_cell );
@@ -81,14 +78,14 @@ class OlssonOperator : public OperatorBase<number,
         
         this->n.update_ghost_values();
 
-        for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler().active_cell_iterators())
+        for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
         if (cell->is_locally_owned())
         {
           cell_matrix = 0.0;
           cell_rhs    = 0.0;
           fe_values.reinit(cell);
 
-          const double epsilon_cell = eps>0.0 ? eps : cell->diameter() / ( std::sqrt(dim) * 2 );
+          const double epsilon_cell = eps>0.0 ? eps : cell->diameter() / ( std::sqrt(dim) ) * eps_scale_factor;
           AssertThrow(epsilon_cell>0.0, ExcMessage("Reinitialization: the value of epsilon for the reinitialization function must be larger than zero!"));
 
           fe_values.get_function_values(     levelset_old, psi_at_q );     // compute values of old solution at tau_n
@@ -134,7 +131,7 @@ class OlssonOperator : public OperatorBase<number,
           // assembly
           cell->get_dof_indices( local_dof_indices );
           
-          scratch_data.get_constraint().distribute_local_to_global( cell_matrix,
+          scratch_data.get_constraint(comp).distribute_local_to_global( cell_matrix,
                                                    cell_rhs,
                                                    local_dof_indices,
                                                    matrix,
@@ -157,12 +154,15 @@ class OlssonOperator : public OperatorBase<number,
             const VectorType & src) const override
       {
         AssertThrow(this->d_tau>0.0, ExcMessage("reinitialization operator: d_tau must be set"));
-        AssertThrow(eps>0.0, ExcMessage("reinitialization operator: epsilon must be set"));
+        
+        const double eps_ = eps > 0 ? eps : eps_scale_factor * scratch_data.get_min_cell_size(comp); // @ todo: check how cell size can be extracted from matrix free class
+       
+        AssertThrow(eps_>0.0, ExcMessage("reinitialization operator: epsilon must be set"));
         
         const int n_q_points_1d = degree+1; //@ get out of matrixfree?
         
-        FEEvaluation<dim, degree, n_q_points_1d, 1, number>   levelset(      scratch_data.get_matrix_free() );
-        FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( scratch_data.get_matrix_free() );
+        FEEvaluation<dim, degree, n_q_points_1d, 1, number>   levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
+        FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>( [&] 
           (const auto&, auto& dst, const auto& src, auto cell_range) {
@@ -184,7 +184,7 @@ class OlssonOperator : public OperatorBase<number,
                   const auto n_phi = normalize(normal_vector.get_value(q_index));
                   
                   levelset.submit_value(phi, q_index);
-                  levelset.submit_gradient(this->d_tau * eps * scalar_product(grad_phi, n_phi) * n_phi, q_index);
+                  levelset.submit_gradient(this->d_tau * eps_ * scalar_product(grad_phi, n_phi) * n_phi, q_index);
               }
 
               levelset.integrate_scatter(true, true, dst);
@@ -201,7 +201,9 @@ class OlssonOperator : public OperatorBase<number,
                const VectorType & src) const override
     {
       AssertThrow(this->d_tau>0.0, ExcMessage("reinitialization matrix-free operator: d_tau must be set"));
-      AssertThrow(eps>0.0,         ExcMessage("reinitialization matrix-free operator: epsilon must be set"));
+      const double eps_ = eps > 0 ? eps : eps_scale_factor * scratch_data.get_min_cell_size(comp); // @ todo: check how cell size can be extracted from matrix free class
+
+      AssertThrow(eps_>0.0,         ExcMessage("reinitialization matrix-free operator: epsilon must be set"));
       
       const auto compressive_flux = [&](const auto &phi) 
       {
@@ -210,8 +212,8 @@ class OlssonOperator : public OperatorBase<number,
 
       const int n_q_points_1d = degree+1;
       
-      FEEvaluation<dim, degree, n_q_points_1d, 1, number>   psi(           scratch_data.get_matrix_free());
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( scratch_data.get_matrix_free());
+      FEEvaluation<dim, degree, n_q_points_1d, 1, number>   psi(           scratch_data.get_matrix_free(),comp,comp,comp);
+      FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp);
   
       scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
@@ -231,7 +233,7 @@ class OlssonOperator : public OperatorBase<number,
               
               psi.submit_gradient( this->d_tau * compressive_flux(val) * n_phi 
                                    - 
-                                   this->d_tau * eps * scalar_product( psi.get_gradient(q_index), n_phi ) * n_phi, q_index);
+                                   this->d_tau * eps_ * scalar_product( psi.get_gradient(q_index), n_phi ) * n_phi, q_index);
             }
 
             psi.integrate_scatter(false, true, dst);
@@ -242,20 +244,19 @@ class OlssonOperator : public OperatorBase<number,
         true);
     }
 
-    private:
-      void
-      set_normal_vector_field(const BlockVectorType & normal_vector) 
+    void
+    set_normal_vector_field(const BlockVectorType & normal_vector) 
+    {
+      n.reinit(dim);
+      for (unsigned int d=0; d<dim; ++d)
       {
-        n.reinit(dim);
-        for (unsigned int d=0; d<dim; ++d)
-        {
-          scratch_data.initialize_dof_vector(n.block(d));
-          n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
-        }
-        n.update_ghost_values();
+        scratch_data.initialize_dof_vector(n.block(d));
+        n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
       }
+      n.update_ghost_values();
+    }
 
-      
+  private:  
       static
       vector
       normalize(const scalar & in)
@@ -276,10 +277,10 @@ class OlssonOperator : public OperatorBase<number,
       }
 
       const ScratchData<dim>& scratch_data;
-      //const MatrixFree<dim, double, VectorizedArray<double>>& matrix_free;
       
       double eps = -1.0; 
-      BlockVectorType                                 n;
+      double eps_scale_factor; 
+      const BlockVectorType& n;
 
 };
 }   // namespace Reinitialization

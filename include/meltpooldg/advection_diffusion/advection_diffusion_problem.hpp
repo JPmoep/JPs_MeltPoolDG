@@ -47,7 +47,6 @@ namespace AdvectionDiffusion
   private:
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;         
-    using DoFHandlerType      = DoFHandler<dim>;                                    
 
   public:
 
@@ -198,27 +197,27 @@ namespace AdvectionDiffusion
          *  output advection velocity
          */
         BlockVectorType advection;
-        advection.reinit(dim);
-        for(auto d=0; d<dim; ++d)
-          advection.block(d).reinit(dof_handler.n_dofs() ); 
-        
-        advection_velocity->set_time( time_iterator.get_current_time() );
-        
-        std::map<types::global_dof_index, Point<dim> > supportPoints;
+        scratch_data->initialize_block_dof_vector(advection);
 
-        const auto& mapping = scratch_data->get_mapping();
-        DoFTools::map_dofs_to_support_points<dim,dim>(mapping,dof_handler,supportPoints);
-
-        for(auto& global_dof : supportPoints)
+        if ( parameters.paraview_print_advection )
         {
-            auto a = advection_velocity->value(global_dof.second);
+            advection_velocity->set_time( time_iterator.get_current_time() );
+            
+            std::map<types::global_dof_index, Point<dim> > supportPoints;
+
+            const auto& mapping = scratch_data->get_mapping();
+            DoFTools::map_dofs_to_support_points<dim,dim>(mapping,dof_handler,supportPoints);
+
+            for(auto& global_dof : supportPoints)
+            {
+                auto a = advection_velocity->value(global_dof.second);
+                for(auto d=0; d<dim; ++d)
+                  advection.block(d)[global_dof.first] = a[d];
+            } 
+
             for(auto d=0; d<dim; ++d)
-              advection.block(d)[global_dof.first] = a[d];
-        } 
-
-        for(auto d=0; d<dim; ++d)
-          data_out.add_data_vector(dof_handler,advection.block(d), "advection_velocity_"+std::to_string(d));
-
+              data_out.add_data_vector(dof_handler,advection.block(d), "advection_velocity_"+std::to_string(d));
+        }
         /*
         * write data to vtu file
         */

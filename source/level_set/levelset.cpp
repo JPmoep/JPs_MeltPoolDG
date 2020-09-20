@@ -66,13 +66,13 @@ namespace MeltPoolDG
     constraints.reinit(locally_relevant_dofs);
     DoFTools::make_hanging_node_constraints(dof_handler, constraints);
 
-    for (auto const& bc : boundary_conditions->dirichlet_bc)
-    {
-      VectorTools::interpolate_boundary_values( dof_handler,
-                                                bc.first,
-                                                *bc.second,
-                                                constraints );
-    }
+    //for (auto const& bc : base_in->get_boundary_conditions()->dirichlet_bc)
+    //{
+      //VectorTools::interpolate_boundary_values( dof_handler,
+                                                //bc.first,
+                                                //*bc.second,
+                                                //constraints );
+    //}
     constraints.close();   
 
 
@@ -343,7 +343,6 @@ namespace MeltPoolDG
 
       if (parameters.paraview_print_normal_vector)
       {
-        /* currently only supported when reinitialization is activated */
         if ( parameters.ls_do_reinitialization )    
         {
           normal_vector_field = reini.get_normal_vector_field();
@@ -466,19 +465,12 @@ namespace MeltPoolDG
     if (parameters.compute_volume_output)
       postprocessor.print_volume_fraction_table(mpi_communicator, 
                                                 parameters.filename_volume_output);
-    //if (parameters.do_compute_error)
-      //postprocessor.compute_error( degree+1,
-                                   //solution_levelset,
-                                   //*field_conditions->exact_solution_field,  
-                                    //dof_handler,
-                                   //*this->triangulation         
-                                   //);
   }
   
   // instantiation
   template class LevelSetEquation<1,1>; 
   template class LevelSetEquation<2,1>; 
-  template class LevelSetEquation<2,2>; 
+  //template class LevelSetEquation<2,2>; 
 
 } // namespace MeltPoolDG
 

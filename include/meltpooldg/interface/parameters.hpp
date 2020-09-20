@@ -176,7 +176,12 @@ struct Parameters
       prm.add_parameter("reinit constant epsilon",
                          reinit_constant_epsilon,             
                         "Defines the length parameter of the level set function to be constant and"
-                        "not to dependent on the mesh size (default: -1.0 i.e. grid size dependent");
+                        "not to dependent on the mesh size (default: -1.0 i.e. grid size dependent"
+                        "which can be controlled by reinit_epsilon_scale_factor");
+      prm.add_parameter("reinit scale factor epsilon",
+                         reinit_scale_factor_epsilon,             
+                        "Defines the scaling factor of the diffusion parameter in the reinitialization "
+                        "equation; the scaling factor is multipled by the mesh size (default: 0.5 i.e. eps=0.5*h_min");
       prm.add_parameter("reinit dtau",
                          reinit_dtau,
                         "Defines the time step size of the reinitialization to be constant and"
@@ -293,6 +298,7 @@ struct Parameters
   // reinitialization specific parameters
   unsigned int        reinit_max_n_steps        = 5;
   number              reinit_constant_epsilon   = -1.0;
+  number              reinit_scale_factor_epsilon = 0.5;
   number              reinit_dtau               = -1.0;
   unsigned int        reinit_modeltype          = 1;  //@ readability could be improved by using a string variable
   bool                reinit_do_matrixfree      = false;

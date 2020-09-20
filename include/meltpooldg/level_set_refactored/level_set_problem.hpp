@@ -45,17 +45,13 @@ namespace LevelSet
   private:
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;         
-    using DoFHandlerType      = DoFHandler<dim>;                                    
-    using SparsityPatternType = TrilinosWrappers::SparsityPattern;
 
   public:
 
     /*
      *  Constructor of the levelset problem
      */
-    LevelSetProblem()
-    {
-    }
+    LevelSetProblem() = default;
     
     void 
     run( std::shared_ptr<SimulationBase<dim>> base_in ) final
@@ -70,7 +66,8 @@ namespace LevelSet
         /*
          *  do paraview output if requested
          */
-        output_results(time_iterator.get_current_time_step_number());
+        output_results(time_iterator.get_current_time_step_number(),
+                       base_in->parameters);
       }
     }
 
@@ -121,7 +118,6 @@ namespace LevelSet
       constraints_dirichlet.clear();
       constraints_dirichlet.reinit(locally_relevant_dofs);
       DoFTools::make_hanging_node_constraints(dof_handler, constraints_dirichlet);
-      //
       for (const auto& bc : base_in->get_boundary_conditions().dirichlet_bc) 
       {
         VectorTools::interpolate_boundary_values( dof_handler,
@@ -135,7 +131,7 @@ namespace LevelSet
       /*
        *  create quadrature rule
        */
-      QGauss<1> quad_1d_temp(degree+1) ; // evt. nicht mehr
+      QGauss<1> quad_1d_temp(degree+1); 
       
       scratch_data->attach_quadrature(quad_1d_temp);
       scratch_data->attach_quadrature(quad_1d_temp);
@@ -146,10 +142,10 @@ namespace LevelSet
       /*  
        *  initialize the time iterator
        */
-      time_iterator.initialize(TimeIteratorData{ parameters.ls_start_time,
-                                                 parameters.ls_end_time,
-                                                 parameters.ls_time_step_size,
-                                                 1000,
+      time_iterator.initialize(TimeIteratorData{ base_in->parameters.ls_start_time,
+                                                 base_in->parameters.ls_end_time,
+                                                 base_in->parameters.ls_time_step_size,
+                                                 100000,
                                                  false });
       /*
        *  set initial conditions of the levelset function
@@ -169,97 +165,107 @@ namespace LevelSet
        */
       advection_velocity = base_in->get_advection_field();
       level_set_operation.initialize(scratch_data, 
-                                      initial_solution, 
-                                      parameters, 
-                                      advection_velocity);
+                                     initial_solution, 
+                                     base_in->parameters, 
+                                     advection_velocity);
     }
 
     /*
      *  This function is to create paraview output
      */
     void 
-    output_results(const unsigned int time_step=0) const
+    output_results(const unsigned int time_step,
+                   const Parameters<double>& parameters) const
     {
       if (parameters.paraview_do_output)
       {
+        const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
         /*
          *  output advected field
          */
-        //DataOut<dim> data_out;
-        //data_out.attach_dof_handler(matrix_free.get_dof_handler());
-        //data_out.add_data_vector(level_set_operation.solution_level_set, "level_set");
+        DataOut<dim> data_out;
+        data_out.attach_dof_handler(scratch_data->get_dof_handler());
+        data_out.add_data_vector(level_set_operation.solution_level_set, "level_set");
+        
+        /*
+         *  output normal vector field
+         */
+        if (parameters.paraview_print_normal_vector)
+          for (unsigned int d=0; d<dim; ++d)
+            data_out.add_data_vector(level_set_operation.solution_normal_vector.block(d), "normal_"+std::to_string(d));
         
         /*
          *  output advection velocity
-         *  @ todo --> clean up 
+         *  @ todo --> atm solution with compatibility of map_dofs_to_support_points with 
+         *  DoFHandler depending on TriangulationBase missing
          */
         
         //BlockVectorType advection;
-        //advection.reinit(dim);
-        //for(auto d=0; d<dim; ++d)
-          //advection.block(d).reinit(matrix_free.get_dof_handler().n_dofs() ); 
-        
+        //scratch_data->initialize_block_dof_vector(advection);
+
         //if (parameters.paraview_print_advection)
         //{
-          //field_conditions->advection_field->set_time( time_iterator.get_current_time() );
-          //std::map<types::global_dof_index, Point<dim> > supportPoints;
-          //DoFTools::map_dofs_to_support_points<dim,dim>(mapping,
-                                                        //matrix_free.get_dof_handler(),
-                                                        //supportPoints);
-          //for(auto& global_dof : supportPoints)
+          //advection_velocity->set_time( time_iterator.get_current_time() );
+            
+          //std::map<types::global_dof_index, Point<dim>> supportPoints;
+
+          //DoFTools::map_dofs_to_support_points<dim,dim>( scratch_data->get_mapping(), 
+                                                         //dof_handler,
+                                                         //supportPoints )
+
+          //for(const auto& global_dof : supportPoints)
           //{
-              //auto a = field_conditions->advection_field->value(global_dof.second);
+              //auto a = advection_velocity->value(global_dof.second);
               //for(auto d=0; d<dim; ++d)
                 //advection.block(d)[global_dof.first] = a[d];
-          //}
-
+              //constraints.distribute(advection);
+          //} 
 
           //for(auto d=0; d<dim; ++d)
-            //data_out.add_data_vector(matrix_free.get_dof_handler(),
+            //data_out.add_data_vector(scratch_data->get_dof_handler(0),
                                      //advection.block(d), 
                                      //"advection_velocity_"+std::to_string(d));
         //}
         /*
         * write data to vtu file
         */
-        //data_out.build_patches();
-        //data_out.write_vtu_with_pvtu_record("./", "solution_levelset", time_step, mpi_communicator, 4, 1); 
+        data_out.build_patches();
+        data_out.write_vtu_with_pvtu_record("./", "solution_level_set", time_step, mpi_communicator, 4, 1); 
         
         /*
         * write data of boundary -- @todo: move to own utility function
         */
-        //if (parameters.paraview_print_boundary_id)
-        //{
-          //const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
-          //const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
+        if (parameters.paraview_print_boundary_id)
+        {
+          const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
+          const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
 
-          //const unsigned int n_digits = static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
+          const unsigned int n_digits = static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
 
-          //std::string filename = "./solution_levelset_boundary_IDs" + Utilities::int_to_string(rank, n_digits) + ".vtk";
-          //std::ofstream output(filename.c_str());
+          std::string filename = "./solution_level_set_boundary_IDs" + Utilities::int_to_string(rank, n_digits) + ".vtk";
+          std::ofstream output(filename.c_str());
 
-          //GridOut           grid_out;
-          //GridOutFlags::Vtk flags;
-          //flags.output_cells         = false;
-          //flags.output_faces         = true;
-          //flags.output_edges         = false;
-          //flags.output_only_relevant = false;
-          //grid_out.set_flags(flags);
-          //grid_out.write_vtk(*triangulation, output);
-        //}
+          GridOut           grid_out;
+          GridOutFlags::Vtk flags;
+          flags.output_cells         = false;
+          flags.output_faces         = true;
+          flags.output_edges         = false;
+          flags.output_only_relevant = false;
+          grid_out.set_flags(flags);
+          grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
+        }
       }
     }
   private:
     DoFHandler<dim>                                      dof_handler;
-    Parameters<double>                                   parameters; //evt. nicht mehr
     AffineConstraints<double>                            constraints_dirichlet;
     AffineConstraints<double>                            constraints;
     
     std::shared_ptr<ScratchData<dim>>                    scratch_data; 
-    std::shared_ptr<TensorFunction<1,dim>>                advection_velocity;
+    std::shared_ptr<TensorFunction<1,dim>>               advection_velocity;
     
     TimeIterator                                         time_iterator;
     LevelSetOperation<dim, degree>                       level_set_operation;
   };
-} // namespace Reinitialization
+} // namespace LevelSet
 } // namespace MeltPoolDG

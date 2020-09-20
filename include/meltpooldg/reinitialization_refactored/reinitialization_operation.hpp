@@ -37,8 +37,8 @@ namespace ReinitializationNew
     // enum which reinitialization model should be solved
     ReinitModelType reinit_model = ReinitModelType::undefined;
     
-    // time step for reinitialization
-    double d_tau = 0.01;
+    // choose a constant, not cell-size dependent smoothing parameter
+    double scale_factor_epsilon = 0.5;
     
     // choose a constant, not cell-size dependent smoothing parameter
     double constant_epsilon = -1.0;
@@ -77,7 +77,7 @@ namespace ReinitializationNew
      *    accessible for output_results.
      */
     VectorType       solution_level_set;
-    BlockVectorType& solution_normal_vector = normal_vector_field.solution_normal_vector;
+    const BlockVectorType& solution_normal_vector = normal_vector_operation.solution_normal_vector;
 
     ReinitializationOperation()
     {
@@ -85,15 +85,11 @@ namespace ReinitializationNew
     
     void 
     initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-               const VectorType &                             solution_level_set_in,
+               const VectorType & solution_level_set_in,
                const Parameters<double>&                      data_in )
     {
       scratch_data = scratch_data_in;
-
-      scratch_data->initialize_dof_vector(solution_level_set,comp); 
-      
-      solution_level_set.copy_locally_owned_data_from(solution_level_set_in);
-      solution_level_set.update_ghost_values();
+      scratch_data->initialize_dof_vector(solution_level_set); 
       /*
        *    initialize the (local) parameters of the reinitialization
        *    from the global user-defined parameters
@@ -102,18 +98,40 @@ namespace ReinitializationNew
       /*
        *    initialize normal_vector_field
        */
-      normal_vector_field.initialize( scratch_data_in, data_in );
+      normal_vector_operation.initialize( scratch_data_in, data_in );
       /*
-       *    update normal vector field
+       *    compute the normal vector field and update the initial solution
        */
-      normal_vector_field.solve( solution_level_set );
+      update_initial_solution(solution_level_set_in);
       /*
        *   create reinitialization operator. This class supports matrix-based
        *   and matrix-free computation.
        */
       create_operator();
     }
-    
+
+    /*
+     *  By calling the reinitialize function, (1) the solution_level_set field 
+     *  and (2) the normal vector field corresponding to the given solution_level_set_field
+     *  is updated. This is commonly the first stage before performing the pesude-time-dependent
+     *  solution procedure
+     */
+    void
+    update_initial_solution(const VectorType & solution_level_set_in)
+    {
+      /*
+       *    copy the given solution into the member variable
+       */
+      solution_level_set.copy_locally_owned_data_from(solution_level_set_in);
+      solution_level_set.update_ghost_values();
+      /*
+       *    update the normal vector field corresponding to the given solution of the 
+       *    level set; the normal vector field is called by reference within the  
+       *    operator class
+       */
+      normal_vector_operation.solve( solution_level_set );
+    }
+
     void
     solve(const double d_tau)
     {
@@ -125,7 +143,7 @@ namespace ReinitializationNew
       reinit_operator->set_time_increment(d_tau);
 
       int iter = 0;
-      
+
       if (reinit_data.do_matrix_free)
       {
         VectorType src_rhs;
@@ -156,7 +174,7 @@ namespace ReinitializationNew
                                                                                 src,
                                                                                 rhs,
                                                                                 preconditioner);
-        scratch_data->get_constraint().distribute(src);
+        scratch_data->get_constraint(comp).distribute(src);
       }
 
       solution_level_set += src;
@@ -165,10 +183,10 @@ namespace ReinitializationNew
       
       if(reinit_data.do_print_l2norm)
       {
-        const ConditionalOStream& pcout = scratch_data->get_pcout();
+        const ConditionalOStream& pcout = scratch_data->get_pcout(comp);
         pcout << "| CG: i=" << std::setw(5) << std::left << iter;
         pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10) << src.linfty_norm();
-        pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm()/reinit_data.d_tau << "|" << std::endl;
+        pcout << " |ΔΨ|²/dT = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm()/d_tau << "|" << std::endl;
       }
   }
 
@@ -176,15 +194,12 @@ namespace ReinitializationNew
     void 
     set_reinitialization_parameters(const Parameters<double>& data_in)
     {
-      reinit_data.reinit_model        = static_cast<ReinitModelType>(data_in.reinit_modeltype);
-      reinit_data.d_tau               = data_in.reinit_dtau > 0.0 ? 
-                                        data_in.reinit_dtau
-                                        : scratch_data->get_min_cell_size();
-      reinit_data.constant_epsilon    = data_in.reinit_constant_epsilon;
-      reinit_data.max_reinit_steps    = data_in.reinit_max_n_steps; 
-      //reinit_data.verbosity_level     = TypeDefs::VerbosityType::major;
-      reinit_data.do_print_l2norm     = true;//data_in.reinit_do_print_l2norm; 
-      reinit_data.do_matrix_free      = data_in.reinit_do_matrixfree;  
+      reinit_data.reinit_model         = static_cast<ReinitModelType>(data_in.reinit_modeltype);
+      reinit_data.constant_epsilon     = data_in.reinit_constant_epsilon;
+      reinit_data.scale_factor_epsilon = data_in.reinit_scale_factor_epsilon;
+      reinit_data.max_reinit_steps     = data_in.reinit_max_n_steps; 
+      reinit_data.do_print_l2norm      = data_in.reinit_do_print_l2norm; 
+      reinit_data.do_matrix_free       = data_in.reinit_do_matrixfree;  
     }
 
     
@@ -219,9 +234,11 @@ namespace ReinitializationNew
       {
 
        reinit_operator = 
-          std::make_unique<OlssonOperator<dim, degree, double>>( *scratch_data,
-                                                                  normal_vector_field.solution_normal_vector
-                                                                );
+          std::make_unique<OlssonOperator<dim, degree, comp, double>>( *scratch_data,
+                                                                        normal_vector_operation.solution_normal_vector,
+                                                                        reinit_data.constant_epsilon,
+                                                                        reinit_data.scale_factor_epsilon
+                                                                     );
       }
       /* 
        * add your desired operators
@@ -247,7 +264,7 @@ namespace ReinitializationNew
     /*
      *   Computation of the normal vectors
      */
-    NormalVectorNew::NormalVectorOperation<dim,degree>      normal_vector_field;
+    NormalVectorNew::NormalVectorOperation<dim,degree>      normal_vector_operation;
     
   };
 } // namespace ReinitializationNew

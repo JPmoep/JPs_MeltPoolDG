@@ -13,7 +13,7 @@
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/interface/problemselector.hpp>
-
+#include <bits/stdc++.h> 
 namespace MeltPoolDG
 {
   /*
@@ -90,7 +90,7 @@ namespace MeltPoolDG
       {
       }
 
-      Tensor<1, dim> value(const Point<dim> & p) const 
+      Tensor<1, dim> value(const Point<dim> & p) const override
       {
         Tensor<1, dim> value_;
         
@@ -139,14 +139,14 @@ namespace MeltPoolDG
       set_parameters();
     }
     
-    void set_parameters()
+    void set_parameters() final
     {
       std::string paramfile;
       paramfile = "advection_diffusion.json";
       this->parameters.process_parameters_file(paramfile, this->pcout);
     }
 
-    void create_spatial_discretization()
+    void create_spatial_discretization() final
     {
       this->triangulation = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
       GridGenerator::hyper_cube( *this->triangulation, 
@@ -155,7 +155,7 @@ namespace MeltPoolDG
       this->triangulation->refine_global( this->parameters.global_refinements );
     }
 
-    void set_boundary_conditions()
+    void set_boundary_conditions() final
     {
       /*
        *  create a pair of (boundary_id, dirichlet_function)
@@ -163,7 +163,9 @@ namespace MeltPoolDG
       const unsigned int inflow_bc = 42; 
       const unsigned int do_nothing = 0; 
       
-      this->boundary_conditions.dirichlet_bc.emplace(std::make_pair(inflow_bc, std::make_shared<DirichletCondition<dim>>()));
+      auto dirichlet = std::make_shared<DirichletCondition<dim>>();
+      this->boundary_conditions.dirichlet_bc.insert({inflow_bc,dirichlet});
+
       /*
        *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
        *  due to the hyperbolic nature of the analyzed problem
@@ -198,7 +200,7 @@ namespace MeltPoolDG
 
     }
 
-    void set_field_conditions()
+    void set_field_conditions() final
     {   
         this->field_conditions.initial_field =        std::make_shared<InitializePhi<dim>>(); 
         this->field_conditions.advection_field =      std::make_shared<AdvectionField<dim>>(); 
@@ -231,7 +233,7 @@ int main(int argc, char* argv[])
       {
         sim->create();
         auto problem = ProblemSelector<2,degree>::get_problem(sim);
-        problem->run();
+        problem->run(sim);
       }
     }
   catch (std::exception &exc)

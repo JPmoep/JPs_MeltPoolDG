@@ -111,6 +111,7 @@ namespace AdvectionDiffusion
                                                                src,
                                                                rhs );
         scratch_data->get_constraint(comp).distribute(src);
+
         solution_advected_field = src;
         solution_advected_field.update_ghost_values();
       }

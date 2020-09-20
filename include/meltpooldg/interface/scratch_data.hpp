@@ -82,7 +82,7 @@ class ScratchData
     attach_dof_handler(const DoFHandler<dim, spacedim> &dof_handler)
     {
       this->dof_handler.emplace_back(&dof_handler);
-      this->min_cell_size.emplace_back(GridTools::minimal_cell_diameter(dof_handler.get_triangulation()));
+      this->min_cell_size.emplace_back(GridTools::minimal_cell_diameter(dof_handler.get_triangulation())/std::sqrt(dim));
       return this->dof_handler.size() - 1;
     }
 

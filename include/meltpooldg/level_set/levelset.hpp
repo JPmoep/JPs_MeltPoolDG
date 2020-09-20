@@ -146,7 +146,7 @@ namespace MeltPoolDG
     TimerOutput                                computing_timer;
     Timer                                      timer;
     std::shared_ptr<FieldConditions<dim>>      field_conditions;
-    //std::shared_ptr<BoundaryConditions<dim>>   boundary_conditions;
+    const BoundaryConditions<dim>&                    boundary_conditions;
     /* 
      * the following are subproblem objects
     */

@@ -70,7 +70,7 @@ namespace NormalVectorNew
      */
     BlockVectorType solution_normal_vector;
 
-    NormalVectorOperation(){}
+    NormalVectorOperation() = default;
     
     void
     initialize( const std::shared_ptr<const ScratchData<dim>> & scratch_data_in,
@@ -78,14 +78,14 @@ namespace NormalVectorNew
     {
       scratch_data = scratch_data_in;
       /*
-       *  initialize normal_vector data
+       *  initialize normal vector data
        */
       normal_vector_data.damping_parameter = scratch_data_in->get_min_cell_size() * data_in.normal_vec_damping_scale_factor;
       normal_vector_data.verbosity_level   = TypeDefs::VerbosityType::major;
       normal_vector_data.do_print_l2norm   = true;
-
+      normal_vector_data.do_matrix_free    = true;
       /*
-       *  initialize operator
+       *  initialize normal vector operator
        */
       create_operator();
     }
@@ -94,7 +94,7 @@ namespace NormalVectorNew
     solve( const VectorType& solution_levelset_in)
     {
       BlockVectorType rhs;
-      normal_vector_operator->print_me();
+      
       scratch_data->initialize_block_dof_vector(rhs);
       scratch_data->initialize_block_dof_vector(solution_normal_vector);
       

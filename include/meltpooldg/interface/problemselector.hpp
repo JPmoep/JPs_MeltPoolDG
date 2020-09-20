@@ -22,10 +22,10 @@ namespace MeltPoolDG
       get_problem( std::shared_ptr<SimulationBase<dim>> sim )
       {
         std::shared_ptr<ProblemBase<dim,degree>> problem;
-        //if( sim->parameters.problem_name == "level_set_deprecated" )
-          //return std::make_shared<LevelSetEquation<dim,degree>>(sim); 
+        if( sim->parameters.problem_name == "level_set_deprecated" )
+          return std::make_shared<LevelSetEquation<dim,degree>>(sim); 
 
-        if( sim->parameters.problem_name == "level_set" )
+        else if( sim->parameters.problem_name == "level_set" )
           return std::make_shared<LevelSet::LevelSetProblem<dim,degree>>(); 
 
         //else if( sim->parameters.problem_name == "reinitialization_deprecated" )

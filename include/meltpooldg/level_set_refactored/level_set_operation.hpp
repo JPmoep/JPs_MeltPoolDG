@@ -6,13 +6,9 @@
 #pragma once
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
- //for using smart pointers
-#include <deal.II/base/smartpointer.h>
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
-#include <meltpooldg/utilities/utilityfunctions.hpp>
-#include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
 #include <meltpooldg/reinitialization_refactored/reinitialization_operation.hpp>
 #include <meltpooldg/curvature/curvature_operation.hpp>
@@ -44,7 +40,7 @@ namespace LevelSet
   };
   
   /*
-   *     LevelSet model 
+   *     Level set model 
    */
   template <int dim, int degree, int comp=0>
   class LevelSetOperation 
@@ -60,16 +56,8 @@ namespace LevelSet
      *  All the necessary parameters are stored in this vector.
      */
     LevelSetData level_set_data;
-    /*
-     *    This is the primary solution variable of this module, which will be also publically 
-     *    accessible for output_results.
-     */
-    VectorType solution_level_set;
-    //VectorType& solution_curvature = curvature_operation.solution_curvature;
 
-    LevelSetOperation( )
-    {
-    }
+    LevelSetOperation() = default;
     
     void 
     initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
@@ -78,50 +66,61 @@ namespace LevelSet
                const std::shared_ptr<TensorFunction<1,dim>>  &advection_velocity_in )
     {
       /*
-       *  set initiali conditions
+       *  set initial conditions
        */
-      scratch_data = scratch_data_in;
+      scratch_data       = scratch_data_in;
       advection_velocity = advection_velocity_in;
-      parameters=data_in;
-
-      scratch_data->initialize_dof_vector(solution_level_set,comp);
-
-      solution_level_set.copy_locally_owned_data_from(solution_level_set_in);
-      solution_level_set.update_ghost_values();
-
       /*
        *  initialize the advection_diffusion problem
        */
       advec_diff_operation.initialize(scratch_data,
-                                      solution_level_set, 
+                                      solution_level_set_in, 
                                       data_in,
                                       advection_velocity_in);
       /*
        *  set the parameters for the levelset problem; already determined parameters
-       *  from the initialize call are overwritten.
+       *  from the initialize call of advec_diff_operation are overwritten.
        */
       set_level_set_parameters(data_in);
+      /*
+       *    initialize the reinitialization operation class
+       */
+      reinit_operation.initialize(scratch_data,
+                                  solution_level_set_in,
+                                  data_in);
+      /*
+       *  the initial solution of the level set equation will be reinitialized;
+       */
+      if(level_set_data.do_reinitialization)
+      {
+        while ( !reinit_time_iterator.is_finished() )
+        {
+          const double d_tau = reinit_time_iterator.get_next_time_increment();   
+          scratch_data->get_pcout() << std::setw(4) << "" << "| reini: τ= " << std::setw(10) << std::left << reinit_time_iterator.get_current_time();
+          reinit_operation.solve(d_tau);
+        }
+        advec_diff_operation.solution_advected_field = reinit_operation.solution_level_set; // @ could be defined by reference
+        reinit_time_iterator.reset();
+      }
+      /*
+       *    initialize the curvature operation class
+       */
+      curvature_operation.initialize(scratch_data, data_in);
     }
 
-    
     void
     solve(const double dt ) // data_in is needed for reinitialization
     {
-      
       /*
        *  solve the advection step of the levelset 
        */
       advec_diff_operation.solve( dt );
-      solution_level_set = advec_diff_operation.solution_advected_field; // @ could be defined by reference
-
       /*
        *  solve the reinitialization of the level set equation
        */
       if(level_set_data.do_reinitialization)
       {
-        reinit_operation.initialize(scratch_data,
-                                    solution_level_set, 
-                                    parameters);
+        reinit_operation.update_initial_solution(advec_diff_operation.solution_advected_field);
 
         while ( !reinit_time_iterator.is_finished() )
         {
@@ -129,36 +128,34 @@ namespace LevelSet
           scratch_data->get_pcout() << std::setw(4) << "" << "| reini: τ= " << std::setw(10) << std::left << reinit_time_iterator.get_current_time();
           reinit_operation.solve(d_tau);
         }
-        solution_level_set = reinit_operation.solution_level_set; // @ could be defined by reference
+
+        /*
+         *  reset the solution of the level set field to the reinitialized solution
+         */
+        advec_diff_operation.solution_advected_field = reinit_operation.solution_level_set; // @ could be defined by reference
         reinit_time_iterator.reset();
       }
       /*
-       *    initialize the curvature operation class
-       */
-      curvature_operation.initialize(scratch_data, parameters);
-      /*
        *    compute the curvature
        */
-      curvature_operation.solve(solution_level_set);
+      curvature_operation.solve(advec_diff_operation.solution_advected_field);
     }  
-  
 
   private:
-    // @ todo: migrate this function to data struct
     void 
     set_level_set_parameters(const Parameters<double>& data_in)
     {
-      level_set_data.do_reinitialization = true; //data_in.ls_do_reinitialization;
-        //@ todo: add parameter for paraview output
+      level_set_data.do_reinitialization                    = data_in.ls_do_reinitialization;
       advec_diff_operation.advec_diff_data.diffusivity      = data_in.ls_artificial_diffusivity;
+      advec_diff_operation.advec_diff_data.theta            = data_in.ls_theta;
       advec_diff_operation.advec_diff_data.do_print_l2norm  = true; 
       advec_diff_operation.advec_diff_data.do_matrix_free   = false; 
       /*
-       *  setup the time iterator for the reinitialization
+       *  setup the time iterator for the reinitialization problem
        */
       reinit_time_iterator.initialize(TimeIteratorData{0.0,
                                                        100000.,
-                                                       data_in.reinit_dtau > 0.0 ? data_in.reinit_dtau : scratch_data->get_min_cell_size(),
+                                                       data_in.reinit_dtau > 0.0 ? data_in.reinit_dtau : scratch_data->get_min_cell_size() * data_in.reinit_scale_factor_epsilon,
                                                        data_in.reinit_max_n_steps,
                                                        false});
 
@@ -166,20 +163,37 @@ namespace LevelSet
 
     std::shared_ptr<const ScratchData<dim>>             scratch_data;    
     std::shared_ptr<TensorFunction<1,dim>>              advection_velocity;
-    Parameters<double>                                  parameters; //evt. nicht mehr
      /*
-     *  This pointer will point to your user-defined advection_diffusion operator.
+     *  The following objects are the operations, which are performed for solving the
+     *  level set equation.
      */
     AdvectionDiffusionOperation<dim, degree,1>           advec_diff_operation;
     ReinitializationOperation<dim, degree,0>             reinit_operation;
-    CurvatureNew::CurvatureOperation<dim, degree, 0>      curvature_operation;
+    CurvatureNew::CurvatureOperation<dim, degree, 0>     curvature_operation;
 
-    TimeIterator                                       reinit_time_iterator;
+     /*
+     *  The reinitialization of the level set function is a "pseudo"-time-dependent
+     *  equation, which is solved up to quasi-steady state. Thus a time iterator is 
+     *  needed.
+     */
+    TimeIterator                                         reinit_time_iterator;
+
+  public:
     /*
-    * the following are prototypes for matrix-based operators
-    */
-    SparsityPatternType                                dsp;
-    SparseMatrixType                                   system_matrix;     // @todo: might not be a member variable
+     *    This is the primary solution variable of this module, which will be also publically 
+     *    accessible for output_results.
+     */
+    const VectorType& solution_level_set = advec_diff_operation.solution_advected_field;
+    /*
+     *    This is the curvature solution variable, which will be publically 
+     *    accessible for output_results.
+     */
+    const VectorType& solution_curvature = curvature_operation.solution_curvature;
+    /*
+     *    This is the normal vector field, which will be publically 
+     *    accessible for output_results.
+     */
+    const BlockVectorType& solution_normal_vector = reinit_operation.solution_normal_vector;
   };
-} // namespace AdvectionDiffusion
+} // namespace LevelSet
 } // namespace MeltPoolDG

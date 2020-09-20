@@ -34,17 +34,17 @@ namespace MeltPoolDG
     (void)component;
     Point<2> center     = Point<2>(0.0,0.5); 
     const double radius = 0.25;
-    //return UtilityFunctions::CharacteristicFunctions::sgn( 
-                //UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ));
+    return UtilityFunctions::CharacteristicFunctions::sgn( 
+                UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ));
 
     /*
      *  Alternatively, a tanh function could be used, corresponding to the
      *  analytic solution of the reinitialization problem
      */
-    return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function( 
-           UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ), 
-           this->epsInterface 
-           );
+    //return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function( 
+           //UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ), 
+           //this->epsInterface 
+           //);
     }
 
     void setEpsInterface(double eps){ this->epsInterface = eps; }
@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
       {
         sim->create();
         auto problem = ProblemSelector<2,degree>::get_problem(sim);
-        problem->run();
+        problem->run(sim);
       }
     }
   catch (std::exception &exc)

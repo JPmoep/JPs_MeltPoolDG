@@ -48,11 +48,11 @@ namespace NormalVectorNew
       const auto& mapping = scratch_data.get_mapping();
 
       FEValues<dim> fe_values( mapping,
-                               scratch_data.get_matrix_free().get_dof_handler().get_fe(),
-                               scratch_data.get_matrix_free().get_quadrature(),
+                               scratch_data.get_matrix_free().get_dof_handler(comp).get_fe(),
+                               scratch_data.get_matrix_free().get_quadrature(comp),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
 
-      const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell();
+      const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell(comp);
 
       FullMatrix<double>                    normal_cell_matrix( dofs_per_cell, dofs_per_cell );
       std::vector<Vector<double>>           normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
@@ -65,7 +65,7 @@ namespace NormalVectorNew
       matrix = 0.0;
       rhs = 0.0;
 
-      for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler().active_cell_iterators())
+      for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
       if (cell->is_locally_owned())
       {
         fe_values.reinit(cell);
@@ -138,7 +138,7 @@ namespace NormalVectorNew
           const BlockVectorType & src) const override
     {
       const int n_q_points_1d = degree+1; // @ todo: not hard code
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal( scratch_data.get_matrix_free() );
+      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal( scratch_data.get_matrix_free(), comp, comp, comp);
 
       scratch_data.get_matrix_free().template cell_loop<BlockVectorType, BlockVectorType>( [&] 
         (const auto&, auto& dst, const auto& src, auto cell_range) {
@@ -178,8 +178,8 @@ namespace NormalVectorNew
     {
       const int n_q_points_1d = degree+1;
 
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal_vector( scratch_data.get_matrix_free() );
-      FEEvaluation<dim, degree, n_q_points_1d, 1, number>     levelset(      scratch_data.get_matrix_free() );
+      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
+      FEEvaluation<dim, degree, n_q_points_1d, 1, number>     levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
 
       scratch_data.get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {

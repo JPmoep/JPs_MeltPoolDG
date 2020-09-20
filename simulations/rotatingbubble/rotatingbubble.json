@@ -19,7 +19,8 @@
     "reinit max n steps"     : "5",
     "reinit modeltype"       : "1",
     "reinit do matrixfree"   : "true", 
-    "reinit do print l2norm" : "true" 
+    "reinit do print l2norm" : "true",
+    "reinit eps scale factor" : "0.5" 
   },
   "normal vector" : {
     "normal vec damping scale factor" : "0.5"
@@ -27,7 +28,7 @@
   "paraview" : {
     "paraview do output"           : "true",
     "paraview print normal vector" : "true",
-    "paraview print advection" : "true",
+    "paraview print advection"     : "true",
     "paraview print boundary id"   : "true"
   }
 }
