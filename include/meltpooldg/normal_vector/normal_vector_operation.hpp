@@ -49,8 +49,15 @@ namespace NormalVector
   };
   
   /*
-   *     Model for computing the normal vector to a scalar function as a smooth function
-   *     @ todo: add equation 
+   *  This function calculates the normal vector of the current level set function being
+   *  the solution of an intermediate projection step 
+   *   
+   *              (w, n_ϕ)  + η_n (∇w, ∇n_ϕ)  = (w,∇ϕ)
+   *                      Ω                 Ω            Ω            
+   *  
+   *  with test function w, the normal vector n_ϕ, damping parameter η_n and the
+   *  level set function ϕ.
+   *
    */
   
   template <int dim, int degree, unsigned int comp=0>
@@ -133,15 +140,13 @@ namespace NormalVector
 
       if (normal_vector_data.do_print_l2norm)
       {
-        scratch_data->get_pcout() <<  "| normal vector:         i=" << iter << " \t"; 
+        const ConditionalOStream& pcout = scratch_data->get_pcout();
+        pcout <<  "| normal vector:         i=" << iter << " \t"; 
         for(unsigned int d=0; d<dim; ++d)
-          scratch_data->get_pcout() << "|n_" << d << "| = " << std::setprecision(11) << std::setw(15) << std::left << solution_normal_vector.block(d).l2_norm();
-        scratch_data->get_pcout() << std::endl;
+          pcout << "|n_" << d << "| = " << std::setprecision(11) << std::setw(15) << std::left << solution_normal_vector.block(d).l2_norm();
+        pcout << std::endl;
       }
     }
-
-    void 
-    print_me(); 
   
   private:
     void create_operator()

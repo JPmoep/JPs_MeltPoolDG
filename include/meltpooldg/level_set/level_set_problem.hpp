@@ -34,11 +34,6 @@ namespace LevelSet
 {
   using namespace dealii; 
 
-  /*
-   *     Reinitialization model for reobtaining the signed-distance 
-   *     property of the level set equation
-   */
-  
   template <int dim, int degree>
   class LevelSetProblem : public ProblemBase<dim,degree>
   {
@@ -48,9 +43,6 @@ namespace LevelSet
 
   public:
 
-    /*
-     *  Constructor of the levelset problem
-     */
     LevelSetProblem() = default;
     
     void 
@@ -75,8 +67,8 @@ namespace LevelSet
 
   private:
     /*
-     *  This function initials the relevant member data
-     *  for the computation of a reinitialization problem
+     *  This function initials the relevant scratch data
+     *  for the computation of the level set problem
      */
     void 
     initialize(std::shared_ptr<SimulationBase<dim>> base_in )

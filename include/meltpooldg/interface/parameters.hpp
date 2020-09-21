@@ -116,7 +116,7 @@ struct Parameters
       prm.add_parameter("advec diff do print l2norm",
                          advec_diff_do_print_l2norm,
                         "Defines if the l2norm of the advected field should be printed) "
-                        "(default=false)");
+                        "(default=true)");
     }
     prm.leave_subsection();
     
@@ -310,8 +310,8 @@ struct Parameters
   number              advec_diff_start_time      = 0.0;
   number              advec_diff_end_time        = 1.0;
   number              advec_diff_time_step_size  = 0.01;
-  bool                advec_diff_do_print_l2norm = false;
   bool                advec_diff_do_matrixfree   = false;
+  bool                advec_diff_do_print_l2norm = true;
 
   // normal vector    specific parameters
   number              normal_vec_damping_scale_factor = 0.5;

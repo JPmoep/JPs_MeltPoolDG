@@ -40,7 +40,8 @@ namespace LevelSet
   };
   
   /*
-   *     Level set model 
+   *     Level set model including advection, reinitialization and curvature computation
+   *     of the level set function.
    */
   template <int dim, int degree, int comp=0>
   class LevelSetOperation 
@@ -89,7 +90,7 @@ namespace LevelSet
                                   solution_level_set_in,
                                   data_in);
       /*
-       *  the initial solution of the level set equation will be reinitialized;
+       *  The initial solution of the level set equation will be reinitialized.
        */
       if(level_set_data.do_reinitialization)
       {
@@ -109,14 +110,14 @@ namespace LevelSet
     }
 
     void
-    solve(const double dt ) // data_in is needed for reinitialization
+    solve(const double dt) 
     {
       /*
-       *  solve the advection step of the levelset 
+       *  solve the advection step of the level set function 
        */
       advec_diff_operation.solve( dt );
       /*
-       *  solve the reinitialization of the level set equation
+       *  solve the reinitialization problem of the level set equation
        */
       if(level_set_data.do_reinitialization)
       {

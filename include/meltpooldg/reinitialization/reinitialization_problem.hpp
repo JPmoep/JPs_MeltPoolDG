@@ -33,7 +33,7 @@ namespace Reinitialization
   using namespace dealii; 
  	
   /*
-   *     Reinitialization model for reobtaining the signed-distance 
+   *     Reinitialization model for reobtaining the "signed-distance" 
    *     property of the level set equation
    */
 
@@ -50,14 +50,7 @@ namespace Reinitialization
      *  Constructor of reinitialization problem
      */
 
-    ReinitializationProblem()
-    {
-    }
-
-    /*
-     *  This function is the global run function overriding the run() function from the ProblemBase
-     *  class
-     */
+    ReinitializationProblem() = default;
 
     void 
     run( std::shared_ptr<SimulationBase<dim>> base_in ) final
@@ -70,7 +63,7 @@ namespace Reinitialization
         scratch_data->get_pcout() << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
         
         reinit_operation.solve(d_tau);
-        //do paraview output if requested
+        
         output_results(time_iterator.get_current_time_step_number());
       }
     }
@@ -164,11 +157,11 @@ namespace Reinitialization
         data_out.attach_dof_handler(scratch_data->get_matrix_free().get_dof_handler());
         data_out.add_data_vector(reinit_operation.solution_level_set, "psi");
 
-        //if (parameters.paraview_print_normal_vector)
-        //{
+        if (parameters.paraview_print_normal_vector)
+        {
           for (unsigned int d=0; d<dim; ++d)
             data_out.add_data_vector(reinit_operation.solution_normal_vector.block(d), "normal_"+std::to_string(d));
-        //}
+        }
 
           //@todo: add_data_vector(exact_solution)
         //VectorType levelset_exact;
@@ -186,10 +179,7 @@ namespace Reinitialization
     DoFHandler<dim>                                      dof_handler;
     Parameters<double>                                   parameters; //evt. nicht mehr
     AffineConstraints<double>                            constraints;
-    /* 
-    * at the moment the implementation considers natural boundary conditions
-     */
-    //std::shared_ptr<BoundaryConditions<dim>>   boundary_conditions;
+    
     std::shared_ptr<ScratchData<dim>>                    scratch_data;
     TimeIterator                                         time_iterator;
     ReinitializationOperation<dim, degree>               reinit_operation;

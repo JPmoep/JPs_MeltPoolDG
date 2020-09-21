@@ -36,11 +36,6 @@ namespace AdvectionDiffusion
 {
   using namespace dealii; 
 
-  /*
-   *     Reinitialization model for reobtaining the signed-distance 
-   *     property of the level set equation
-   */
-  
   template <int dim, int degree>
   class AdvectionDiffusionProblem : public ProblemBase<dim,degree>
   {
@@ -50,18 +45,8 @@ namespace AdvectionDiffusion
 
   public:
 
-    /*
-     *  Constructor of advection-diffusion problem
-     */
-
-    AdvectionDiffusionProblem()
-    {
-    }
-    /*
-     *  This function is the global run function overriding the run() function from the ProblemBase
-     *  class
-     */
-
+    AdvectionDiffusionProblem() = default;
+    
     void 
     run( std::shared_ptr<SimulationBase<dim>> base_in ) final
     {
@@ -75,7 +60,8 @@ namespace AdvectionDiffusion
         /*
          *  do paraview output if requested
          */
-        output_results(time_iterator.get_current_time_step_number());
+        output_results(time_iterator.get_current_time_step_number(),
+                       base_in->parameters);
       }
     }
 
@@ -89,7 +75,6 @@ namespace AdvectionDiffusion
     void 
     initialize( std::shared_ptr<SimulationBase<dim>> base_in )
     {
-      parameters = base_in->parameters;
       /*
        *  setup scratch data
        */
@@ -116,7 +101,7 @@ namespace AdvectionDiffusion
       constraints.clear();
       constraints.reinit(locally_relevant_dofs);
       DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-      //
+      
       for (const auto& bc : base_in->get_boundary_conditions().dirichlet_bc) 
       {
         VectorTools::interpolate_boundary_values( dof_handler,
@@ -148,10 +133,6 @@ namespace AdvectionDiffusion
       
       time_iterator.initialize(time_data);
       
-      /*  
-       *  @todo: only advection field needs to be stored
-       *  initialize the field conditions
-       */
       /*
        *  set initial conditions of the levelset function
        */
@@ -175,12 +156,10 @@ namespace AdvectionDiffusion
                                       parameters, 
                                       advection_velocity);
     }
-    /*
-     *  This function is to create paraview output
-     */
 
     void 
-    output_results(const unsigned int time_step=0) 
+    output_results(const unsigned int time_step,
+                   const Parameters<double>& parameters) 
     {
       if (parameters.paraview_do_output)
       {
@@ -248,7 +227,7 @@ namespace AdvectionDiffusion
     }
   private:
     DoFHandler<dim>                                      dof_handler;
-    Parameters<double>                                   parameters; //evt. nicht mehr
+    Parameters<double>                                   parameters; 
     AffineConstraints<double>                            constraints;    
     std::shared_ptr<ScratchData<dim>>                    scratch_data; 
 

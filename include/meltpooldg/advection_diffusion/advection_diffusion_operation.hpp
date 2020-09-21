@@ -6,8 +6,6 @@
 #pragma once
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
- //for using smart pointers
-#include <deal.II/base/smartpointer.h>
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
@@ -22,9 +20,6 @@ namespace AdvectionDiffusion
 {
   using namespace dealii; 
   
-  /*
-   *     AdvectionDiffusion model 
-   */
   template <int dim, int degree, int comp=0>
   class AdvectionDiffusionOperation 
   {
@@ -36,18 +31,17 @@ namespace AdvectionDiffusion
 
   public:
     /*
-     *  All the necessary parameters are stored in this vector.
-     */
-    AdvectionDiffusionData advec_diff_data;
-    /*
      *    This is the primary solution variable of this module, which will be also publically 
      *    accessible for output_results.
      */
     VectorType solution_advected_field;
+    /*
+     *  All the necessary parameters are stored in this struct.
+     */
+    AdvectionDiffusionData advec_diff_data;
 
-    AdvectionDiffusionOperation()
-    {
-    }
+    AdvectionDiffusionOperation() = default;
+    
     void 
     initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                const VectorType &                             solution_advected_field_in,
@@ -55,17 +49,23 @@ namespace AdvectionDiffusion
                const std::shared_ptr<TensorFunction<1,dim>> & advection_velocity_in )
     {
       scratch_data = scratch_data_in;
-      advection_velocity = advection_velocity_in; 
+      /*
+       *  set the initial solution of the advected field
+       */
       scratch_data->initialize_dof_vector(solution_advected_field,comp);
-
       solution_advected_field.copy_locally_owned_data_from(solution_advected_field_in);
       solution_advected_field.update_ghost_values();
-
+      /*
+       *  copy the given velocity function
+       */
+      advection_velocity = advection_velocity_in; 
       /*
        *  set the parameters for the advection_diffusion problem
        */
       set_advection_diffusion_parameters(data_in);
-      
+      /*
+       *  create the advection-diffusion operator
+       */
       create_operator();
     }
 
@@ -85,18 +85,9 @@ namespace AdvectionDiffusion
       if (advec_diff_data.do_matrix_free)
       {
         AssertThrow(false, ExcMessage("not yet implemented! "))
-        //advec_diff_operator->create_rhs( rhs, solution_advected_field );
-        //iter = LinearSolve< VectorType,
-                                      //SolverCG<VectorType>,
-                                      //OperatorBase<double>>
-                                      //::solve( *advec_diff_operator,
-                                                //src,
-                                                //rhs );
       }
       else
       {
-        
-        system_matrix.reinit( dsp );  
         //@todo: which preconditioner?
         //TrilinosWrappers::PreconditionAMG preconditioner;     
         //TrilinosWrappers::PreconditionAMG::AdditionalData data;     
@@ -115,17 +106,17 @@ namespace AdvectionDiffusion
         solution_advected_field = src;
         solution_advected_field.update_ghost_values();
       }
-
-      const ConditionalOStream& pcout = scratch_data->get_pcout();
+      
       if(advec_diff_data.do_print_l2norm)
       {
+        const ConditionalOStream& pcout = scratch_data->get_pcout();
         pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
         pcout << "\t |Δϕ|2 = " << std::setw(15) << std::left << std::setprecision(10) << src.l2_norm() << std::endl;
       }
   }
 
   private:
-    // @ todo: migrate this function to data struct
+    // @ todo: migrate this function to parameter class
     void 
     set_advection_diffusion_parameters(const Parameters<double>& data_in)
     {
@@ -180,7 +171,7 @@ namespace AdvectionDiffusion
     * the following are prototypes for matrix-based operators
     */
     SparsityPatternType                       dsp;
-    SparseMatrixType                          system_matrix;     // @todo: might not be a member variable
+    SparseMatrixType                          system_matrix;     
   };
 } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

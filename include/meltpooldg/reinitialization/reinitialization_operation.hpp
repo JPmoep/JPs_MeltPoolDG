@@ -79,13 +79,11 @@ namespace Reinitialization
     VectorType       solution_level_set;
     const BlockVectorType& solution_normal_vector = normal_vector_operation.solution_normal_vector;
 
-    ReinitializationOperation()
-    {
-    }
+    ReinitializationOperation() = default;
     
     void 
     initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-               const VectorType & solution_level_set_in,
+               const VectorType                              &solution_level_set_in,
                const Parameters<double>&                      data_in )
     {
       scratch_data = scratch_data_in;
@@ -114,7 +112,7 @@ namespace Reinitialization
      *  By calling the reinitialize function, (1) the solution_level_set field 
      *  and (2) the normal vector field corresponding to the given solution_level_set_field
      *  is updated. This is commonly the first stage before performing the pesude-time-dependent
-     *  solution procedure
+     *  solution procedure.
      */
     void
     update_initial_solution(const VectorType & solution_level_set_in)
@@ -264,7 +262,7 @@ namespace Reinitialization
     /*
      *   Computation of the normal vectors
      */
-    NormalVector::NormalVectorOperation<dim,degree>      normal_vector_operation;
+    NormalVector::NormalVectorOperation<dim,degree>         normal_vector_operation;
     
   };
 } // namespace Reinitialization
