@@ -145,26 +145,14 @@ namespace NormalVector
           for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
           {
             normal.reinit(cell);
-          /*
-           * @ bug? --> the following call yield a compilation error
-           */
-            //normal.gather_evaluate(src, true, true);
-          /* current work around */
-            normal.read_dof_values(src);
-            normal.evaluate(true,true,false);
+            normal.gather_evaluate(src, true, true);
 
             for (unsigned int q_index=0; q_index<normal.n_q_points; ++q_index)
             {
                 normal.submit_value(              normal.get_value(    q_index ), q_index);
                 normal.submit_gradient( damping * normal.get_gradient( q_index ), q_index );
               }
-              /*
-              * @ bug? --> the following call yield a compilation error
-              */
-              //normal_comp.integrate_scatter(true, true, dst);
-          /* current work around */
-              normal.integrate(true, true);
-              normal.distribute_local_to_global(dst);
+              normal.integrate_scatter(true, true, dst);
             }
           },
           dst, 
@@ -192,12 +180,7 @@ namespace NormalVector
             for (unsigned int q_index = 0; q_index < normal_vector.n_q_points; ++q_index)
               normal_vector.submit_value( levelset.get_gradient(q_index), q_index );
 
-            normal_vector.integrate(true, false);
-            normal_vector.distribute_local_to_global(dst);
-            /*
-             * @ bug? --> the following call yield a compilation error
-             */
-            //normal_vector.integrate_scatter(true, false, dst);
+            normal_vector.integrate_scatter(true, false, dst);
           }
         },
         dst,

@@ -44,12 +44,12 @@ namespace MeltPoolDG
          * getter functions
         */
 
-        virtual MPI_Comm                          get_mpi_communicator() const { return this->mpi_communicator; };
+        virtual MPI_Comm                               get_mpi_communicator() const { return this->mpi_communicator; };
         
-        std::shared_ptr<FieldConditions<dim>>     get_field_conditions() const { return std::make_shared<FieldConditions<dim>>(this->field_conditions); }
-        std::shared_ptr<TensorFunction<1,dim>>    get_advection_field()  const { return this->field_conditions.advection_field; }
+        std::shared_ptr<FieldConditions<dim>>          get_field_conditions() const { return std::make_shared<FieldConditions<dim>>(this->field_conditions); }
+        std::shared_ptr<TensorFunction<1,dim>>         get_advection_field()  const { return this->field_conditions.advection_field; }
         
-        const BoundaryConditions<dim>&            get_boundary_conditions() const { return this->boundary_conditions; }
+        const BoundaryConditions<dim>&                 get_boundary_conditions() const { return this->boundary_conditions; }
 
         const MPI_Comm                                 mpi_communicator;
         const dealii::ConditionalOStream               pcout;          // @todo: make protected
