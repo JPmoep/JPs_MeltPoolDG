@@ -28,6 +28,7 @@ struct LevelSetData {
     number              time_step_size         = 0.01;
     bool                enable_CFL_condition   = false; 
     bool                do_print_l2norm        = false;
+    bool                do_matrix_free       = false;
 };
   
 template<typename number=double>
@@ -235,6 +236,9 @@ struct Parameters
       prm.add_parameter("ls do print l2norm",
                          ls.do_print_l2norm,
                         "Defines if the l2norm of the levelset result should be printed)");
+      prm.add_parameter("ls do matrix free",
+                         ls.do_matrix_free,
+                        "Set this parameter if a matrix free solution procedure should be performed");
     }
     prm.leave_subsection();
     
