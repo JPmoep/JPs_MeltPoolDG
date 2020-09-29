@@ -1,0 +1,386 @@
+#pragma once
+#include <deal.II/base/parameter_handler.h>
+#include <deal.II/base/conditional_ostream.h>
+// c++
+#include <fstream>
+#include <iostream>
+
+namespace MeltPoolDG
+{
+
+using namespace dealii;
+  
+template<typename number=double>
+struct BaseData{
+  std::string         application_name   = "none";
+  std::string         problem_name       = "none";
+  unsigned int        dimension          = 2;
+  unsigned int        global_refinements = 1;
+};
+
+template<typename number=double>
+struct LevelSetData {
+    bool                do_reinitialization    = false;
+    number              artificial_diffusivity = 0.0;
+    number              theta                  = 0.5;
+    number              start_time             = 0.0;
+    number              end_time               = 1.0;
+    number              time_step_size         = 0.01;
+    bool                enable_CFL_condition   = false; 
+    bool                do_print_l2norm        = false;
+};
+  
+template<typename number=double>
+struct ReinitializationData {
+  unsigned int        max_n_steps          = 5;
+  number              constant_epsilon     = -1.0;
+  number              scale_factor_epsilon = 0.5;
+  number              dtau                 = -1.0;
+  std::string         modeltype            = "olsson2007";
+  bool                do_matrix_free       = false;
+  bool                do_print_l2norm      = false;
+};
+  
+template<typename number=double>
+struct AdvectionDiffusionData{
+  number              diffusivity     = 0.0;
+  number              theta           = 0.5;
+  number              start_time      = 0.0;
+  number              end_time        = 1.0;
+  number              time_step_size  = 0.01;
+  bool                do_matrix_free  = false;
+  bool                do_print_l2norm = true;
+};
+
+template<typename number=double>
+struct NormalVectorData{
+  number              damping_scale_factor = 0.5;
+  bool                do_matrix_free       = false;
+  bool                do_print_l2norm      = true;
+};
+
+template<typename number=double>
+struct CurvatureData{
+  number              damping_scale_factor = 0.0;
+  bool                do_matrix_free       = false;
+  bool                do_print_l2norm      = true;
+};
+
+template<typename number=double>
+struct ParaviewData{
+  bool                do_output           = false;
+  std::string         filename            = "solution";
+  int                 write_frequency     = 1;
+  bool                do_initial_state    = true;
+  bool                print_levelset      = true;
+  bool                print_normal_vector = false;
+  bool                print_curvature     = false;
+  bool                print_advection     = false;
+  bool                print_exactsolution = false;
+  bool                print_boundary_id   = false;
+};
+
+template<typename number=double>
+struct OutputData{
+  bool                do_walltime              = 0;
+  bool                do_compute_error         = 0;
+  bool                do_compute_volume_output = 0;
+  std::string         filename_volume_output   = "my_volumes.txt";
+};
+
+template <typename number=double>
+struct Parameters
+{
+  void 
+  process_parameters_file(const std::string &parameter_filename,
+                          const dealii::ConditionalOStream &pcout
+      )
+  {
+    ParameterHandler prm;
+    add_parameters(prm);
+    
+    check_for_file(parameter_filename, prm);
+
+    std::ifstream file;
+    file.open(parameter_filename);
+    
+    if(parameter_filename.substr(parameter_filename.find_last_of(".") + 1) == "json") 
+      prm.parse_input_from_json(file, true);
+    else if(parameter_filename.substr(parameter_filename.find_last_of(".") + 1) == "prm") 
+      prm.parse_input(parameter_filename);
+    else
+      AssertThrow(false, ExcMessage("Parameterhandler cannot handle current file ending"));
+    prm.print_parameters(pcout.get_stream(),
+                         ParameterHandler::OutputStyle::Text);
+  }
+  
+  void check_for_file (const std::string &parameter_filename,
+                       ParameterHandler  & /*prm*/) const
+  {
+    std::ifstream parameter_file (parameter_filename.c_str());
+
+    if (!parameter_file)
+      {
+        parameter_file.close ();
+
+        std::ostringstream message;
+        message << "Input parameter file <" << parameter_filename
+                << "> not found. Please make sure the file exists!"
+                << std::endl;
+
+        AssertThrow (false, ExcMessage (message.str().c_str()));
+      }
+  }
+  
+  void 
+  add_parameters(ParameterHandler& prm)
+  {
+    /*
+     *    base
+     */
+    prm.enter_subsection("base");
+    {
+      prm.add_parameter("application name", 
+                         base.application_name, 
+                        "Sets the base name for the application that will be fed to the problem type."
+                        );
+      prm.add_parameter("problem name", 
+                         base.problem_name, 
+                        "Sets the base name for the problem that should be solved."
+                        );
+      prm.add_parameter("dimension", 
+                         base.dimension,
+                        "Defines the dimension of the problem"
+                         );
+      prm.add_parameter("global refinements",
+                         base.global_refinements,
+                        "Defines the number of initial global refinements"
+                         );
+    }
+    prm.leave_subsection();
+    /*
+     *   advection diffusion 
+     */
+    prm.enter_subsection("advection diffusion");
+    {
+      prm.add_parameter("advec diff diffusivity",
+                         advec_diff.diffusivity,
+                        "Defines the diffusivity for the advection diffusion equation "
+                        );
+      prm.add_parameter("advec diff theta", 
+                         advec_diff.theta,
+                        "Sets the theta value for the time stepping scheme: 0=explicit euler; "
+                        "1=implicit euler; 0.5=Crank-Nicholson;"
+                        );
+      prm.add_parameter("advec diff start time", 
+                         advec_diff.start_time,
+                        "Defines the start time for the solution of the levelset problem"
+                        );
+      prm.add_parameter("advec diff end time", 
+                         advec_diff.end_time,
+                        "Sets the end time for the solution of the advection diffusion problem"
+                        );
+      prm.add_parameter("advec diff time step size", 
+                         advec_diff.time_step_size,
+                        "Sets the step size for time stepping. For non-uniform "
+                        "time stepping, this parameter determines the size of the first time step."
+                        );
+      prm.add_parameter("advec diff do matrix free",
+                         advec_diff.do_matrix_free,
+                        "Set this parameter if a matrix free solution procedure should be performed");
+      prm.add_parameter("advec diff do print l2norm",
+                         advec_diff.do_print_l2norm,
+                        "Defines if the l2norm of the advected field should be printed).");
+    }
+    prm.leave_subsection();
+    
+    /*
+     *   levelset 
+     */
+    prm.enter_subsection("levelset");
+    {
+      prm.add_parameter("ls artificial diffusivity",
+                         ls.artificial_diffusivity,
+                        "Defines the artificial diffusivity for the level set transport equation"
+                        );
+
+      prm.add_parameter("ls do reinitialization",
+                         ls.do_reinitialization,
+                        "Defines if reinitialization of level set function is activated"
+                       );
+      prm.add_parameter("ls theta", 
+                         ls.theta,
+                        "Sets the theta value for the time stepping scheme (0=explicit euler; "
+                        "1=implicit euler; 0.5=Crank-Nicholson"
+                        );
+
+      prm.add_parameter("ls start time", 
+                         ls.start_time,
+                        "Defines the start time for the solution of the levelset problem"
+                        );
+      prm.add_parameter("ls end time", 
+                         ls.end_time,
+                        "Sets the end time for the solution of the levelset problem"
+                        );
+      prm.add_parameter("ls time step size", 
+                         ls.time_step_size,
+                        "Sets the step size for time stepping. For non-uniform "
+                        "time stepping, this parameter determines the size of the first time step."
+                        );
+      prm.add_parameter("ls enable CFL condition", 
+                         ls.enable_CFL_condition,
+                        "Enables to dynamically adapt the time step to meet the CFL condition"
+                        " in case of explicit time integration (theta=0)"
+                        );
+      prm.add_parameter("ls do print l2norm",
+                         ls.do_print_l2norm,
+                        "Defines if the l2norm of the levelset result should be printed)");
+    }
+    prm.leave_subsection();
+    
+    /*
+     *   reinitialization 
+     */
+    prm.enter_subsection("reinitialization");
+    {
+      prm.add_parameter("reinit max n steps", 
+                         reinit.max_n_steps,
+                        "Sets the maximum number of reinitialization steps"); 
+      prm.add_parameter("reinit constant epsilon",
+                         reinit.constant_epsilon,             
+                        "Defines the length parameter of the level set function to be constant and"
+                        "not to dependent on the mesh size (default: -1.0 i.e. grid size dependent"
+                        "which can be controlled by reinit_epsilon_scale_factor");
+      prm.add_parameter("reinit scale factor epsilon",
+                         reinit.scale_factor_epsilon,             
+                        "Defines the scaling factor of the diffusion parameter in the reinitialization "
+                        "equation; the scaling factor is multipled by the mesh size (default: 0.5 i.e. eps=0.5*h_min");
+      prm.add_parameter("reinit dtau",
+                         reinit.dtau,
+                        "Defines the time step size of the reinitialization to be constant and"
+                        "not to dependent on the mesh size (default: -1.0 i.e. grid size dependent");
+      prm.add_parameter("reinit modeltype",
+                         reinit.modeltype,
+                        "Sets the type of reinitialization model that should be used"
+                        "This string is converted to an enum value."); 
+      prm.add_parameter("reinit do matrix free",
+                         reinit.do_matrix_free,
+                        "Set this parameter if a matrix free solution procedure should be performed");
+      prm.add_parameter("reinit do print l2norm",
+                         reinit.do_print_l2norm,
+                        "Defines if the l2norm of the reinitialization result should be printed)");
+    }
+    prm.leave_subsection();
+    /*
+     *   normal vector
+     */
+    prm.enter_subsection("normal vector");
+    {
+      prm.add_parameter ("normal vec damping scale factor", 
+                          normal_vec.damping_scale_factor,
+                         "normal vector computation: damping = cell_size * normal_vec_damping_scale_factor");
+      prm.add_parameter("normal vec do matrix free",
+                         normal_vec.do_matrix_free,
+                        "Set this parameter if a matrix free solution procedure should be performed");
+      prm.add_parameter("normal vec do print l2norm",
+                         normal_vec.do_print_l2norm,
+                        "Defines if the l2norm of the normal vector result should be printed)");
+    }
+    prm.leave_subsection();
+    /*
+     *   curvature
+     */
+    prm.enter_subsection("curvature");
+    {
+      prm.add_parameter ("curv damping scale factor", 
+                          curv.damping_scale_factor,
+                         "curvature computation: damping = cell_size * curv_damping_scale_factor");
+      prm.add_parameter("curv do matrix free",
+                         curv.do_matrix_free,
+                        "Set this parameter if a matrix free solution procedure should be performed");
+      prm.add_parameter("curv do print l2norm",
+                         curv.do_print_l2norm,
+                        "Defines if the l2norm of the curvature result should be printed)");
+    }
+    prm.leave_subsection();
+    
+    /*
+     *   paraview
+     */
+    prm.enter_subsection("paraview");
+    {
+      prm.add_parameter ("paraview do output", 
+                          paraview.do_output,
+                         "boolean for producing paraview output files");
+      prm.add_parameter ("paraview filename", 
+                          paraview.filename,
+                         "Sets the base name for the paraview file output.");
+      prm.add_parameter ("paraview write frequency", 
+                          paraview.write_frequency,
+                         "every n timestep that should be written");
+      prm.add_parameter ("paraview do initial state",
+                          paraview.do_initial_state,
+                         "boolean for writing the initial state into the paraview output file");
+      prm.add_parameter ("paraview print levelset",
+                          paraview.print_levelset,
+                         "boolean for writing the levelset variable into the paraview output file");
+      prm.add_parameter ("paraview print normal vector", 
+                          paraview.print_normal_vector,
+                         "boolean for writing the computed normalvector into the paraview output file");
+      prm.add_parameter ("paraview print curvature", 
+                          paraview.print_curvature,
+                         "boolean for writing the computed curvature into the paraview output file");
+      prm.add_parameter ("paraview print advection", 
+                          paraview.print_advection,
+                         "boolean for writing the computed advection into the paraview output file");
+      prm.add_parameter ("paraview print exactsolution", 
+                          paraview.print_exactsolution,
+                         "boolean for writing the exact solution into the paraview output file");
+      prm.add_parameter ("paraview print boundary id", 
+                          paraview.print_boundary_id,
+                         "boolean for printing a vtk-file with the boundary id");
+    }
+    prm.leave_subsection();
+    
+    /*
+     *   output
+     */
+    prm.enter_subsection("output");
+    {
+      prm.add_parameter ("do walltime", 
+                          output.do_walltime,
+                         "this flag enables the output of wall times (should be disabled if a test file is prepared)");
+      prm.add_parameter ("do compute error", 
+                          output.do_compute_error,
+                         "this flag enables the computation of the error compared to a given analytical solution.");
+      prm.add_parameter ("do compute volume output", 
+                          output.do_compute_volume_output,
+                         "boolean for computing the phase volumes");
+      prm.add_parameter ("filename volume output", 
+                          output.filename_volume_output,
+                         "Sets the base name for the volume fraction file output.");
+    }
+    prm.leave_subsection();
+  }
+
+  // base parameters
+  BaseData<number>               base;
+  // level set specific parameters
+  LevelSetData<number>           ls;
+  // reinitialization specific parameters
+  ReinitializationData<number>   reinit;
+  // advection diffusion specific parameters
+  AdvectionDiffusionData<number> advec_diff;
+  // advection diffusion specific parameters
+  NormalVectorData<number>       normal_vec;
+  // advection diffusion specific parameters
+  CurvatureData<number>          curv;
+  // paraview parameters
+  ParaviewData<number>           paraview;
+  // output parameters
+  OutputData<number>             output;
+  
+};
+
+
+} // namespace MeltPoolDG
