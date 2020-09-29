@@ -1,3 +1,4 @@
+#pragma once
 // deal-specific libraries
 #include <deal.II/base/function.h>
 #include <deal.II/base/tensor_function.h>
@@ -13,9 +14,12 @@
 // MeltPoolDG
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
-#include <meltpooldg/interface/problemselector.hpp>
 
 namespace MeltPoolDG
+{
+namespace Simulation
+{
+namespace ReinitCircle
 {
   /*
    * this function specifies the initial field of the level set equation
@@ -76,20 +80,20 @@ namespace MeltPoolDG
    */
 
   template<int dim>
-  class Simulation : public SimulationBase<dim>
+  class SimulationReinit : public SimulationBase<dim>
   {
   public:
-    Simulation() 
-      : SimulationBase<dim>(MPI_COMM_WORLD)
+    SimulationReinit(std::string parameter_file,
+               const MPI_Comm mpi_communicator) 
+      : SimulationBase<dim>(parameter_file,
+                            mpi_communicator)
     {
       set_parameters();
     }
     
     void set_parameters()
     {
-      std::string paramfile;
-      paramfile = "reinit_circle.json";
-      this->parameters.process_parameters_file(paramfile,this->pcout);
+      this->parameters.process_parameters_file(this->parameter_file,this->pcout);
     }
 
     void create_spatial_discretization()
@@ -104,7 +108,7 @@ namespace MeltPoolDG
       GridGenerator::hyper_cube( *this->triangulation, 
                                  left_domain, 
                                  right_domain );
-      this->triangulation->refine_global( this->parameters.global_refinements );
+      this->triangulation->refine_global( this->parameters.base.global_refinements );
     }
 
     void set_boundary_conditions()
@@ -123,69 +127,9 @@ namespace MeltPoolDG
 
   };
 
+} // namespace ReinitCircle
+} // namespace Simulation
 } // namespace MeltPoolDG
 
-int main(int argc, char* argv[])
-{
-  using namespace dealii;
-  using namespace MeltPoolDG;
-
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
-  
-  try
-    {
-      // @ todo: incorporate better way for template parameter degree
-      const int degree = 1;
-
-      const auto dim = std::make_shared<Simulation<1>>()->parameters.dimension;
-
-      if ( dim == 1)
-      {
-        auto sim = std::make_shared<Simulation<1>>();
-        sim->create();
-        auto problem = ProblemSelector<1,degree>::get_problem(sim);
-        problem->run(sim);
-      }
-      else if ( dim == 2)
-      {
-        auto sim = std::make_shared<Simulation<2>>();
-        sim->create();
-        auto problem = ProblemSelector<2,degree>::get_problem(sim);
-        problem->run(sim);
-      }
-      else
-      {
-        AssertThrow(false, ExcMessage("Dimension must be 1 or 2."));
-      }
-    }
-  catch (std::exception &exc)
-    {
-      std::cerr << std::endl
-                << std::endl
-                << "----------------------------------------------------"
-                << std::endl;
-      std::cerr << "Exception on processing: " << std::endl
-                << exc.what() << std::endl
-                << "Aborting!" << std::endl
-                << "----------------------------------------------------"
-                << std::endl;
-
-      return 1;
-    }
-  catch (...)
-    {
-      std::cerr << std::endl
-                << std::endl
-                << "----------------------------------------------------"
-                << std::endl;
-      std::cerr << "Unknown exception!" << std::endl
-                << "Aborting!" << std::endl
-                << "----------------------------------------------------"
-                << std::endl;
-      return 1;
-    }
-
-  return 0;
-}
 
 

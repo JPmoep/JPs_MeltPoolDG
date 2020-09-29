@@ -17,15 +17,20 @@ namespace MeltPoolDG
     {
         public:
 
-        SimulationBase(MPI_Comm my_communicator)
-        : mpi_communicator(my_communicator)
+        SimulationBase(std::string parameter_file_in,
+                       MPI_Comm my_communicator)
+        : parameter_file(parameter_file_in)
+        , mpi_communicator(my_communicator)
         , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0 )
         {
+          set_parameters();
         }
 
         virtual ~SimulationBase() = default;
 
-        virtual void set_parameters() = 0;
+        virtual void set_parameters() {
+          this->parameters.process_parameters_file(this->parameter_file,this->pcout);
+        };
         
         virtual void set_boundary_conditions() = 0;
         
@@ -51,6 +56,7 @@ namespace MeltPoolDG
         
         const BoundaryConditions<dim>&                 get_boundary_conditions() const { return this->boundary_conditions; }
 
+        const std::string                              parameter_file;
         const MPI_Comm                                 mpi_communicator;
         const dealii::ConditionalOStream               pcout;          // @todo: make protected
         Parameters<double>                             parameters;

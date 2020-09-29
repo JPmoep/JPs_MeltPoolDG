@@ -8,15 +8,15 @@ namespace MeltPoolDG
 {
     using namespace dealii;
 
-    template <typename number           = double,
+    template< typename number           = double,
               typename DoFVectorType    = LinearAlgebra::distributed::Vector<number>,
               typename SrcRhsVectorType = DoFVectorType>
     class OperatorBase
     {
       private:
-        using SparseMatrixType = TrilinosWrappers::SparseMatrix;
-        using VectorType       = LinearAlgebra::distributed::Vector<number>;
-        using BlockVectorType  = LinearAlgebra::distributed::BlockVector<number>;
+        using SparseMatrixType    = TrilinosWrappers::SparseMatrix;
+        using SparsityPatternType = TrilinosWrappers::SparsityPattern;
+      
       public:
 
         virtual ~OperatorBase() = default;
@@ -58,7 +58,37 @@ namespace MeltPoolDG
         {
           d_tau = dt;
         }
+        
+        template<unsigned int dim,
+                 unsigned int comp>
+        void
+        initialize_matrix_based(const ScratchData<dim>& scratch_data)
+        {
+          const MPI_Comm mpi_communicator = scratch_data.get_mpi_comm(comp);  
+          dsp.reinit( scratch_data.get_locally_owned_dofs(),
+                      scratch_data.get_locally_owned_dofs(),
+                      scratch_data.get_locally_relevant_dofs(),
+                      mpi_communicator);
 
-        double d_tau = 0.0; 
+          DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(comp), 
+                                          this->dsp,
+                                          scratch_data.get_constraint(comp),
+                                          true,
+                                          Utilities::MPI::this_mpi_process(mpi_communicator)
+                                          );
+          this->dsp.compress();
+          
+          this->system_matrix.reinit( dsp );  
+        }
+        
+        const SparseMatrixType &
+        get_system_matrix() const
+        {
+          return this->system_matrix;
+        }
+
+        double d_tau            = 0.0; 
+        SparseMatrixType        system_matrix;
+        SparsityPatternType     dsp;
     };
 } // namespace MeltPoolDG

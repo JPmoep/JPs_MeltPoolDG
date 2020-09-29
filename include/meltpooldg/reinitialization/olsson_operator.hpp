@@ -60,7 +60,7 @@ class OlssonOperator : public OperatorBase<number,
                                  scratch_data.get_matrix_free().get_quadrature(comp),
                                  update_values | update_gradients | update_quadrature_points | update_JxW_values
                                  );
-        const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell(comp);
+        const unsigned int                    dofs_per_cell =scratch_data.get_n_dofs_per_cell();
         
         FullMatrix<double>   cell_matrix( dofs_per_cell, dofs_per_cell );
         Vector<double>       cell_rhs(    dofs_per_cell );

@@ -63,7 +63,7 @@ namespace LevelSet
       }
     }
 
-    std::string get_name() final { return "reinitialization"; };
+    std::string get_name() final { return "level_set_problem"; };
 
   private:
     /*
@@ -134,9 +134,9 @@ namespace LevelSet
       /*  
        *  initialize the time iterator
        */
-      time_iterator.initialize(TimeIteratorData{ base_in->parameters.ls_start_time,
-                                                 base_in->parameters.ls_end_time,
-                                                 base_in->parameters.ls_time_step_size,
+      time_iterator.initialize(TimeIteratorData<double>{ base_in->parameters.ls.start_time,
+                                                 base_in->parameters.ls.end_time,
+                                                 base_in->parameters.ls.time_step_size,
                                                  100000,
                                                  false });
       /*
@@ -169,7 +169,7 @@ namespace LevelSet
     output_results(const unsigned int time_step,
                    const Parameters<double>& parameters) const
     {
-      if (parameters.paraview_do_output)
+      if (parameters.paraview.do_output)
       {
         const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
         /*
@@ -182,7 +182,7 @@ namespace LevelSet
         /*
          *  output normal vector field
          */
-        if (parameters.paraview_print_normal_vector)
+        if (parameters.paraview.print_normal_vector)
           for (unsigned int d=0; d<dim; ++d)
             data_out.add_data_vector(level_set_operation.solution_normal_vector.block(d), "normal_"+std::to_string(d));
         
@@ -195,7 +195,7 @@ namespace LevelSet
         //BlockVectorType advection;
         //scratch_data->initialize_block_dof_vector(advection);
 
-        //if (parameters.paraview_print_advection)
+        //if (parameters.paraview.print_advection)
         //{
           //advection_velocity->set_time( time_iterator.get_current_time() );
             
@@ -227,7 +227,7 @@ namespace LevelSet
         /*
         * write data of boundary -- @todo: move to own utility function
         */
-        if (parameters.paraview_print_boundary_id)
+        if (parameters.paraview.print_boundary_id)
         {
           const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
           const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
@@ -256,7 +256,7 @@ namespace LevelSet
     std::shared_ptr<ScratchData<dim>>                    scratch_data; 
     std::shared_ptr<TensorFunction<1,dim>>               advection_velocity;
     
-    TimeIterator                                         time_iterator;
+    TimeIterator<double>                                 time_iterator;
     LevelSetOperation<dim, degree>                       level_set_operation;
   };
 } // namespace LevelSet

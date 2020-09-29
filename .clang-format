@@ -112,7 +112,10 @@ IncludeCategories:
     Priority: 300
   - Regex:    "deal.II/sundials/.*\\.h"
     Priority: 310
-# put boost right after deal:
+# put MeltPoolDG right after deal:
+  - Regex:    "meltpooldg/.*\\.hpp"
+    Priority: 400
+# put boost after meltpooldg:
   - Regex: "<boost.*>"
     Priority: 500
 # try to group PETSc headers:
@@ -127,6 +130,8 @@ IncludeCategories:
 # should not be caught here
   - Regex: "<[a-z_]+>"
     Priority: 100000
+
+
 
 IndentCaseLabels: true
 IndentPPDirectives: AfterHash

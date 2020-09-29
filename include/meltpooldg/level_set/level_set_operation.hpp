@@ -20,24 +20,6 @@ namespace LevelSet
   using namespace dealii; 
   using namespace Reinitialization; 
   using namespace AdvectionDiffusion; 
-
-  struct LevelSetData 
-  {
-    // this parameter activates the reinitialization of the level set field
-    bool do_reinitialization = false;
-    
-    // choose the diffusivity parameter
-    double artificial_diffusivity = 0.0;
-    
-    // choose theta from the generaliezd time-stepping included
-    double theta = 0.5;
-
-    // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
-    bool do_print_l2norm = false;
-    
-    // maximum number of LevelSet steps to be completed
-    TypeDefs::VerbosityType verbosity_level = TypeDefs::VerbosityType::silent;
-  };
   
   /*
    *     Level set model including advection, reinitialization and curvature computation
@@ -49,14 +31,11 @@ namespace LevelSet
   private:
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
-    using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
-    using SparsityPatternType = TrilinosWrappers::SparsityPattern;
-
   public:
     /*
      *  All the necessary parameters are stored in this vector.
      */
-    LevelSetData level_set_data;
+    LevelSetData<double> level_set_data;
 
     LevelSetOperation() = default;
     
@@ -66,18 +45,19 @@ namespace LevelSet
                const Parameters<double>&                      data_in,
                const std::shared_ptr<TensorFunction<1,dim>>  &advection_velocity_in )
     {
-      /*
-       *  set initial conditions
-       */
       scratch_data       = scratch_data_in;
       advection_velocity = advection_velocity_in;
+      /*
+       *  set the level set data
+       */
+      level_set_data = data_in.ls;
       /*
        *  initialize the advection_diffusion problem
        */
       advec_diff_operation.initialize(scratch_data,
                                       solution_level_set_in, 
                                       data_in,
-                                      advection_velocity_in);
+                                      *advection_velocity_in);
       /*
        *  set the parameters for the levelset problem; already determined parameters
        *  from the initialize call of advec_diff_operation are overwritten.
@@ -146,18 +126,18 @@ namespace LevelSet
     void 
     set_level_set_parameters(const Parameters<double>& data_in)
     {
-      level_set_data.do_reinitialization                    = data_in.ls_do_reinitialization;
-      advec_diff_operation.advec_diff_data.diffusivity      = data_in.ls_artificial_diffusivity;
-      advec_diff_operation.advec_diff_data.theta            = data_in.ls_theta;
-      advec_diff_operation.advec_diff_data.do_print_l2norm  = true; 
-      advec_diff_operation.advec_diff_data.do_matrix_free   = false; 
+      level_set_data.do_reinitialization                    = data_in.ls.do_reinitialization;
+      advec_diff_operation.advec_diff_data.diffusivity      = data_in.ls.artificial_diffusivity;
+      advec_diff_operation.advec_diff_data.theta            = data_in.ls.theta;
+      advec_diff_operation.advec_diff_data.do_print_l2norm  = data_in.ls.do_print_l2norm;
+      advec_diff_operation.advec_diff_data.do_matrix_free   = data_in.ls.do_matrix_free; 
       /*
        *  setup the time iterator for the reinitialization problem
        */
-      reinit_time_iterator.initialize(TimeIteratorData{0.0,
+      reinit_time_iterator.initialize(TimeIteratorData<double>{0.0,
                                                        100000.,
-                                                       data_in.reinit_dtau > 0.0 ? data_in.reinit_dtau : scratch_data->get_min_cell_size() * data_in.reinit_scale_factor_epsilon,
-                                                       data_in.reinit_max_n_steps,
+                                                       data_in.reinit.dtau > 0.0 ? data_in.reinit.dtau : scratch_data->get_min_cell_size() * data_in.reinit.scale_factor_epsilon,
+                                                       data_in.reinit.max_n_steps,
                                                        false});
 
     }
@@ -177,7 +157,7 @@ namespace LevelSet
      *  equation, which is solved up to quasi-steady state. Thus a time iterator is 
      *  needed.
      */
-    TimeIterator                                         reinit_time_iterator;
+    TimeIterator<double>                                  reinit_time_iterator;
 
   public:
     /*

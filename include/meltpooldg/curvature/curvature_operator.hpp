@@ -61,7 +61,7 @@ namespace Curvature
                                scratch_data.get_matrix_free().get_quadrature(),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
 
-      const unsigned int                    dofs_per_cell =scratch_data.get_matrix_free().get_dofs_per_cell();
+      const unsigned int                    dofs_per_cell =scratch_data.get_n_dofs_per_cell();
 
       FullMatrix<double>                    curvature_cell_matrix( dofs_per_cell, dofs_per_cell );
       Vector<double>           curvature_cell_rhs(dofs_per_cell) ;

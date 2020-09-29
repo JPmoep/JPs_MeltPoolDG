@@ -110,7 +110,7 @@ namespace Reinitialization
       /*
        *  create quadrature rule
        */
-      QGauss<1> quad_1d_temp(degree+1) ; // evt. nicht mehr
+      QGauss<1> quad_1d_temp(degree+1);
       
       scratch_data->attach_quadrature(quad_1d_temp);
       /*
@@ -121,10 +121,10 @@ namespace Reinitialization
       /*  
        *  initialize the time iterator
        */
-      time_iterator.initialize(TimeIteratorData{ 0.0,
+      time_iterator.initialize(TimeIteratorData<double>{ 0.0,
                                                  10000.,
-                                                 parameters.reinit_dtau,
-                                                 parameters.reinit_max_n_steps,
+                                                 parameters.reinit.dtau,
+                                                 parameters.reinit.max_n_steps,
                                                  false });
       /*
        *  set initial conditions of the levelset function
@@ -151,27 +151,23 @@ namespace Reinitialization
     void 
     output_results(const unsigned int time_step=0) const
     {
-      if (parameters.paraview_do_output)
+      if (parameters.paraview.do_output)
       {
         DataOut<dim> data_out;
-        data_out.attach_dof_handler(scratch_data->get_matrix_free().get_dof_handler());
+        //data_out.attach_dof_handler(scratch_data->get_matrix_free().get_dof_handler());
+        data_out.attach_dof_handler(dof_handler);
         data_out.add_data_vector(reinit_operation.solution_level_set, "psi");
 
-        if (parameters.paraview_print_normal_vector)
+        if (parameters.paraview.print_normal_vector)
         {
           for (unsigned int d=0; d<dim; ++d)
             data_out.add_data_vector(reinit_operation.solution_normal_vector.block(d), "normal_"+std::to_string(d));
         }
 
-          //@todo: add_data_vector(exact_solution)
-        //VectorType levelset_exact;
-        //levelset_exact.reinit( locally_owned_dofs,
-                               //mpi_communicator);
-      
         const int n_digits_timestep = 4;
         const int n_groups = 1;
         data_out.build_patches();
-        data_out.write_vtu_with_pvtu_record("./", "solution_reinitialization", time_step, scratch_data->get_mpi_comm(), n_digits_timestep, n_groups);
+        data_out.write_vtu_with_pvtu_record("./", parameters.paraview.filename, time_step, scratch_data->get_mpi_comm(), n_digits_timestep, n_groups);
       }
     }
 
@@ -181,7 +177,7 @@ namespace Reinitialization
     AffineConstraints<double>                            constraints;
     
     std::shared_ptr<ScratchData<dim>>                    scratch_data;
-    TimeIterator                                         time_iterator;
+    TimeIterator<double>                                 time_iterator;
     ReinitializationOperation<dim, degree>               reinit_operation;
     
   };

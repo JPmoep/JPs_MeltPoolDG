@@ -82,7 +82,7 @@ namespace AdvectionDiffusion
       /*
        *  setup mapping
        */
-      const auto& mapping = MappingQGeneric<dim>(degree);
+      const auto mapping = MappingQGeneric<dim>(degree);
       scratch_data->set_mapping(mapping);
       /*
        *  setup DoFHandler
@@ -125,10 +125,10 @@ namespace AdvectionDiffusion
       /*  
        *  initialize the time iterator
        */
-      TimeIteratorData time_data;
-      time_data.start_time       = parameters.advec_diff_start_time;
-      time_data.end_time         = parameters.advec_diff_end_time;
-      time_data.time_increment   = parameters.advec_diff_time_step_size; 
+      TimeIteratorData<double> time_data;
+      time_data.start_time       = parameters.advec_diff.start_time;
+      time_data.end_time         = parameters.advec_diff.end_time;
+      time_data.time_increment   = parameters.advec_diff.time_step_size; 
       time_data.max_n_time_steps = 10000;
       
       time_iterator.initialize(time_data);
@@ -151,17 +151,18 @@ namespace AdvectionDiffusion
        *    initialize the advection-diffusion operation class
        */
       advection_velocity = base_in->get_advection_field();
+      
       advec_diff_operation.initialize(scratch_data, 
                                       initial_solution, 
                                       parameters, 
-                                      advection_velocity);
+                                      *advection_velocity);
     }
 
     void 
     output_results(const unsigned int time_step,
                    const Parameters<double>& parameters) 
     {
-      if (parameters.paraview_do_output)
+      if (parameters.paraview.do_output)
       {
         const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
           
@@ -178,24 +179,22 @@ namespace AdvectionDiffusion
         BlockVectorType advection;
         scratch_data->initialize_block_dof_vector(advection);
 
-        if ( parameters.paraview_print_advection )
+        if ( parameters.paraview.print_advection )
         {
             advection_velocity->set_time( time_iterator.get_current_time() );
-            
-            std::map<types::global_dof_index, Point<dim> > supportPoints;
-
-            const auto& mapping = scratch_data->get_mapping();
-            DoFTools::map_dofs_to_support_points<dim,dim>(mapping,dof_handler,supportPoints);
-
-            for(auto& global_dof : supportPoints)
-            {
-                auto a = advection_velocity->value(global_dof.second);
-                for(auto d=0; d<dim; ++d)
-                  advection.block(d)[global_dof.first] = a[d];
-            } 
-
+            /*
+             *  work around to interpolate a vector-valued quantity on a scalar DoFHandler
+             */
             for(auto d=0; d<dim; ++d)
+            {
+              VectorTools::interpolate(scratch_data->get_mapping(),
+                                       scratch_data->get_dof_handler(),
+                                       ScalarFunctionFromFunctionObject<dim>( [&](const Point<dim>& p) {return advection_velocity->value(p)[d];}),
+                                       advection.block(d));
+              advection.block(d).update_ghost_values();
+
               data_out.add_data_vector(dof_handler,advection.block(d), "advection_velocity_"+std::to_string(d));
+            }
         }
         /*
         * write data to vtu file
@@ -231,9 +230,9 @@ namespace AdvectionDiffusion
     AffineConstraints<double>                            constraints;    
     std::shared_ptr<ScratchData<dim>>                    scratch_data; 
 
-    std::shared_ptr<TensorFunction<1,dim>>                advection_velocity;
+    std::shared_ptr<TensorFunction<1,dim>>               advection_velocity;
 
-    TimeIterator                                         time_iterator;
+    TimeIterator<double>                                 time_iterator;
     AdvectionDiffusionOperation<dim, degree>             advec_diff_operation;
   };
 } // namespace AdvectionDiffusion

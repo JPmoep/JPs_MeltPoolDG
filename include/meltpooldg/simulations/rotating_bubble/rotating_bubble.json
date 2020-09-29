@@ -1,10 +1,9 @@
 {
-  "general" : { 
-    "problem name" : "level_set" 
-  },
-  "spatial domain" : { 
-      "dimension" : "2",
-      "global refinements" : "6"
+  "base" : { 
+    "problem name" : "level_set", 
+    "application name" : "rotating_bubble",
+    "dimension" : "2",
+    "global refinements" : "6"
   },
   "levelset" : {
     "ls do reinitialization"    : "true",
@@ -17,7 +16,7 @@
   },
   "reinitialization" : {
     "reinit max n steps"     : "5",
-    "reinit modeltype"       : "1",
+    "reinit modeltype"       : "olsson2007",
     "reinit do matrixfree"   : "true", 
     "reinit do print l2norm" : "true",
     "reinit eps scale factor" : "0.5" 

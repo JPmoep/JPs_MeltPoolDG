@@ -17,16 +17,15 @@ namespace MeltPoolDG
     public:
       static 
       std::shared_ptr<ProblemBase<dim,degree>> 
-      get_problem( std::shared_ptr<SimulationBase<dim>> sim )
+      get_problem( std::string problem_name )
       {
-        std::shared_ptr<ProblemBase<dim,degree>> problem;
-        if( sim->parameters.problem_name == "level_set" )
+        if( problem_name == "level_set" )
           return std::make_shared<LevelSet::LevelSetProblem<dim,degree>>(); 
 
-        else if( sim->parameters.problem_name == "reinitialization" )
+        else if( problem_name == "reinitialization" )
           return std::make_shared<Reinitialization::ReinitializationProblem<dim,degree>>();     
         
-        else if( sim->parameters.problem_name == "advection_diffusion" )
+        else if( problem_name == "advection_diffusion" )
           return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim,degree>>();     
         
         /* add your problem here*/

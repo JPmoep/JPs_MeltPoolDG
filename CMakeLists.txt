@@ -12,6 +12,15 @@ MESSAGE("_______________________________________________________________________
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
 
+set(CMAKE_CXX_STANDARD 17)
+
+## avoid in-source compilation
+set(DEFAULT_OUT_OF_SOURCE_FOLDER "build")
+if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+  message(FATAL_ERROR "In-source builds not allowed. Change to ${DEFAULT_OUT_OF_SOURCE_FOLDER} folder and run then cmake
+     ")
+endif ()
+
 FIND_PACKAGE(deal.II 9.2.0 QUIET
   HINTS ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
   )
@@ -37,11 +46,14 @@ ENDIF()
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
+
+
 # Set the source files to be compiled
+SET(TARGET_SRC run_simulation.cpp)
 SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
 
 # Set the include directory and the name of the project
-FILE(GLOB_RECURSE TARGET_SRC  "source/**/*.cpp")
+
 INCLUDE_DIRECTORIES(include)
 
 PROJECT(MeltPoolDG)
@@ -67,8 +79,14 @@ IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
   SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
 ENDIF()
 
-# applications
-ADD_SUBDIRECTORY(simulations)
+SET(projectName "run_simulation")
+
+message("--------- building project: ${CMAKE_PROJECT_NAME}")
+ADD_EXECUTABLE(${projectName} 
+                run_simulation.cpp)
+
+DEAL_II_SETUP_TARGET(${projectName})
+TARGET_LINK_LIBRARIES(${projectName} ${CMAKE_PROJECT_NAME})
 
 # tests --> will be added asap
 #enable_testing()

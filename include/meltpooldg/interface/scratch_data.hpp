@@ -20,12 +20,16 @@
 // for mapping
 #include <deal.II/fe/mapping.h>
  #include <deal.II/grid/grid_tools.h>
+// DoFTools
+#include <deal.II/dofs/dof_tools.h>
 
 namespace MeltPoolDG{
   /**
    * Container containing mapping-, finite-element-, and quadrature-related
    * objects to be used either in matrix-based or in matrix-free context.
    */
+using namespace dealii;
+
 template <int dim, 
           int spacedim=dim, 
           typename number=double, 
@@ -36,9 +40,7 @@ class ScratchData
     using VectorType          = LinearAlgebra::distributed::Vector<number>;    
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<number>;    
   public:
-    ScratchData()
-    {
-    }
+    ScratchData() = default;
 
     /**
      * Setup everything in one go.
@@ -83,6 +85,12 @@ class ScratchData
     {
       this->dof_handler.emplace_back(&dof_handler);
       this->min_cell_size.emplace_back(GridTools::minimal_cell_diameter(dof_handler.get_triangulation())/std::sqrt(dim));
+
+      this->locally_owned_dofs.emplace_back(dof_handler.locally_owned_dofs());
+      IndexSet locally_relevant_dofs_temp;
+      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs_temp);
+      this->locally_relevant_dofs.emplace_back(locally_relevant_dofs_temp);
+      
       return this->dof_handler.size() - 1;
     }
 
@@ -117,14 +125,6 @@ class ScratchData
       if (this->quad_1D.size() > 0)
         matrix_free.reinit(*this->mapping, this->dof_handler, this->constraint, this->quad_1D);
     }
-    /*
-     * Store additional more specific data
-     */
-    //void 
-    //set_parameters(const Parameters<number>& parameters)
-    //{
-      //this->parameters = std::move(parameters);
-    //}
 
     /**
      * Getter functions.
@@ -165,6 +165,11 @@ class ScratchData
       return this->matrix_free.get_dof_handler(dof_idx);
     }
 
+    unsigned int
+    get_n_dofs_per_cell(const unsigned int dof_idx=0) const
+    {
+      return this->matrix_free.get_dof_handler(dof_idx).get_fe().n_dofs_per_cell();
+    }
 
     const double &
     get_min_cell_size(const unsigned int dof_idx=0) const
@@ -178,6 +183,18 @@ class ScratchData
       return UtilityFunctions::get_mpi_comm(*this->dof_handler[dof_idx]);
     }
     
+    const IndexSet &
+    get_locally_owned_dofs(const unsigned int dof_idx=0) const
+    {
+      return this->locally_owned_dofs[dof_idx];
+    }
+    
+    const IndexSet &
+    get_locally_relevant_dofs(const unsigned int dof_idx=0) const
+    {
+      return this->locally_relevant_dofs[dof_idx];
+    }
+
     ConditionalOStream  
     get_pcout(const unsigned int dof_idx=0) const
     {
@@ -216,6 +233,8 @@ class ScratchData
     std::vector<Quadrature<dim>>                   quad;
     std::vector<Quadrature<1>>                     quad_1D;
     std::vector<double>                            min_cell_size;     
+    std::vector<IndexSet>                          locally_owned_dofs;     
+    std::vector<IndexSet>                          locally_relevant_dofs;     
     
     MatrixFree<dim, number, VectorizedArrayType>   matrix_free;
 

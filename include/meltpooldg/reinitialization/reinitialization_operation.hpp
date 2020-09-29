@@ -25,38 +25,6 @@ namespace Reinitialization
   using namespace dealii; 
 
   /*
-   *    Data for reinitialization of level set equation
-   */
-  
-  enum class ReinitModelType { olsson2007 = 1,  //@ todo: number can be removed when input parameter of model type is changed to string
-                               /* ... your reinitialization operator ...*/
-                               undefined  };
-  
-  struct ReinitializationData
-  {
-    // enum which reinitialization model should be solved
-    ReinitModelType reinit_model = ReinitModelType::undefined;
-    
-    // choose a constant, not cell-size dependent smoothing parameter
-    double scale_factor_epsilon = 0.5;
-    
-    // choose a constant, not cell-size dependent smoothing parameter
-    double constant_epsilon = -1.0;
-
-    // maximum number of reinitialization steps to be completed
-    unsigned int max_reinit_steps = 5;
-    
-    // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
-    bool do_print_l2norm = true;
-    
-    // this parameter activates the matrix free cell loop procedure
-    bool do_matrix_free = false;
-    
-    // maximum number of reinitialization steps to be completed
-    TypeDefs::VerbosityType verbosity_level = TypeDefs::VerbosityType::silent;
-  };
-  
-  /*
    *     Reinitialization model for reobtaining the signed-distance 
    *     property of the level set equation
    */
@@ -68,10 +36,9 @@ namespace Reinitialization
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
     using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
-    using SparsityPatternType = TrilinosWrappers::SparsityPattern;
 
   public:
-    ReinitializationData      reinit_data;
+    ReinitializationData<double>      reinit_data;
     /*
      *    This is the primary solution variable of this module, which will be also publically 
      *    accessible for output_results.
@@ -158,17 +125,17 @@ namespace Reinitialization
       }
       else
       {
-        system_matrix.reinit( dsp );  
+        reinit_operator->system_matrix.reinit( reinit_operator->dsp );  
 
         TrilinosWrappers::PreconditionAMG preconditioner;     
         TrilinosWrappers::PreconditionAMG::AdditionalData data;     
 
-        preconditioner.initialize(system_matrix, data); 
-        reinit_operator->assemble_matrixbased( solution_level_set, system_matrix, rhs );
+        preconditioner.initialize(reinit_operator->system_matrix, data); 
+        reinit_operator->assemble_matrixbased( solution_level_set, reinit_operator->system_matrix, rhs );
         iter = LinearSolve<VectorType,
                                      SolverCG<VectorType>,
                                      SparseMatrixType,
-                                     TrilinosWrappers::PreconditionAMG>::solve( system_matrix,
+                                     TrilinosWrappers::PreconditionAMG>::solve( reinit_operator->system_matrix,
                                                                                 src,
                                                                                 rhs,
                                                                                 preconditioner);
@@ -192,43 +159,13 @@ namespace Reinitialization
     void 
     set_reinitialization_parameters(const Parameters<double>& data_in)
     {
-      reinit_data.reinit_model         = static_cast<ReinitModelType>(data_in.reinit_modeltype);
-      reinit_data.constant_epsilon     = data_in.reinit_constant_epsilon;
-      reinit_data.scale_factor_epsilon = data_in.reinit_scale_factor_epsilon;
-      reinit_data.max_reinit_steps     = data_in.reinit_max_n_steps; 
-      reinit_data.do_print_l2norm      = data_in.reinit_do_print_l2norm; 
-      reinit_data.do_matrix_free       = data_in.reinit_do_matrixfree;  
+      reinit_data = data_in.reinit;
     }
 
-    
     void create_operator()
     {
-      if (!reinit_data.do_matrix_free)
-      {
-        const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm(comp);
-        IndexSet locally_owned_dofs;
-        IndexSet locally_relevant_dofs;
-        
-        locally_owned_dofs = scratch_data->get_dof_handler(comp).locally_owned_dofs(); 
-        DoFTools::extract_locally_relevant_dofs(scratch_data->get_dof_handler(comp), locally_relevant_dofs);
-        
-        dsp.reinit( locally_owned_dofs,
-                    locally_owned_dofs,
-                    locally_relevant_dofs,
-                    mpi_communicator
-                    );
-        DoFTools::make_sparsity_pattern(scratch_data->get_dof_handler(comp), 
-                                        dsp,
-                                        scratch_data->get_constraint(comp),
-                                        true,
-                                        Utilities::MPI::this_mpi_process(mpi_communicator)
-                                        );
-        dsp.compress();
-        
-        system_matrix.reinit( dsp );  
-      }
       
-      if (reinit_data.reinit_model == ReinitModelType::olsson2007)
+      if (reinit_data.modeltype == "olsson2007")
       {
 
        reinit_operator = 
@@ -246,15 +183,16 @@ namespace Reinitialization
        */
       else
         AssertThrow(false, ExcMessage("Requested reinitialization model not implemented."))
+      /*
+       *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
+       *  apply it to the system matrix. This functionality is part of the OperatorBase class.
+       */
+      if (!reinit_data.do_matrix_free)
+        reinit_operator->initialize_matrix_based<dim,comp>(*scratch_data);
     }
   
   private:
     std::shared_ptr<const ScratchData<dim>>                 scratch_data;
-    /*
-    * the following are prototypes for matrix-based operators
-    */
-    SparsityPatternType                                     dsp;
-    SparseMatrixType                                        system_matrix;     // @todo: might not be a member variable
     /*
      *  This shared pointer will point to your user-defined reinitialization operator.
      */

@@ -1,3 +1,0 @@
-ADD_SUBDIRECTORY(reinit_circle)
-ADD_SUBDIRECTORY(advection_diffusion)
-ADD_SUBDIRECTORY(rotatingbubble)

@@ -16,24 +16,6 @@ namespace AdvectionDiffusion
 {
 using namespace dealii;
 
-struct AdvectionDiffusionData 
-{
-  // choose the diffusivity parameter
-  double diffusivity = 0.0;
-  
-  // choose theta from the generaliezd time-stepping included
-  double theta = 0.5;
-
-  // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
-  bool do_print_l2norm = false;
-  
-  // this parameter activates the matrix free cell loop procedure
-  bool do_matrix_free = false;
-  
-  // maximum number of AdvectionDiffusion steps to be completed
-  TypeDefs::VerbosityType verbosity_level = TypeDefs::VerbosityType::silent;
-};
-  
 template<int dim, int degree, int comp=0, typename number = double>
 class AdvectionDiffusionOperator : public OperatorBase<number, 
                               LinearAlgebra::distributed::Vector<number>, 
@@ -49,7 +31,7 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
   public:
     AdvectionDiffusionOperator( const ScratchData<dim>&       scratch_data_in, 
                                 const TensorFunction<1,dim>&  advection_velocity_in,
-                                const AdvectionDiffusionData& data_in )
+                                const AdvectionDiffusionData<number>& data_in )
     : scratch_data        ( scratch_data_in )
     , advection_velocity  ( advection_velocity_in )
     , data                ( data_in               )
@@ -75,7 +57,7 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
                                scratch_data.get_matrix_free().get_quadrature(comp),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values
                                );
-      const unsigned int   dofs_per_cell = scratch_data.get_matrix_free().get_dofs_per_cell();      
+      const unsigned int   dofs_per_cell = scratch_data.get_n_dofs_per_cell();      
       
       FullMatrix<double>   cell_matrix( dofs_per_cell, dofs_per_cell );
       Vector<double>       cell_rhs(    dofs_per_cell );
@@ -179,9 +161,9 @@ class AdvectionDiffusionOperator : public OperatorBase<number,
     //}
 
     private:
-      const ScratchData<dim>&       scratch_data;
-      const TensorFunction<1,dim>&  advection_velocity;
-      const AdvectionDiffusionData& data;
+      const ScratchData<dim>&               scratch_data;
+      const TensorFunction<1,dim>&          advection_velocity;
+      const AdvectionDiffusionData<number>& data;
 };
 }   // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

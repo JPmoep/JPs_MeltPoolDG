@@ -22,33 +22,6 @@ namespace NormalVector
   using namespace dealii; 
 
   /*
-   *    Data for computing the normal vector of a given scalar field 
-   *    considering diffusive damping;
-   *
-   *    !!!! 
-   *          the normal vector field is not normalized to length one, 
-   *          it actually represents the gradient of the level set 
-   *          function 
-   *    !!!! 
-   */
-  
-  struct NormalVectorData 
-  {
-    // parameter for diffusive term in computation of normals
-    double damping_parameter = 1e-6;
-    
-    // this parameter controls whether the l2 norm is printed (mainly for testing purposes)
-    bool do_print_l2norm = true;
-    
-    // this parameter controls whether the matrixfree operator is called
-    bool do_matrix_free = false;
-    
-    // current verbosity level --> see possible options in UtilityFunctions
-    TypeDefs::VerbosityType verbosity_level = TypeDefs::VerbosityType::silent;
-
-  };
-  
-  /*
    *  This function calculates the normal vector of the current level set function being
    *  the solution of an intermediate projection step 
    *   
@@ -58,6 +31,11 @@ namespace NormalVector
    *  with test function w, the normal vector n_ϕ, damping parameter η_n and the
    *  level set function ϕ.
    *
+   *    !!!! 
+   *          the normal vector field is not normalized to length one, 
+   *          it actually represents the gradient of the level set 
+   *          function 
+   *    !!!! 
    */
   
   template <int dim, int degree, unsigned int comp=0>
@@ -67,10 +45,9 @@ namespace NormalVector
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<double>;    
     using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
-    using SparsityPatternType = TrilinosWrappers::SparsityPattern;
 
   public:
-    NormalVectorData normal_vector_data;
+    NormalVectorData<double> normal_vector_data;
     /*
      *    This is the primary solution variable of this module, which will be also publically 
      *    accessible for output_results.
@@ -87,10 +64,7 @@ namespace NormalVector
       /*
        *  initialize normal vector data
        */
-      normal_vector_data.damping_parameter = scratch_data_in->get_min_cell_size() * data_in.normal_vec_damping_scale_factor;
-      normal_vector_data.verbosity_level   = TypeDefs::VerbosityType::major;
-      normal_vector_data.do_print_l2norm   = true;
-      normal_vector_data.do_matrix_free    = true;
+      normal_vector_data = data_in.normal_vec;
       /*
        *  initialize normal vector operator
        */
@@ -122,14 +96,14 @@ namespace NormalVector
       {
         
         normal_vector_operator->assemble_matrixbased( solution_levelset_in, 
-                                                      system_matrix, 
+                                                      normal_vector_operator->system_matrix, 
                                                       rhs );
 
         for (unsigned int d=0; d<dim; ++d)
         {
           iter = LinearSolve<VectorType,
                              SolverCG<VectorType>,
-                             SparseMatrixType>::solve( system_matrix,
+                             SparseMatrixType>::solve( normal_vector_operator->system_matrix,
                                                        solution_normal_vector.block(d),
                                                        rhs.block(d) );
 
@@ -151,33 +125,15 @@ namespace NormalVector
   private:
     void create_operator()
     {
-      if (!normal_vector_data.do_matrix_free)
-      {
-        const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm(comp);
-        IndexSet locally_owned_dofs;
-        IndexSet locally_relevant_dofs;
-        
-        locally_owned_dofs = scratch_data->get_dof_handler(comp).locally_owned_dofs(); 
-        DoFTools::extract_locally_relevant_dofs(scratch_data->get_dof_handler(comp), locally_relevant_dofs);
-
-        dsp.reinit( locally_owned_dofs,
-                    locally_owned_dofs,
-                    locally_relevant_dofs,
-                    mpi_communicator);
-
-        DoFTools::make_sparsity_pattern(scratch_data->get_dof_handler(0), 
-                                        dsp,
-                                        scratch_data->get_constraint(),
-                                        true,
-                                        Utilities::MPI::this_mpi_process(mpi_communicator)
-                                        );
-        dsp.compress();
-        
-        system_matrix.reinit( dsp );  
-      }
-
+      const double damping_parameter = scratch_data->get_min_cell_size() * normal_vector_data.damping_scale_factor;
       normal_vector_operator = std::make_unique<NormalVectorOperator<dim, degree, comp>>( *scratch_data,
-                                                          normal_vector_data.damping_parameter );
+                                                                                           damping_parameter );
+      /*
+       *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
+       *  apply it to the system matrix. This functionality is part of the OperatorBase class.
+       */
+      if (!normal_vector_data.do_matrix_free)
+        normal_vector_operator->initialize_matrix_based<dim,comp>(*scratch_data);
     }
   private:
     std::shared_ptr<const ScratchData<dim>> scratch_data;
@@ -187,9 +143,6 @@ namespace NormalVector
      */
     std::unique_ptr<OperatorBase<double, BlockVectorType, VectorType>>    
                                                normal_vector_operator;    
-    
-    SparseMatrixType                           system_matrix;
-    SparsityPatternType                        dsp;
   };
 } // namespace NormalVector
 } // namespace MeltPoolDG
