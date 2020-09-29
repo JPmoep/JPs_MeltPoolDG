@@ -16,7 +16,7 @@ namespace AdvectionDiffusion
 {
 using namespace dealii;
 
-template<int dim, int degree, int comp=0, typename number = double>
+template<int dim, int comp=0, typename number = double>
 class AdvectionDiffusionOperator : public OperatorBase<number, 
                               LinearAlgebra::distributed::Vector<number>, 
                               LinearAlgebra::distributed::Vector<number>>

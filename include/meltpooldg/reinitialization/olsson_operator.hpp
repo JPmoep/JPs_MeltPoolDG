@@ -9,6 +9,7 @@
 // MeltPoolDG
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operator.hpp>
+#include <meltpooldg/utilities/fe_integrator.hpp>
 
 namespace MeltPoolDG
 {
@@ -16,7 +17,7 @@ namespace Reinitialization
 {
 using namespace dealii;
 
-template<int dim, int degree, unsigned int comp=0, typename number = double>
+template<int dim, unsigned int comp=0, typename number = double>
 class OlssonOperator : public OperatorBase<number, 
                               LinearAlgebra::distributed::Vector<number>, 
                               LinearAlgebra::distributed::Vector<number>>
@@ -90,7 +91,7 @@ class OlssonOperator : public OperatorBase<number,
 
           fe_values.get_function_values(     levelset_old, psi_at_q );     // compute values of old solution at tau_n
           fe_values.get_function_gradients(  levelset_old, grad_psi_at_q ); // compute gradients of old solution at tau_n
-          NormalVector::NormalVectorOperator<dim,degree>::get_unit_normals_at_quadrature(fe_values,
+          NormalVector::NormalVectorOperator<dim>::get_unit_normals_at_quadrature(fe_values,
                                          n,
                                          normal_at_q);
 
@@ -159,10 +160,8 @@ class OlssonOperator : public OperatorBase<number,
        
         AssertThrow(eps_>0.0, ExcMessage("reinitialization operator: epsilon must be set"));
         
-        const int n_q_points_1d = degree+1; //@ get out of matrixfree?
-        
-        FEEvaluation<dim, degree, n_q_points_1d, 1, number>   levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
-        FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
+        FECellIntegrator<dim, 1, number>   levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
+        FECellIntegrator<dim, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>( [&] 
           (const auto&, auto& dst, const auto& src, auto cell_range) {
@@ -210,10 +209,8 @@ class OlssonOperator : public OperatorBase<number,
           return 0.5 * ( make_vectorized_array<number>(1.) - phi * phi );
       };
 
-      const int n_q_points_1d = degree+1;
-      
-      FEEvaluation<dim, degree, n_q_points_1d, 1, number>   psi(           scratch_data.get_matrix_free(),comp,comp,comp);
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp);
+      FECellIntegrator<dim, 1, number>   psi(           scratch_data.get_matrix_free(),comp,comp,comp);
+      FECellIntegrator<dim, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp);
   
       scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {

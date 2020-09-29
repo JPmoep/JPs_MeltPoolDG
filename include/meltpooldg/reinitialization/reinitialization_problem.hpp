@@ -37,8 +37,8 @@ namespace Reinitialization
    *     property of the level set equation
    */
 
-  template <int dim, int degree>
-  class ReinitializationProblem : public ProblemBase<dim,degree>
+  template <int dim>
+  class ReinitializationProblem : public ProblemBase<dim>
   {
   private:
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
@@ -86,12 +86,12 @@ namespace Reinitialization
       /*
        *  setup mapping
        */
-      auto mapping = MappingQGeneric<dim>(degree);
+      auto mapping = MappingQGeneric<dim>(parameters.degree);
       scratch_data->set_mapping(mapping);
       /*
        *  setup DoFHandler
        */
-      FE_Q<dim>    fe(degree);
+      FE_Q<dim>    fe(parameters.degree);
       
       dof_handler.initialize(*base_in->triangulation, fe );
       IndexSet locally_relevant_dofs;
@@ -110,7 +110,7 @@ namespace Reinitialization
       /*
        *  create quadrature rule
        */
-      QGauss<1> quad_1d_temp(degree+1);
+      QGauss<1> quad_1d_temp(parameters.degree+1);
       
       scratch_data->attach_quadrature(quad_1d_temp);
       /*
@@ -178,7 +178,7 @@ namespace Reinitialization
     
     std::shared_ptr<ScratchData<dim>>                    scratch_data;
     TimeIterator<double>                                 time_iterator;
-    ReinitializationOperation<dim, degree>               reinit_operation;
+    ReinitializationOperation<dim>               reinit_operation;
     
   };
 } // namespace Reinitialization

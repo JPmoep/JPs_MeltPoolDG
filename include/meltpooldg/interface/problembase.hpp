@@ -5,7 +5,7 @@ namespace MeltPoolDG
 {
   using namespace dealii;
 
-  template <int dim, int degree>
+  template <int dim>
   class ProblemBase
   {
     public:

@@ -20,7 +20,7 @@ namespace AdvectionDiffusion
 {
   using namespace dealii; 
   
-  template <int dim, int degree, int comp=0>
+  template <int dim, int comp=0>
   class AdvectionDiffusionOperation 
   {
   private:
@@ -126,7 +126,7 @@ namespace AdvectionDiffusion
     void create_operator(const TensorFunction<1,dim>& advection_velocity)
     {
       advec_diff_operator = 
-         std::make_unique<AdvectionDiffusionOperator<dim, degree, comp, double>>( *scratch_data,
+         std::make_unique<AdvectionDiffusionOperator<dim, comp, double>>( *scratch_data,
                                                                             advection_velocity,
                                                                             advec_diff_data
                                                                           );

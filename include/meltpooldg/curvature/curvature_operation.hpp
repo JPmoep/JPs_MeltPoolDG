@@ -19,7 +19,7 @@ namespace Curvature
 {
   using namespace dealii; 
 
-  template <int dim, int degree, unsigned int comp=0>
+  template <int dim, unsigned int comp=0>
   class CurvatureOperation
   {
     /*
@@ -119,7 +119,7 @@ namespace Curvature
     void create_operator()
     {
       const double damping_parameter = scratch_data->get_min_cell_size() * curvature_data.damping_scale_factor;
-      curvature_operator = std::make_unique<CurvatureOperator<dim, degree, comp>>(
+      curvature_operator = std::make_unique<CurvatureOperator<dim, comp>>(
                                                           *scratch_data,
                                                           damping_parameter );
       /*
@@ -133,7 +133,7 @@ namespace Curvature
   private:
     std::shared_ptr<const ScratchData<dim>> scratch_data;
     
-    NormalVector::NormalVectorOperation<dim,degree> normal_vector_operation;
+    NormalVector::NormalVectorOperation<dim> normal_vector_operation;
 
     /* 
      *  This pointer will point to your user-defined curvature operator.

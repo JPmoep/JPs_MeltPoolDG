@@ -38,7 +38,7 @@ namespace NormalVector
    *    !!!! 
    */
   
-  template <int dim, int degree, unsigned int comp=0>
+  template <int dim, unsigned int comp=0>
   class NormalVectorOperation
   {
   private:
@@ -126,7 +126,7 @@ namespace NormalVector
     void create_operator()
     {
       const double damping_parameter = scratch_data->get_min_cell_size() * normal_vector_data.damping_scale_factor;
-      normal_vector_operator = std::make_unique<NormalVectorOperator<dim, degree, comp>>( *scratch_data,
+      normal_vector_operator = std::make_unique<NormalVectorOperator<dim, comp>>( *scratch_data,
                                                                                            damping_parameter );
       /*
        *  In case of a matrix-based simulation, setup the distributed sparsity pattern and

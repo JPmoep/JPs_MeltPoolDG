@@ -12,7 +12,7 @@ namespace MeltPoolDG
 {
 namespace Simulation
 {
-  template<int dim, int degree>
+  template<int dim>
   class SimulationSelector
   {
     public:

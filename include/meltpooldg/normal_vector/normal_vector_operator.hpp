@@ -10,7 +10,8 @@
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
-#include "meltpooldg/interface/operator_base.hpp"
+#include <meltpooldg/interface/operator_base.hpp>
+#include <meltpooldg/utilities/fe_integrator.hpp>
 
 using namespace dealii;
 
@@ -19,7 +20,7 @@ namespace MeltPoolDG
 namespace NormalVector
 {
 
-  template<int dim, int degree, unsigned int comp=0, typename number = double>
+  template<int dim, unsigned int comp=0, typename number = double>
   class NormalVectorOperator: public OperatorBase<number, 
                                 LinearAlgebra::distributed::BlockVector<number>, 
                                 LinearAlgebra::distributed::Vector<number>>
@@ -137,8 +138,7 @@ namespace NormalVector
     vmult(BlockVectorType & dst,
           const BlockVectorType & src) const override
     {
-      const int n_q_points_1d = degree+1; // @ todo: not hard code
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal( scratch_data.get_matrix_free(), comp, comp, comp);
+      FECellIntegrator<dim, dim, number>   normal( scratch_data.get_matrix_free(), comp, comp, comp);
 
       scratch_data.get_matrix_free().template cell_loop<BlockVectorType, BlockVectorType>( [&] 
         (const auto&, auto& dst, const auto& src, auto cell_range) {
@@ -164,10 +164,8 @@ namespace NormalVector
     create_rhs(BlockVectorType & dst,
                const VectorType & src) const override
     {
-      const int n_q_points_1d = degree+1;
-
-      FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
-      FEEvaluation<dim, degree, n_q_points_1d, 1, number>     levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
+      FECellIntegrator<dim, dim, number>   normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
+      FECellIntegrator<dim, 1, number>     levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
 
       scratch_data.get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {

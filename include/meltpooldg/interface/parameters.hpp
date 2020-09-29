@@ -383,6 +383,9 @@ struct Parameters
   ParaviewData<number>           paraview;
   // output parameters
   OutputData<number>             output;
+  // polynomial degree @todo: should every level have the option to have its own degree
+  // and number of quadrature points?
+  static const unsigned int degree = 1;
   
 };
 

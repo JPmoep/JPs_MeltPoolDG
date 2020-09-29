@@ -29,7 +29,7 @@ namespace Reinitialization
    *     property of the level set equation
    */
   
-  template <int dim, int degree, unsigned int comp=0>
+  template <int dim, unsigned int comp=0>
   class ReinitializationOperation 
   {
   private:
@@ -169,7 +169,7 @@ namespace Reinitialization
       {
 
        reinit_operator = 
-          std::make_unique<OlssonOperator<dim, degree, comp, double>>( *scratch_data,
+          std::make_unique<OlssonOperator<dim, comp, double>>( *scratch_data,
                                                                         normal_vector_operation.solution_normal_vector,
                                                                         reinit_data.constant_epsilon,
                                                                         reinit_data.scale_factor_epsilon
@@ -200,7 +200,7 @@ namespace Reinitialization
     /*
      *   Computation of the normal vectors
      */
-    NormalVector::NormalVectorOperation<dim,degree>         normal_vector_operation;
+    NormalVector::NormalVectorOperation<dim>         normal_vector_operation;
     
   };
 } // namespace Reinitialization

@@ -35,25 +35,24 @@ namespace Simulation
 
     const auto dim = parameters.base.dimension;
 
-    const unsigned int degree = 1; // @todo
   try
     {
       if ( dim == 1)
       {
-        auto sim = SimulationSelector<1,degree>::get_simulation(parameters.base.application_name,
+        auto sim = SimulationSelector<1>::get_simulation(parameters.base.application_name,
                                                                 parameter_file,
                                                                 mpi_communicator);
         sim->create();
-        auto problem = ProblemSelector<1,degree>::get_problem(parameters.base.problem_name);
+        auto problem = ProblemSelector<1>::get_problem(parameters.base.problem_name);
         problem->run(sim);
       }
       else if ( dim == 2)
       {
-        auto sim = SimulationSelector<2,degree>::get_simulation(parameters.base.application_name,
+        auto sim = SimulationSelector<2>::get_simulation(parameters.base.application_name,
                                                                 parameter_file,
                                                                 mpi_communicator);
         sim->create();
-        auto problem = ProblemSelector<2,degree>::get_problem(parameters.base.problem_name);
+        auto problem = ProblemSelector<2>::get_problem(parameters.base.problem_name);
         problem->run(sim);
       }
       else

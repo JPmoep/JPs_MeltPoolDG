@@ -36,8 +36,8 @@ namespace AdvectionDiffusion
 {
   using namespace dealii; 
 
-  template <int dim, int degree>
-  class AdvectionDiffusionProblem : public ProblemBase<dim,degree>
+  template <int dim>
+  class AdvectionDiffusionProblem : public ProblemBase<dim>
   {
   private:
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
@@ -82,12 +82,12 @@ namespace AdvectionDiffusion
       /*
        *  setup mapping
        */
-      const auto mapping = MappingQGeneric<dim>(degree);
+      const auto mapping = MappingQGeneric<dim>(parameters.degree);
       scratch_data->set_mapping(mapping);
       /*
        *  setup DoFHandler
        */
-      FE_Q<dim>    fe(degree);
+      FE_Q<dim>    fe(parameters.degree);
       
       dof_handler.initialize(*base_in->triangulation, fe );
       IndexSet locally_relevant_dofs;
@@ -115,7 +115,7 @@ namespace AdvectionDiffusion
       /*
        *  create quadrature rule
        */
-      QGauss<1> quad_1d_temp(degree+1) ; // evt. nicht mehr
+      QGauss<1> quad_1d_temp(parameters.degree+1) ; // evt. nicht mehr
       
       scratch_data->attach_quadrature(quad_1d_temp);
       /*
@@ -233,7 +233,7 @@ namespace AdvectionDiffusion
     std::shared_ptr<TensorFunction<1,dim>>               advection_velocity;
 
     TimeIterator<double>                                 time_iterator;
-    AdvectionDiffusionOperation<dim, degree>             advec_diff_operation;
+    AdvectionDiffusionOperation<dim>             advec_diff_operation;
   };
 } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG
