@@ -82,16 +82,14 @@ namespace AdvectionDiffusion
       /*
        *  setup mapping
        */
-      const auto mapping = MappingQGeneric<dim>(parameters.degree);
+      const auto mapping = MappingQGeneric<dim>(base_in->parameters.base.degree);
       scratch_data->set_mapping(mapping);
       /*
        *  setup DoFHandler
        */
-      FE_Q<dim>    fe(parameters.degree);
+      FE_Q<dim>    fe(base_in->parameters.base.degree);
       
       dof_handler.initialize(*base_in->triangulation, fe );
-      IndexSet locally_relevant_dofs;
-      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
       scratch_data->attach_dof_handler(dof_handler);
 
       /*
@@ -99,7 +97,7 @@ namespace AdvectionDiffusion
        *  dirichlet constraints are supported)
        */
       constraints.clear();
-      constraints.reinit(locally_relevant_dofs);
+      constraints.reinit(scratch_data->get_locally_relevant_dofs());
       DoFTools::make_hanging_node_constraints(dof_handler, constraints);
       
       for (const auto& bc : base_in->get_boundary_conditions().dirichlet_bc) 
@@ -115,7 +113,7 @@ namespace AdvectionDiffusion
       /*
        *  create quadrature rule
        */
-      QGauss<1> quad_1d_temp(parameters.degree+1) ; // evt. nicht mehr
+      QGauss<1> quad_1d_temp(base_in->parameters.base.n_q_points_1d);
       
       scratch_data->attach_quadrature(quad_1d_temp);
       /*
@@ -126,9 +124,9 @@ namespace AdvectionDiffusion
        *  initialize the time iterator
        */
       TimeIteratorData<double> time_data;
-      time_data.start_time       = parameters.advec_diff.start_time;
-      time_data.end_time         = parameters.advec_diff.end_time;
-      time_data.time_increment   = parameters.advec_diff.time_step_size; 
+      time_data.start_time       = base_in->parameters.advec_diff.start_time;
+      time_data.end_time         = base_in->parameters.advec_diff.end_time;
+      time_data.time_increment   = base_in->parameters.advec_diff.time_step_size; 
       time_data.max_n_time_steps = 10000;
       
       time_iterator.initialize(time_data);
@@ -154,8 +152,9 @@ namespace AdvectionDiffusion
       
       advec_diff_operation.initialize(scratch_data, 
                                       initial_solution, 
-                                      parameters, 
+                                      base_in->parameters, 
                                       *advection_velocity);
+
     }
 
     void 
@@ -226,7 +225,6 @@ namespace AdvectionDiffusion
     }
   private:
     DoFHandler<dim>                                      dof_handler;
-    Parameters<double>                                   parameters; 
     AffineConstraints<double>                            constraints;    
     std::shared_ptr<ScratchData<dim>>                    scratch_data; 
 

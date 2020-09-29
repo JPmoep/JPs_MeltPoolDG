@@ -64,7 +64,8 @@ namespace Reinitialization
         
         reinit_operation.solve(d_tau);
         
-        output_results(time_iterator.get_current_time_step_number());
+        output_results(time_iterator.get_current_time_step_number(),
+                       base_in->parameters);
       }
     }
 
@@ -78,7 +79,6 @@ namespace Reinitialization
     void 
     initialize( std::shared_ptr<SimulationBase<dim>> base_in )
     {
-      parameters = base_in->parameters;
       /*
        *  setup scratch data
        */
@@ -86,23 +86,21 @@ namespace Reinitialization
       /*
        *  setup mapping
        */
-      auto mapping = MappingQGeneric<dim>(parameters.degree);
+      auto mapping = MappingQGeneric<dim>(base_in->parameters.base.degree);
       scratch_data->set_mapping(mapping);
       /*
        *  setup DoFHandler
        */
-      FE_Q<dim>    fe(parameters.degree);
+      FE_Q<dim>    fe(base_in->parameters.base.degree);
       
       dof_handler.initialize(*base_in->triangulation, fe );
-      IndexSet locally_relevant_dofs;
-      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
       scratch_data->attach_dof_handler(dof_handler);
 
       /*
        *  make hanging nodes constraints
        */
       constraints.clear();
-      constraints.reinit(locally_relevant_dofs);
+      constraints.reinit(scratch_data->get_locally_relevant_dofs());
       DoFTools::make_hanging_node_constraints(dof_handler, constraints);
       constraints.close();
       
@@ -110,7 +108,7 @@ namespace Reinitialization
       /*
        *  create quadrature rule
        */
-      QGauss<1> quad_1d_temp(parameters.degree+1);
+      QGauss<1> quad_1d_temp(base_in->parameters.base.n_q_points_1d);
       
       scratch_data->attach_quadrature(quad_1d_temp);
       /*
@@ -123,8 +121,8 @@ namespace Reinitialization
        */
       time_iterator.initialize(TimeIteratorData<double>{ 0.0,
                                                  10000.,
-                                                 parameters.reinit.dtau,
-                                                 parameters.reinit.max_n_steps,
+                                                 base_in->parameters.reinit.dtau,
+                                                 base_in->parameters.reinit.max_n_steps,
                                                  false });
       /*
        *  set initial conditions of the levelset function
@@ -142,19 +140,19 @@ namespace Reinitialization
       /*
        *    initialize the reinitialization operation class
        */
-      reinit_operation.initialize(scratch_data, solution_level_set, parameters);
+      reinit_operation.initialize(scratch_data, solution_level_set, base_in->parameters);
     }
 
     /*
      *  Creating paraview output
      */
     void 
-    output_results(const unsigned int time_step=0) const
+    output_results(const unsigned int time_step,
+                   const Parameters<double>& parameters) const
     {
       if (parameters.paraview.do_output)
       {
         DataOut<dim> data_out;
-        //data_out.attach_dof_handler(scratch_data->get_matrix_free().get_dof_handler());
         data_out.attach_dof_handler(dof_handler);
         data_out.add_data_vector(reinit_operation.solution_level_set, "psi");
 
@@ -172,13 +170,12 @@ namespace Reinitialization
     }
 
   private:
-    DoFHandler<dim>                                      dof_handler;
-    Parameters<double>                                   parameters; //evt. nicht mehr
-    AffineConstraints<double>                            constraints;
+    DoFHandler<dim>                    dof_handler;
+    AffineConstraints<double>          constraints;
     
-    std::shared_ptr<ScratchData<dim>>                    scratch_data;
-    TimeIterator<double>                                 time_iterator;
-    ReinitializationOperation<dim>               reinit_operation;
+    std::shared_ptr<ScratchData<dim>>  scratch_data;
+    TimeIterator<double>               time_iterator;
+    ReinitializationOperation<dim>     reinit_operation;
     
   };
 } // namespace Reinitialization

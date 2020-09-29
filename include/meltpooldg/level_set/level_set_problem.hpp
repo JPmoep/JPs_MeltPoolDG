@@ -80,16 +80,14 @@ namespace LevelSet
       /*
        *  setup mapping
        */
-      auto mapping = MappingQGeneric<dim>(base_in->parameters.degree);
+      auto mapping = MappingQGeneric<dim>(base_in->parameters.base.degree);
       scratch_data->set_mapping(mapping);
       /*
        *  setup DoFHandler
        */
-      FE_Q<dim>    fe(base_in->parameters.degree);
+      FE_Q<dim>    fe(base_in->parameters.base.degree);
       
       dof_handler.initialize(*base_in->triangulation, fe );
-      IndexSet locally_relevant_dofs;
-      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
       scratch_data->attach_dof_handler(dof_handler);
       scratch_data->attach_dof_handler(dof_handler);
 
@@ -97,7 +95,7 @@ namespace LevelSet
        *  make hanging nodes constraints
        */
       constraints.clear();
-      constraints.reinit(locally_relevant_dofs);
+      constraints.reinit(scratch_data->get_locally_relevant_dofs());
       DoFTools::make_hanging_node_constraints(dof_handler, constraints);
       constraints.close();
 
@@ -108,7 +106,7 @@ namespace LevelSet
        *  dirichlet constraints are supported)
        */
       constraints_dirichlet.clear();
-      constraints_dirichlet.reinit(locally_relevant_dofs);
+      constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
       DoFTools::make_hanging_node_constraints(dof_handler, constraints_dirichlet);
       for (const auto& bc : base_in->get_boundary_conditions().dirichlet_bc) 
       {
@@ -123,7 +121,7 @@ namespace LevelSet
       /*
        *  create quadrature rule
        */
-      QGauss<1> quad_1d_temp(base_in->parameters.degree+1); 
+      QGauss<1> quad_1d_temp(base_in->parameters.base.n_q_points_1d); 
       
       scratch_data->attach_quadrature(quad_1d_temp);
       scratch_data->attach_quadrature(quad_1d_temp);
@@ -257,7 +255,7 @@ namespace LevelSet
     std::shared_ptr<TensorFunction<1,dim>>               advection_velocity;
     
     TimeIterator<double>                                 time_iterator;
-    LevelSetOperation<dim>                       level_set_operation;
+    LevelSetOperation<dim>                               level_set_operation;
   };
 } // namespace LevelSet
 } // namespace MeltPoolDG

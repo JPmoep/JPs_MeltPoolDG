@@ -26,15 +26,16 @@ namespace Simulation
           return std::make_shared<ReinitCircle::SimulationReinit<dim>>(parameter_file,
                                                                        mpi_communicator);
         else if( simulation_name == "advection_diffusion" )
+        {
           return std::make_shared<AdvectionDiffusion::SimulationAdvec<dim>>(parameter_file,
                                                                             mpi_communicator);
+        }
         else if( simulation_name == "rotating_bubble" )
         {
           return std::make_shared<RotatingBubble::SimulationRotatingBubble<dim>>(parameter_file,
                                                                                  mpi_communicator);
         }
           /* add your simulation here*/
-        
         else
           AssertThrow(false, ExcMessage("The input-fle for your requested application does not exist"));
       }  
