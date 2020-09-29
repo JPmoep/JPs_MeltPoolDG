@@ -30,7 +30,7 @@ namespace Curvature
      *  level set function n_ϕ.
      *
      */
-  template<int dim, int degree, unsigned int comp=0, typename number = double>
+  template<int dim, unsigned int comp=0, typename number = double>
   class CurvatureOperator: public OperatorBase<number, 
                                 LinearAlgebra::distributed::Vector<number>, 
                                 LinearAlgebra::distributed::BlockVector<number>>
@@ -83,7 +83,7 @@ namespace Curvature
         curvature_cell_matrix = 0.0;
         curvature_cell_rhs    = 0.0;
               
-        NormalVector::NormalVectorOperator<dim,degree>::get_unit_normals_at_quadrature( fe_values,
+        NormalVector::NormalVectorOperator<dim>::get_unit_normals_at_quadrature( fe_values,
                                         solution_normal_vector_in,
                                         normal_at_q );
                  

@@ -34,8 +34,8 @@ namespace LevelSet
 {
   using namespace dealii; 
 
-  template <int dim, int degree>
-  class LevelSetProblem : public ProblemBase<dim,degree>
+  template <int dim>
+  class LevelSetProblem : public ProblemBase<dim>
   {
   private:
     using VectorType          = LinearAlgebra::distributed::Vector<double>;         
@@ -80,12 +80,12 @@ namespace LevelSet
       /*
        *  setup mapping
        */
-      auto mapping = MappingQGeneric<dim>(degree);
+      auto mapping = MappingQGeneric<dim>(base_in->parameters.degree);
       scratch_data->set_mapping(mapping);
       /*
        *  setup DoFHandler
        */
-      FE_Q<dim>    fe(degree);
+      FE_Q<dim>    fe(base_in->parameters.degree);
       
       dof_handler.initialize(*base_in->triangulation, fe );
       IndexSet locally_relevant_dofs;
@@ -123,7 +123,7 @@ namespace LevelSet
       /*
        *  create quadrature rule
        */
-      QGauss<1> quad_1d_temp(degree+1); 
+      QGauss<1> quad_1d_temp(base_in->parameters.degree+1); 
       
       scratch_data->attach_quadrature(quad_1d_temp);
       scratch_data->attach_quadrature(quad_1d_temp);
@@ -257,7 +257,7 @@ namespace LevelSet
     std::shared_ptr<TensorFunction<1,dim>>               advection_velocity;
     
     TimeIterator<double>                                 time_iterator;
-    LevelSetOperation<dim, degree>                       level_set_operation;
+    LevelSetOperation<dim>                       level_set_operation;
   };
 } // namespace LevelSet
 } // namespace MeltPoolDG
