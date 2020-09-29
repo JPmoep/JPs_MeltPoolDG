@@ -1,9 +1,10 @@
 {
   "base" : { 
-    "problem name" :     "advection_diffusion",
-    "application name" : "advection_diffusion",
-    "dimension" : "2",
-    "global refinements" : "5"
+    "problem name"       : "advection_diffusion",
+    "application name"   : "advection_diffusion",
+    "dimension"          : "2",
+    "global refinements" : "5",
+    "degree"             : "1"
   },
   "advection diffusion" : {
     "advec diff diffusivity"     : "0.000001",

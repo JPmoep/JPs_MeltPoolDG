@@ -11,28 +11,33 @@ namespace MeltPoolDG
 using namespace dealii;
   
 template<typename number=double>
-struct BaseData{
+struct BaseData
+{
   std::string         application_name   = "none";
   std::string         problem_name       = "none";
   unsigned int        dimension          = 2;
   unsigned int        global_refinements = 1;
+  unsigned int        degree             = 1;
+  int                 n_q_points_1d      = -1;
 };
 
 template<typename number=double>
-struct LevelSetData {
-    bool                do_reinitialization    = false;
-    number              artificial_diffusivity = 0.0;
-    number              theta                  = 0.5;
-    number              start_time             = 0.0;
-    number              end_time               = 1.0;
-    number              time_step_size         = 0.01;
-    bool                enable_CFL_condition   = false; 
-    bool                do_print_l2norm        = false;
-    bool                do_matrix_free       = false;
+struct LevelSetData 
+{
+  bool                do_reinitialization    = false;
+  number              artificial_diffusivity = 0.0;
+  number              theta                  = 0.5;
+  number              start_time             = 0.0;
+  number              end_time               = 1.0;
+  number              time_step_size         = 0.01;
+  bool                enable_CFL_condition   = false; 
+  bool                do_print_l2norm        = false;
+  bool                do_matrix_free         = false;
 };
   
 template<typename number=double>
-struct ReinitializationData {
+struct ReinitializationData 
+{
   unsigned int        max_n_steps          = 5;
   number              constant_epsilon     = -1.0;
   number              scale_factor_epsilon = 0.5;
@@ -43,7 +48,8 @@ struct ReinitializationData {
 };
   
 template<typename number=double>
-struct AdvectionDiffusionData{
+struct AdvectionDiffusionData
+{
   number              diffusivity     = 0.0;
   number              theta           = 0.5;
   number              start_time      = 0.0;
@@ -54,21 +60,24 @@ struct AdvectionDiffusionData{
 };
 
 template<typename number=double>
-struct NormalVectorData{
+struct NormalVectorData
+{
   number              damping_scale_factor = 0.5;
   bool                do_matrix_free       = false;
   bool                do_print_l2norm      = true;
 };
 
 template<typename number=double>
-struct CurvatureData{
+struct CurvatureData
+{
   number              damping_scale_factor = 0.0;
   bool                do_matrix_free       = false;
   bool                do_print_l2norm      = true;
 };
 
 template<typename number=double>
-struct ParaviewData{
+struct ParaviewData
+{
   bool                do_output           = false;
   std::string         filename            = "solution";
   int                 write_frequency     = 1;
@@ -82,7 +91,8 @@ struct ParaviewData{
 };
 
 template<typename number=double>
-struct OutputData{
+struct OutputData
+{
   bool                do_walltime              = 0;
   bool                do_compute_error         = 0;
   bool                do_compute_volume_output = 0;
@@ -111,8 +121,15 @@ struct Parameters
       prm.parse_input(parameter_filename);
     else
       AssertThrow(false, ExcMessage("Parameterhandler cannot handle current file ending"));
+    /*
+     *  set the number of quadrature points in 1d
+     */
+    if (base.n_q_points_1d==-1)
+      base.n_q_points_1d = base.degree + 1;
+
     prm.print_parameters(pcout.get_stream(),
                          ParameterHandler::OutputStyle::Text);
+
   }
   
   void check_for_file (const std::string &parameter_filename,
@@ -156,6 +173,14 @@ struct Parameters
       prm.add_parameter("global refinements",
                          base.global_refinements,
                         "Defines the number of initial global refinements"
+                         );
+      prm.add_parameter("degree", 
+                         base.degree,
+                        "Defines the interpolation degree"
+                         );
+      prm.add_parameter("n q points 1d", 
+                         base.n_q_points_1d,
+                        "Defines the number of quadrature points"
                          );
     }
     prm.leave_subsection();
@@ -383,9 +408,6 @@ struct Parameters
   ParaviewData<number>           paraview;
   // output parameters
   OutputData<number>             output;
-  // polynomial degree @todo: should every level have the option to have its own degree
-  // and number of quadrature points?
-  static const unsigned int degree = 1;
   
 };
 
