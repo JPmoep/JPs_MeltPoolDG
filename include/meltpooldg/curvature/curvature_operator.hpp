@@ -40,15 +40,14 @@ namespace Curvature
       using BlockVectorType     = LinearAlgebra::distributed::BlockVector<number>;
       using VectorizedArrayType = VectorizedArray<number>;
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
-      
-      CurvatureOperator
-       ( const ScratchData<dim>& scratch_data_in,
-        const double            damping_in
-      )
+      // clang-format off
+      CurvatureOperator( const ScratchData<dim>& scratch_data_in,
+                         const double            damping_in )
       : scratch_data( scratch_data_in )
-      , damping     ( damping_in )
+      , damping     ( damping_in      )
       {
       }
+      // clang-format on
 
       void
       assemble_matrixbased( const BlockVectorType & solution_normal_vector_in, 

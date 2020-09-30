@@ -46,11 +46,10 @@ ENDIF()
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
-
-
 # Set the source files to be compiled
-SET(TARGET_SRC run_simulation.cpp)
-SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
+# temporarilly disabled as long as no source files in meltpooldg exists
+#SET(TARGET_SRC run_simulation.cpp)
+#SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
 
 # Set the include directory and the name of the project
 
@@ -58,7 +57,8 @@ INCLUDE_DIRECTORIES(include)
 
 PROJECT(MeltPoolDG)
 
-ADD_LIBRARY(${CMAKE_PROJECT_NAME} ${TARGET_SRC})
+# temporarilly disabled as long as no source files in meltpooldg exists
+#ADD_LIBRARY(${CMAKE_PROJECT_NAME} ${TARGET_SRC})
 
 # Define custom targets to easily switch the build type:
 ADD_CUSTOM_TARGET(debug
@@ -73,7 +73,8 @@ ADD_CUSTOM_TARGET(release
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
-DEAL_II_SETUP_TARGET(MeltPoolDG)
+# temporarilly disabled as long as no source files in meltpooldg exists
+#DEAL_II_SETUP_TARGET(MeltPoolDG)
 
 IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
   SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
@@ -86,7 +87,8 @@ ADD_EXECUTABLE(${projectName}
                 run_simulation.cpp)
 
 DEAL_II_SETUP_TARGET(${projectName})
-TARGET_LINK_LIBRARIES(${projectName} ${CMAKE_PROJECT_NAME})
+# temporarilly disabled as long as no source files in meltpooldg exists
+#TARGET_LINK_LIBRARIES(${projectName} ${CMAKE_PROJECT_NAME})
 
 # tests --> will be added asap
 #enable_testing()
