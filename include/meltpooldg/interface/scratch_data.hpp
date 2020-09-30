@@ -41,14 +41,20 @@ class ScratchData
     using BlockVectorType     = LinearAlgebra::distributed::BlockVector<number>;    
   public:
     ScratchData() = default;
-
+    
+    ScratchData(const ScratchData &scratch_data)
+    {
+      this->reinit(scratch_data.get_mapping(),
+                   scratch_data.get_dof_handlers(),  
+                   scratch_data.get_constraints(),  
+                   scratch_data.get_quads()); 
+    }
     /**
      * Setup everything in one go.
      */
     template <int dim_q>
     void
-    reinit(
-           const Mapping<dim, spacedim> &                        mapping,
+    reinit(const Mapping<dim, spacedim> &                        mapping,
            const std::vector<const DoFHandler<dim, spacedim> *> &dof_handler,
            const std::vector<const AffineConstraints<number> *> &constraint,
            const std::vector<Quadrature<dim_q>> &                quad)
@@ -68,12 +74,10 @@ class ScratchData
 
       this->build();
     }
-  
+
     /**
      * Fill internal data structures step-by-step.
      */
-
-
     void
     set_mapping(const Mapping<dim, spacedim> &mapping)
     {
@@ -146,11 +150,23 @@ class ScratchData
     {
       return *this->constraint[constraint_index];
     }
+    
+    const std::vector<const AffineConstraints<number> *>&
+    get_constraints() const
+    {
+      return this->constraint;
+    }
 
     const Quadrature<dim> &
     get_quadrature(const unsigned int quad_index=0) const
     {
       return this->quad[quad_index];
+    }
+    
+    const std::vector<Quadrature<dim>>&
+    get_quadratures() const
+    {
+      return this->quad;
     }
 
     const MatrixFree<dim, number, VectorizedArrayType> &
@@ -163,6 +179,12 @@ class ScratchData
     get_dof_handler(const unsigned int dof_idx=0) const
     {
       return this->matrix_free.get_dof_handler(dof_idx);
+    }
+    
+    const std::vector<const DoFHandler<dim, spacedim> *>&
+    get_dof_handlers() const
+    {
+      return this->dof_handler;
     }
 
     unsigned int
