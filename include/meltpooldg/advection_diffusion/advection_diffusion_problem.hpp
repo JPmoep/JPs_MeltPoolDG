@@ -176,7 +176,7 @@ namespace MeltPoolDG
              *  output advection velocity
              */
             BlockVectorType advection;
-            scratch_data->initialize_block_dof_vector(advection);
+            scratch_data->initialize_dof_vector(advection);
 
             if (parameters.paraview.print_advection)
               {

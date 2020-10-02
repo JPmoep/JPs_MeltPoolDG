@@ -76,8 +76,8 @@ namespace NormalVector
     {
       BlockVectorType rhs;
       
-      scratch_data->initialize_block_dof_vector(rhs);
-      scratch_data->initialize_block_dof_vector(solution_normal_vector);
+      scratch_data->initialize_dof_vector(rhs);
+      scratch_data->initialize_dof_vector(solution_normal_vector);
       
       int iter = 0;
       
