@@ -230,11 +230,11 @@ class ScratchData
     }
 
     void
-    initialize_block_dof_vector(BlockVectorType & vec) const
+    initialize_block_dof_vector(BlockVectorType & vec, const unsigned int dof_idx=0) const
     {
       vec.reinit(dim);
       for (unsigned int d=0; d<dim; ++d)
-        this->initialize_dof_vector(vec.block(d));
+        this->initialize_dof_vector(vec.block(d), dof_idx);
     }
 
     void
