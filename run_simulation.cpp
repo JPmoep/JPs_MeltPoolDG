@@ -29,9 +29,8 @@ namespace Simulation
                  const MPI_Comm    mpi_communicator)
   {
     
-    const dealii::ConditionalOStream pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0 );
     Parameters<number> parameters;
-    parameters.process_parameters_file(parameter_file, pcout);
+    parameters.process_parameters_file(parameter_file);
 
     const auto dim = parameters.base.dimension;
 
@@ -43,6 +42,8 @@ namespace Simulation
                                                                 parameter_file,
                                                                 mpi_communicator);
         sim->create();
+        if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+          parameters.print_parameters(std::cout);
         auto problem = ProblemSelector<1>::get_problem(parameters.base.problem_name);
         problem->run(sim);
       }
@@ -52,6 +53,8 @@ namespace Simulation
                                                                 parameter_file,
                                                                 mpi_communicator);
         sim->create();
+        if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+          parameters.print_parameters(std::cout);
         auto problem = ProblemSelector<2>::get_problem(parameters.base.problem_name);
         problem->run(sim);
       }
