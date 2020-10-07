@@ -150,6 +150,12 @@ namespace MeltPoolDG
          *    initialize the advection-diffusion operation class
          */
         advection_velocity = base_in->get_advection_field();
+        AssertThrow(base_in->get_advection_field(), 
+                    ExcMessage(" It seems that your SimulationBase object does not contain "
+                               "a valid advection velocity. A shared_ptr to your advection velocity "
+                               "function, e.g., AdvectionFunc<dim> must be specified as follows: "
+                               "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();" 
+                              ));
 
         advec_diff_operation.initialize(scratch_data,
                                         initial_solution,
@@ -204,32 +210,36 @@ namespace MeltPoolDG
              * write data to vtu file
              */
             data_out.build_patches();
-            data_out.write_vtu_with_pvtu_record("./",
-                                                "solution_advection_diffusion",
-                                                time_step,
-                                                mpi_communicator); // n_digits_timestep, n_groups);
-
+            data_out.write_vtu_with_pvtu_record("./", 
+                                                parameters.paraview.filename, 
+                                                time_step, 
+                                                scratch_data->get_mpi_comm(), 
+                                                parameters.paraview.n_digits_timestep, 
+                                                parameters.paraview.n_groups);
             /*
              * write data of boundary -- @todo: move to own utility function
              */
-            const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
-            const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
+            if (parameters.paraview.print_boundary_id)
+            {
+              const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
+              const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
 
-            const unsigned int n_digits =
-              static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
+              const unsigned int n_digits =
+                static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
 
-            std::string filename = "./solution_advection_diffusion_boundary_IDs" +
-                                   Utilities::int_to_string(rank, n_digits) + ".vtk";
-            std::ofstream output(filename.c_str());
+              std::string filename = "./solution_advection_diffusion_boundary_IDs" +
+                                     Utilities::int_to_string(rank, n_digits) + ".vtk";
+              std::ofstream output(filename.c_str());
 
-            GridOut           grid_out;
-            GridOutFlags::Vtk flags;
-            flags.output_cells         = false;
-            flags.output_faces         = true;
-            flags.output_edges         = false;
-            flags.output_only_relevant = false;
-            grid_out.set_flags(flags);
-            grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
+              GridOut           grid_out;
+              GridOutFlags::Vtk flags;
+              flags.output_cells         = false;
+              flags.output_faces         = true;
+              flags.output_edges         = false;
+              flags.output_only_relevant = false;
+              grid_out.set_flags(flags);
+              grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
+            }
           }
       }
 

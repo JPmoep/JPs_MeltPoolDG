@@ -87,6 +87,8 @@ namespace MeltPoolDG
     bool        print_advection     = false;
     bool        print_exactsolution = false;
     bool        print_boundary_id   = false;
+    int         n_digits_timestep   = 4;
+    int         n_groups            = 1;
   };
 
   template <typename number = double>
@@ -124,6 +126,11 @@ namespace MeltPoolDG
        */
       if (base.n_q_points_1d == -1)
         base.n_q_points_1d = base.degree + 1;
+      /*
+       *  Attach the problem name to the paraview file name in case of its default value
+       */
+      if (paraview.filename == "solution" )
+        paraview.filename += "_" + base.problem_name; 
 
       prm.print_parameters(pcout.get_stream(), ParameterHandler::OutputStyle::Text);
     }
@@ -358,6 +365,13 @@ namespace MeltPoolDG
         prm.add_parameter("paraview print boundary id",
                           paraview.print_boundary_id,
                           "boolean for printing a vtk-file with the boundary id");
+        prm.add_parameter("paraview n digits timestep",
+                          paraview.n_digits_timestep,
+                          "number of digits for the frame number of the vtk-file.");
+        prm.add_parameter("paraview n groups",
+                          paraview.n_digits_timestep,
+                          "number of parallel written vtk-files.");
+        
       }
       prm.leave_subsection();
 

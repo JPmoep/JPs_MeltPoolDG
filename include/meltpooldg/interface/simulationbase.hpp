@@ -45,8 +45,22 @@ namespace MeltPoolDG
     create()
     {
       create_spatial_discretization();
+      AssertThrow(this->triangulation,
+                  ExcMessage("It seems that your SimulationBase object does not contain"
+                             " a valid triangulation object. A shared_ptr to your triangulation"
+                             " must be specified as follows for a serialized triangulation "
+                             " this->triangulation = std::make_shared<Triangulation<dim>>(); "
+                             " or for a parallel triangulation "
+                             " this->triangulation = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator); "
+                            ));
       set_boundary_conditions();
       set_field_conditions();
+      AssertThrow(this->field_conditions.initial_field,
+                  ExcMessage("It seems that your SimulationBase object does not contain "
+                             "a valid initial field function. A shared_ptr to your initial field "
+                             "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+                             "this->field_conditions.initial_field = std::make_shared<MyInitializeFunc<dim>>();" 
+                            ));
     };
 
     /*

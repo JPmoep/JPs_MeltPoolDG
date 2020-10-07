@@ -154,6 +154,13 @@ namespace LevelSet
        *    initialize the levelset operation class
        */
       advection_velocity = base_in->get_advection_field();
+      AssertThrow(base_in->get_advection_field(), 
+                  ExcMessage(" It seems that your SimulationBase object does not contain "
+                             "a valid advection velocity. A shared_ptr to your advection velocity "
+                             "function, e.g., AdvectionFunc<dim> must be specified as follows: "
+                             "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();" 
+                            ));
+      
       level_set_operation.initialize(scratch_data, 
                                      initial_solution, 
                                      base_in->parameters, 
@@ -186,41 +193,42 @@ namespace LevelSet
         
         /*
          *  output advection velocity
-         *  @ todo --> atm solution with compatibility of map_dofs_to_support_points with 
-         *  DoFHandler depending on TriangulationBase missing
          */
-        
-        //BlockVectorType advection;
-        //scratch_data->initialize_dof_vector(advection);
+        BlockVectorType advection;
+        scratch_data->initialize_dof_vector(advection);
 
-        //if (parameters.paraview.print_advection)
-        //{
-          //advection_velocity->set_time( time_iterator.get_current_time() );
-            
-          //std::map<types::global_dof_index, Point<dim>> supportPoints;
+        if (parameters.paraview.print_advection)
+        {
+          advection_velocity->set_time(time_iterator.get_current_time());
+          /*
+           *  work around to interpolate a vector-valued quantity on a scalar DoFHandler
+           */
+          for (auto d = 0; d < dim; ++d)
+            {
+              VectorTools::interpolate(scratch_data->get_mapping(),
+                                       scratch_data->get_dof_handler(),
+                                       ScalarFunctionFromFunctionObject<dim>(
+                                         [&](const Point<dim> &p) {
+                                           return advection_velocity->value(p)[d];
+                                         }),
+                                       advection.block(d));
+              advection.block(d).update_ghost_values();
 
-          //DoFTools::map_dofs_to_support_points<dim,dim>( scratch_data->get_mapping(), 
-                                                         //dof_handler,
-                                                         //supportPoints )
-
-          //for(const auto& global_dof : supportPoints)
-          //{
-              //auto a = advection_velocity->value(global_dof.second);
-              //for(auto d=0; d<dim; ++d)
-                //advection.block(d)[global_dof.first] = a[d];
-              //constraints.distribute(advection);
-          //} 
-
-          //for(auto d=0; d<dim; ++d)
-            //data_out.add_data_vector(scratch_data->get_dof_handler(0),
-                                     //advection.block(d), 
-                                     //"advection_velocity_"+std::to_string(d));
-        //}
+              data_out.add_data_vector(dof_handler,
+                                       advection.block(d),
+                                       "advection_velocity_" + std::to_string(d));
+            }
+        }
         /*
         * write data to vtu file
         */
         data_out.build_patches();
-        data_out.write_vtu_with_pvtu_record("./", "solution_level_set", time_step, mpi_communicator, 4, 1); 
+        data_out.write_vtu_with_pvtu_record("./", 
+                                            parameters.paraview.filename, 
+                                            time_step, 
+                                            scratch_data->get_mpi_comm(), 
+                                            parameters.paraview.n_digits_timestep, 
+                                            parameters.paraview.n_groups);
         
         /*
         * write data of boundary -- @todo: move to own utility function
