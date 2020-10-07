@@ -104,13 +104,11 @@ namespace MeltPoolDG
   struct Parameters
   {
     void
-    process_parameters_file(const std::string &               parameter_filename,
-                            const dealii::ConditionalOStream &pcout)
+    process_parameters_file(const std::string &parameter_filename)
     {
-      ParameterHandler prm;
-      add_parameters(prm);
+      add_parameters();
 
-      check_for_file(parameter_filename, prm);
+      check_for_file(parameter_filename);
 
       std::ifstream file;
       file.open(parameter_filename);
@@ -132,11 +130,17 @@ namespace MeltPoolDG
       if (paraview.filename == "solution" )
         paraview.filename += "_" + base.problem_name; 
 
-      prm.print_parameters(pcout.get_stream(), ParameterHandler::OutputStyle::Text);
+    }
+    
+    void
+    print_parameters(const dealii::ConditionalOStream &pcout)
+    {
+      prm.print_parameters(pcout.get_stream(),
+                           ParameterHandler::OutputStyle::Text);
     }
 
     void
-    check_for_file(const std::string &parameter_filename, ParameterHandler & /*prm*/) const
+    check_for_file(const std::string &parameter_filename) const
     {
       std::ifstream parameter_file(parameter_filename.c_str());
 
@@ -153,7 +157,7 @@ namespace MeltPoolDG
     }
 
     void
-    add_parameters(ParameterHandler &prm)
+    add_parameters()
     {
       /*
        *    base
@@ -397,6 +401,8 @@ namespace MeltPoolDG
       }
       prm.leave_subsection();
     }
+   
+    ParameterHandler prm;
 
     BaseData<number>               base;
     LevelSetData<number>           ls;
