@@ -162,10 +162,13 @@ namespace Reinitialization
             data_out.add_data_vector(reinit_operation.solution_normal_vector.block(d), "normal_"+std::to_string(d));
         }
 
-        const int n_digits_timestep = 4;
-        const int n_groups = 1;
         data_out.build_patches();
-        data_out.write_vtu_with_pvtu_record("./", parameters.paraview.filename, time_step, scratch_data->get_mpi_comm(), n_digits_timestep, n_groups);
+        data_out.write_vtu_with_pvtu_record("./", 
+                                            parameters.paraview.filename, 
+                                            time_step, 
+                                            scratch_data->get_mpi_comm(), 
+                                            parameters.paraview.n_digits_timestep, 
+                                            parameters.paraview.n_groups);
       }
     }
 
