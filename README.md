@@ -45,7 +45,7 @@ else call
 ```bash  
 make release
 ```
-Then build the code and run the simulation. As an example the simulation of the newly created "vortex_bubble" will be demonstrated.
+Then build the code and run the simulation. As an example the simulation of the newly created "vortex_bubble" is demonstrated using 4 threads:
 ```bash  
 make -j 4 
 mpirun -np 4 ./run_simulation ../include/meltpooldg/simulations/vortex_bubble.json
