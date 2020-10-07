@@ -11,30 +11,31 @@ This project depends on the following third-party libraries:
 
 ![alt text](doc/MeltPoolDG.png?raw=true)
 
-### How to add and run a new simulation
+### How to add, build and run a simulation
 
-In the ./simulations folder you find some example simulations. If you would like to create a simulation "vortex_bubble", follow the subsequent steps:
+In the `./include/meltpooldg/simulations` folder you find some example simulations. If you would like to create an additional simulation, e.g. "vortex_bubble", follow the subsequent steps:
 
 ```bash
-cd simulations
-echo "ADD_SUBDIRECTORY(vortex_bubble)" >> CMakeLists.txt
-mkdir vortex_bubble
-cd vortex_bubble    
-touch vortex_bubble.cpp
+mkdir ./include/meltpooldg/simulations/vortex_bubble
+cd include/meltpooldg/simulations/vortex_bubble    
+touch vortex_bubble.hpp
 touch vortex_bubble.json
-cp ../rotating_bubble/CMakeLists .
 ```
-   
-In the CMakeLists file change the project name and the *.cpp-file name containing the main function. You can build an run your simulation (with e.g. 4 processes) using the following commands:
+In the `.hpp` file a child class of the MeltPoolDG::SimulationBase<dim> class must be created. In the `.json`-file the parameters will be specified. Note that the `.json`-file is a command line argument and is only needed at run-time of the simulation. 
+The new simulation has to be added to the simulation factory `./include/meltpooldg/simulation_selector.hpp` 
+```cpp
+else if( simulation_name == "vortex_bubble" )
+{
+    return std::make_shared<VortexBubble::Simulation<dim>>(parameterfile,
+                                                 mpi_communicator);
+}
+```
+You can build an run your simulation (with e.g. 4 processes) using the following commands:
    
 ```bash  
 mkdir build
 cd build
-cmake -D DEAL_II_DIR=/myDealIIBuildDir ../.
-```
-Change to the simulations director
-```bash  
-cd simulations
+cmake -D DEAL_II_DIR=/dealii_build_dir ../.
 ```
 For the debug version call
 ```bash  
@@ -44,10 +45,10 @@ else call
 ```bash  
 make release
 ```
-Then build the code and run the simulation
+Then build the code and run the simulation. As an example the simulation of the newly created "vortex_bubble" will be demonstrated.
 ```bash  
 make -j 4 
-mpirun -np 4 ./run_simulation folder_of_your_json_file/your_input_file.json
+mpirun -np 4 ./run_simulation ../include/meltpooldg/simulations/vortex_bubble.json
 ```
 
 
