@@ -9,6 +9,21 @@ This project depends on the following third-party libraries:
 - p4est
 - Trilinos
 
+Before installing deal.II, you have to install the two libraries p4est and Trilinos. More information for that you can find here for p4est (https://www.dealii.org/9.2.0/external-libs/p4est.html) and here for Trilinos (https://www.dealii.org/9.2.0/external-libs/trilinos.html).  
+To configure the deal.II library, you have to use now these arguments for cmake:
+
+ ```bash
+cmake -DCMAKE_INSTALL_PREFIX=/path/to/install/dir 
+-DP4EST_DIR=/path/to/installation -DDEAL_II_WITH_P4EST=ON -DEAL_II_WITH_MPI=ON -DTRILINOS_DIR=/path/to/trilinos -DDEAL_II_WITH_TRILINOS=ON ../deal.II
+```
+ 
+then compiling as usual:
+ 
+```bash
+make --jobs=4 install
+make test
+```
+
 ![alt text](doc/MeltPoolDG.png?raw=true)
 
 ### How to add, build and run a simulation
