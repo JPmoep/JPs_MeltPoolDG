@@ -88,12 +88,7 @@ namespace ReinitCircle
       : SimulationBase<dim>(parameter_file,
                             mpi_communicator)
     {
-      set_parameters();
-    }
-    
-    void set_parameters()
-    {
-      this->parameters.process_parameters_file(this->parameter_file,this->pcout);
+      this->set_parameters();
     }
 
     void create_spatial_discretization()

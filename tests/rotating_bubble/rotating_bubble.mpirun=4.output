@@ -1,0 +1,1627 @@
+# Listing of Parameters
+# ---------------------
+subsection advection diffusion
+  # Defines the diffusivity for the advection diffusion equation
+  set advec diff diffusivity     = 0
+
+  # Set this parameter if a matrix free solution procedure should be
+  # performed
+  set advec diff do matrix free  = false
+
+  # Defines if the l2norm of the advected field should be printed).
+  set advec diff do print l2norm = true
+
+  # Sets the end time for the solution of the advection diffusion problem
+  set advec diff end time        = 1
+
+  # Defines the start time for the solution of the levelset problem
+  set advec diff start time      = 0
+
+  # Sets the theta value for the time stepping scheme: 0=explicit euler;
+  # 1=implicit euler; 0.5=Crank-Nicholson;
+  set advec diff theta           = 0.5
+
+  # Sets the step size for time stepping. For non-uniform time stepping, this
+  # parameter determines the size of the first time step.
+  set advec diff time step size  = 0.01
+end
+
+
+subsection base
+  # Sets the base name for the application that will be fed to the problem
+  # type.
+  set application name   = rotating_bubble # default: none
+
+  # Defines the interpolation degree
+  set degree             = 1
+
+  # Defines the dimension of the problem
+  set dimension          = 2
+
+  # Defines the number of initial global refinements
+  set global refinements = 6               # default: 1
+
+  # Defines the number of quadrature points
+  set n q points 1d      = -1
+
+  # Sets the base name for the problem that should be solved.
+  set problem name       = level_set       # default: none
+end
+
+
+subsection curvature
+  # curvature computation: damping = cell_size * curv_damping_scale_factor
+  set curv damping scale factor = 0
+
+  # Set this parameter if a matrix free solution procedure should be
+  # performed
+  set curv do matrix free       = false
+
+  # Defines if the l2norm of the curvature result should be printed)
+  set curv do print l2norm      = true
+end
+
+
+subsection levelset
+  # Defines the artificial diffusivity for the level set transport equation
+  set ls artificial diffusivity = 0.0                # default: 0
+
+  # Set this parameter if a matrix free solution procedure should be
+  # performed
+  set ls do matrix free         = false
+
+  # Defines if the l2norm of the levelset result should be printed)
+  set ls do print l2norm        = true               # default: false
+
+  # Defines if reinitialization of level set function is activated
+  set ls do reinitialization    = true               # default: false
+
+  # Enables to dynamically adapt the time step to meet the CFL condition in
+  # case of explicit time integration (theta=0)
+  set ls enable CFL condition   = false
+
+  # Sets the end time for the solution of the levelset problem
+  set ls end time               = 1.5707963267948966 # default: 1
+
+  # Defines the start time for the solution of the levelset problem
+  set ls start time             = 0.0                # default: 0
+
+  # Sets the theta value for the time stepping scheme (0=explicit euler;
+  # 1=implicit euler; 0.5=Crank-Nicholson
+  set ls theta                  = 0.5
+
+  # Sets the step size for time stepping. For non-uniform time stepping, this
+  # parameter determines the size of the first time step.
+  set ls time step size         = 0.01
+end
+
+
+subsection normal vector
+  # normal vector computation: damping = cell_size *
+  # normal_vec_damping_scale_factor
+  set normal vec damping scale factor = 0.5
+
+  # Set this parameter if a matrix free solution procedure should be
+  # performed
+  set normal vec do matrix free       = false
+
+  # Defines if the l2norm of the normal vector result should be printed)
+  set normal vec do print l2norm      = true
+end
+
+
+subsection output
+  # this flag enables the computation of the error compared to a given
+  # analytical solution.
+  set do compute error         = false
+
+  # boolean for computing the phase volumes
+  set do compute volume output = false
+
+  # this flag enables the output of wall times (should be disabled if a test
+  # file is prepared)
+  set do walltime              = false
+
+  # Sets the base name for the volume fraction file output.
+  set filename volume output   = my_volumes.txt
+end
+
+
+subsection paraview
+  # boolean for writing the initial state into the paraview output file
+  set paraview do initial state    = true
+
+  # boolean for producing paraview output files
+  set paraview do output           = false
+
+  # Sets the base name for the paraview file output.
+  set paraview filename            = solution
+
+  # number of digits for the frame number of the vtk-file.
+  set paraview n digits timestep   = 4
+
+  # number of parallel written vtk-files.
+  set paraview n groups            = 4
+
+  # boolean for writing the computed advection into the paraview output file
+  set paraview print advection     = false
+
+  # boolean for printing a vtk-file with the boundary id
+  set paraview print boundary id   = false
+
+  # boolean for writing the computed curvature into the paraview output file
+  set paraview print curvature     = false
+
+  # boolean for writing the exact solution into the paraview output file
+  set paraview print exactsolution = false
+
+  # boolean for writing the levelset variable into the paraview output file
+  set paraview print levelset      = true
+
+  # boolean for writing the computed normalvector into the paraview output
+  # file
+  set paraview print normal vector = false
+
+  # every n timestep that should be written
+  set paraview write frequency     = 1
+end
+
+
+subsection reinitialization
+  # Defines the length parameter of the level set function to be constant
+  # andnot to dependent on the mesh size (default: -1.0 i.e. grid size
+  # dependentwhich can be controlled by reinit_epsilon_scale_factor
+  set reinit constant epsilon     = -1
+
+  # Set this parameter if a matrix free solution procedure should be
+  # performed
+  set reinit do matrix free       = false
+
+  # Defines if the l2norm of the reinitialization result should be printed)
+  set reinit do print l2norm      = true       # default: false
+
+  # Defines the time step size of the reinitialization to be constant andnot
+  # to dependent on the mesh size (default: -1.0 i.e. grid size dependent
+  set reinit dtau                 = -1
+
+  # Sets the maximum number of reinitialization steps
+  set reinit max n steps          = 5
+
+  # Sets the type of reinitialization model that should be used.
+  set reinit modeltype            = olsson2007
+
+  # Defines the scaling factor of the diffusion parameter in the
+  # reinitialization equation; the scaling factor is multipled by the mesh
+  # size (default: 0.5 i.e. eps=0.5*h_min
+  set reinit scale factor epsilon = 0.5
+end
+
+
+| normal vector:         i=74 	|n_0| = 66.676541871   |n_1| = 67.433582258   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.5026334156    |ΔΨ|²/dT = 205.6335667    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.2908769634    |ΔΨ|²/dT = 112.6372295    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.152334047     |ΔΨ|²/dT = 57.32005499    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.0747426334    |ΔΨ|²/dT = 28.63013349    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.03659823533   |ΔΨ|²/dT = 14.61332635    |
+| ls: t= 0.01      | GMRES: i=63   	 |Δϕ|2 = 64.34622011    
+| normal vector:         i=76 	|n_0| = 64.774748548   |n_1| = 65.570096844   
+    | reini: τ= 0.015625  | CG: i=16   	 |ΔΨ|∞ = 0.04044622021   |ΔΨ|²/dT = 13.68029926    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01984771614   |ΔΨ|²/dT = 7.054920339    |
+    | reini: τ= 0.046875  | CG: i=16   	 |ΔΨ|∞ = 0.01400367261   |ΔΨ|²/dT = 3.982477456    |
+    | reini: τ= 0.0625    | CG: i=16   	 |ΔΨ|∞ = 0.01044447895   |ΔΨ|²/dT = 2.486308383    |
+    | reini: τ= 0.078125  | CG: i=16   	 |ΔΨ|∞ = 0.008151955214  |ΔΨ|²/dT = 1.720368035    |
+| normal vector:         i=76 	|n_0| = 64.669086852   |n_1| = 65.467596124   
+| curvature:         i=31 	|k| = 1581.8201028   
+| ls: t= 0.02      | GMRES: i=63   	 |Δϕ|2 = 64.31631472    
+| normal vector:         i=76 	|n_0| = 64.667701653   |n_1| = 65.451178558   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.0329460107    |ΔΨ|²/dT = 9.406049873    |
+    | reini: τ= 0.03125   | CG: i=16   	 |ΔΨ|∞ = 0.01747367921   |ΔΨ|²/dT = 4.82109147     |
+    | reini: τ= 0.046875  | CG: i=16   	 |ΔΨ|∞ = 0.01086051454   |ΔΨ|²/dT = 2.636247081    |
+    | reini: τ= 0.0625    | CG: i=16   	 |ΔΨ|∞ = 0.007273291981  |ΔΨ|²/dT = 1.624510404    |
+    | reini: τ= 0.078125  | CG: i=16   	 |ΔΨ|∞ = 0.005350769408  |ΔΨ|²/dT = 1.165240078    |
+| normal vector:         i=76 	|n_0| = 64.655837922   |n_1| = 65.440250861   
+| curvature:         i=31 	|k| = 1583.0647117   
+| ls: t= 0.03      | GMRES: i=63   	 |Δϕ|2 = 64.31283038    
+| normal vector:         i=76 	|n_0| = 64.653570888   |n_1| = 65.413533395   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02919193183   |ΔΨ|²/dT = 8.79949705     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01601805721   |ΔΨ|²/dT = 4.498513635    |
+    | reini: τ= 0.046875  | CG: i=16   	 |ΔΨ|∞ = 0.008514679163  |ΔΨ|²/dT = 2.395799683    |
+    | reini: τ= 0.0625    | CG: i=16   	 |ΔΨ|∞ = 0.006292329312  |ΔΨ|²/dT = 1.40983938     |
+    | reini: τ= 0.078125  | CG: i=16   	 |ΔΨ|∞ = 0.004803945343  |ΔΨ|²/dT = 0.9709525559   |
+| normal vector:         i=76 	|n_0| = 64.652267345   |n_1| = 65.413051837   
+| curvature:         i=31 	|k| = 1586.2334891   
+| ls: t= 0.04      | GMRES: i=63   	 |Δϕ|2 = 64.31233948    
+| normal vector:         i=76 	|n_0| = 64.649284697   |n_1| = 65.376892706   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03238823773   |ΔΨ|²/dT = 8.835225771    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01652724403   |ΔΨ|²/dT = 4.38743876     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008895208204  |ΔΨ|²/dT = 2.240266092    |
+    | reini: τ= 0.0625    | CG: i=16   	 |ΔΨ|∞ = 0.005284716334  |ΔΨ|²/dT = 1.223270183    |
+    | reini: τ= 0.078125  | CG: i=16   	 |ΔΨ|∞ = 0.003542701352  |ΔΨ|²/dT = 0.7671948076   |
+| normal vector:         i=76 	|n_0| = 64.648920251   |n_1| = 65.377649912   
+| curvature:         i=31 	|k| = 1580.5365326   
+| ls: t= 0.05      | GMRES: i=63   	 |Δϕ|2 = 64.31225789    
+| normal vector:         i=76 	|n_0| = 64.64543988    |n_1| = 65.333183221   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03080435662   |ΔΨ|²/dT = 8.815613933    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01338396973   |ΔΨ|²/dT = 4.361962708    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007615139507  |ΔΨ|²/dT = 2.183126011    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004495028236  |ΔΨ|²/dT = 1.13869479     |
+    | reini: τ= 0.078125  | CG: i=16   	 |ΔΨ|∞ = 0.002767452941  |ΔΨ|²/dT = 0.661956322    |
+| normal vector:         i=76 	|n_0| = 64.644880934   |n_1| = 65.334129766   
+| curvature:         i=31 	|k| = 1581.431039    
+| ls: t= 0.06      | GMRES: i=63   	 |Δϕ|2 = 64.31224165    
+| normal vector:         i=76 	|n_0| = 64.641162311   |n_1| = 65.282707629   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03119462068   |ΔΨ|²/dT = 8.72608582     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01620351698   |ΔΨ|²/dT = 4.334985597    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00801694058   |ΔΨ|²/dT = 2.159466236    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004238398243  |ΔΨ|²/dT = 1.097504509    |
+    | reini: τ= 0.078125  | CG: i=16   	 |ΔΨ|∞ = 0.002531124609  |ΔΨ|²/dT = 0.5994223178   |
+| normal vector:         i=76 	|n_0| = 64.640350739   |n_1| = 65.283779973   
+| curvature:         i=31 	|k| = 1581.1559858   
+| ls: t= 0.07      | GMRES: i=63   	 |Δϕ|2 = 64.31223479    
+| normal vector:         i=76 	|n_0| = 64.636683119   |n_1| = 65.226904033   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03186609912   |ΔΨ|²/dT = 8.852962676    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01545318622   |ΔΨ|²/dT = 4.345280895    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007284844257  |ΔΨ|²/dT = 2.144466655    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004057273449  |ΔΨ|²/dT = 1.075174991    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002420304601  |ΔΨ|²/dT = 0.5682413609   |
+| normal vector:         i=76 	|n_0| = 64.635642223   |n_1| = 65.228087236   
+| curvature:         i=31 	|k| = 1580.6887893   
+| ls: t= 0.08      | GMRES: i=63   	 |Δϕ|2 = 64.31222772    
+| normal vector:         i=76 	|n_0| = 64.632332705   |n_1| = 65.167335926   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02710343509   |ΔΨ|²/dT = 8.793519091    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01462422529   |ΔΨ|²/dT = 4.357303891    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007791848624  |ΔΨ|²/dT = 2.155341209    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003891959459  |ΔΨ|²/dT = 1.07547396     |
+    | reini: τ= 0.078125  | CG: i=16   	 |ΔΨ|∞ = 0.001820379054  |ΔΨ|²/dT = 0.5595769604   |
+| normal vector:         i=76 	|n_0| = 64.63111395    |n_1| = 65.168635722   
+| curvature:         i=31 	|k| = 1586.835073    
+| ls: t= 0.09      | GMRES: i=63   	 |Δϕ|2 = 64.31222721    
+| normal vector:         i=76 	|n_0| = 64.62847647    |n_1| = 65.105592171   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02997710589   |ΔΨ|²/dT = 8.871222602    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01587134902   |ΔΨ|²/dT = 4.356451309    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008091745792  |ΔΨ|²/dT = 2.148443565    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004065986162  |ΔΨ|²/dT = 1.068800054    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002075096473  |ΔΨ|²/dT = 0.5485196296   |
+| normal vector:         i=76 	|n_0| = 64.627099897   |n_1| = 65.107028445   
+| curvature:         i=31 	|k| = 1583.6786198   
+| ls: t= 0.1       | GMRES: i=63   	 |Δϕ|2 = 64.31221905    
+| normal vector:         i=76 	|n_0| = 64.625447378   |n_1| = 65.043213094   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03053909791   |ΔΨ|²/dT = 8.965747532    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01542408486   |ΔΨ|²/dT = 4.386494006    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007921588426  |ΔΨ|²/dT = 2.152313309    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004371001133  |ΔΨ|²/dT = 1.06639473     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002440375614  |ΔΨ|²/dT = 0.5450907696   |
+| normal vector:         i=76 	|n_0| = 64.623932735   |n_1| = 65.044776048   
+| curvature:         i=31 	|k| = 1582.4601312   
+| ls: t= 0.11      | GMRES: i=63   	 |Δϕ|2 = 64.31221474    
+| normal vector:         i=76 	|n_0| = 64.623571301   |n_1| = 64.981589515   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03199176754   |ΔΨ|²/dT = 8.850332891    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01656677564   |ΔΨ|²/dT = 4.3785657      |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008191387835  |ΔΨ|²/dT = 2.16127854     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004083758905  |ΔΨ|²/dT = 1.072216596    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002132313049  |ΔΨ|²/dT = 0.547250765    |
+| normal vector:         i=76 	|n_0| = 64.621949778   |n_1| = 64.983295437   
+| curvature:         i=31 	|k| = 1583.0024802   
+| ls: t= 0.12      | GMRES: i=63   	 |Δϕ|2 = 64.31221237    
+| normal vector:         i=76 	|n_0| = 64.623177281   |n_1| = 64.921972779   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03224862485   |ΔΨ|²/dT = 8.97618131     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01571927751   |ΔΨ|²/dT = 4.397969128    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008271598367  |ΔΨ|²/dT = 2.159318192    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004321966034  |ΔΨ|²/dT = 1.068238537    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002181229136  |ΔΨ|²/dT = 0.5420349996   |
+| normal vector:         i=76 	|n_0| = 64.621420263   |n_1| = 64.923773112   
+| curvature:         i=31 	|k| = 1583.5016529   
+| ls: t= 0.13      | GMRES: i=63   	 |Δϕ|2 = 64.31221037    
+| normal vector:         i=76 	|n_0| = 64.624527122   |n_1| = 64.865352943   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02919294861   |ΔΨ|²/dT = 8.907207655    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01655193844   |ΔΨ|²/dT = 4.397497483    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008898403037  |ΔΨ|²/dT = 2.166861719    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004658867711  |ΔΨ|²/dT = 1.073612841    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00243449246   |ΔΨ|²/dT = 0.5463863129   |
+| normal vector:         i=76 	|n_0| = 64.62268144    |n_1| = 64.867243476   
+| curvature:         i=31 	|k| = 1589.6362073   
+| ls: t= 0.14      | GMRES: i=63   	 |Δϕ|2 = 64.31221006    
+| normal vector:         i=76 	|n_0| = 64.627953422   |n_1| = 64.812552018   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03038020511   |ΔΨ|²/dT = 8.968656056    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01569312772   |ΔΨ|²/dT = 4.395472645    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008372744123  |ΔΨ|²/dT = 2.162420464    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004380484788  |ΔΨ|²/dT = 1.072035365    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00245505107   |ΔΨ|²/dT = 0.5452300923   |
+| normal vector:         i=76 	|n_0| = 64.626025677   |n_1| = 64.814555454   
+| curvature:         i=31 	|k| = 1583.0368094   
+| ls: t= 0.15      | GMRES: i=63   	 |Δϕ|2 = 64.3122021     
+| normal vector:         i=76 	|n_0| = 64.633748045   |n_1| = 64.764203798   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02635868369   |ΔΨ|²/dT = 8.945352102    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01509586499   |ΔΨ|²/dT = 4.407130824    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00835569019   |ΔΨ|²/dT = 2.169325415    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00448052372   |ΔΨ|²/dT = 1.073714885    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002382680608  |ΔΨ|²/dT = 0.5435555812   |
+| normal vector:         i=76 	|n_0| = 64.631743818   |n_1| = 64.766274379   
+| curvature:         i=31 	|k| = 1588.7491272   
+| ls: t= 0.16      | GMRES: i=63   	 |Δϕ|2 = 64.31220858    
+| normal vector:         i=76 	|n_0| = 64.642204265   |n_1| = 64.720668751   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03009243082   |ΔΨ|²/dT = 9.026010098    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.0144750912    |ΔΨ|²/dT = 4.409666665    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008312066073  |ΔΨ|²/dT = 2.164279513    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00453789585   |ΔΨ|²/dT = 1.071727246    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002417326592  |ΔΨ|²/dT = 0.5442497151   |
+| normal vector:         i=76 	|n_0| = 64.640134103   |n_1| = 64.722791702   
+| curvature:         i=31 	|k| = 1584.7601238   
+| ls: t= 0.17      | GMRES: i=63   	 |Δϕ|2 = 64.31220232    
+| normal vector:         i=76 	|n_0| = 64.65362427    |n_1| = 64.682154001   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.030275005     |ΔΨ|²/dT = 9.006143012    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01578351092   |ΔΨ|²/dT = 4.412734178    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008006258661  |ΔΨ|²/dT = 2.16381279     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004188160543  |ΔΨ|²/dT = 1.068412674    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002202719543  |ΔΨ|²/dT = 0.5396343304   |
+| normal vector:         i=76 	|n_0| = 64.651517038   |n_1| = 64.684336183   
+| curvature:         i=31 	|k| = 1585.6152745   
+| ls: t= 0.18      | GMRES: i=63   	 |Δϕ|2 = 64.31220335    
+| normal vector:         i=76 	|n_0| = 64.668331217   |n_1| = 64.648730821   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03179713559   |ΔΨ|²/dT = 9.001696348    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01640812041   |ΔΨ|²/dT = 4.411232077    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008224996101  |ΔΨ|²/dT = 2.164468842    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004131887083  |ΔΨ|²/dT = 1.06958238     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002097062462  |ΔΨ|²/dT = 0.5403723913   |
+| normal vector:         i=76 	|n_0| = 64.666185532   |n_1| = 64.650944118   
+| curvature:         i=31 	|k| = 1585.7471023   
+| ls: t= 0.19      | GMRES: i=63   	 |Δϕ|2 = 64.31220338    
+| normal vector:         i=76 	|n_0| = 64.686614275   |n_1| = 64.620308154   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03040777475   |ΔΨ|²/dT = 9.032579208    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01632344538   |ΔΨ|²/dT = 4.418014284    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008816092705  |ΔΨ|²/dT = 2.1622386      |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004667277893  |ΔΨ|²/dT = 1.06560909     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002466010991  |ΔΨ|²/dT = 0.5368279638   |
+| normal vector:         i=76 	|n_0| = 64.684453361   |n_1| = 64.622527325   
+| curvature:         i=31 	|k| = 1586.1839037   
+| ls: t= 0.2       | GMRES: i=63   	 |Δϕ|2 = 64.31220183    
+| normal vector:         i=76 	|n_0| = 64.708772273   |n_1| = 64.596700592   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02906494513   |ΔΨ|²/dT = 8.956135612    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01615575106   |ΔΨ|²/dT = 4.405204738    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008588836789  |ΔΨ|²/dT = 2.16382894     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004530904096  |ΔΨ|²/dT = 1.068001264    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002437048868  |ΔΨ|²/dT = 0.5377933874   |
+| normal vector:         i=76 	|n_0| = 64.706611049   |n_1| = 64.598948225   
+| curvature:         i=31 	|k| = 1585.2675501   
+| ls: t= 0.21      | GMRES: i=63   	 |Δϕ|2 = 64.31220137    
+| normal vector:         i=76 	|n_0| = 64.735062874   |n_1| = 64.577702061   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02898798026   |ΔΨ|²/dT = 8.991366934    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01525982069   |ΔΨ|²/dT = 4.410536723    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008176049995  |ΔΨ|²/dT = 2.161756098    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004506377048  |ΔΨ|²/dT = 1.065324219    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00245248456   |ΔΨ|²/dT = 0.5359628359   |
+| normal vector:         i=76 	|n_0| = 64.732913821   |n_1| = 64.579912756   
+| curvature:         i=31 	|k| = 1586.7510515   
+| ls: t= 0.22      | GMRES: i=63   	 |Δϕ|2 = 64.31220185    
+| normal vector:         i=76 	|n_0| = 64.765685708   |n_1| = 64.562975103   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02937202902   |ΔΨ|²/dT = 8.92860418     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01572245283   |ΔΨ|²/dT = 4.396614116    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007958857819  |ΔΨ|²/dT = 2.161019075    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004234121176  |ΔΨ|²/dT = 1.065771241    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002328651598  |ΔΨ|²/dT = 0.534917323    |
+| normal vector:         i=76 	|n_0| = 64.763558172   |n_1| = 64.565181764   
+| curvature:         i=31 	|k| = 1585.0619983   
+| ls: t= 0.23      | GMRES: i=63   	 |Δϕ|2 = 64.31220058    
+| normal vector:         i=76 	|n_0| = 64.800754875   |n_1| = 64.552256446   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02933453576   |ΔΨ|²/dT = 8.953661895    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01609668503   |ΔΨ|²/dT = 4.393745915    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008321355954  |ΔΨ|²/dT = 2.15610573     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004180069541  |ΔΨ|²/dT = 1.062858636    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002245800213  |ΔΨ|²/dT = 0.533779065    |
+| normal vector:         i=76 	|n_0| = 64.798680894   |n_1| = 64.55440768    
+| curvature:         i=31 	|k| = 1584.2119224   
+| ls: t= 0.24      | GMRES: i=63   	 |Δϕ|2 = 64.31219984    
+| normal vector:         i=76 	|n_0| = 64.840294289   |n_1| = 64.545188278   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02697489814   |ΔΨ|²/dT = 8.895762781    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01566947042   |ΔΨ|²/dT = 4.384634748    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008520162862  |ΔΨ|²/dT = 2.156491928    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004405572798  |ΔΨ|²/dT = 1.063559107    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002211009119  |ΔΨ|²/dT = 0.533501278    |
+| normal vector:         i=76 	|n_0| = 64.838262355   |n_1| = 64.547293837   
+| curvature:         i=31 	|k| = 1589.3052705   
+| ls: t= 0.25      | GMRES: i=63   	 |Δϕ|2 = 64.31220241    
+| normal vector:         i=76 	|n_0| = 64.884141481   |n_1| = 64.54147148    
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02601541241   |ΔΨ|²/dT = 8.983558203    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01509234731   |ΔΨ|²/dT = 4.384237937    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008394409028  |ΔΨ|²/dT = 2.146858378    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004441441684  |ΔΨ|²/dT = 1.057719419    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00228961446   |ΔΨ|²/dT = 0.5306456675   |
+| normal vector:         i=76 	|n_0| = 64.882186414   |n_1| = 64.543503454   
+| curvature:         i=31 	|k| = 1583.419992    
+| ls: t= 0.26      | GMRES: i=63   	 |Δϕ|2 = 64.31219647    
+| normal vector:         i=76 	|n_0| = 64.932008613   |n_1| = 64.540770522   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02802633129   |ΔΨ|²/dT = 8.85295478     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01416829372   |ΔΨ|²/dT = 4.36818078     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007700667884  |ΔΨ|²/dT = 2.14739726     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004181587501  |ΔΨ|²/dT = 1.05730243     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00215711638   |ΔΨ|²/dT = 0.5284987094   |
+| normal vector:         i=76 	|n_0| = 64.930142603   |n_1| = 64.54273485    
+| curvature:         i=31 	|k| = 1588.0236975   
+| ls: t= 0.27      | GMRES: i=63   	 |Δϕ|2 = 64.31220336    
+| normal vector:         i=76 	|n_0| = 64.983391546   |n_1| = 64.542784273   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02839015501   |ΔΨ|²/dT = 8.968379573    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.014531313     |ΔΨ|²/dT = 4.371857435    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007334699911  |ΔΨ|²/dT = 2.136473424    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003650153165  |ΔΨ|²/dT = 1.049883981    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00187393251   |ΔΨ|²/dT = 0.5249854192   |
+| normal vector:         i=76 	|n_0| = 64.98160571    |n_1| = 64.54463795    
+| curvature:         i=31 	|k| = 1584.2068569   
+| ls: t= 0.28      | GMRES: i=63   	 |Δϕ|2 = 64.31219907    
+| normal vector:         i=76 	|n_0| = 65.037557082   |n_1| = 64.54716053    
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02744008278   |ΔΨ|²/dT = 8.875743576    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01474348995   |ΔΨ|²/dT = 4.368131552    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007593453829  |ΔΨ|²/dT = 2.140331432    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003901797324  |ΔΨ|²/dT = 1.049824075    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001980749611  |ΔΨ|²/dT = 0.5224538969   |
+| normal vector:         i=76 	|n_0| = 65.035885799   |n_1| = 64.548927483   
+| curvature:         i=31 	|k| = 1584.43183     
+| ls: t= 0.29      | GMRES: i=63   	 |Δϕ|2 = 64.31220184    
+| normal vector:         i=76 	|n_0| = 65.093604398   |n_1| = 64.553607895   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02898239943   |ΔΨ|²/dT = 8.828874239    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.0150152253    |ΔΨ|²/dT = 4.34706416     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007336699     |ΔΨ|²/dT = 2.135032924    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003793498115  |ΔΨ|²/dT = 1.049179864    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002016783859  |ΔΨ|²/dT = 0.5224002287   |
+| normal vector:         i=76 	|n_0| = 65.092065068   |n_1| = 64.555261308   
+| curvature:         i=31 	|k| = 1582.0925933   
+| ls: t= 0.3       | GMRES: i=63   	 |Δϕ|2 = 64.31220083    
+| normal vector:         i=76 	|n_0| = 65.150415719   |n_1| = 64.561775001   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02759416752   |ΔΨ|²/dT = 8.862995448    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01448764809   |ΔΨ|²/dT = 4.354003603    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007574699191  |ΔΨ|²/dT = 2.131071124    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003872586284  |ΔΨ|²/dT = 1.043579571    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001945672917  |ΔΨ|²/dT = 0.5177327614   |
+| normal vector:         i=76 	|n_0| = 65.148975926   |n_1| = 64.563287142   
+| curvature:         i=31 	|k| = 1587.0835915   
+| ls: t= 0.31      | GMRES: i=63   	 |Δϕ|2 = 64.3122059     
+| normal vector:         i=75 	|n_0| = 65.20664923    |n_1| = 64.571298489   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02873251736   |ΔΨ|²/dT = 8.740100561    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01421174287   |ΔΨ|²/dT = 4.322676741    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007624089194  |ΔΨ|²/dT = 2.12775778     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003852581062  |ΔΨ|²/dT = 1.0447891      |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001973413273  |ΔΨ|²/dT = 0.5178669905   |
+| normal vector:         i=75 	|n_0| = 65.205351847   |n_1| = 64.572693807   
+| curvature:         i=31 	|k| = 1586.2791751   
+| ls: t= 0.32      | GMRES: i=63   	 |Δϕ|2 = 64.31220641    
+| normal vector:         i=75 	|n_0| = 65.260903543   |n_1| = 64.581857179   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02949879526   |ΔΨ|²/dT = 8.874763811    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01283437296   |ΔΨ|²/dT = 4.331047759    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006858865023  |ΔΨ|²/dT = 2.116864682    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003558876942  |ΔΨ|²/dT = 1.03703384     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001796259141  |ΔΨ|²/dT = 0.5140396249   |
+| normal vector:         i=75 	|n_0| = 65.259753534   |n_1| = 64.583104692   
+| curvature:         i=31 	|k| = 1581.0671035   
+| ls: t= 0.33      | GMRES: i=63   	 |Δϕ|2 = 64.31220479    
+| normal vector:         i=75 	|n_0| = 65.311657533   |n_1| = 64.59306868    
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02807835406   |ΔΨ|²/dT = 8.747584657    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01462812215   |ΔΨ|²/dT = 4.319167512    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007247170706  |ΔΨ|²/dT = 2.118833839    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003508793382  |ΔΨ|²/dT = 1.036345293    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001792976188  |ΔΨ|²/dT = 0.511132911    |
+| normal vector:         i=75 	|n_0| = 65.310655513   |n_1| = 64.594177273   
+| curvature:         i=31 	|k| = 1582.1939197   
+| ls: t= 0.34      | GMRES: i=63   	 |Δϕ|2 = 64.3122127     
+| normal vector:         i=75 	|n_0| = 65.357367824   |n_1| = 64.604591547   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02991175698   |ΔΨ|²/dT = 8.741668988    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01407247304   |ΔΨ|²/dT = 4.303616036    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006624209486  |ΔΨ|²/dT = 2.113279842    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003442429008  |ΔΨ|²/dT = 1.035519554    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001738985635  |ΔΨ|²/dT = 0.5110871525   |
+| normal vector:         i=75 	|n_0| = 65.356516917   |n_1| = 64.605534923   
+| curvature:         i=31 	|k| = 1580.339228    
+| ls: t= 0.35      | GMRES: i=63   	 |Δϕ|2 = 64.31221252    
+| normal vector:         i=75 	|n_0| = 65.396545468   |n_1| = 64.616060667   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02623267091   |ΔΨ|²/dT = 8.778706291    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01277093039   |ΔΨ|²/dT = 4.305683126    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00683246369   |ΔΨ|²/dT = 2.105750619    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003415712165  |ΔΨ|²/dT = 1.028516578    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001706882616  |ΔΨ|²/dT = 0.5063785424   |
+| normal vector:         i=75 	|n_0| = 65.395832469   |n_1| = 64.61683089    
+| curvature:         i=31 	|k| = 1580.4842822   
+| ls: t= 0.36      | GMRES: i=63   	 |Δϕ|2 = 64.31221668    
+| normal vector:         i=75 	|n_0| = 65.427810265   |n_1| = 64.627152424   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02857225484   |ΔΨ|²/dT = 8.640319244    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01403737462   |ΔΨ|²/dT = 4.284174611    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006616029758  |ΔΨ|²/dT = 2.109185288    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003193737796  |ΔΨ|²/dT = 1.032712149    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001673799895  |ΔΨ|²/dT = 0.5078689096   |
+| normal vector:         i=75 	|n_0| = 65.427258153   |n_1| = 64.627765155   
+| curvature:         i=31 	|k| = 1586.002413    
+| ls: t= 0.37      | GMRES: i=63   	 |Δϕ|2 = 64.31222087    
+| normal vector:         i=75 	|n_0| = 65.450013747   |n_1| = 64.637602583   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02782719484   |ΔΨ|²/dT = 8.759140127    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01405784893   |ΔΨ|²/dT = 4.281652648    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006648937299  |ΔΨ|²/dT = 2.095794531    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003285979916  |ΔΨ|²/dT = 1.025538009    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00162784223   |ΔΨ|²/dT = 0.5050196444   |
+| normal vector:         i=75 	|n_0| = 65.449623244   |n_1| = 64.6380376     
+| curvature:         i=31 	|k| = 1581.1365164   
+| ls: t= 0.38      | GMRES: i=63   	 |Δϕ|2 = 64.31221931    
+| normal vector:         i=75 	|n_0| = 65.462243431   |n_1| = 64.647159132   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03080332599   |ΔΨ|²/dT = 8.727361723    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.0143484584    |ΔΨ|²/dT = 4.295985756    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00642970915   |ΔΨ|²/dT = 2.103413707    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003191687062  |ΔΨ|²/dT = 1.026669279    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001571629956  |ΔΨ|²/dT = 0.5040920863   |
+| normal vector:         i=75 	|n_0| = 65.462004554   |n_1| = 64.64741999    
+| curvature:         i=31 	|k| = 1585.4042532   
+| ls: t= 0.39      | GMRES: i=63   	 |Δϕ|2 = 64.31222321    
+| normal vector:         i=75 	|n_0| = 65.463884912   |n_1| = 64.655652229   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0301993669    |ΔΨ|²/dT = 8.587279972    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01357763792   |ΔΨ|²/dT = 4.258303741    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00643263517   |ΔΨ|²/dT = 2.099509025    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003208258007  |ΔΨ|²/dT = 1.029053113    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001520327882  |ΔΨ|²/dT = 0.5056224259   |
+| normal vector:         i=75 	|n_0| = 65.463818451   |n_1| = 64.655744672   
+| curvature:         i=31 	|k| = 1585.1060961   
+| ls: t= 0.4       | GMRES: i=63   	 |Δϕ|2 = 64.31222463    
+| normal vector:         i=75 	|n_0| = 65.454697984   |n_1| = 64.662980419   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02702545741   |ΔΨ|²/dT = 8.778329813    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01354184182   |ΔΨ|²/dT = 4.280607625    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007042325727  |ΔΨ|²/dT = 2.09221689     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003480357436  |ΔΨ|²/dT = 1.023242889    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001670459471  |ΔΨ|²/dT = 0.503625871    |
+| normal vector:         i=75 	|n_0| = 65.454787424   |n_1| = 64.662885679   
+| curvature:         i=31 	|k| = 1581.1441466   
+| ls: t= 0.41      | GMRES: i=63   	 |Δϕ|2 = 64.31222279    
+| normal vector:         i=75 	|n_0| = 65.434765259   |n_1| = 64.669087834   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03084825204   |ΔΨ|²/dT = 8.670809066    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01536226185   |ΔΨ|²/dT = 4.286049648    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007298796036  |ΔΨ|²/dT = 2.104115434    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003371427613  |ΔΨ|²/dT = 1.028464913    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001542504627  |ΔΨ|²/dT = 0.5051296051   |
+| normal vector:         i=75 	|n_0| = 65.435010363   |n_1| = 64.668819633   
+| curvature:         i=31 	|k| = 1586.5095702   
+| ls: t= 0.42      | GMRES: i=63   	 |Δϕ|2 = 64.31222585    
+| normal vector:         i=75 	|n_0| = 65.404543205   |n_1| = 64.674020831   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03116811252   |ΔΨ|²/dT = 8.628104128    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01467362744   |ΔΨ|²/dT = 4.262025086    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.0066347533    |ΔΨ|²/dT = 2.099797264    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003422373744  |ΔΨ|²/dT = 1.030374115    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001713373535  |ΔΨ|²/dT = 0.5072208136   |
+| normal vector:         i=75 	|n_0| = 65.404961648   |n_1| = 64.673581972   
+| curvature:         i=31 	|k| = 1582.886561    
+| ls: t= 0.43      | GMRES: i=63   	 |Δϕ|2 = 64.312224      
+| normal vector:         i=75 	|n_0| = 65.364841396   |n_1| = 64.677880716   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02696773476   |ΔΨ|²/dT = 8.797778936    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01405200324   |ΔΨ|²/dT = 4.293094669    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007526943654  |ΔΨ|²/dT = 2.099075293    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003836496406  |ΔΨ|²/dT = 1.0276201      |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001903560573  |ΔΨ|²/dT = 0.5067142941   |
+| normal vector:         i=75 	|n_0| = 65.365412982   |n_1| = 64.677262115   
+| curvature:         i=31 	|k| = 1580.7949987   
+| ls: t= 0.44      | GMRES: i=63   	 |Δϕ|2 = 64.31222114    
+| normal vector:         i=75 	|n_0| = 65.316726758   |n_1| = 64.680814735   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03164144218   |ΔΨ|²/dT = 8.677801367    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01571527952   |ΔΨ|²/dT = 4.292552802    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007520636889  |ΔΨ|²/dT = 2.109963022    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003533024128  |ΔΨ|²/dT = 1.033289932    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001656606055  |ΔΨ|²/dT = 0.5088964545   |
+| normal vector:         i=75 	|n_0| = 65.317462622   |n_1| = 64.680038095   
+| curvature:         i=31 	|k| = 1583.335489    
+| ls: t= 0.45      | GMRES: i=63   	 |Δϕ|2 = 64.31222292    
+| normal vector:         i=75 	|n_0| = 65.261537581   |n_1| = 64.683048408   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03201218238   |ΔΨ|²/dT = 8.721374205    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01488138301   |ΔΨ|²/dT = 4.292423218    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007491995437  |ΔΨ|²/dT = 2.111647564    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003927731549  |ΔΨ|²/dT = 1.037249096    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002034286838  |ΔΨ|²/dT = 0.5124010694   |
+| normal vector:         i=75 	|n_0| = 65.26244139    |n_1| = 64.682106854   
+| curvature:         i=31 	|k| = 1580.1706043   
+| ls: t= 0.46      | GMRES: i=63   	 |Δϕ|2 = 64.31221716    
+| normal vector:         i=75 	|n_0| = 65.200778549   |n_1| = 64.684814345   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02814745547   |ΔΨ|²/dT = 8.792561459    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.0157600876    |ΔΨ|²/dT = 4.312973854    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008274307141  |ΔΨ|²/dT = 2.114112667    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004177641549  |ΔΨ|²/dT = 1.036856548    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002071352233  |ΔΨ|²/dT = 0.5129252148   |
+| normal vector:         i=75 	|n_0| = 65.201825606   |n_1| = 64.683712078   
+| curvature:         i=31 	|k| = 1581.0401025   
+| ls: t= 0.47      | GMRES: i=63   	 |Δϕ|2 = 64.3122176     
+| normal vector:         i=75 	|n_0| = 65.136027733   |n_1| = 64.686379546   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02990424444   |ΔΨ|²/dT = 8.723736712    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.0143376791    |ΔΨ|²/dT = 4.310986053    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006667237711  |ΔΨ|²/dT = 2.123608634    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003672487515  |ΔΨ|²/dT = 1.044259893    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002045123324  |ΔΨ|²/dT = 0.5172060781   |
+| normal vector:         i=75 	|n_0| = 65.137222149   |n_1| = 64.685132851   
+| curvature:         i=31 	|k| = 1584.5944722   
+| ls: t= 0.48      | GMRES: i=63   	 |Δϕ|2 = 64.31221695    
+| normal vector:         i=76 	|n_0| = 65.068920087   |n_1| = 64.688035417   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02990873786   |ΔΨ|²/dT = 8.890076173    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01561640496   |ΔΨ|²/dT = 4.337879783    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008014343203  |ΔΨ|²/dT = 2.123029511    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004049986069  |ΔΨ|²/dT = 1.042600865    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002048967136  |ΔΨ|²/dT = 0.5174827483   |
+| normal vector:         i=76 	|n_0| = 65.070251422   |n_1| = 64.686638906   
+| curvature:         i=31 	|k| = 1582.8354225   
+| ls: t= 0.49      | GMRES: i=63   	 |Δϕ|2 = 64.31221084    
+| normal vector:         i=76 	|n_0| = 65.001034093   |n_1| = 64.690055059   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03290484583   |ΔΨ|²/dT = 8.836296131    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01684566463   |ΔΨ|²/dT = 4.351998313    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008291741526  |ΔΨ|²/dT = 2.135517129    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004048063477  |ΔΨ|²/dT = 1.048269565    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00215244009   |ΔΨ|²/dT = 0.5202163094   |
+| normal vector:         i=76 	|n_0| = 65.002504775   |n_1| = 64.688543325   
+| curvature:         i=31 	|k| = 1586.9537364   
+| ls: t= 0.5       | GMRES: i=63   	 |Δϕ|2 = 64.31220903    
+| normal vector:         i=76 	|n_0| = 64.933857669   |n_1| = 64.692748411   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03049614551   |ΔΨ|²/dT = 8.831729055    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01546331002   |ΔΨ|²/dT = 4.348624742    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008563790281  |ΔΨ|²/dT = 2.140084298    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004583336005  |ΔΨ|²/dT = 1.053945208    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002428537375  |ΔΨ|²/dT = 0.5244010554   |
+| normal vector:         i=76 	|n_0| = 64.935481595   |n_1| = 64.691126465   
+| curvature:         i=31 	|k| = 1581.9306557   
+| ls: t= 0.51      | GMRES: i=63   	 |Δϕ|2 = 64.31220225    
+| normal vector:         i=76 	|n_0| = 64.868735986   |n_1| = 64.696390259   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03014197218   |ΔΨ|²/dT = 8.908662219    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.0164379005    |ΔΨ|²/dT = 4.374744286    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008480340724  |ΔΨ|²/dT = 2.146418241    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00421231536   |ΔΨ|²/dT = 1.055619817    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002140061048  |ΔΨ|²/dT = 0.5258077631   |
+| normal vector:         i=76 	|n_0| = 64.870465628   |n_1| = 64.694648249   
+| curvature:         i=31 	|k| = 1583.1396649   
+| ls: t= 0.52      | GMRES: i=63   	 |Δϕ|2 = 64.31220425    
+| normal vector:         i=76 	|n_0| = 64.806762066   |n_1| = 64.701235006   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02850900978   |ΔΨ|²/dT = 8.872307027    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01454399644   |ΔΨ|²/dT = 4.370431921    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007854641254  |ΔΨ|²/dT = 2.151069248    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004329774791  |ΔΨ|²/dT = 1.060512866    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002358135061  |ΔΨ|²/dT = 0.5291759805   |
+| normal vector:         i=76 	|n_0| = 64.808590158   |n_1| = 64.699399405   
+| curvature:         i=31 	|k| = 1587.6622737   
+| ls: t= 0.53      | GMRES: i=63   	 |Δϕ|2 = 64.31220244    
+| normal vector:         i=76 	|n_0| = 64.748856943   |n_1| = 64.707570282   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03037892702   |ΔΨ|²/dT = 9.020146117    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01514854026   |ΔΨ|²/dT = 4.394593581    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008018002457  |ΔΨ|²/dT = 2.15076993     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004330065663  |ΔΨ|²/dT = 1.059435711    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002270379634  |ΔΨ|²/dT = 0.5299364676   |
+| normal vector:         i=76 	|n_0| = 64.750789497   |n_1| = 64.705647631   
+| curvature:         i=31 	|k| = 1583.146559    
+| ls: t= 0.54      | GMRES: i=63   	 |Δϕ|2 = 64.31219502    
+| normal vector:         i=76 	|n_0| = 64.695735277   |n_1| = 64.715664645   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03181842072   |ΔΨ|²/dT = 8.906346474    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01554469049   |ΔΨ|²/dT = 4.392195005    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008151700902  |ΔΨ|²/dT = 2.160866892    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004219375597  |ΔΨ|²/dT = 1.065723622    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002189459749  |ΔΨ|²/dT = 0.5331968654   |
+| normal vector:         i=76 	|n_0| = 64.697767993   |n_1| = 64.713684465   
+| curvature:         i=31 	|k| = 1585.6861519   
+| ls: t= 0.55      | GMRES: i=63   	 |Δϕ|2 = 64.31219839    
+| normal vector:         i=76 	|n_0| = 64.647887741   |n_1| = 64.725813798   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03163509412   |ΔΨ|²/dT = 9.059651434    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01694809999   |ΔΨ|²/dT = 4.418419198    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008754414805  |ΔΨ|²/dT = 2.160792417    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004431455048  |ΔΨ|²/dT = 1.063635291    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002226904146  |ΔΨ|²/dT = 0.5324625811   |
+| normal vector:         i=76 	|n_0| = 64.649964099   |n_1| = 64.723746986   
+| curvature:         i=31 	|k| = 1585.4531457   
+| ls: t= 0.56      | GMRES: i=63   	 |Δϕ|2 = 64.31219461    
+| normal vector:         i=76 	|n_0| = 64.605556358   |n_1| = 64.738261388   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03186131471   |ΔΨ|²/dT = 8.985637925    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.0162213314    |ΔΨ|²/dT = 4.415277409    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008772913901  |ΔΨ|²/dT = 2.165524124    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004718967993  |ΔΨ|²/dT = 1.065983627    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002513268304  |ΔΨ|²/dT = 0.5331635368   |
+| normal vector:         i=76 	|n_0| = 64.607698935   |n_1| = 64.736171924   
+| curvature:         i=31 	|k| = 1585.3907313   
+| ls: t= 0.57      | GMRES: i=63   	 |Δϕ|2 = 64.31219263    
+| normal vector:         i=76 	|n_0| = 64.56889112    |n_1| = 64.753350388   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02863298108   |ΔΨ|²/dT = 9.002183269    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01619072506   |ΔΨ|²/dT = 4.418200388    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008799994351  |ΔΨ|²/dT = 2.166685238    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004626121538  |ΔΨ|²/dT = 1.067111046    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002422051415  |ΔΨ|²/dT = 0.5343038326   |
+| normal vector:         i=76 	|n_0| = 64.571079976   |n_1| = 64.751212661   
+| curvature:         i=31 	|k| = 1585.2034332   
+| ls: t= 0.58      | GMRES: i=63   	 |Δϕ|2 = 64.31219189    
+| normal vector:         i=76 	|n_0| = 64.537857239   |n_1| = 64.77133662    
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02925820716   |ΔΨ|²/dT = 9.006206078    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01585911552   |ΔΨ|²/dT = 4.422447513    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008253898366  |ΔΨ|²/dT = 2.168243866    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00441755294   |ΔΨ|²/dT = 1.067095096    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002406513824  |ΔΨ|²/dT = 0.5338488164   |
+| normal vector:         i=76 	|n_0| = 64.540047826   |n_1| = 64.769187252   
+| curvature:         i=31 	|k| = 1587.284398    
+| ls: t= 0.59      | GMRES: i=63   	 |Δϕ|2 = 64.31219138    
+| normal vector:         i=76 	|n_0| = 64.512283937   |n_1| = 64.792530756   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02914350551   |ΔΨ|²/dT = 8.979332259    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01553506646   |ΔΨ|²/dT = 4.412180718    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007990025397  |ΔΨ|²/dT = 2.167003012    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004312268232  |ΔΨ|²/dT = 1.068391453    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002321515089  |ΔΨ|²/dT = 0.5352718835   |
+| normal vector:         i=76 	|n_0| = 64.514509992   |n_1| = 64.790374336   
+| curvature:         i=31 	|k| = 1584.4717558   
+| ls: t= 0.6       | GMRES: i=63   	 |Δϕ|2 = 64.31218822    
+| normal vector:         i=76 	|n_0| = 64.491996694   |n_1| = 64.817188948   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02896596078   |ΔΨ|²/dT = 8.989939847    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01631323266   |ΔΨ|²/dT = 4.414732482    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008639289246  |ΔΨ|²/dT = 2.166036779    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004439783263  |ΔΨ|²/dT = 1.06688785     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002274033995  |ΔΨ|²/dT = 0.5341676523   |
+| normal vector:         i=76 	|n_0| = 64.494194859   |n_1| = 64.815043897   
+| curvature:         i=31 	|k| = 1588.3240952   
+| ls: t= 0.61      | GMRES: i=63   	 |Δϕ|2 = 64.31219064    
+| normal vector:         i=76 	|n_0| = 64.476668719   |n_1| = 64.845537298   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0266987809    |ΔΨ|²/dT = 8.98616418     |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01553627909   |ΔΨ|²/dT = 4.405294677    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008429439506  |ΔΨ|²/dT = 2.161879789    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004398109129  |ΔΨ|²/dT = 1.065898656    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002259268834  |ΔΨ|²/dT = 0.534119185    |
+| normal vector:         i=76 	|n_0| = 64.478860257   |n_1| = 64.843412616   
+| curvature:         i=31 	|k| = 1585.0397791   
+| ls: t= 0.62      | GMRES: i=63   	 |Δϕ|2 = 64.31218753    
+| normal vector:         i=76 	|n_0| = 64.466024176   |n_1| = 64.87772358    
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02651831196   |ΔΨ|²/dT = 9.006038692    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01513132814   |ΔΨ|²/dT = 4.407612463    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008568858561  |ΔΨ|²/dT = 2.158710914    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004600378517  |ΔΨ|²/dT = 1.062607906    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002396567158  |ΔΨ|²/dT = 0.5319122474   |
+| normal vector:         i=76 	|n_0| = 64.468169689   |n_1| = 64.875638479   
+| curvature:         i=31 	|k| = 1585.2234521   
+| ls: t= 0.63      | GMRES: i=63   	 |Δϕ|2 = 64.31218887    
+| normal vector:         i=76 	|n_0| = 64.459708853   |n_1| = 64.913807281   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02912315369   |ΔΨ|²/dT = 8.956793979    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01458560436   |ΔΨ|²/dT = 4.394709108    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007457865228  |ΔΨ|²/dT = 2.155891195    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004086548989  |ΔΨ|²/dT = 1.061923811    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002117799702  |ΔΨ|²/dT = 0.531432077    |
+| normal vector:         i=76 	|n_0| = 64.461813276   |n_1| = 64.911776944   
+| curvature:         i=31 	|k| = 1586.5644815   
+| ls: t= 0.64      | GMRES: i=63   	 |Δϕ|2 = 64.31218922    
+| normal vector:         i=76 	|n_0| = 64.457405046   |n_1| = 64.953715343   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.0290396177    |ΔΨ|²/dT = 9.04284174     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01479082225   |ΔΨ|²/dT = 4.40873069     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007415691145  |ΔΨ|²/dT = 2.152344301    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003848380348  |ΔΨ|²/dT = 1.057053363    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002024946215  |ΔΨ|²/dT = 0.5282792202   |
+| normal vector:         i=76 	|n_0| = 64.459432949   |n_1| = 64.951736753   
+| curvature:         i=31 	|k| = 1584.5610506   
+| ls: t= 0.65      | GMRES: i=63   	 |Δϕ|2 = 64.31218767    
+| normal vector:         i=76 	|n_0| = 64.45875216    |n_1| = 64.997198338   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02800028724   |ΔΨ|²/dT = 8.874669049    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01519065605   |ΔΨ|²/dT = 4.376765778    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008020531199  |ΔΨ|²/dT = 2.150695351    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00414853454   |ΔΨ|²/dT = 1.058189129    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002128865004  |ΔΨ|²/dT = 0.5279506421   |
+| normal vector:         i=76 	|n_0| = 64.460728285   |n_1| = 64.995322792   
+| curvature:         i=31 	|k| = 1583.6531139   
+| ls: t= 0.66      | GMRES: i=63   	 |Δϕ|2 = 64.31218952    
+| normal vector:         i=76 	|n_0| = 64.463447944   |n_1| = 65.043878424   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02838724503   |ΔΨ|²/dT = 8.983913119    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01503595999   |ΔΨ|²/dT = 4.388560858    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007741043247  |ΔΨ|²/dT = 2.1427236      |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004083925909  |ΔΨ|²/dT = 1.050550828    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00215457125   |ΔΨ|²/dT = 0.523448558    |
+| normal vector:         i=76 	|n_0| = 64.465306543   |n_1| = 65.042070725   
+| curvature:         i=31 	|k| = 1586.5231401   
+| ls: t= 0.67      | GMRES: i=63   	 |Δϕ|2 = 64.31219024    
+| normal vector:         i=76 	|n_0| = 64.471095826   |n_1| = 65.093091491   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02890645581   |ΔΨ|²/dT = 8.813210108    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01520192514   |ΔΨ|²/dT = 4.358808711    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007518925927  |ΔΨ|²/dT = 2.14311326     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003910865615  |ΔΨ|²/dT = 1.052446438    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002104933093  |ΔΨ|²/dT = 0.5228931479   |
+| normal vector:         i=76 	|n_0| = 64.472879496   |n_1| = 65.091395411   
+| curvature:         i=31 	|k| = 1584.580281    
+| ls: t= 0.68      | GMRES: i=63   	 |Δϕ|2 = 64.31219163    
+| normal vector:         i=76 	|n_0| = 64.481400038   |n_1| = 65.144045286   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02766995151   |ΔΨ|²/dT = 8.879991506    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01455026425   |ΔΨ|²/dT = 4.349717479    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007820401885  |ΔΨ|²/dT = 2.131491786    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003977732703  |ΔΨ|²/dT = 1.046797056    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00210601596   |ΔΨ|²/dT = 0.5206611515   |
+| normal vector:         i=76 	|n_0| = 64.483063601   |n_1| = 65.142474535   
+| curvature:         i=31 	|k| = 1582.1420415   
+| ls: t= 0.69      | GMRES: i=63   	 |Δϕ|2 = 64.31218919    
+| normal vector:         i=76 	|n_0| = 64.493966258   |n_1| = 65.195716019   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02849482838   |ΔΨ|²/dT = 8.791018551    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01409088447   |ΔΨ|²/dT = 4.34024821     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007676559603  |ΔΨ|²/dT = 2.131214728    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003943748424  |ΔΨ|²/dT = 1.045371722    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001983230826  |ΔΨ|²/dT = 0.518598823    |
+| normal vector:         i=76 	|n_0| = 64.495509055   |n_1| = 65.194253126   
+| curvature:         i=31 	|k| = 1587.895414    
+| ls: t= 0.7       | GMRES: i=63   	 |Δϕ|2 = 64.31219762    
+| normal vector:         i=76 	|n_0| = 64.508431365   |n_1| = 65.246867838   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02620926792   |ΔΨ|²/dT = 8.805983492    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01399465023   |ΔΨ|²/dT = 4.317757294    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007281312176  |ΔΨ|²/dT = 2.117581792    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003702097162  |ΔΨ|²/dT = 1.039321231    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001909451822  |ΔΨ|²/dT = 0.5151970971   |
+| normal vector:         i=76 	|n_0| = 64.509844114   |n_1| = 65.245537589   
+| curvature:         i=31 	|k| = 1583.5681422   
+| ls: t= 0.71      | GMRES: i=63   	 |Δϕ|2 = 64.31219509    
+| normal vector:         i=76 	|n_0| = 64.524410715   |n_1| = 65.296160156   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.028908996     |ΔΨ|²/dT = 8.871095255    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01455354489   |ΔΨ|²/dT = 4.336382391    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006977662975  |ΔΨ|²/dT = 2.116866642    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003534507182  |ΔΨ|²/dT = 1.035038926    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001847058556  |ΔΨ|²/dT = 0.5120834173   |
+| normal vector:         i=76 	|n_0| = 64.525682052   |n_1| = 65.294963758   
+| curvature:         i=31 	|k| = 1581.8392382   
+| ls: t= 0.72      | GMRES: i=63   	 |Δϕ|2 = 64.31219689    
+| normal vector:         i=76 	|n_0| = 64.541507762   |n_1| = 65.342129923   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.0276036269    |ΔΨ|²/dT = 8.684560866    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01367106209   |ΔΨ|²/dT = 4.302834605    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007121424234  |ΔΨ|²/dT = 2.116939367    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003662854159  |ΔΨ|²/dT = 1.037124881    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001826627973  |ΔΨ|²/dT = 0.5116294742   |
+| normal vector:         i=76 	|n_0| = 64.542650137   |n_1| = 65.341094284   
+| curvature:         i=31 	|k| = 1581.8273986   
+| ls: t= 0.73      | GMRES: i=63   	 |Δϕ|2 = 64.31220048    
+| normal vector:         i=76 	|n_0| = 64.559346152   |n_1| = 65.38330069    
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0295069771    |ΔΨ|²/dT = 8.758740351    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01394833265   |ΔΨ|²/dT = 4.294726912    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007108674034  |ΔΨ|²/dT = 2.104939024    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003488046336  |ΔΨ|²/dT = 1.031089424    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001811594007  |ΔΨ|²/dT = 0.5089021434   |
+| normal vector:         i=76 	|n_0| = 64.560317756   |n_1| = 65.382409974   
+| curvature:         i=31 	|k| = 1580.3448995   
+| ls: t= 0.74      | GMRES: i=63   	 |Δϕ|2 = 64.31219967    
+| normal vector:         i=76 	|n_0| = 64.57750096    |n_1| = 65.418181915   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02864904842   |ΔΨ|²/dT = 8.700855922    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01322951489   |ΔΨ|²/dT = 4.290901216    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006478066815  |ΔΨ|²/dT = 2.104338065    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003300320237  |ΔΨ|²/dT = 1.028794329    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001650594111  |ΔΨ|²/dT = 0.5063520031   |
+| normal vector:         i=76 	|n_0| = 64.578311312   |n_1| = 65.417429844   
+| curvature:         i=31 	|k| = 1583.4698981   
+| ls: t= 0.75      | GMRES: i=63   	 |Δϕ|2 = 64.31220647    
+| normal vector:         i=76 	|n_0| = 64.595615476   |n_1| = 65.445393371   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03087397601   |ΔΨ|²/dT = 8.661285265    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01378064793   |ΔΨ|²/dT = 4.272907174    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006958915219  |ΔΨ|²/dT = 2.101397314    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003451045017  |ΔΨ|²/dT = 1.029894011    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001675900397  |ΔΨ|²/dT = 0.5072075357   |
+| normal vector:         i=76 	|n_0| = 64.596262924   |n_1| = 65.444802136   
+| curvature:         i=31 	|k| = 1581.6653805   
+| ls: t= 0.76      | GMRES: i=63   	 |Δϕ|2 = 64.31220641    
+| normal vector:         i=75 	|n_0| = 64.613351611   |n_1| = 65.463755265   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02779733694   |ΔΨ|²/dT = 8.777836536    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01357765366   |ΔΨ|²/dT = 4.28918328     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006703293881  |ΔΨ|²/dT = 2.095707388    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003311740687  |ΔΨ|²/dT = 1.023894965    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001636277734  |ΔΨ|²/dT = 0.503778092    |
+| normal vector:         i=75 	|n_0| = 64.613819535   |n_1| = 65.463311941   
+| curvature:         i=31 	|k| = 1581.8305859   
+| ls: t= 0.77      | GMRES: i=63   	 |Δϕ|2 = 64.31220627    
+| normal vector:         i=75 	|n_0| = 64.630398754   |n_1| = 65.472290392   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0280610449    |ΔΨ|²/dT = 8.608229313    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01418070523   |ΔΨ|²/dT = 4.272761094    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006987632282  |ΔΨ|²/dT = 2.103131705    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003329122692  |ΔΨ|²/dT = 1.028883994    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001577391031  |ΔΨ|²/dT = 0.5050455448   |
+| normal vector:         i=75 	|n_0| = 64.630704125   |n_1| = 65.472007435   
+| curvature:         i=31 	|k| = 1586.9661791   
+| ls: t= 0.78      | GMRES: i=63   	 |Δϕ|2 = 64.31221038    
+| normal vector:         i=75 	|n_0| = 64.646533738   |n_1| = 65.470339601   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02916792      |ΔΨ|²/dT = 8.673068279    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01462790825   |ΔΨ|²/dT = 4.25963479     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006884184097  |ΔΨ|²/dT = 2.092232341    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003163897865  |ΔΨ|²/dT = 1.025396217    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001501204207  |ΔΨ|²/dT = 0.5046069221   |
+| normal vector:         i=75 	|n_0| = 64.646662982   |n_1| = 65.470223916   
+| curvature:         i=31 	|k| = 1581.7265055   
+| ls: t= 0.79      | GMRES: i=63   	 |Δϕ|2 = 64.31220819    
+| normal vector:         i=75 	|n_0| = 64.661565947   |n_1| = 65.457571204   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.03209891141   |ΔΨ|²/dT = 8.766922678    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01480524072   |ΔΨ|²/dT = 4.292819358    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00656662624   |ΔΨ|²/dT = 2.098389679    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003130307706  |ΔΨ|²/dT = 1.024708014    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001515548143  |ΔΨ|²/dT = 0.5035094022   |
+| normal vector:         i=75 	|n_0| = 64.66151227    |n_1| = 65.457603063   
+| curvature:         i=31 	|k| = 1583.3562425   
+| ls: t= 0.8       | GMRES: i=63   	 |Δϕ|2 = 64.3122091     
+| normal vector:         i=75 	|n_0| = 64.675380068   |n_1| = 65.433983187   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02865860265   |ΔΨ|²/dT = 8.589848999    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01399613986   |ΔΨ|²/dT = 4.267899283    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007301994143  |ΔΨ|²/dT = 2.104353049    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003640695201  |ΔΨ|²/dT = 1.031027654    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001777175112  |ΔΨ|²/dT = 0.5064694124   |
+| normal vector:         i=75 	|n_0| = 64.67515972    |n_1| = 65.434182003   
+| curvature:         i=31 	|k| = 1586.4764512   
+| ls: t= 0.81      | GMRES: i=63   	 |Δϕ|2 = 64.31221124    
+| normal vector:         i=75 	|n_0| = 64.687954262   |n_1| = 65.399972983   
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.02837833688   |ΔΨ|²/dT = 8.74465165     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01495361738   |ΔΨ|²/dT = 4.278610881    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007382614069  |ΔΨ|²/dT = 2.098013324    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003456029274  |ΔΨ|²/dT = 1.028421662    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001632886408  |ΔΨ|²/dT = 0.5067319353   |
+| normal vector:         i=75 	|n_0| = 64.687553353   |n_1| = 65.400333107   
+| curvature:         i=31 	|k| = 1580.9996257   
+| ls: t= 0.82      | GMRES: i=63   	 |Δϕ|2 = 64.31220754    
+| normal vector:         i=76 	|n_0| = 64.699304623   |n_1| = 65.356257854   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03258371297   |ΔΨ|²/dT = 8.756184543    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01521968497   |ΔΨ|²/dT = 4.301920513    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006822051357  |ΔΨ|²/dT = 2.10656034     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00345469046   |ΔΨ|²/dT = 1.029930601    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001801331544  |ΔΨ|²/dT = 0.5067358269   |
+| normal vector:         i=76 	|n_0| = 64.698731886   |n_1| = 65.356768023   
+| curvature:         i=31 	|k| = 1585.3645407   
+| ls: t= 0.83      | GMRES: i=63   	 |Δϕ|2 = 64.31220861    
+| normal vector:         i=76 	|n_0| = 64.709531472   |n_1| = 65.303860508   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02916117733   |ΔΨ|²/dT = 8.664285569    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01512271329   |ΔΨ|²/dT = 4.290896655    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007897452767  |ΔΨ|²/dT = 2.114163361    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003957374397  |ΔΨ|²/dT = 1.036920367    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001935954767  |ΔΨ|²/dT = 0.5105560887   |
+| normal vector:         i=76 	|n_0| = 64.708799638   |n_1| = 65.304542702   
+| curvature:         i=31 	|k| = 1581.5473661   
+| ls: t= 0.84      | GMRES: i=63   	 |Δϕ|2 = 64.31220793    
+| normal vector:         i=76 	|n_0| = 64.718791798   |n_1| = 65.244097367   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03027639334   |ΔΨ|²/dT = 8.801644596    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01586479264   |ΔΨ|²/dT = 4.307120628    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007846833552  |ΔΨ|²/dT = 2.111799052    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003720742053  |ΔΨ|²/dT = 1.036131524    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001792679756  |ΔΨ|²/dT = 0.5119022877   |
+| normal vector:         i=76 	|n_0| = 64.717889268   |n_1| = 65.244936742   
+| curvature:         i=31 	|k| = 1579.9938969   
+| ls: t= 0.85      | GMRES: i=63   	 |Δϕ|2 = 64.31220307    
+| normal vector:         i=76 	|n_0| = 64.727259603   |n_1| = 65.178445578   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03015392989   |ΔΨ|²/dT = 8.77169124     |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01330660406   |ΔΨ|²/dT = 4.322509723    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007100704732  |ΔΨ|²/dT = 2.122396349    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00386288553   |ΔΨ|²/dT = 1.04061448     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002030724464  |ΔΨ|²/dT = 0.514012409    |
+| normal vector:         i=76 	|n_0| = 64.726205409   |n_1| = 65.179435503   
+| curvature:         i=31 	|k| = 1581.9323163   
+| ls: t= 0.86      | GMRES: i=63   	 |Δϕ|2 = 64.31220611    
+| normal vector:         i=76 	|n_0| = 64.735168858   |n_1| = 65.108517253   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03115212977   |ΔΨ|²/dT = 8.769410179    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01615309247   |ΔΨ|²/dT = 4.317627126    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008031957023  |ΔΨ|²/dT = 2.123634626    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003891044902  |ΔΨ|²/dT = 1.043765082    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00185892097   |ΔΨ|²/dT = 0.5166559564   |
+| normal vector:         i=76 	|n_0| = 64.733962117   |n_1| = 65.109659056   
+| curvature:         i=31 	|k| = 1580.9047247   
+| ls: t= 0.87      | GMRES: i=63   	 |Δϕ|2 = 64.31220238    
+| normal vector:         i=76 	|n_0| = 64.742751781   |n_1| = 65.035984937   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03290414164   |ΔΨ|²/dT = 8.894595057    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01617937631   |ΔΨ|²/dT = 4.354651287    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007740332767  |ΔΨ|²/dT = 2.13159398     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004092059999  |ΔΨ|²/dT = 1.045247522    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002114219198  |ΔΨ|²/dT = 0.5178279841   |
+| normal vector:         i=76 	|n_0| = 64.741394582   |n_1| = 65.037253598   
+| curvature:         i=31 	|k| = 1584.1102663   
+| ls: t= 0.88      | GMRES: i=63   	 |Δϕ|2 = 64.31220119    
+| normal vector:         i=76 	|n_0| = 64.750251619   |n_1| = 64.962475407   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02752394519   |ΔΨ|²/dT = 8.792918408    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.0158399298    |ΔΨ|²/dT = 4.346739775    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008566707846  |ΔΨ|²/dT = 2.139869519    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004463693503  |ΔΨ|²/dT = 1.05182292     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002290237108  |ΔΨ|²/dT = 0.5215068013   |
+| normal vector:         i=76 	|n_0| = 64.748776697   |n_1| = 64.963889798   
+| curvature:         i=31 	|k| = 1587.7228839   
+| ls: t= 0.89      | GMRES: i=63   	 |Δϕ|2 = 64.31219906    
+| normal vector:         i=76 	|n_0| = 64.757943478   |n_1| = 64.889574095   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03079428344   |ΔΨ|²/dT = 8.908609404    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01608906889   |ΔΨ|²/dT = 4.359227365    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008012283973  |ΔΨ|²/dT = 2.139528825    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003910954579  |ΔΨ|²/dT = 1.053234604    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002143365529  |ΔΨ|²/dT = 0.5241224657   |
+| normal vector:         i=76 	|n_0| = 64.756348456   |n_1| = 64.891136176   
+| curvature:         i=31 	|k| = 1581.6505451   
+| ls: t= 0.9       | GMRES: i=63   	 |Δϕ|2 = 64.31219122    
+| normal vector:         i=76 	|n_0| = 64.766064803   |n_1| = 64.818708864   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0281077923    |ΔΨ|²/dT = 8.87893586     |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01407246436   |ΔΨ|²/dT = 4.373037087    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008063617447  |ΔΨ|²/dT = 2.149456568    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00440711922   |ΔΨ|²/dT = 1.05794157     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002359532721  |ΔΨ|²/dT = 0.5267880437   |
+| normal vector:         i=76 	|n_0| = 64.764364669   |n_1| = 64.820395574   
+| curvature:         i=31 	|k| = 1584.4606204   
+| ls: t= 0.91      | GMRES: i=63   	 |Δϕ|2 = 64.31219464    
+| normal vector:         i=76 	|n_0| = 64.77486689    |n_1| = 64.751099947   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03204810434   |ΔΨ|²/dT = 8.920714819    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01595805331   |ΔΨ|²/dT = 4.374384581    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007724902932  |ΔΨ|²/dT = 2.148209548    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003742299629  |ΔΨ|²/dT = 1.058547793    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00197425974   |ΔΨ|²/dT = 0.5281317833   |
+| normal vector:         i=76 	|n_0| = 64.773053607   |n_1| = 64.752887252   
+| curvature:         i=31 	|k| = 1584.4241224   
+| ls: t= 0.92      | GMRES: i=63   	 |Δϕ|2 = 64.31219191    
+| normal vector:         i=76 	|n_0| = 64.784576531   |n_1| = 64.687756613   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03174917642   |ΔΨ|²/dT = 9.009256261    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01628690506   |ΔΨ|²/dT = 4.401337206    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008630675554  |ΔΨ|²/dT = 2.153264756    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004473809745  |ΔΨ|²/dT = 1.059067291    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002303288694  |ΔΨ|²/dT = 0.5289496916   |
+| normal vector:         i=76 	|n_0| = 64.782676906   |n_1| = 64.689637681   
+| curvature:         i=31 	|k| = 1585.2945605   
+| ls: t= 0.93      | GMRES: i=63   	 |Δϕ|2 = 64.31218812    
+| normal vector:         i=76 	|n_0| = 64.795457243   |n_1| = 64.62948314    
+    | reini: τ= 0.015625  | CG: i=15   	 |ΔΨ|∞ = 0.0318632998    |ΔΨ|²/dT = 8.901306241    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01713635944   |ΔΨ|²/dT = 4.387438568    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008851540525  |ΔΨ|²/dT = 2.158800957    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004477592671  |ΔΨ|²/dT = 1.064608575    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002328900905  |ΔΨ|²/dT = 0.5322612721   |
+| normal vector:         i=76 	|n_0| = 64.793498274   |n_1| = 64.631486741   
+| curvature:         i=31 	|k| = 1583.4501425   
+| ls: t= 0.94      | GMRES: i=63   	 |Δϕ|2 = 64.31218531    
+| normal vector:         i=76 	|n_0| = 64.807778699   |n_1| = 64.576898179   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03136565322   |ΔΨ|²/dT = 9.003475142    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01554621261   |ΔΨ|²/dT = 4.415894401    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008720219502  |ΔΨ|²/dT = 2.16425401     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004766016325  |ΔΨ|²/dT = 1.065198578    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002581300187  |ΔΨ|²/dT = 0.5326502229   |
+| normal vector:         i=76 	|n_0| = 64.805731035   |n_1| = 64.578949826   
+| curvature:         i=31 	|k| = 1587.6041434   
+| ls: t= 0.95      | GMRES: i=63   	 |Δϕ|2 = 64.31218698    
+| normal vector:         i=76 	|n_0| = 64.821763057   |n_1| = 64.530309321   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02903507507   |ΔΨ|²/dT = 8.962606206    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01614514421   |ΔΨ|²/dT = 4.407372021    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008744764795  |ΔΨ|²/dT = 2.165633215    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004576739447  |ΔΨ|²/dT = 1.067464856    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00235488568   |ΔΨ|²/dT = 0.5340783001   |
+| normal vector:         i=76 	|n_0| = 64.819681945   |n_1| = 64.532423257   
+| curvature:         i=31 	|k| = 1584.2982804   
+| ls: t= 0.96      | GMRES: i=63   	 |Δϕ|2 = 64.31218139    
+| normal vector:         i=76 	|n_0| = 64.837726578   |n_1| = 64.489928214   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02904594862   |ΔΨ|²/dT = 8.974060018    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01562337788   |ΔΨ|²/dT = 4.410472104    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008063340919  |ΔΨ|²/dT = 2.166532424    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004323031518  |ΔΨ|²/dT = 1.068337938    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002417228209  |ΔΨ|²/dT = 0.5351375865   |
+| normal vector:         i=76 	|n_0| = 64.835602314   |n_1| = 64.49210388    
+| curvature:         i=31 	|k| = 1584.3092551   
+| ls: t= 0.97      | GMRES: i=63   	 |Δϕ|2 = 64.312181      
+| normal vector:         i=76 	|n_0| = 64.855928144   |n_1| = 64.455794821   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02822999149   |ΔΨ|²/dT = 8.981614198    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01615848207   |ΔΨ|²/dT = 4.410526735    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008672807554  |ΔΨ|²/dT = 2.16599987     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004503268579  |ΔΨ|²/dT = 1.068090892    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002320578828  |ΔΨ|²/dT = 0.5350285985   |
+| normal vector:         i=76 	|n_0| = 64.853780167   |n_1| = 64.457975617   
+| curvature:         i=31 	|k| = 1587.0684784   
+| ls: t= 0.98      | GMRES: i=63   	 |Δϕ|2 = 64.31218065    
+| normal vector:         i=76 	|n_0| = 64.876655398   |n_1| = 64.427767013   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02812150509   |ΔΨ|²/dT = 9.007167162    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01541851168   |ΔΨ|²/dT = 4.408714201    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008526350478  |ΔΨ|²/dT = 2.162784755    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004520111634  |ΔΨ|²/dT = 1.06706211     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00235145994   |ΔΨ|²/dT = 0.5353230066   |
+| normal vector:         i=76 	|n_0| = 64.874503478   |n_1| = 64.429980074   
+| curvature:         i=31 	|k| = 1584.9390954   
+| ls: t= 0.99      | GMRES: i=63   	 |Δϕ|2 = 64.31217572    
+| normal vector:         i=76 	|n_0| = 64.900183181   |n_1| = 64.405690395   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02830976631   |ΔΨ|²/dT = 8.981490867    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01464604991   |ΔΨ|²/dT = 4.407257535    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008411478371  |ΔΨ|²/dT = 2.162585182    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004562087025  |ΔΨ|²/dT = 1.066160848    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00239074431   |ΔΨ|²/dT = 0.5343426894   |
+| normal vector:         i=76 	|n_0| = 64.89803383    |n_1| = 64.407894918   
+| curvature:         i=31 	|k| = 1586.5966887   
+| ls: t= 1         | GMRES: i=63   	 |Δϕ|2 = 64.31217822    
+| normal vector:         i=76 	|n_0| = 64.926740358   |n_1| = 64.389274848   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03046453416   |ΔΨ|²/dT = 9.028475245    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.0155702534    |ΔΨ|²/dT = 4.408420474    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007747081057  |ΔΨ|²/dT = 2.157767964    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004092370847  |ΔΨ|²/dT = 1.063029787    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002149318046  |ΔΨ|²/dT = 0.5329778637   |
+| normal vector:         i=76 	|n_0| = 64.924615302   |n_1| = 64.391461576   
+| curvature:         i=31 	|k| = 1585.6884377   
+| ls: t= 1.01      | GMRES: i=63   	 |Δϕ|2 = 64.31217333    
+| normal vector:         i=76 	|n_0| = 64.956514739   |n_1| = 64.378217792   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03003292949   |ΔΨ|²/dT = 8.986391619    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01558189524   |ΔΨ|²/dT = 4.407632669    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008130258204  |ΔΨ|²/dT = 2.159067265    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004162619378  |ΔΨ|²/dT = 1.062284473    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002115488656  |ΔΨ|²/dT = 0.5314557283   |
+| normal vector:         i=76 	|n_0| = 64.954416879   |n_1| = 64.380377754   
+| curvature:         i=31 	|k| = 1585.605965    
+| ls: t= 1.02      | GMRES: i=63   	 |Δϕ|2 = 64.31217507    
+| normal vector:         i=76 	|n_0| = 64.989590989   |n_1| = 64.372190908   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02853589106   |ΔΨ|²/dT = 8.979743945    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01577034719   |ΔΨ|²/dT = 4.398654395    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008381220041  |ΔΨ|²/dT = 2.154452854    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004349846017  |ΔΨ|²/dT = 1.060062359    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002232071098  |ΔΨ|²/dT = 0.5302325794   |
+| normal vector:         i=76 	|n_0| = 64.987555316   |n_1| = 64.374301724   
+| curvature:         i=31 	|k| = 1585.2656794   
+| ls: t= 1.03      | GMRES: i=63   	 |Δϕ|2 = 64.31217145    
+| normal vector:         i=76 	|n_0| = 65.025971508   |n_1| = 64.370838519   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02827432995   |ΔΨ|²/dT = 8.964360283    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01502780854   |ΔΨ|²/dT = 4.405475402    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008148962815  |ΔΨ|²/dT = 2.157834148    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004348784011  |ΔΨ|²/dT = 1.059929532    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002286160865  |ΔΨ|²/dT = 0.5289411679   |
+| normal vector:         i=76 	|n_0| = 65.023977359   |n_1| = 64.37288653    
+| curvature:         i=31 	|k| = 1587.8729792   
+| ls: t= 1.04      | GMRES: i=63   	 |Δϕ|2 = 64.31217352    
+| normal vector:         i=76 	|n_0| = 65.06545904    |n_1| = 64.373806498   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02881297376   |ΔΨ|²/dT = 8.89617161     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01537163937   |ΔΨ|²/dT = 4.376454076    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007737516955  |ΔΨ|²/dT = 2.150263574    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004127345029  |ΔΨ|²/dT = 1.058736178    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002215690144  |ΔΨ|²/dT = 0.5286162771   |
+| normal vector:         i=76 	|n_0| = 65.063565427   |n_1| = 64.37579463    
+| curvature:         i=31 	|k| = 1583.3734382   
+| ls: t= 1.05      | GMRES: i=63   	 |Δϕ|2 = 64.31216801    
+| normal vector:         i=76 	|n_0| = 65.107765098   |n_1| = 64.380752573   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02840032735   |ΔΨ|²/dT = 8.899693068    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01544301437   |ΔΨ|²/dT = 4.379681187    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007884859738  |ΔΨ|²/dT = 2.147494155    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003978177592  |ΔΨ|²/dT = 1.054630101    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002178544697  |ΔΨ|²/dT = 0.5253217649   |
+| normal vector:         i=76 	|n_0| = 65.10594213    |n_1| = 64.382640082   
+| curvature:         i=31 	|k| = 1589.7810445   
+| ls: t= 1.06      | GMRES: i=63   	 |Δϕ|2 = 64.31217351    
+| normal vector:         i=76 	|n_0| = 65.152321905   |n_1| = 64.391284842   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02781769615   |ΔΨ|²/dT = 8.832384655    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01477310803   |ΔΨ|²/dT = 4.348942901    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008052022532  |ΔΨ|²/dT = 2.138283789    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00414820551   |ΔΨ|²/dT = 1.052246247    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002161634488  |ΔΨ|²/dT = 0.5239779392   |
+| normal vector:         i=76 	|n_0| = 65.150605752   |n_1| = 64.39308919    
+| curvature:         i=31 	|k| = 1583.570256    
+| ls: t= 1.07      | GMRES: i=63   	 |Δϕ|2 = 64.31216966    
+| normal vector:         i=76 	|n_0| = 65.198426082   |n_1| = 64.405060594   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02705859976   |ΔΨ|²/dT = 8.921716516    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01339786705   |ΔΨ|²/dT = 4.357209947    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007472935951  |ΔΨ|²/dT = 2.129876578    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003928056528  |ΔΨ|²/dT = 1.044823248    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001990127995  |ΔΨ|²/dT = 0.5196281132   |
+| normal vector:         i=76 	|n_0| = 65.196821696   |n_1| = 64.406747238   
+| curvature:         i=31 	|k| = 1582.8344609   
+| ls: t= 1.08      | GMRES: i=63   	 |Δϕ|2 = 64.31216953    
+| normal vector:         i=76 	|n_0| = 65.245142133   |n_1| = 64.421672728   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02788385428   |ΔΨ|²/dT = 8.778780471    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01451324522   |ΔΨ|²/dT = 4.337278937    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007284109237  |ΔΨ|²/dT = 2.132101013    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003618240447  |ΔΨ|²/dT = 1.04676125     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001984228773  |ΔΨ|²/dT = 0.5191904595   |
+| normal vector:         i=76 	|n_0| = 65.243663179   |n_1| = 64.423254963   
+| curvature:         i=31 	|k| = 1585.6260633   
+| ls: t= 1.09      | GMRES: i=63   	 |Δϕ|2 = 64.31217459    
+| normal vector:         i=76 	|n_0| = 65.291357534   |n_1| = 64.440746827   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.028848816     |ΔΨ|²/dT = 8.898131159    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01418902057   |ΔΨ|²/dT = 4.338648845    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006755081133  |ΔΨ|²/dT = 2.118544112    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003496944477  |ΔΨ|²/dT = 1.037602204    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001796192263  |ΔΨ|²/dT = 0.5143806056   |
+| normal vector:         i=76 	|n_0| = 65.289997731   |n_1| = 64.442180136   
+| curvature:         i=31 	|k| = 1583.5535266   
+| ls: t= 1.1       | GMRES: i=63   	 |Δϕ|2 = 64.31217146    
+| normal vector:         i=75 	|n_0| = 65.335782841   |n_1| = 64.461835196   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02711958367   |ΔΨ|²/dT = 8.783282765    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01408001603   |ΔΨ|²/dT = 4.335605858    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007411034449  |ΔΨ|²/dT = 2.125725329    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003728103979  |ΔΨ|²/dT = 1.039797099    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001906558537  |ΔΨ|²/dT = 0.5132828429   |
+| normal vector:         i=75 	|n_0| = 65.334555143   |n_1| = 64.463142205   
+| curvature:         i=31 	|k| = 1586.5753457   
+| ls: t= 1.11      | GMRES: i=63   	 |Δϕ|2 = 64.3121754     
+| normal vector:         i=75 	|n_0| = 65.377033917   |n_1| = 64.484543814   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02836058021   |ΔΨ|²/dT = 8.712611441    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01404058475   |ΔΨ|²/dT = 4.299601904    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007262593917  |ΔΨ|²/dT = 2.115586889    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003612713955  |ΔΨ|²/dT = 1.03835542     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00187556355   |ΔΨ|²/dT = 0.5130593401   |
+| normal vector:         i=75 	|n_0| = 65.375967888   |n_1| = 64.48571714    
+| curvature:         i=31 	|k| = 1581.0579635   
+| ls: t= 1.12      | GMRES: i=63   	 |Δϕ|2 = 64.31217293    
+| normal vector:         i=75 	|n_0| = 65.413684738   |n_1| = 64.508440528   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0270391269    |ΔΨ|²/dT = 8.797311831    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01276437386   |ΔΨ|²/dT = 4.304590013    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006567515867  |ΔΨ|²/dT = 2.104647862    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003406830308  |ΔΨ|²/dT = 1.029391262    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001715363113  |ΔΨ|²/dT = 0.5079887681   |
+| normal vector:         i=75 	|n_0| = 65.412755778   |n_1| = 64.509448065   
+| curvature:         i=31 	|k| = 1580.9502518   
+| ls: t= 1.13      | GMRES: i=63   	 |Δϕ|2 = 64.31217553    
+| normal vector:         i=75 	|n_0| = 65.444261731   |n_1| = 64.533068497   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02738751149   |ΔΨ|²/dT = 8.676302013    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01425343968   |ΔΨ|²/dT = 4.293255171    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007038042196  |ΔΨ|²/dT = 2.110200289    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003383271933  |ΔΨ|²/dT = 1.032656917    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001806001515  |ΔΨ|²/dT = 0.5081505602   |
+| normal vector:         i=75 	|n_0| = 65.443480887   |n_1| = 64.533924294   
+| curvature:         i=31 	|k| = 1582.8290011   
+| ls: t= 1.14      | GMRES: i=63   	 |Δϕ|2 = 64.31218116    
+| normal vector:         i=75 	|n_0| = 65.467403826   |n_1| = 64.558027989   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02811641236   |ΔΨ|²/dT = 8.750957421    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01394642582   |ΔΨ|²/dT = 4.287634679    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006457483676  |ΔΨ|²/dT = 2.10102656     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003163520528  |ΔΨ|²/dT = 1.028563697    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001580661325  |ΔΨ|²/dT = 0.5065755232   |
+| normal vector:         i=75 	|n_0| = 65.466775477   |n_1| = 64.55870896    
+| curvature:         i=31 	|k| = 1580.8276873   
+| ls: t= 1.15      | GMRES: i=63   	 |Δϕ|2 = 64.31217836    
+| normal vector:         i=75 	|n_0| = 65.481891557   |n_1| = 64.582905835   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03010003615   |ΔΨ|²/dT = 8.728834485    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01406372593   |ΔΨ|²/dT = 4.294240988    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006290079223  |ΔΨ|²/dT = 2.102800962    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003237653876  |ΔΨ|²/dT = 1.026990567    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001619561931  |ΔΨ|²/dT = 0.5046069314   |
+| normal vector:         i=75 	|n_0| = 65.481406498   |n_1| = 64.583415477   
+| curvature:         i=31 	|k| = 1585.8349336   
+| ls: t= 1.16      | GMRES: i=63   	 |Δϕ|2 = 64.31218191    
+| normal vector:         i=75 	|n_0| = 65.486708035   |n_1| = 64.607352024   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03039279509   |ΔΨ|²/dT = 8.603389602    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01373659658   |ΔΨ|²/dT = 4.264516406    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006598749748  |ΔΨ|²/dT = 2.101430443    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003138923323  |ΔΨ|²/dT = 1.029580626    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001577296748  |ΔΨ|²/dT = 0.5057377524   |
+| normal vector:         i=75 	|n_0| = 65.486389932   |n_1| = 64.607701468   
+| curvature:         i=31 	|k| = 1585.0509187   
+| ls: t= 1.17      | GMRES: i=63   	 |Δϕ|2 = 64.31218343    
+| normal vector:         i=75 	|n_0| = 65.481144163   |n_1| = 64.63107303    
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02869316708   |ΔΨ|²/dT = 8.779166568    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01314304591   |ΔΨ|²/dT = 4.283683572    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006722941514  |ΔΨ|²/dT = 2.09439752     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003352016786  |ΔΨ|²/dT = 1.024310996    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001618333833  |ΔΨ|²/dT = 0.5039234026   |
+| normal vector:         i=75 	|n_0| = 65.48097953    |n_1| = 64.631238497   
+| curvature:         i=31 	|k| = 1581.298169    
+| ls: t= 1.18      | GMRES: i=63   	 |Δϕ|2 = 64.31218111    
+| normal vector:         i=75 	|n_0| = 65.464774269   |n_1| = 64.653799542   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02926740448   |ΔΨ|²/dT = 8.677149593    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01510671678   |ΔΨ|²/dT = 4.28828163     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007367407625  |ΔΨ|²/dT = 2.10488188     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003467449302  |ΔΨ|²/dT = 1.028502319    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001607268891  |ΔΨ|²/dT = 0.504716869    |
+| normal vector:         i=75 	|n_0| = 65.464761714   |n_1| = 64.653792903   
+| curvature:         i=31 	|k| = 1586.646192    
+| ls: t= 1.19      | GMRES: i=63   	 |Δϕ|2 = 64.31218489    
+| normal vector:         i=75 	|n_0| = 65.43753465    |n_1| = 64.675364215   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03053016425   |ΔΨ|²/dT = 8.631435725    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01486631956   |ΔΨ|²/dT = 4.264333232    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006877344353  |ΔΨ|²/dT = 2.100453556    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003271671959  |ΔΨ|²/dT = 1.030040511    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001584235842  |ΔΨ|²/dT = 0.5064213555   |
+| normal vector:         i=75 	|n_0| = 65.437690659   |n_1| = 64.675186031   
+| curvature:         i=31 	|k| = 1583.062448    
+| ls: t= 1.2       | GMRES: i=63   	 |Δϕ|2 = 64.31218403    
+| normal vector:         i=75 	|n_0| = 65.399739977   |n_1| = 64.695658505   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03110210357   |ΔΨ|²/dT = 8.800915547    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01355712428   |ΔΨ|²/dT = 4.297063429    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00698894594   |ΔΨ|²/dT = 2.100918203    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003639108818  |ΔΨ|²/dT = 1.027661319    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001825879775  |ΔΨ|²/dT = 0.5058117294   |
+| normal vector:         i=75 	|n_0| = 65.400044244   |n_1| = 64.695295927   
+| curvature:         i=31 	|k| = 1581.6794722   
+| ls: t= 1.21      | GMRES: i=63   	 |Δϕ|2 = 64.31218232    
+| normal vector:         i=75 	|n_0| = 65.352020241   |n_1| = 64.714629683   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02988782131   |ΔΨ|²/dT = 8.666929413    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01584888596   |ΔΨ|²/dT = 4.291790498    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007964217421  |ΔΨ|²/dT = 2.110501249    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003880864617  |ΔΨ|²/dT = 1.032942265    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001872768382  |ΔΨ|²/dT = 0.5077002348   |
+| normal vector:         i=75 	|n_0| = 65.352483861   |n_1| = 64.714102622   
+| curvature:         i=31 	|k| = 1586.1014867   
+| ls: t= 1.22      | GMRES: i=63   	 |Δϕ|2 = 64.31218509    
+| normal vector:         i=75 	|n_0| = 65.295361205   |n_1| = 64.732322617   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03145742951   |ΔΨ|²/dT = 8.729246077    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01543039578   |ΔΨ|²/dT = 4.294086583    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007190763534  |ΔΨ|²/dT = 2.111810973    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003444883972  |ΔΨ|²/dT = 1.036459724    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.0018362257    |ΔΨ|²/dT = 0.5109903903   |
+| normal vector:         i=75 	|n_0| = 65.295990775   |n_1| = 64.731626418   
+| curvature:         i=31 	|k| = 1580.3315574   
+| ls: t= 1.23      | GMRES: i=63   	 |Δϕ|2 = 64.31218139    
+| normal vector:         i=75 	|n_0| = 65.231023373   |n_1| = 64.74881471    
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02919015001   |ΔΨ|²/dT = 8.808441021    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01401530955   |ΔΨ|²/dT = 4.314407813    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007689990862  |ΔΨ|²/dT = 2.113078136    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003992028863  |ΔΨ|²/dT = 1.035360797    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002000490141  |ΔΨ|²/dT = 0.5110459781   |
+| normal vector:         i=75 	|n_0| = 65.231802031   |n_1| = 64.747952686   
+| curvature:         i=31 	|k| = 1580.3800979   
+| ls: t= 1.24      | GMRES: i=63   	 |Δϕ|2 = 64.31218068    
+| normal vector:         i=75 	|n_0| = 65.160464055   |n_1| = 64.764237931   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03241852787   |ΔΨ|²/dT = 8.734285005    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01642805895   |ΔΨ|²/dT = 4.31754381     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008017584218  |ΔΨ|²/dT = 2.124790794    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003839309835  |ΔΨ|²/dT = 1.042758529    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00183274036   |ΔΨ|²/dT = 0.5148164074   |
+| normal vector:         i=75 	|n_0| = 65.161403316   |n_1| = 64.763225015   
+| curvature:         i=31 	|k| = 1581.4649683   
+| ls: t= 1.25      | GMRES: i=63   	 |Δϕ|2 = 64.31218186    
+| normal vector:         i=75 	|n_0| = 65.08532029    |n_1| = 64.778771162   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03239325144   |ΔΨ|²/dT = 8.822677578    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01512170578   |ΔΨ|²/dT = 4.326282382    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008032399391  |ΔΨ|²/dT = 2.122522392    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004257141341  |ΔΨ|²/dT = 1.041890368    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002230335379  |ΔΨ|²/dT = 0.5154905268   |
+| normal vector:         i=75 	|n_0| = 65.086407101   |n_1| = 64.777597006   
+| curvature:         i=31 	|k| = 1580.4807858   
+| ls: t= 1.26      | GMRES: i=63   	 |Δϕ|2 = 64.31217813    
+| normal vector:         i=75 	|n_0| = 65.007282088   |n_1| = 64.792591848   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02936143895   |ΔΨ|²/dT = 8.83673394     |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01633975995   |ΔΨ|²/dT = 4.353320036    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008538983645  |ΔΨ|²/dT = 2.137667979    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00428326396   |ΔΨ|²/dT = 1.048956184    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002094553816  |ΔΨ|²/dT = 0.5192361142   |
+| normal vector:         i=75 	|n_0| = 65.008497472   |n_1| = 64.791271992   
+| curvature:         i=31 	|k| = 1586.9188746   
+| ls: t= 1.27      | GMRES: i=63   	 |Δϕ|2 = 64.31218048    
+| normal vector:         i=76 	|n_0| = 64.928037669   |n_1| = 64.805916553   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03015167996   |ΔΨ|²/dT = 8.822426471    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01475455603   |ΔΨ|²/dT = 4.345256       |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007114614659  |ΔΨ|²/dT = 2.139131506    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003998661104  |ΔΨ|²/dT = 1.052965169    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00218616717   |ΔΨ|²/dT = 0.5226131588   |
+| normal vector:         i=76 	|n_0| = 64.929397971   |n_1| = 64.80446763    
+| curvature:         i=31 	|k| = 1584.3139061   
+| ls: t= 1.28      | GMRES: i=63   	 |Δϕ|2 = 64.31217661    
+| normal vector:         i=76 	|n_0| = 64.8492453     |n_1| = 64.818968878   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03037210309   |ΔΨ|²/dT = 8.952068309    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01561993406   |ΔΨ|²/dT = 4.371868085    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008061880991  |ΔΨ|²/dT = 2.141127608    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004172986093  |ΔΨ|²/dT = 1.05286005     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002087611336  |ΔΨ|²/dT = 0.5238715618   |
+| normal vector:         i=76 	|n_0| = 64.850743378   |n_1| = 64.817399569   
+| curvature:         i=31 	|k| = 1581.7549373   
+| ls: t= 1.29      | GMRES: i=63   	 |Δϕ|2 = 64.31217136    
+| normal vector:         i=76 	|n_0| = 64.772415036   |n_1| = 64.831965121   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0331893533    |ΔΨ|²/dT = 8.861523818    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01631551282   |ΔΨ|²/dT = 4.371515026    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008139332339  |ΔΨ|²/dT = 2.150983601    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004292036954  |ΔΨ|²/dT = 1.059125271    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002249755403  |ΔΨ|²/dT = 0.5272121469   |
+| normal vector:         i=76 	|n_0| = 64.774056667   |n_1| = 64.830295685   
+| curvature:         i=31 	|k| = 1583.3277405   
+| ls: t= 1.3       | GMRES: i=63   	 |Δϕ|2 = 64.31217213    
+| normal vector:         i=76 	|n_0| = 64.698897653   |n_1| = 64.84513216    
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03006055107   |ΔΨ|²/dT = 8.9546352      |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01675211905   |ΔΨ|²/dT = 4.387246718    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008902366978  |ΔΨ|²/dT = 2.151262418    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004595090473  |ΔΨ|²/dT = 1.05851674     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002340189561  |ΔΨ|²/dT = 0.5275460175   |
+| normal vector:         i=76 	|n_0| = 64.70064089    |n_1| = 64.843340539   
+| curvature:         i=31 	|k| = 1583.2928393   
+| ls: t= 1.31      | GMRES: i=63   	 |Δϕ|2 = 64.31217101    
+| normal vector:         i=76 	|n_0| = 64.629790966   |n_1| = 64.858654686   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03201612365   |ΔΨ|²/dT = 8.953792957    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01686530126   |ΔΨ|²/dT = 4.401554734    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008477495543  |ΔΨ|²/dT = 2.159404429    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00443307955   |ΔΨ|²/dT = 1.062075499    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002391416577  |ΔΨ|²/dT = 0.5295289811   |
+| normal vector:         i=76 	|n_0| = 64.631622721   |n_1| = 64.856776297   
+| curvature:         i=31 	|k| = 1588.8122779   
+| ls: t= 1.32      | GMRES: i=63   	 |Δϕ|2 = 64.31217039    
+| normal vector:         i=76 	|n_0| = 64.565998852   |n_1| = 64.872777829   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02960233658   |ΔΨ|²/dT = 8.948335763    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01530535169   |ΔΨ|²/dT = 4.39495163     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00861824352   |ΔΨ|²/dT = 2.160338472    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00465741844   |ΔΨ|²/dT = 1.065227644    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002469242022  |ΔΨ|²/dT = 0.5323337837   |
+| normal vector:         i=76 	|n_0| = 64.567954599   |n_1| = 64.870830804   
+| curvature:         i=31 	|k| = 1582.7855135   
+| ls: t= 1.33      | GMRES: i=63   	 |Δϕ|2 = 64.31216335    
+| normal vector:         i=76 	|n_0| = 64.508246761   |n_1| = 64.887737041   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0288304094    |ΔΨ|²/dT = 8.948080514    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01604925445   |ΔΨ|²/dT = 4.4101853      |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008452130121  |ΔΨ|²/dT = 2.168826515    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004293515241  |ΔΨ|²/dT = 1.069159559    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002211015347  |ΔΨ|²/dT = 0.5345791243   |
+| normal vector:         i=76 	|n_0| = 64.510273495   |n_1| = 64.885716315   
+| curvature:         i=31 	|k| = 1589.3585332   
+| ls: t= 1.34      | GMRES: i=63   	 |Δϕ|2 = 64.3121684     
+| normal vector:         i=76 	|n_0| = 64.456953956   |n_1| = 64.903755294   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02818169178   |ΔΨ|²/dT = 9.006606943    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01588150171   |ΔΨ|²/dT = 4.411820877    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008570918024  |ΔΨ|²/dT = 2.166265444    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004470462219  |ΔΨ|²/dT = 1.068743518    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002385368047  |ΔΨ|²/dT = 0.535157785    |
+| normal vector:         i=76 	|n_0| = 64.459028644   |n_1| = 64.901674973   
+| curvature:         i=31 	|k| = 1584.2391201   
+| ls: t= 1.35      | GMRES: i=63   	 |Δϕ|2 = 64.31216277    
+| normal vector:         i=76 	|n_0| = 64.412371961   |n_1| = 64.921087203   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02958445949   |ΔΨ|²/dT = 8.994786768    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01493322565   |ΔΨ|²/dT = 4.413171512    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008339938305  |ΔΨ|²/dT = 2.167132139    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004446689279  |ΔΨ|²/dT = 1.06931444     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002313644963  |ΔΨ|²/dT = 0.5360563682   |
+| normal vector:         i=76 	|n_0| = 64.414521502   |n_1| = 64.918980693   
+| curvature:         i=31 	|k| = 1585.4526965   
+| ls: t= 1.36      | GMRES: i=63   	 |Δϕ|2 = 64.3121612     
+| normal vector:         i=76 	|n_0| = 64.374631137   |n_1| = 64.940018352   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03056552319   |ΔΨ|²/dT = 9.000214859    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01490817196   |ΔΨ|²/dT = 4.412790273    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008144381532  |ΔΨ|²/dT = 2.165675023    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004440147713  |ΔΨ|²/dT = 1.068348787    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002329639196  |ΔΨ|²/dT = 0.5355666505   |
+| normal vector:         i=76 	|n_0| = 64.376799374   |n_1| = 64.937870351   
+| curvature:         i=31 	|k| = 1585.8636277   
+| ls: t= 1.37      | GMRES: i=63   	 |Δϕ|2 = 64.31216201    
+| normal vector:         i=76 	|n_0| = 64.343637914   |n_1| = 64.960791521   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03105027624   |ΔΨ|²/dT = 9.048299226    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01633906081   |ΔΨ|²/dT = 4.418660562    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008340940385  |ΔΨ|²/dT = 2.162989848    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004187768197  |ΔΨ|²/dT = 1.066012147    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002100635165  |ΔΨ|²/dT = 0.5347555308   |
+| normal vector:         i=76 	|n_0| = 64.345826742   |n_1| = 64.958643092   
+| curvature:         i=31 	|k| = 1585.7543294   
+| ls: t= 1.38      | GMRES: i=63   	 |Δϕ|2 = 64.31215662    
+| normal vector:         i=76 	|n_0| = 64.319246584   |n_1| = 64.983700873   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03113776899   |ΔΨ|²/dT = 8.969697798    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01611353494   |ΔΨ|²/dT = 4.409486739    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008476395117  |ΔΨ|²/dT = 2.16439481     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00442721702   |ΔΨ|²/dT = 1.066813733    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002288999431  |ΔΨ|²/dT = 0.5344761001   |
+| normal vector:         i=76 	|n_0| = 64.321454917   |n_1| = 64.981547209   
+| curvature:         i=31 	|k| = 1585.486245    
+| ls: t= 1.39      | GMRES: i=63   	 |Δϕ|2 = 64.31215801    
+| normal vector:         i=76 	|n_0| = 64.301227349   |n_1| = 65.008972649   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02927293544   |ΔΨ|²/dT = 9.032626151    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01610182038   |ΔΨ|²/dT = 4.415920165    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008716113952  |ΔΨ|²/dT = 2.160610508    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004600062095  |ΔΨ|²/dT = 1.063455467    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002403589325  |ΔΨ|²/dT = 0.532825338    |
+| normal vector:         i=76 	|n_0| = 64.303405103   |n_1| = 65.006840622   
+| curvature:         i=31 	|k| = 1586.4477137   
+| ls: t= 1.4       | GMRES: i=63   	 |Δϕ|2 = 64.31215366    
+| normal vector:         i=76 	|n_0| = 64.289245956   |n_1| = 65.036820482   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02880268199   |ΔΨ|²/dT = 8.928479607    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01560830645   |ΔΨ|²/dT = 4.402698961    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008372706284  |ΔΨ|²/dT = 2.163290293    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004505495085  |ΔΨ|²/dT = 1.065540054    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002413089843  |ΔΨ|²/dT = 0.5330251085   |
+| normal vector:         i=76 	|n_0| = 64.291420267   |n_1| = 65.03471294    
+| curvature:         i=31 	|k| = 1585.5421772   
+| ls: t= 1.41      | GMRES: i=63   	 |Δϕ|2 = 64.31215402    
+| normal vector:         i=76 	|n_0| = 64.283010027   |n_1| = 65.06736357    
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02877573156   |ΔΨ|²/dT = 8.97640768     |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01507511219   |ΔΨ|²/dT = 4.398826481    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007848166314  |ΔΨ|²/dT = 2.15604309     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004313956562  |ΔΨ|²/dT = 1.061501451    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002344008139  |ΔΨ|²/dT = 0.5312398851   |
+| normal vector:         i=76 	|n_0| = 64.285125021   |n_1| = 65.065308952   
+| curvature:         i=31 	|k| = 1584.6779751   
+| ls: t= 1.42      | GMRES: i=63   	 |Δϕ|2 = 64.31214944    
+| normal vector:         i=76 	|n_0| = 64.282123125   |n_1| = 65.100646527   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02874009982   |ΔΨ|²/dT = 8.871629791    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01582423504   |ΔΨ|²/dT = 4.386676707    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008181733405  |ΔΨ|²/dT = 2.159243517    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004091409988  |ΔΨ|²/dT = 1.063863001    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002218553423  |ΔΨ|²/dT = 0.5315928194   |
+| normal vector:         i=76 	|n_0| = 64.284199102   |n_1| = 65.098642512   
+| curvature:         i=31 	|k| = 1590.0926013   
+| ls: t= 1.43      | GMRES: i=63   	 |Δϕ|2 = 64.31215197    
+| normal vector:         i=76 	|n_0| = 64.286252462   |n_1| = 65.136553535   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02671971123   |ΔΨ|²/dT = 8.953733557    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01517913303   |ΔΨ|²/dT = 4.3772238      |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.008053289163  |ΔΨ|²/dT = 2.146108192    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004118064573  |ΔΨ|²/dT = 1.057526402    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002239630444  |ΔΨ|²/dT = 0.5292199034   |
+| normal vector:         i=76 	|n_0| = 64.288250023   |n_1| = 65.134627862   
+| curvature:         i=31 	|k| = 1583.4647992   
+| ls: t= 1.44      | GMRES: i=63   	 |Δϕ|2 = 64.31214392    
+| normal vector:         i=76 	|n_0| = 64.294997225   |n_1| = 65.174840659   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02774196907   |ΔΨ|²/dT = 8.836146592    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.0144466553    |ΔΨ|²/dT = 4.363865647    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00809220078   |ΔΨ|²/dT = 2.146313162    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.004279201571  |ΔΨ|²/dT = 1.056600775    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002184122956  |ΔΨ|²/dT = 0.5271709554   |
+| normal vector:         i=76 	|n_0| = 64.296926572   |n_1| = 65.173000578   
+| curvature:         i=31 	|k| = 1589.2634089   
+| ls: t= 1.45      | GMRES: i=63   	 |Δϕ|2 = 64.31215004    
+| normal vector:         i=76 	|n_0| = 64.307997776   |n_1| = 65.21506332    
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0265892191    |ΔΨ|²/dT = 8.92187765     |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01351926163   |ΔΨ|²/dT = 4.35462335     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007081058952  |ΔΨ|²/dT = 2.131756927    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00369807448   |ΔΨ|²/dT = 1.048600341    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002001131979  |ΔΨ|²/dT = 0.5233239507   |
+| normal vector:         i=76 	|n_0| = 64.309823175   |n_1| = 65.213319496   
+| curvature:         i=31 	|k| = 1584.2712667   
+| ls: t= 1.46      | GMRES: i=63   	 |Δϕ|2 = 64.31214317    
+| normal vector:         i=76 	|n_0| = 64.324837911   |n_1| = 65.256585619   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02871243017   |ΔΨ|²/dT = 8.889980339    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01445380361   |ΔΨ|²/dT = 4.360228736    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007044855278  |ΔΨ|²/dT = 2.13274599     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003700872189  |ΔΨ|²/dT = 1.045423204    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001987746157  |ΔΨ|²/dT = 0.5195047131   |
+| normal vector:         i=76 	|n_0| = 64.326563155   |n_1| = 65.254945406   
+| curvature:         i=31 	|k| = 1584.1408034   
+| ls: t= 1.47      | GMRES: i=63   	 |Δϕ|2 = 64.31214534    
+| normal vector:         i=76 	|n_0| = 64.345126925   |n_1| = 65.298569903   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02909885689   |ΔΨ|²/dT = 8.7900304      |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01419975762   |ΔΨ|²/dT = 4.335510775    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007399960743  |ΔΨ|²/dT = 2.131496898    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003799028289  |ΔΨ|²/dT = 1.047541837    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001949883615  |ΔΨ|²/dT = 0.520289291    |
+| normal vector:         i=76 	|n_0| = 64.346749239   |n_1| = 65.297066196   
+| curvature:         i=31 	|k| = 1582.550224    
+| ls: t= 1.48      | GMRES: i=63   	 |Δϕ|2 = 64.31214318    
+| normal vector:         i=76 	|n_0| = 64.36845068    |n_1| = 65.340015407   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0266134633    |ΔΨ|²/dT = 8.867982264    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01459195386   |ΔΨ|²/dT = 4.342407404    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007538617626  |ΔΨ|²/dT = 2.123247595    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003848098888  |ΔΨ|²/dT = 1.040026451    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.002002866949  |ΔΨ|²/dT = 0.5156809134   |
+| normal vector:         i=76 	|n_0| = 64.369923427   |n_1| = 65.338620039   
+| curvature:         i=31 	|k| = 1585.7179753   
+| ls: t= 1.49      | GMRES: i=63   	 |Δϕ|2 = 64.31214321    
+| normal vector:         i=76 	|n_0| = 64.3943331     |n_1| = 65.379695655   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02846939548   |ΔΨ|²/dT = 8.684959181    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01419570808   |ΔΨ|²/dT = 4.310828       |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007364242258  |ΔΨ|²/dT = 2.124310648    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003621026082  |ΔΨ|²/dT = 1.042703695    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001826681503  |ΔΨ|²/dT = 0.5155538506   |
+| normal vector:         i=76 	|n_0| = 64.395690161   |n_1| = 65.378438041   
+| curvature:         i=31 	|k| = 1587.8121001   
+| ls: t= 1.5       | GMRES: i=63   	 |Δϕ|2 = 64.3121444     
+| normal vector:         i=76 	|n_0| = 64.422361782   |n_1| = 65.416314791   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03003969117   |ΔΨ|²/dT = 8.799688862    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01364143094   |ΔΨ|²/dT = 4.303133901    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.007054208612  |ΔΨ|²/dT = 2.108728115    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003559621045  |ΔΨ|²/dT = 1.035008063    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001929034334  |ΔΨ|²/dT = 0.5127901711   |
+| normal vector:         i=76 	|n_0| = 64.423570789   |n_1| = 65.415206684   
+| curvature:         i=31 	|k| = 1581.2661667   
+| ls: t= 1.51      | GMRES: i=63   	 |Δϕ|2 = 64.31213903    
+| normal vector:         i=76 	|n_0| = 64.452045674   |n_1| = 65.448483193   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02862774376   |ΔΨ|²/dT = 8.766248584    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01420403542   |ΔΨ|²/dT = 4.308867919    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.00672291859   |ΔΨ|²/dT = 2.108968482    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003528159447  |ΔΨ|²/dT = 1.03087592     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001815683088  |ΔΨ|²/dT = 0.508181674    |
+| normal vector:         i=76 	|n_0| = 64.453106304   |n_1| = 65.447515889   
+| curvature:         i=31 	|k| = 1582.1851904   
+| ls: t= 1.52      | GMRES: i=63   	 |Δϕ|2 = 64.312144      
+| normal vector:         i=76 	|n_0| = 64.482920533   |n_1| = 65.474776436   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.03065529747   |ΔΨ|²/dT = 8.684034307    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01324617683   |ΔΨ|²/dT = 4.292351685    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006800974139  |ΔΨ|²/dT = 2.111966366    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003478795988  |ΔΨ|²/dT = 1.035321281    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001719439667  |ΔΨ|²/dT = 0.5102115815   |
+| normal vector:         i=76 	|n_0| = 64.48382703    |n_1| = 65.473966025   
+| curvature:         i=31 	|k| = 1580.8354035   
+| ls: t= 1.53      | GMRES: i=63   	 |Δϕ|2 = 64.3121437     
+| normal vector:         i=76 	|n_0| = 64.514522036   |n_1| = 65.493848438   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0261829208    |ΔΨ|²/dT = 8.776362703    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01332109602   |ΔΨ|²/dT = 4.294936949    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006779084769  |ΔΨ|²/dT = 2.10150157     |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003381026936  |ΔΨ|²/dT = 1.028152958    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001676771465  |ΔΨ|²/dT = 0.5066804803   |
+| normal vector:         i=76 	|n_0| = 64.515247683   |n_1| = 65.493178082   
+| curvature:         i=31 	|k| = 1580.8794379   
+| ls: t= 1.54      | GMRES: i=63   	 |Δϕ|2 = 64.31214206    
+| normal vector:         i=76 	|n_0| = 64.546382405   |n_1| = 65.504444965   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02845183161   |ΔΨ|²/dT = 8.646373215    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01372355793   |ΔΨ|²/dT = 4.283882816    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006674983923  |ΔΨ|²/dT = 2.106664389    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003159600929  |ΔΨ|²/dT = 1.030710664    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001575690843  |ΔΨ|²/dT = 0.5065076205   |
+| normal vector:         i=76 	|n_0| = 64.546947884   |n_1| = 65.503924733   
+| curvature:         i=31 	|k| = 1586.4430956   
+| ls: t= 1.55      | GMRES: i=63   	 |Δϕ|2 = 64.31214673    
+| normal vector:         i=75 	|n_0| = 64.578111819   |n_1| = 65.505532639   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02816046971   |ΔΨ|²/dT = 8.698218829    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01425441847   |ΔΨ|²/dT = 4.27453457     |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006758570038  |ΔΨ|²/dT = 2.099569241    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003230157128  |ΔΨ|²/dT = 1.028840151    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001555746855  |ΔΨ|²/dT = 0.5062380255   |
+| normal vector:         i=75 	|n_0| = 64.578506004   |n_1| = 65.505176026   
+| curvature:         i=31 	|k| = 1581.7316181   
+| ls: t= 1.56      | GMRES: i=63   	 |Δϕ|2 = 64.31214372    
+| normal vector:         i=75 	|n_0| = 64.609332151   |n_1| = 65.496337408   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.0318713732    |ΔΨ|²/dT = 8.783624081    |
+    | reini: τ= 0.03125   | CG: i=15   	 |ΔΨ|∞ = 0.01501918071   |ΔΨ|²/dT = 4.300369602    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006752921083  |ΔΨ|²/dT = 2.102310497    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.003209020382  |ΔΨ|²/dT = 1.02690598     |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.00157141392   |ΔΨ|²/dT = 0.5047632635   |
+| normal vector:         i=75 	|n_0| = 64.609543898   |n_1| = 65.496126059   
+| curvature:         i=31 	|k| = 1583.7729678   
+| ls: t= 1.57      | GMRES: i=63   	 |Δϕ|2 = 64.31214429    
+| normal vector:         i=75 	|n_0| = 64.639719947   |n_1| = 65.476359627   
+    | reini: τ= 0.015625  | CG: i=14   	 |ΔΨ|∞ = 0.02949620527   |ΔΨ|²/dT = 8.610882127    |
+    | reini: τ= 0.03125   | CG: i=14   	 |ΔΨ|∞ = 0.01314700091   |ΔΨ|²/dT = 4.277003665    |
+    | reini: τ= 0.046875  | CG: i=15   	 |ΔΨ|∞ = 0.006602436062  |ΔΨ|²/dT = 2.107855905    |
+    | reini: τ= 0.0625    | CG: i=15   	 |ΔΨ|∞ = 0.00326128738   |ΔΨ|²/dT = 1.032139932    |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.001573657644  |ΔΨ|²/dT = 0.506581515    |
+| normal vector:         i=75 	|n_0| = 64.639766166   |n_1| = 65.476311634   
+| curvature:         i=31 	|k| = 1586.4546478   
+| ls: t= 1.5707963268| GMRES: i=25   	 |Δϕ|2 = 64.31214719    
+| normal vector:         i=75 	|n_0| = 64.642142763   |n_1| = 65.474252638   
+    | reini: τ= 0.015625  | CG: i=17   	 |ΔΨ|∞ = 0.003240197068  |ΔΨ|²/dT = 0.8725709243   |
+    | reini: τ= 0.03125   | CG: i=17   	 |ΔΨ|∞ = 0.00137259792   |ΔΨ|²/dT = 0.3797674285   |
+    | reini: τ= 0.046875  | CG: i=17   	 |ΔΨ|∞ = 0.0005440576559 |ΔΨ|²/dT = 0.1660557434   |
+    | reini: τ= 0.0625    | CG: i=16   	 |ΔΨ|∞ = 0.0002454865334 |ΔΨ|²/dT = 0.08077002567  |
+    | reini: τ= 0.078125  | CG: i=15   	 |ΔΨ|∞ = 0.0001480294021 |ΔΨ|²/dT = 0.05044740148  |
+| normal vector:         i=75 	|n_0| = 64.642334033   |n_1| = 65.474346181   
+| curvature:         i=31 	|k| = 1586.846413    

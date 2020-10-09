@@ -16,9 +16,9 @@ namespace MeltPoolDG
   class SimulationBase
   {
   public:
-    SimulationBase(std::string parameter_file_in, MPI_Comm my_communicator)
+    SimulationBase(std::string parameter_file_in, MPI_Comm mpi_communicator_in)
     : parameter_file(parameter_file_in)
-    , mpi_communicator(my_communicator)
+    , mpi_communicator(mpi_communicator_in)
     , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
     {
       set_parameters();
@@ -29,7 +29,7 @@ namespace MeltPoolDG
     virtual void
     set_parameters()
     {
-      this->parameters.process_parameters_file(this->parameter_file, this->pcout);
+      this->parameters.process_parameters_file(this->parameter_file);
     };
 
     virtual void

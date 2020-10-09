@@ -8,6 +8,7 @@ MESSAGE("                              MeltPoolDG                               
 MESSAGE("                                                                                 ")
 MESSAGE("_________________________________________________________________________________")
 
+
 # this is the standard deal.II search mechanism, including check for Trilinos and p4est
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
@@ -48,17 +49,14 @@ DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 # Set the source files to be compiled
 # temporarilly disabled as long as no source files in meltpooldg exists
-#SET(TARGET_SRC run_simulation.cpp)
-#SET(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
+SET(TARGET_SRC meltpooldg.cpp)
 
 # Set the include directory and the name of the project
-
-INCLUDE_DIRECTORIES(include)
+INCLUDE_DIRECTORIES(include ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 PROJECT(MeltPoolDG)
 
-# temporarilly disabled as long as no source files in meltpooldg exists
-#ADD_LIBRARY(${CMAKE_PROJECT_NAME} ${TARGET_SRC})
+ADD_LIBRARY(MeltPoolDG ${TARGET_SRC})
 
 # Define custom targets to easily switch the build type:
 ADD_CUSTOM_TARGET(debug
@@ -73,10 +71,8 @@ ADD_CUSTOM_TARGET(release
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
-# temporarilly disabled as long as no source files in meltpooldg exists
-#DEAL_II_SETUP_TARGET(MeltPoolDG)
-
 IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
+  MESSAGE("Tests found")
   SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
 ENDIF()
 
@@ -87,11 +83,11 @@ ADD_EXECUTABLE(${projectName}
                 run_simulation.cpp)
 
 DEAL_II_SETUP_TARGET(${projectName})
-# temporarilly disabled as long as no source files in meltpooldg exists
-#TARGET_LINK_LIBRARIES(${projectName} ${CMAKE_PROJECT_NAME})
 
-# tests --> will be added asap
-#enable_testing()
-#ADD_SUBDIRECTORY(tests)
+TARGET_LINK_LIBRARIES(${projectName} ${CMAKE_PROJECT_NAME})
+
+#tests
+enable_testing()
+ADD_SUBDIRECTORY(tests)
 
 

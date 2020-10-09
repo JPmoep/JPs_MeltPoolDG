@@ -1,4 +1,3 @@
-#pragma once
 // deal-specific libraries
 #include <deal.II/base/function.h>
 #include <deal.II/base/tensor_function.h>
@@ -14,10 +13,11 @@
 // MeltPoolDG
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
+#include <meltpooldg/interface/problem_selector.hpp>
 
 namespace MeltPoolDG
 {
-namespace Simulation
+namespace Test
 {
 namespace RotatingBubble
 {
@@ -30,9 +30,9 @@ namespace RotatingBubble
   {
     public:
     InitializePhi()
-      : Function<dim>(),
-        epsInterface(0.0313)
+      : Function<dim>()
     {}
+
     virtual double value( const Point<dim> & p,
                    const unsigned int component = 0) const
     {
@@ -44,22 +44,7 @@ namespace RotatingBubble
     return UtilityFunctions::CharacteristicFunctions::sgn( 
                 UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ));
 
-    /*
-     *  Alternatively, a tanh function could be used, corresponding to the
-     *  analytic solution of the reinitialization problem
-     */
-    //return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function( 
-           //UtilityFunctions::DistanceFunctions::spherical_manifold<dim>( p, center, radius ), 
-           //this->epsInterface 
-           //);
     }
-
-    void setEpsInterface(double eps){ this->epsInterface = eps; }
-
-    double getEpsInterface(){ return this->epsInterface; }
-
-    private:
-      double epsInterface;
   };
 
   template <int dim>
@@ -143,17 +128,17 @@ namespace RotatingBubble
    */
 
   template<int dim>
-  class SimulationRotatingBubble : public SimulationBase<dim>
+  class Simulation : public SimulationBase<dim>
   {
   public:
-      SimulationRotatingBubble( std::string parameter_file,
+      Simulation( std::string parameter_file,
                   const MPI_Comm mpi_communicator)
       : SimulationBase<dim>(parameter_file,
                             mpi_communicator)
     {
       this->set_parameters();
     }
-
+    
     void create_spatial_discretization()
     {
       if(dim == 1)
@@ -228,5 +213,35 @@ namespace RotatingBubble
   };
 
 } // namespace RotatingBubble
-} // namespace Simulation
+} // namespace Test
 } // namespace MeltPoolDG
+
+int main(int argc, char* argv[])
+{
+  using namespace dealii;
+  using namespace MeltPoolDG;
+
+  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  
+  MPI_Comm mpi_communicator(MPI_COMM_WORLD); 
+  std::string input_file =  std::string(SOURCE_DIR) + "/rotating_bubble.json";
+  
+  const dealii::ConditionalOStream pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0 );
+  Parameters<double> parameters;
+  parameters.process_parameters_file(input_file);
+
+  if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+    parameters.print_parameters(std::cout);
+
+  using namespace MeltPoolDG::Test::RotatingBubble;
+
+  std::shared_ptr<SimulationBase<2>> test = std::make_shared<Simulation<2>>(input_file, mpi_communicator);
+  test->create();
+  auto problem = ProblemSelector<2>::get_problem(parameters.base.problem_name);
+  problem->run(test);
+  
+  return 0;
+}
+
+
+
