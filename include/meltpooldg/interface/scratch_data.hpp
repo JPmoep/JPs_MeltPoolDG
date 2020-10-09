@@ -127,7 +127,6 @@ class ScratchData
       this->min_cell_size.clear();
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
-      this->locally_active_dofs.clear();
 
       for (const auto& dof : dof_handler)
       {
@@ -143,10 +142,6 @@ class ScratchData
         IndexSet locally_relevant_dofs_temp;
         DoFTools::extract_locally_relevant_dofs(*dof, locally_relevant_dofs_temp);
         this->locally_relevant_dofs.push_back(locally_relevant_dofs_temp);
-        
-        IndexSet locally_active_dofs_temp;
-        DoFTools::extract_locally_active_dofs(*dof, locally_active_dofs_temp);
-        this->locally_active_dofs.push_back(locally_active_dofs_temp);
       }
     }
 
@@ -319,7 +314,6 @@ class ScratchData
     std::vector<double>                            min_cell_size;     
     std::vector<IndexSet>                          locally_owned_dofs;     
     std::vector<IndexSet>                          locally_relevant_dofs;     
-    std::vector<IndexSet>                          locally_active_dofs;     
     
     MatrixFree<dim, number, VectorizedArrayType>   matrix_free;
 
