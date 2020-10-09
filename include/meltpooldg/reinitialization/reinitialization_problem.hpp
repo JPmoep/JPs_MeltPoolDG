@@ -10,15 +10,17 @@
 #include <deal.II/base/conditional_ostream.h> 
 // for index set
 #include <deal.II/base/index_set.h>
-//// for distributed triangulation
+// for distributed triangulation
 #include <deal.II/distributed/tria_base.h>
+#include <deal.II/distributed/grid_refinement.h>
+#include <deal.II/distributed/solution_transfer.h>
 // for dof_handler type
 #include <deal.II/dofs/dof_handler.h>
+#include <deal.II/numerics/error_estimator.h>
 // for FE_Q<dim> type
 #include <deal.II/fe/fe_q.h>
 // for mapping
 #include <deal.II/fe/mapping.h>
-
 // MeltPoolDG
 #include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/interface/problembase.hpp>
@@ -55,6 +57,7 @@ namespace Reinitialization
     void 
     run( std::shared_ptr<SimulationBase<dim>> base_in ) final
     {
+
       initialize(base_in);
 
       while ( !time_iterator.is_finished() )
@@ -66,6 +69,10 @@ namespace Reinitialization
         
         output_results(time_iterator.get_current_time_step_number(),
                        base_in->parameters);
+        
+        if (base_in->parameters.amr.do_amr)
+          refine_mesh( base_in );
+
       }
     }
 
@@ -79,43 +86,10 @@ namespace Reinitialization
     void 
     initialize( std::shared_ptr<SimulationBase<dim>> base_in )
     {
-      /*
-       *  setup scratch data
+      /*  
+       *  initialize the dof system
        */
-      scratch_data = std::make_shared<ScratchData<dim>>();
-      /*
-       *  setup mapping
-       */
-      auto mapping = MappingQGeneric<dim>(base_in->parameters.base.degree);
-      scratch_data->set_mapping(mapping);
-      /*
-       *  setup DoFHandler
-       */
-      FE_Q<dim>    fe(base_in->parameters.base.degree);
-      
-      dof_handler.initialize(*base_in->triangulation, fe );
-      scratch_data->attach_dof_handler(dof_handler);
-
-      /*
-       *  make hanging nodes constraints
-       */
-      constraints.clear();
-      constraints.reinit(scratch_data->get_locally_relevant_dofs());
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-      constraints.close();
-      
-      scratch_data->attach_constraint_matrix(constraints);
-      /*
-       *  create quadrature rule
-       */
-      QGauss<1> quad_1d_temp(base_in->parameters.base.n_q_points_1d);
-      
-      scratch_data->attach_quadrature(quad_1d_temp);
-      /*
-       *  create the matrix-free object
-       */
-      scratch_data->build();
-
+      setup_dof_system(base_in, true);
       /*  
        *  initialize the time iterator
        */
@@ -143,6 +117,148 @@ namespace Reinitialization
       reinit_operation.initialize(scratch_data, solution_level_set, base_in->parameters);
     }
 
+    void 
+    setup_dof_system( std::shared_ptr<SimulationBase<dim>> base_in,
+                      const bool do_initial_setup )
+    {
+      /*
+       *  setup scratch data
+       */
+      if (do_initial_setup)
+      {
+        scratch_data = std::make_shared<ScratchData<dim>>();
+        /*
+         *  setup mapping
+         */
+        const auto mapping = MappingQGeneric<dim>(base_in->parameters.base.degree);
+        scratch_data->set_mapping(mapping); 
+        /*
+         *  create quadrature rule
+         */
+        QGauss<1> quad_1d_temp(base_in->parameters.base.n_q_points_1d);
+        scratch_data->attach_quadrature(quad_1d_temp); 
+      }
+      /*
+       *  setup DoFHandler
+       */
+      FE_Q<dim>    fe(base_in->parameters.base.degree); 
+      dof_handler.initialize(*base_in->triangulation, fe );
+      
+      if (do_initial_setup)
+        scratch_data->attach_dof_handler(dof_handler);
+      /*
+       *  re-create partitioning
+       */
+      scratch_data->create_partitioning();
+      /*
+       *  make hanging nodes constraints
+       */
+      constraints.clear();
+      constraints.reinit(scratch_data->get_locally_relevant_dofs());
+      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
+      constraints.close();
+      
+      if (do_initial_setup)
+        scratch_data->attach_constraint_matrix(constraints);
+      
+      /*
+       *  create the matrix-free object
+       */
+      scratch_data->build();
+    }
+    
+    /*
+     *  perform mesh refinement
+     */
+    void 
+    refine_mesh( std::shared_ptr<SimulationBase<dim>> base_in)
+    {
+      if (dim>1)
+      {
+        Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
+        
+        /*  @todo:
+         *  bug (?)
+         *  for the purpose of the KellyErrorEstimator initialize_dof_vector could not be used
+         *  scratch_data->initialize_dof_vector(locally_relevant_solution);
+         */
+
+        VectorType locally_relevant_solution;
+        locally_relevant_solution.reinit( scratch_data->get_locally_owned_dofs(),
+                                          scratch_data->get_locally_relevant_dofs(),
+                                          scratch_data->get_mpi_comm() );
+        locally_relevant_solution.copy_locally_owned_data_from(reinit_operation.solution_level_set);
+        constraints.distribute(locally_relevant_solution);
+        locally_relevant_solution.update_ghost_values();
+        
+        KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
+                                           QGauss<dim - 1>(base_in->parameters.base.n_q_points_1d),
+                                           {},
+                                           locally_relevant_solution,
+                                           estimated_error_per_cell); 
+
+        parallel::distributed::Triangulation<dim>& tria_ref = 
+            dynamic_cast<parallel::distributed::Triangulation<dim>&>(*(base_in->triangulation));
+
+        parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(tria_ref,
+                                                          estimated_error_per_cell,
+                                                          base_in->parameters.amr.upper_perc_to_refine,
+                                                          base_in->parameters.amr.lower_perc_to_coarsen);
+
+        /*
+         *  Limit the maximum and minimum refinement levels of cells of the grid.
+         */
+        if (tria_ref.n_levels() > base_in->parameters.amr.max_grid_refinement_level)
+          for (auto &cell :
+               tria_ref.active_cell_iterators_on_level(base_in->parameters.amr.max_grid_refinement_level) )
+            cell->clear_refine_flag();
+        if (tria_ref.n_levels() < base_in->parameters.amr.min_grid_refinement_level)
+          for (auto &cell :
+               tria_ref.active_cell_iterators_on_level(base_in->parameters.amr.min_grid_refinement_level) )
+            cell->clear_coarsen_flag();
+
+        /*
+         *  Initialize the triangulation change from the old grid to the new grid
+         */
+        base_in->triangulation->prepare_coarsening_and_refinement();
+        /*
+         *  Initialize the solution transfer from the old grid to the new grid
+         */
+        parallel::distributed::SolutionTransfer<dim, VectorType, DoFHandlerType> solution_transfer(dof_handler);
+        solution_transfer.prepare_for_coarsening_and_refinement(locally_relevant_solution);
+        
+        /*
+         *  Execute the grid refinement
+         */
+        base_in->triangulation->execute_coarsening_and_refinement();
+
+        /*
+         *  update dof-related scratch data to match the current triangulation
+         */
+        setup_dof_system(base_in, false);
+        
+        /*
+         *  interpolate the given solution to the new discretization
+         *
+         */
+        VectorType interpolated_solution;
+        scratch_data->initialize_dof_vector(interpolated_solution);
+
+        solution_transfer.interpolate(interpolated_solution);
+
+        constraints.distribute(interpolated_solution);
+        interpolated_solution.update_ghost_values();
+        /*
+         * update the reinitialization operator with the new solution values  
+         */
+        reinit_operation.update_initial_solution(interpolated_solution);
+      }
+      else
+        //@todo: WIP
+        AssertThrow(false, ExcMessage("Mesh refinement for dim=1 not yet supported"));
+      
+    }
+
     /*
      *  Creating paraview output
      */
@@ -162,6 +278,8 @@ namespace Reinitialization
             data_out.add_data_vector(reinit_operation.solution_normal_vector.block(d), "normal_"+std::to_string(d));
         }
 
+        const int n_digits_timestep = 4;
+        const int n_groups = 1;
         data_out.build_patches();
         data_out.write_vtu_with_pvtu_record("./", 
                                             parameters.paraview.filename, 

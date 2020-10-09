@@ -72,6 +72,8 @@ class ScratchData
       for (unsigned int i = 0; i < quad.size(); ++i)
         this->attach_quadrature(quad[i]);
 
+      this->create_partitioning();
+
       this->build();
     }
 
@@ -88,13 +90,6 @@ class ScratchData
     attach_dof_handler(const DoFHandler<dim, spacedim> &dof_handler)
     {
       this->dof_handler.emplace_back(&dof_handler);
-      this->min_cell_size.emplace_back(GridTools::minimal_cell_diameter(dof_handler.get_triangulation())/std::sqrt(dim));
-
-      this->locally_owned_dofs.emplace_back(dof_handler.locally_owned_dofs());
-      IndexSet locally_relevant_dofs_temp;
-      DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs_temp);
-      this->locally_relevant_dofs.emplace_back(locally_relevant_dofs_temp);
-      
       return this->dof_handler.size() - 1;
     }
 
@@ -122,12 +117,79 @@ class ScratchData
       this->quad.emplace_back(QIterated<dim>(quadrature, 1));
       return this->quad.size() - 1;
     }
+    
+    void
+    create_partitioning()
+    {
+      /*
+       *  recreate DoF-dependent partitioning data
+       */
+      this->min_cell_size.clear();
+      this->locally_owned_dofs.clear();
+      this->locally_relevant_dofs.clear();
+      this->locally_active_dofs.clear();
+
+      for (const auto& dof : dof_handler)
+      {
+        /*
+         *  create vector of minimum cell sizes
+         */
+        this->min_cell_size.push_back(GridTools::minimal_cell_diameter(dof->get_triangulation())/std::sqrt(dim));
+        /*
+         *  create partitioning
+         */
+        this->locally_owned_dofs.push_back(dof->locally_owned_dofs());
+      
+        IndexSet locally_relevant_dofs_temp;
+        DoFTools::extract_locally_relevant_dofs(*dof, locally_relevant_dofs_temp);
+        this->locally_relevant_dofs.push_back(locally_relevant_dofs_temp);
+        
+        IndexSet locally_active_dofs_temp;
+        DoFTools::extract_locally_active_dofs(*dof, locally_active_dofs_temp);
+        this->locally_active_dofs.push_back(locally_active_dofs_temp);
+      }
+    }
 
     void
     build()
     {
+      this->matrix_free.clear();
       if (this->quad_1D.size() > 0)
-        matrix_free.reinit(*this->mapping, this->dof_handler, this->constraint, this->quad_1D);
+        this->matrix_free.reinit(*this->mapping, this->dof_handler, this->constraint, this->quad_1D);
+      else
+        AssertThrow(false, ExcMessage("ScratchData: quad_1D is missing"));
+    }
+    /*
+     * initialize vectors
+     */
+    void
+    initialize_dof_vector(VectorType & vec, const unsigned int dof_idx=0) const
+    {
+      matrix_free.initialize_dof_vector(vec,dof_idx);
+    }
+
+    void
+    initialize_dof_vector(BlockVectorType & vec, const unsigned int dof_idx=0) const
+    {
+      vec.reinit(dim);
+      for (unsigned int d=0; d<dim; ++d)
+        this->initialize_dof_vector(vec.block(d), dof_idx);
+    }
+    /*
+     * clear all member variables
+     */
+    void
+    clear()
+    {
+      this->matrix_free.clear();
+      this->quad_1D.clear();
+      this->quad.clear();
+      this->constraint.clear();
+      this->dof_handler.clear();
+      this->mapping.reset();
+      this->min_cell_size.clear();
+      this->locally_owned_dofs.clear();
+      this->locally_relevant_dofs.clear();
     }
 
     /**
@@ -216,37 +278,37 @@ class ScratchData
     {
       return this->locally_relevant_dofs[dof_idx];
     }
+    
+    const IndexSet &
+    get_locally_active_dofs(const unsigned int dof_idx=0) const
+    {
+      return this->locally_active_dofs[dof_idx];
+    }
 
     ConditionalOStream  
     get_pcout(const unsigned int dof_idx=0) const
     {
       return ConditionalOStream( std::cout, Utilities::MPI::this_mpi_process(this->get_mpi_comm(dof_idx)) == 0 );
     }
-
-    void
-    initialize_dof_vector(VectorType & vec, const unsigned int dof_idx=0) const
+    /*
+     *
+     * @todo: WIP
+       
+    static
+    auto
+    get_derived_triangulation(const Triangulation<dim,spacedim>* &tria_in)
     {
-      matrix_free.initialize_dof_vector(vec,dof_idx);
+      auto n = tria_in->n_active_cells();
+      if (dim==1)
+      {
+        return dynamic_cast<Triangulation<dim>&>(tria_in);
+      }
+      else
+      {
+        return dynamic_cast<parallel::distributed::Triangulation<dim>&>(*tria_in);
+      }
     }
-
-    void
-    initialize_dof_vector(BlockVectorType & vec, const unsigned int dof_idx=0) const
-    {
-      vec.reinit(dim);
-      for (unsigned int d=0; d<dim; ++d)
-        this->initialize_dof_vector(vec.block(d), dof_idx);
-    }
-
-    void
-    clear()
-    {
-      this->matrix_free.clear();
-      this->quad_1D.clear();
-      this->quad.clear();
-      this->constraint.clear();
-      this->dof_handler.clear();
-      this->mapping.reset();
-    }
+      */
 
   private:
     std::unique_ptr<Mapping<dim, spacedim>>        mapping;
@@ -257,6 +319,7 @@ class ScratchData
     std::vector<double>                            min_cell_size;     
     std::vector<IndexSet>                          locally_owned_dofs;     
     std::vector<IndexSet>                          locally_relevant_dofs;     
+    std::vector<IndexSet>                          locally_active_dofs;     
     
     MatrixFree<dim, number, VectorizedArrayType>   matrix_free;
 
