@@ -5,6 +5,7 @@
 #include <meltpooldg/interface/problem_selector.hpp>
 // simulations
 #include <meltpooldg/simulations/reinit_circle/reinit_circle.hpp>
+#include <meltpooldg/simulations/reinit_circle_amr/reinit_circle_amr.hpp>
 #include <meltpooldg/simulations/advection_diffusion/advection_diffusion.hpp>
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
 
@@ -25,6 +26,11 @@ namespace Simulation
         if( simulation_name == "reinit_circle" )
           return std::make_shared<ReinitCircle::SimulationReinit<dim>>(parameter_file,
                                                                        mpi_communicator);
+        else if( simulation_name == "reinit_circle_amr" )
+        {
+          return std::make_shared<ReinitCircleAMR::SimulationReinit<dim>>(parameter_file,
+                                                                            mpi_communicator);
+        }
         else if( simulation_name == "advection_diffusion" )
         {
           return std::make_shared<AdvectionDiffusion::SimulationAdvec<dim>>(parameter_file,

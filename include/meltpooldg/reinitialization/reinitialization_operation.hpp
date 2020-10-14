@@ -87,6 +87,7 @@ namespace Reinitialization
       /*
        *    copy the given solution into the member variable
        */
+      scratch_data->initialize_dof_vector(solution_level_set);
       solution_level_set.copy_locally_owned_data_from(solution_level_set_in);
       solution_level_set.update_ghost_values();
       /*
@@ -94,6 +95,7 @@ namespace Reinitialization
        *    level set; the normal vector field is called by reference within the  
        *    operator class
        */
+      normal_vector_operation.update();
       normal_vector_operation.solve( solution_level_set );
     }
 
@@ -164,21 +166,20 @@ namespace Reinitialization
 
     void create_operator()
     {
-      
       if (reinit_data.modeltype == "olsson2007")
       {
 
        reinit_operator = 
           std::make_unique<OlssonOperator<dim, comp, double>>( *scratch_data,
-                                                                        normal_vector_operation.solution_normal_vector,
-                                                                        reinit_data.constant_epsilon,
-                                                                        reinit_data.scale_factor_epsilon
-                                                                     );
+                                                                normal_vector_operation.solution_normal_vector,
+                                                                reinit_data.constant_epsilon,
+                                                                reinit_data.scale_factor_epsilon
+                                                              );
       }
       /* 
-       * add your desired operators
+       * add your desired operators here
        *
-       * else if (reinit_data.reinitmodel == ReinitModelType::my_new_reinitialization_model
+       * else if (reinit_data.reinitmodel == "my_model")
        *    ....
        */
       else
@@ -190,17 +191,22 @@ namespace Reinitialization
       if (!reinit_data.do_matrix_free)
         reinit_operator->initialize_matrix_based<dim,comp>(*scratch_data);
     }
+    void update_operator()
+    {
+      if (!reinit_data.do_matrix_free)
+        reinit_operator->initialize_matrix_based<dim,comp>(*scratch_data);
+    }
   
   private:
-    std::shared_ptr<const ScratchData<dim>>                 scratch_data;
+    std::shared_ptr<const ScratchData<dim>>   scratch_data;
     /*
      *  This shared pointer will point to your user-defined reinitialization operator.
      */
-    std::unique_ptr<OperatorBase<double>>                   reinit_operator;
+    std::unique_ptr<OperatorBase<double>>     reinit_operator;
     /*
      *   Computation of the normal vectors
      */
-    NormalVector::NormalVectorOperation<dim>         normal_vector_operation;
+    NormalVector::NormalVectorOperation<dim>  normal_vector_operation;
     
   };
 } // namespace Reinitialization

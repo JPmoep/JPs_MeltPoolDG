@@ -21,6 +21,16 @@ namespace MeltPoolDG
   };
 
   template <typename number = double>
+  struct AdaptiveMeshingData
+  {
+    bool   do_amr                          = false;
+    double upper_perc_to_refine            = 0.0;
+    double lower_perc_to_coarsen           = 0.0;
+    unsigned int max_grid_refinement_level = 12;
+    unsigned int min_grid_refinement_level = 1;
+  };
+
+  template <typename number = double>
   struct LevelSetData
   {
     bool   do_reinitialization    = false;
@@ -125,10 +135,10 @@ namespace MeltPoolDG
       if (base.n_q_points_1d == -1)
         base.n_q_points_1d = base.degree + 1;
       /*
-       *  Attach the problem name to the paraview file name in case of its default value
+       *  set the min grid refinement level if not user-specified 
        */
-      if (paraview.filename == "solution" )
-        paraview.filename += "_" + base.problem_name; 
+      if (amr.min_grid_refinement_level== 1)
+        amr.min_grid_refinement_level = base.global_refinements;
 
     }
     
@@ -164,10 +174,9 @@ namespace MeltPoolDG
        */
       prm.enter_subsection("base");
       {
-        prm.add_parameter(
-          "application name",
-          base.application_name,
-          "Sets the base name for the application that will be fed to the problem type.");
+        prm.add_parameter("application name",
+                           base.application_name,
+                           "Sets the base name for the application that will be fed to the problem type.");
         prm.add_parameter("problem name",
                           base.problem_name,
                           "Sets the base name for the problem that should be solved.");
@@ -179,6 +188,26 @@ namespace MeltPoolDG
         prm.add_parameter("n q points 1d",
                           base.n_q_points_1d,
                           "Defines the number of quadrature points");
+      }
+      prm.leave_subsection();
+      /*
+       *    adaptive meshing
+       */
+      prm.enter_subsection("adaptive meshing");
+      {
+        prm.add_parameter(
+          "do amr",
+          amr.do_amr,
+          "Sets this parameter to true to activate adaptive meshing");
+        prm.add_parameter("upper perc to refine",
+                          amr.upper_perc_to_refine,
+                          "Defines the (upper) percentage of elements that should be refined");
+        prm.add_parameter("lower perc to coarsen",
+                           amr.lower_perc_to_coarsen,
+                          "Defines the (lower) percentage of elements that should be coarsened");
+        prm.add_parameter("max grid refinement level",
+                          amr.max_grid_refinement_level,
+                          "Defines the number of maximum refinement steps one grid cell will be undergone.");
       }
       prm.leave_subsection();
       /*
@@ -375,7 +404,6 @@ namespace MeltPoolDG
         prm.add_parameter("paraview n groups",
                           paraview.n_digits_timestep,
                           "number of parallel written vtk-files.");
-        
       }
       prm.leave_subsection();
 
@@ -405,6 +433,7 @@ namespace MeltPoolDG
     ParameterHandler prm;
 
     BaseData<number>               base;
+    AdaptiveMeshingData<number>    amr;
     LevelSetData<number>           ls;
     ReinitializationData<number>   reinit;
     AdvectionDiffusionData<number> advec_diff;

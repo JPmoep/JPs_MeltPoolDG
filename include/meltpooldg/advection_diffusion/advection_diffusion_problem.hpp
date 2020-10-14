@@ -94,6 +94,10 @@ namespace MeltPoolDG
         scratch_data->attach_dof_handler(dof_handler);
 
         /*
+         *  create partitioning
+         */
+        scratch_data->create_partitioning();
+        /*
          *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
          *  dirichlet constraints are supported)
          */

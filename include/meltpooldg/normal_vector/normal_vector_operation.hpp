@@ -21,7 +21,7 @@ namespace NormalVector
 {
   using namespace dealii; 
 
-  /*
+  /**
    *  This function calculates the normal vector of the current level set function being
    *  the solution of an intermediate projection step 
    *   
@@ -68,6 +68,12 @@ namespace NormalVector
       /*
        *  initialize normal vector operator
        */
+      create_operator();
+    }
+
+    void
+    update()
+    {
       create_operator();
     }
 
@@ -123,6 +129,10 @@ namespace NormalVector
     }
   
   private:
+    /**
+     * This function creates the normal vector operator for assembling the system operator (either matrix based or
+     * matrix free) and the right handside. 
+     */
     void create_operator()
     {
       const double damping_parameter = scratch_data->get_min_cell_size() * normal_vector_data.damping_scale_factor;
@@ -135,6 +145,7 @@ namespace NormalVector
       if (!normal_vector_data.do_matrix_free)
         normal_vector_operator->initialize_matrix_based<dim,comp>(*scratch_data);
     }
+
   private:
     std::shared_ptr<const ScratchData<dim>> scratch_data;
 
