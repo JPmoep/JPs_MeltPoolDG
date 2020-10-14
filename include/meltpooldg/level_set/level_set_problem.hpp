@@ -90,7 +90,10 @@ namespace LevelSet
       dof_handler.initialize(*base_in->triangulation, fe );
       scratch_data->attach_dof_handler(dof_handler);
       scratch_data->attach_dof_handler(dof_handler);
-
+      /*
+       *  create partitioning
+       */
+      scratch_data->create_partitioning();
       /*
        *  make hanging nodes constraints
        */
