@@ -27,7 +27,8 @@
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
 #include <meltpooldg/reinitialization/reinitialization_operation.hpp>
-
+// C++
+#include <memory>
 namespace MeltPoolDG
 {
 namespace Reinitialization
@@ -173,7 +174,7 @@ namespace Reinitialization
     void 
     refine_mesh( std::shared_ptr<SimulationBase<dim>> base_in)
     {
-      if (dim>1)
+     if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(base_in->triangulation) )
       {
         Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
         
@@ -184,23 +185,18 @@ namespace Reinitialization
          */
 
         VectorType locally_relevant_solution;
-        locally_relevant_solution.reinit( scratch_data->get_locally_owned_dofs(),
-                                          scratch_data->get_locally_relevant_dofs(),
-                                          scratch_data->get_mpi_comm() );
+        locally_relevant_solution.reinit( scratch_data->get_partitioner() );
         locally_relevant_solution.copy_locally_owned_data_from(reinit_operation.solution_level_set);
         constraints.distribute(locally_relevant_solution);
         locally_relevant_solution.update_ghost_values();
         
         KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
-                                           QGauss<dim - 1>(base_in->parameters.base.n_q_points_1d),
+                                           scratch_data->get_face_quadrature(),
                                            {},
                                            locally_relevant_solution,
                                            estimated_error_per_cell); 
 
-        parallel::distributed::Triangulation<dim>& tria_ref = 
-            dynamic_cast<parallel::distributed::Triangulation<dim>&>(*(base_in->triangulation));
-
-        parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(tria_ref,
+        parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(*tria,
                                                           estimated_error_per_cell,
                                                           base_in->parameters.amr.upper_perc_to_refine,
                                                           base_in->parameters.amr.lower_perc_to_coarsen);
@@ -208,13 +204,13 @@ namespace Reinitialization
         /*
          *  Limit the maximum and minimum refinement levels of cells of the grid.
          */
-        if (tria_ref.n_levels() > base_in->parameters.amr.max_grid_refinement_level)
+        if (tria->n_levels() > base_in->parameters.amr.max_grid_refinement_level)
           for (auto &cell :
-               tria_ref.active_cell_iterators_on_level(base_in->parameters.amr.max_grid_refinement_level) )
+               tria->active_cell_iterators_on_level(base_in->parameters.amr.max_grid_refinement_level) )
             cell->clear_refine_flag();
-        if (tria_ref.n_levels() < base_in->parameters.amr.min_grid_refinement_level)
+        if (tria->n_levels() < base_in->parameters.amr.min_grid_refinement_level)
           for (auto &cell :
-               tria_ref.active_cell_iterators_on_level(base_in->parameters.amr.min_grid_refinement_level) )
+               tria->active_cell_iterators_on_level(base_in->parameters.amr.min_grid_refinement_level) )
             cell->clear_coarsen_flag();
 
         /*
@@ -247,7 +243,6 @@ namespace Reinitialization
         solution_transfer.interpolate(interpolated_solution);
 
         constraints.distribute(interpolated_solution);
-        interpolated_solution.update_ghost_values();
         /*
          * update the reinitialization operator with the new solution values  
          */

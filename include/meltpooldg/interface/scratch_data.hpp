@@ -7,12 +7,10 @@
 #pragma once
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
-// enabling conditional ostreams
 #include <deal.II/base/conditional_ostream.h> 
-// for index set
 #include <deal.II/base/index_set.h>
-//// for distributed triangulation
-#include <deal.II/distributed/tria_base.h>
+#include <deal.II/base/partitioner.h>
+//#include <deal.II/distributed/tria_base.h>
 // for dof_handler type
 #include <deal.II/dofs/dof_handler.h>
 // for FE_Q<dim> type
@@ -47,7 +45,7 @@ class ScratchData
       this->reinit(scratch_data.get_mapping(),
                    scratch_data.get_dof_handlers(),  
                    scratch_data.get_constraints(),  
-                   scratch_data.get_quads()); 
+                   scratch_data.get_quadratures()); 
     }
     /**
      * Setup everything in one go.
@@ -113,8 +111,9 @@ class ScratchData
     unsigned int
     attach_quadrature(const Quadrature<1> &quadrature)
     {
-      this->quad_1D.emplace_back(quadrature);
-      this->quad.emplace_back(QIterated<dim>(quadrature, 1));
+      this->quad_1D.emplace_back(   quadrature );
+      this->quad.emplace_back(      QIterated<dim>(quadrature, 1) );
+      this->face_quad.emplace_back( QIterated<dim-1>(quadrature, 1) );
       return this->quad.size() - 1;
     }
     
@@ -127,7 +126,9 @@ class ScratchData
       this->min_cell_size.clear();
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
+      this->partitioner.clear();
 
+      int dof_idx = 0;
       for (const auto& dof : dof_handler)
       {
         /*
@@ -142,7 +143,16 @@ class ScratchData
         IndexSet locally_relevant_dofs_temp;
         DoFTools::extract_locally_relevant_dofs(*dof, locally_relevant_dofs_temp);
         this->locally_relevant_dofs.push_back(locally_relevant_dofs_temp);
+      
+        //const auto partitioner_ = std::make_shared<Utilities::MPI::Partitioner>(this->get_locally_owned_dofs(dof_idx), 
+                                                      //this->get_locally_relevant_dofs(dof_idx), 
+                                                      //this->get_mpi_comm(dof_idx));
+        this->partitioner.push_back( std::make_shared<Utilities::MPI::Partitioner>(this->get_locally_owned_dofs(dof_idx), 
+                                                      this->get_locally_relevant_dofs(dof_idx), 
+                                                      this->get_mpi_comm(dof_idx)));
+        dof_idx += 1;        
       }
+
     }
 
     void
@@ -226,6 +236,18 @@ class ScratchData
       return this->quad;
     }
 
+    const Quadrature<dim-1> &
+    get_face_quadrature(const unsigned int quad_index=0) const
+    {
+      return this->face_quad[quad_index];
+    }
+    
+    const std::vector<Quadrature<dim-1>>&
+    get_face_quadratures() const
+    {
+      return this->face_quad;
+    }
+
     const MatrixFree<dim, number, VectorizedArrayType> &
     get_matrix_free() const
     {
@@ -274,10 +296,10 @@ class ScratchData
       return this->locally_relevant_dofs[dof_idx];
     }
     
-    const IndexSet &
-    get_locally_active_dofs(const unsigned int dof_idx=0) const
+    const std::shared_ptr<Utilities::MPI::Partitioner> &
+    get_partitioner(const unsigned int dof_idx=0) const
     {
-      return this->locally_active_dofs[dof_idx];
+      return this->partitioner[dof_idx];
     }
 
     ConditionalOStream  
@@ -306,14 +328,16 @@ class ScratchData
       */
 
   private:
-    std::unique_ptr<Mapping<dim, spacedim>>        mapping;
-    std::vector<const DoFHandler<dim, spacedim> *> dof_handler;
-    std::vector<const AffineConstraints<number> *> constraint;
-    std::vector<Quadrature<dim>>                   quad;
-    std::vector<Quadrature<1>>                     quad_1D;
-    std::vector<double>                            min_cell_size;     
-    std::vector<IndexSet>                          locally_owned_dofs;     
-    std::vector<IndexSet>                          locally_relevant_dofs;     
+    std::unique_ptr<Mapping<dim, spacedim>>                   mapping;
+    std::vector<const DoFHandler<dim, spacedim> *>            dof_handler;
+    std::vector<const AffineConstraints<number> *>            constraint;
+    std::vector<Quadrature<dim>>                              quad;
+    std::vector<Quadrature<1>>                                quad_1D;
+    std::vector<Quadrature<dim-1>>                            face_quad;
+    std::vector<double>                                       min_cell_size;     
+    std::vector<IndexSet>                                     locally_owned_dofs;     
+    std::vector<IndexSet>                                     locally_relevant_dofs;     
+    std::vector<std::shared_ptr<Utilities::MPI::Partitioner>> partitioner;     
     
     MatrixFree<dim, number, VectorizedArrayType>   matrix_free;
 
