@@ -180,6 +180,21 @@ class ScratchData
       for (unsigned int d=0; d<dim; ++d)
         this->initialize_dof_vector(vec.block(d), dof_idx);
     }
+
+    void
+    initialize_bc_vector(VectorType & vec, const unsigned int dof_idx=0) const
+    {
+      this->initialize_dof_vector(vec,dof_idx);
+      this->get_constraint(dof_idx).distribute(vec);
+    }
+
+    void
+    initialize_bc_vector(BlockVectorType & vec, const unsigned int dof_idx=0) const
+    {
+      vec.reinit(dim);
+      for (unsigned int d=0; d<dim; ++d)
+        this->initialize_bc_vector(vec.block(d), dof_idx);
+    }
     /*
      * clear all member variables
      */

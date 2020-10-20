@@ -20,7 +20,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    template <int dim, int comp = 0>
+    template <int dim, int comp = 0, int comp_hanging_node_constraints=comp+1>
     class AdvectionDiffusionOperation
     {
     private:
@@ -44,8 +44,7 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_advected_field_in,
-                 const Parameters<double> &                     data_in,
-                 const TensorFunction<1, dim> &                 advection_velocity_in)
+                 const Parameters<double> &                     data_in)
       {
         scratch_data = scratch_data_in;
         /*
@@ -62,16 +61,15 @@ namespace MeltPoolDG
          *  set the parameters for the advection_diffusion problem
          */
         set_advection_diffusion_parameters(data_in);
-        /*
-         *  create the advection-diffusion operator
-         */
-        create_operator(advection_velocity_in);
       }
 
 
       void
-      solve(const double dt)
+      solve(const double dt,
+            const BlockVectorType& advection_velocity)
       {
+        create_operator(advection_velocity);
+        
         VectorType src, rhs;
 
         scratch_data->initialize_dof_vector(src);
@@ -83,7 +81,44 @@ namespace MeltPoolDG
 
         if (advec_diff_data.do_matrix_free)
           {
-            AssertThrow(false, ExcMessage("not yet implemented! "))
+            /*
+             * apply dirichlet boundary values
+             */
+            auto advec_diff_operator_no_bc =
+              std::make_unique<AdvectionDiffusionOperator<dim, comp_hanging_node_constraints, double>>(*scratch_data,
+                                                                                                        advection_velocity,
+                                                                                                        advec_diff_data);
+            advec_diff_operator_no_bc->set_time_increment(dt);
+            
+            VectorType advected_field_bc_values;
+            scratch_data->initialize_bc_vector(advected_field_bc_values);
+            /*
+             * perform matrix-vector multiplication (with unconstrained system and constrained set in Vector)
+             */
+            advec_diff_operator_no_bc->vmult(rhs, advected_field_bc_values);
+            
+            /*
+             * Modify right-hand side
+             */
+            rhs *= -1.0;
+            advec_diff_operator_no_bc->create_rhs( rhs, solution_advected_field);
+            
+            // clear constrainted values
+            scratch_data->get_constraint(comp).set_zero(rhs);
+            
+            /*
+             * solve linear system A*u_0 = f-A*u_D
+             */
+            iter = LinearSolve< VectorType,
+                                SolverGMRES<VectorType>,
+                                OperatorBase<double>>
+                                ::solve( *advec_diff_operator,
+                                          src,
+                                          rhs );
+
+            scratch_data->get_constraint(comp).distribute(src);
+
+            solution_advected_field = src;
           }
         else
           {
@@ -95,26 +130,29 @@ namespace MeltPoolDG
             advec_diff_operator->assemble_matrixbased(solution_advected_field,
                                                       advec_diff_operator->system_matrix,
                                                       rhs);
-            iter = LinearSolve<VectorType, SolverGMRES<VectorType>, SparseMatrixType>::solve(
-              advec_diff_operator->system_matrix, src, rhs);
+            iter = LinearSolve<VectorType, 
+                               SolverGMRES<VectorType>, 
+                               SparseMatrixType>
+                               ::solve(advec_diff_operator->system_matrix, 
+                                       src, 
+                                       rhs);
 
             scratch_data->get_constraint(comp).distribute(src);
 
-            solution_advected_field = src;
-            solution_advected_field.update_ghost_values();
+            solution_advected_field = src; 
           }
 
         if (advec_diff_data.do_print_l2norm)
           {
             const ConditionalOStream &pcout = scratch_data->get_pcout();
+            pcout << "rhs" << std::setprecision(15) << rhs.l2_norm() << std::endl;
             pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
-            pcout << "\t |Δϕ|2 = " << std::setw(15) << std::left << std::setprecision(10)
-                  << src.l2_norm() << std::endl;
+            pcout << "\t |ϕ|2 = " << std::setw(15) << std::left << std::setprecision(10)
+                  << solution_advected_field.l2_norm() << std::endl;
           }
       }
 
     private:
-      // @ todo: migrate this function to parameter class
       void
       set_advection_diffusion_parameters(const Parameters<double> &data_in)
       {
@@ -122,7 +160,7 @@ namespace MeltPoolDG
       }
 
       void
-      create_operator(const TensorFunction<1, dim> &advection_velocity)
+      create_operator(const BlockVectorType &advection_velocity)
       {
         advec_diff_operator =
           std::make_unique<AdvectionDiffusionOperator<dim, comp, double>>(*scratch_data,
@@ -136,7 +174,7 @@ namespace MeltPoolDG
         if (!advec_diff_data.do_matrix_free)
           advec_diff_operator->initialize_matrix_based<dim, comp>(*scratch_data);
       }
-
+      
     private:
       std::shared_ptr<const ScratchData<dim>> scratch_data;
       /*
