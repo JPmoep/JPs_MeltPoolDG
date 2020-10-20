@@ -98,20 +98,19 @@ namespace LevelSet
       /*
        *  make hanging nodes constraints
        */
-      constraints.clear();
-      constraints.reinit(scratch_data->get_locally_relevant_dofs());
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-      constraints.close();
-
-      scratch_data->attach_constraint_matrix(constraints);
      
       /*
        *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
        *  dirichlet constraints are supported)
        */
+      hanging_node_constraints.clear();
+      hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs());
+      DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
+      hanging_node_constraints.close();
+      
       constraints_dirichlet.clear();
       constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints_dirichlet);
+      constraints_dirichlet.merge(hanging_node_constraints);
       for (const auto& bc : base_in->get_boundary_conditions().dirichlet_bc) 
       {
         VectorTools::interpolate_boundary_values( dof_handler,
@@ -121,6 +120,7 @@ namespace LevelSet
       }
       constraints_dirichlet.close(); 
 
+      scratch_data->attach_constraint_matrix(hanging_node_constraints);
       scratch_data->attach_constraint_matrix(constraints_dirichlet);
       /*
        *  create quadrature rule
@@ -190,8 +190,8 @@ namespace LevelSet
                                      return advec_func.value(p)[d];
                                    }),
                                  advection_velocity.block(d));
-        advection_velocity.block(d).update_ghost_values();
       }
+      advection_velocity.update_ghost_values();
     }
     /*
      *  This function is to create paraview output
@@ -265,13 +265,13 @@ namespace LevelSet
   private:
     DoFHandler<dim>                                      dof_handler;
     AffineConstraints<double>                            constraints_dirichlet;
-    AffineConstraints<double>                            constraints;
+    AffineConstraints<double>                            hanging_node_constraints;
     
     std::shared_ptr<ScratchData<dim>>                    scratch_data; 
     BlockVectorType                                      advection_velocity;
     
     TimeIterator<double>                                 time_iterator;
-    LevelSetOperation<dim>                               level_set_operation;
+    LevelSetOperation<dim, 1, 0>                         level_set_operation;
   };
 } // namespace LevelSet
 } // namespace MeltPoolDG

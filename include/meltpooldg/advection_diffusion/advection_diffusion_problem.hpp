@@ -193,8 +193,8 @@ namespace MeltPoolDG
                                        return advec_func.value(p)[d];
                                      }),
                                    advection_velocity.block(d));
-          advection_velocity.block(d).update_ghost_values();
         }
+        advection_velocity.update_ghost_values();
       }
 
       void

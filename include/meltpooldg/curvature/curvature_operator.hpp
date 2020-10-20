@@ -54,6 +54,8 @@ namespace Curvature
                             SparseMatrixType & matrix, 
                             VectorType & rhs ) const override
       {
+      solution_normal_vector_in.update_ghost_values();
+
       const auto& mapping = scratch_data.get_mapping();     
       FEValues<dim> fe_values( mapping,
                                scratch_data.get_matrix_free().get_dof_handler().get_fe(),
@@ -82,7 +84,7 @@ namespace Curvature
         curvature_cell_matrix = 0.0;
         curvature_cell_rhs    = 0.0;
               
-        NormalVector::NormalVectorOperator<dim>::get_unit_normals_at_quadrature( fe_values,
+        NormalVector::NormalVectorOperator<dim,comp>::get_unit_normals_at_quadrature( fe_values,
                                         solution_normal_vector_in,
                                         normal_at_q );
                  

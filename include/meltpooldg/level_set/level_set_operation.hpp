@@ -25,7 +25,7 @@ namespace LevelSet
    *     Level set model including advection, reinitialization and curvature computation
    *     of the level set function.
    */
-  template <int dim, int comp=0>
+  template <int dim, int comp_advec_diff=0, int comp_no_dirichlet=1>
   class LevelSetOperation 
   {
   private:
@@ -145,9 +145,9 @@ namespace LevelSet
      *  The following objects are the operations, which are performed for solving the
      *  level set equation.
      */
-    AdvectionDiffusionOperation<dim,1>           advec_diff_operation;
-    ReinitializationOperation<dim,0>             reinit_operation;
-    Curvature::CurvatureOperation<dim, 0>        curvature_operation;
+    AdvectionDiffusionOperation<dim,   comp_advec_diff, comp_no_dirichlet> advec_diff_operation;
+    ReinitializationOperation<dim,     comp_no_dirichlet>                  reinit_operation;
+    Curvature::CurvatureOperation<dim, comp_no_dirichlet>                  curvature_operation;
 
      /*
      *  The reinitialization of the level set function is a "pseudo"-time-dependent

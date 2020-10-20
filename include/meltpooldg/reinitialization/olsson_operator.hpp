@@ -91,7 +91,7 @@ class OlssonOperator : public OperatorBase<number,
 
           fe_values.get_function_values(     levelset_old, psi_at_q );     // compute values of old solution at tau_n
           fe_values.get_function_gradients(  levelset_old, grad_psi_at_q ); // compute gradients of old solution at tau_n
-          NormalVector::NormalVectorOperator<dim>::get_unit_normals_at_quadrature(fe_values,
+          NormalVector::NormalVectorOperator<dim,comp>::get_unit_normals_at_quadrature(fe_values,
                                          n,
                                          normal_at_q);
 
@@ -154,6 +154,8 @@ class OlssonOperator : public OperatorBase<number,
       vmult(VectorType & dst,
             const VectorType & src) const override
       {
+        src.update_ghost_values();
+        
         AssertThrow(this->d_tau>0.0, ExcMessage("reinitialization operator: d_tau must be set"));
         
         const double eps_ = eps > 0 ? eps : eps_scale_factor * scratch_data.get_min_cell_size(comp); // @ todo: check how cell size can be extracted from matrix free class
@@ -199,6 +201,9 @@ class OlssonOperator : public OperatorBase<number,
     create_rhs(VectorType & dst,
                const VectorType & src) const override
     {
+      src.update_ghost_values();
+      this->n.update_ghost_values();
+
       AssertThrow(this->d_tau>0.0, ExcMessage("reinitialization matrix-free operator: d_tau must be set"));
       const double eps_ = eps > 0 ? eps : eps_scale_factor * scratch_data.get_min_cell_size(comp); // @ todo: check how cell size can be extracted from matrix free class
 
@@ -209,8 +214,8 @@ class OlssonOperator : public OperatorBase<number,
           return 0.5 * ( make_vectorized_array<number>(1.) - phi * phi );
       };
 
-      FECellIntegrator<dim, 1, number>   psi(           scratch_data.get_matrix_free(),comp,comp,comp);
-      FECellIntegrator<dim, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp);
+      FECellIntegrator<dim, 1, number>   psi(           scratch_data.get_matrix_free(),comp,comp,0);
+      FECellIntegrator<dim, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,0);
   
       scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
@@ -247,7 +252,7 @@ class OlssonOperator : public OperatorBase<number,
       n.reinit(dim);
       for (unsigned int d=0; d<dim; ++d)
       {
-        scratch_data.initialize_dof_vector(n.block(d));
+        scratch_data.initialize_dof_vector(n.block(d), comp);
         n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
       }
       n.update_ghost_values();

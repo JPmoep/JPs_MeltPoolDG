@@ -103,7 +103,6 @@ namespace Curvature
                                                        rhs );
 
         scratch_data->get_constraint(comp).distribute(solution_curvature);
-        solution_curvature.update_ghost_values();
       }
 
       if (curvature_data.do_print_l2norm)
@@ -133,7 +132,7 @@ namespace Curvature
   private:
     std::shared_ptr<const ScratchData<dim>> scratch_data;
     
-    NormalVector::NormalVectorOperation<dim> normal_vector_operation;
+    NormalVector::NormalVectorOperation<dim,comp> normal_vector_operation;
 
     /* 
      *  This pointer will point to your user-defined curvature operator.

@@ -91,7 +91,7 @@ namespace MeltPoolDG
             advec_diff_operator_no_bc->set_time_increment(dt);
             
             VectorType advected_field_bc_values;
-            scratch_data->initialize_bc_vector(advected_field_bc_values);
+            scratch_data->initialize_bc_vector(advected_field_bc_values, comp);
             /*
              * perform matrix-vector multiplication (with unconstrained system and constrained set in Vector)
              */
@@ -115,10 +115,6 @@ namespace MeltPoolDG
                                 ::solve( *advec_diff_operator,
                                           src,
                                           rhs );
-
-            scratch_data->get_constraint(comp).distribute(src);
-
-            solution_advected_field = src;
           }
         else
           {
@@ -137,15 +133,16 @@ namespace MeltPoolDG
                                        src, 
                                        rhs);
 
-            scratch_data->get_constraint(comp).distribute(src);
-
-            solution_advected_field = src; 
           }
+        
+        scratch_data->get_constraint(comp).distribute(src);
+
+        solution_advected_field = src; 
+        solution_advected_field.update_ghost_values();
 
         if (advec_diff_data.do_print_l2norm)
           {
             const ConditionalOStream &pcout = scratch_data->get_pcout();
-            pcout << "rhs" << std::setprecision(15) << rhs.l2_norm() << std::endl;
             pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
             pcout << "\t |ϕ|2 = " << std::setw(15) << std::left << std::setprecision(10)
                   << solution_advected_field.l2_norm() << std::endl;

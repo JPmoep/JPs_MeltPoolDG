@@ -38,7 +38,7 @@ namespace NormalVector
    *    !!!! 
    */
   
-  template <int dim, unsigned int comp=0>
+  template <int dim, unsigned int comp>
   class NormalVectorOperation
   {
   private:
@@ -82,8 +82,8 @@ namespace NormalVector
     {
       BlockVectorType rhs;
       
-      scratch_data->initialize_dof_vector(rhs);
-      scratch_data->initialize_dof_vector(solution_normal_vector);
+      scratch_data->initialize_dof_vector(rhs, comp);
+      scratch_data->initialize_dof_vector(solution_normal_vector, comp);
       
       int iter = 0;
       
@@ -96,7 +96,8 @@ namespace NormalVector
                             ::solve( *normal_vector_operator,
                                      solution_normal_vector,
                                      rhs );
-        solution_normal_vector.update_ghost_values();
+        for (unsigned int d=0; d<dim; ++d)
+          scratch_data->get_constraint(comp).distribute(solution_normal_vector.block(d));
       }
       else
       {
@@ -114,7 +115,6 @@ namespace NormalVector
                                                        rhs.block(d) );
 
           scratch_data->get_constraint(comp).distribute(solution_normal_vector.block(d));
-          solution_normal_vector.block(d).update_ghost_values();
         }
       }
 
@@ -135,9 +135,9 @@ namespace NormalVector
      */
     void create_operator()
     {
-      const double damping_parameter = scratch_data->get_min_cell_size() * normal_vector_data.damping_scale_factor;
+      const double damping_parameter = scratch_data->get_min_cell_size(comp) * normal_vector_data.damping_scale_factor;
       normal_vector_operator = std::make_unique<NormalVectorOperator<dim, comp>>( *scratch_data,
-                                                                                           damping_parameter );
+                                                                                   damping_parameter );
       /*
        *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
        *  apply it to the system matrix. This functionality is part of the OperatorBase class.
