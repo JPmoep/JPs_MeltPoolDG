@@ -71,7 +71,7 @@ subsection curvature
 
   # Set this parameter if a matrix free solution procedure should be
   # performed
-  set curv do matrix free       = false
+  set curv do matrix free       = true # default: false
 
   # Defines if the l2norm of the curvature result should be printed)
   set curv do print l2norm      = true

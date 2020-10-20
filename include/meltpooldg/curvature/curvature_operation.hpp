@@ -81,20 +81,26 @@ namespace Curvature
       
       VectorType rhs;
 
-      scratch_data->initialize_dof_vector(rhs);
-      scratch_data->initialize_dof_vector(solution_curvature);
-      
+      scratch_data->initialize_dof_vector(rhs, comp);
+      scratch_data->initialize_dof_vector(solution_curvature, comp);
+      solution_curvature = 0;
       int iter = 0;
       
       if (curvature_data.do_matrix_free)
       {
-        AssertThrow(false,ExcMessage("curvature matrix-free not yet implemented"));
+        curvature_operator->create_rhs( rhs, normal_vector_operation.solution_normal_vector);
+        iter = LinearSolve< VectorType,
+                            SolverCG<VectorType>,
+                            OperatorBase<double, VectorType, BlockVectorType>>
+                            ::solve( *curvature_operator,
+                                     solution_curvature,
+                                     rhs );
       }
       else
       {
         curvature_operator->assemble_matrixbased( normal_vector_operation.solution_normal_vector, 
-                                                      curvature_operator->system_matrix, 
-                                                      rhs );
+                                                  curvature_operator->system_matrix, 
+                                                  rhs );
 
         iter = LinearSolve<VectorType,
                              SolverCG<VectorType>,
@@ -102,8 +108,9 @@ namespace Curvature
                                                        solution_curvature,
                                                        rhs );
 
-        scratch_data->get_constraint(comp).distribute(solution_curvature);
       }
+
+      scratch_data->get_constraint(comp).distribute(solution_curvature);
 
       if (curvature_data.do_print_l2norm)
       {
@@ -117,7 +124,7 @@ namespace Curvature
   private:
     void create_operator()
     {
-      const double damping_parameter = scratch_data->get_min_cell_size() * curvature_data.damping_scale_factor;
+      const double damping_parameter = scratch_data->get_min_cell_size(comp) * curvature_data.damping_scale_factor;
       curvature_operator = std::make_unique<CurvatureOperator<dim, comp>>(
                                                           *scratch_data,
                                                           damping_parameter );

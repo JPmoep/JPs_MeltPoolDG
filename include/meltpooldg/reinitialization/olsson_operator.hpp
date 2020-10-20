@@ -258,31 +258,31 @@ class OlssonOperator : public OperatorBase<number,
       n.update_ghost_values();
     }
 
-  private:  
-      static
-      vector
-      normalize(const scalar & in)
-      {
-          vector vec;
-          
-          for(unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
-            vec[0][v] = in[v] >= 0.0 ? 1.0 : -1.0;
-          
-          return vec;
-      }
-      
-      static
-      vector
-      normalize(const vector & in)
-      {
-          return in / in.norm();
-      }
+    static
+    vector
+    normalize(const scalar & in)
+    {
+        vector vec;
+        
+        for(unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
+          vec[0][v] = in[v] >= 0.0 ? 1.0 : -1.0;
+        
+        return vec;
+    }
+    
+    static
+    vector
+    normalize(const vector & in)
+    {
+        return in / in.norm();
+    }
 
-      const ScratchData<dim>& scratch_data;
-      
-      double eps = -1.0; 
-      double eps_scale_factor; 
-      const BlockVectorType& n;
+  private:  
+    const ScratchData<dim>& scratch_data;
+    
+    double eps = -1.0; 
+    double eps_scale_factor; 
+    const BlockVectorType& n;
 
 };
 }   // namespace Reinitialization

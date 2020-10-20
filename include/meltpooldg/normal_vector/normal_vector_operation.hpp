@@ -96,8 +96,6 @@ namespace NormalVector
                             ::solve( *normal_vector_operator,
                                      solution_normal_vector,
                                      rhs );
-        for (unsigned int d=0; d<dim; ++d)
-          scratch_data->get_constraint(comp).distribute(solution_normal_vector.block(d));
       }
       else
       {
@@ -107,16 +105,15 @@ namespace NormalVector
                                                       rhs );
 
         for (unsigned int d=0; d<dim; ++d)
-        {
           iter = LinearSolve<VectorType,
                              SolverCG<VectorType>,
                              SparseMatrixType>::solve( normal_vector_operator->system_matrix,
                                                        solution_normal_vector.block(d),
                                                        rhs.block(d) );
 
-          scratch_data->get_constraint(comp).distribute(solution_normal_vector.block(d));
-        }
       }
+      for (unsigned int d=0; d<dim; ++d)
+        scratch_data->get_constraint(comp).distribute(solution_normal_vector.block(d));
 
       if (normal_vector_data.do_print_l2norm)
       {
