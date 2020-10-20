@@ -83,7 +83,6 @@ namespace Curvature
 
       scratch_data->initialize_dof_vector(rhs, comp);
       scratch_data->initialize_dof_vector(solution_curvature, comp);
-      solution_curvature = 0;
       int iter = 0;
       
       if (curvature_data.do_matrix_free)
