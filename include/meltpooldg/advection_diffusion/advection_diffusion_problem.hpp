@@ -236,7 +236,7 @@ namespace MeltPoolDG
             /*
              * write data of boundary -- @todo: move to own utility function
              */
-            if (parameters.paraview_print_boundary_id)
+            if (parameters.paraview.print_boundary_id)
             {
               const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
               const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
