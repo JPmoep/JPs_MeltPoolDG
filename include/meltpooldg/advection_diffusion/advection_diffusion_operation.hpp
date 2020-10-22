@@ -89,23 +89,10 @@ namespace MeltPoolDG
                                                                                                         advection_velocity,
                                                                                                         advec_diff_data);
             advec_diff_operator_no_bc->set_time_increment(dt);
-            
-            VectorType advected_field_bc_values;
-            scratch_data->initialize_bc_vector(advected_field_bc_values, comp);
-            /*
-             * perform matrix-vector multiplication (with unconstrained system and constrained set in Vector)
-             */
-            advec_diff_operator_no_bc->vmult(rhs, advected_field_bc_values);
-            
-            /*
-             * Modify right-hand side
-             */
-            rhs *= -1.0;
-            advec_diff_operator_no_bc->create_rhs( rhs, solution_advected_field);
-            
-            // clear constrainted values
-            scratch_data->get_constraint(comp).set_zero(rhs);
-            
+            advec_diff_operator_no_bc->create_rhs_and_apply_dirichlet_mf(rhs,
+                                                                         solution_advected_field,
+                                                                         *scratch_data,
+                                                                         comp /*dof_idx*/);
             /*
              * solve linear system A*u_0 = f-A*u_D
              */
