@@ -21,7 +21,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    template <int dim, int comp = 0, int comp_hanging_node_constraints = comp + 1>
+    	template <int dim, int comp = 0, int comp_hanging_node_constraints = comp + 1>
     class AdvectionDiffusionOperation
     {
     private:
