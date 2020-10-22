@@ -289,7 +289,7 @@ namespace Reinitialization
     
     std::shared_ptr<ScratchData<dim>>  scratch_data;
     TimeIterator<double>               time_iterator;
-    ReinitializationOperation<dim>     reinit_operation;
+    ReinitializationOperation<dim,0>   reinit_operation;
     
   };
 } // namespace Reinitialization

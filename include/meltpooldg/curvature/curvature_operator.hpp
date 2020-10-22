@@ -40,6 +40,7 @@ namespace Curvature
       using BlockVectorType     = LinearAlgebra::distributed::BlockVector<number>;
       using VectorizedArrayType = VectorizedArray<number>;
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;                     
+
       // clang-format off
       CurvatureOperator( const ScratchData<dim>& scratch_data_in,
                          const double            damping_in )
@@ -54,17 +55,19 @@ namespace Curvature
                             SparseMatrixType & matrix, 
                             VectorType & rhs ) const override
       {
+      solution_normal_vector_in.update_ghost_values();
+
       const auto& mapping = scratch_data.get_mapping();     
       FEValues<dim> fe_values( mapping,
-                               scratch_data.get_matrix_free().get_dof_handler().get_fe(),
-                               scratch_data.get_matrix_free().get_quadrature(),
+                               scratch_data.get_matrix_free().get_dof_handler(comp).get_fe(),
+                               scratch_data.get_matrix_free().get_quadrature(comp),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
 
-      const unsigned int                    dofs_per_cell =scratch_data.get_n_dofs_per_cell();
+      const unsigned int                    dofs_per_cell =scratch_data.get_n_dofs_per_cell(comp);
 
       FullMatrix<double>                    curvature_cell_matrix( dofs_per_cell, dofs_per_cell );
-      Vector<double>           curvature_cell_rhs(dofs_per_cell) ;
-      std::vector<types::global_dof_index>  local_dof_indices(  dofs_per_cell );
+      Vector<double>                        curvature_cell_rhs(    dofs_per_cell) ;
+      std::vector<types::global_dof_index>  local_dof_indices(     dofs_per_cell );
       
       const unsigned int n_q_points = fe_values.get_quadrature().size();
 
@@ -73,7 +76,7 @@ namespace Curvature
       matrix = 0.0;
       rhs = 0.0;
 
-      for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler().active_cell_iterators())
+      for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
       if (cell->is_locally_owned())
       {
         fe_values.reinit(cell);
@@ -82,7 +85,7 @@ namespace Curvature
         curvature_cell_matrix = 0.0;
         curvature_cell_rhs    = 0.0;
               
-        NormalVector::NormalVectorOperator<dim>::get_unit_normals_at_quadrature( fe_values,
+        NormalVector::NormalVectorOperator<dim,comp>::get_unit_normals_at_quadrature( fe_values,
                                         solution_normal_vector_in,
                                         normal_at_q );
                  
@@ -130,77 +133,62 @@ namespace Curvature
      *  matrix-free utility
      */
 
-    //void
-    //vmult(VectorType & dst,
-          //const VectorType & src) const override
-    //{
-      ////const int n_q_points_1d = degree+1; // @ todo: not hard code
-      ////FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal( matrix_free );
+    void
+    vmult(VectorType & dst,
+          const VectorType & src) const override
+    {
 
-      ////matrix_free.template cell_loop<BlockVectorType, BlockVectorType>( [&] 
-        ////(const auto&, auto& dst, const auto& src, auto cell_range) {
-          ////for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
-          ////{
-            ////normal.reinit(cell);
-          /*
-           * @ bug? --> the following call yield a compilation error
-           */
-            //////normal.gather_evaluate(src, true, true);
-          ////[> current work around <]
-            ////normal.read_dof_values(src);
-            ////normal.evaluate(true,true,false);
+      scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>( [&] 
+        (const auto&, auto& dst, const auto& src, auto cell_range) {
+          FECellIntegrator<dim, 1, number> curvature( scratch_data.get_matrix_free(), comp, comp);
+          for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
+          {
+            curvature.reinit(cell);
+            curvature.gather_evaluate(src, true, true);
 
-            ////for (unsigned int q_index=0; q_index<normal.n_q_points; ++q_index)
-            ////{
-                ////normal.submit_value(              normal.get_value(    q_index ), q_index);
-                ////normal.submit_gradient( damping * normal.get_gradient( q_index ), q_index );
-              ////}
-              /*
-              * @ bug? --> the following call yield a compilation error
-              */
-              //////normal_comp.integrate_scatter(true, true, dst);
-          ////[> current work around <]
-              ////normal.integrate(true, true);
-              ////normal.distribute_local_to_global(dst);
-            ////}
-          ////},
-          ////dst, 
-          ////src, 
-          ////true );
-    //}
+            for (unsigned int q_index=0; q_index<curvature.n_q_points; ++q_index)
+            {
+                curvature.submit_value(              curvature.get_value(    q_index ), q_index);
+                curvature.submit_gradient( damping * curvature.get_gradient( q_index ), q_index );
+            }
 
-    //void
-    //create_rhs(VectorType & dst,
-               //const BlockVectorType & src) const override
-    //{
-      ////const int n_q_points_1d = degree+1;
+            curvature.integrate_scatter(true, true, dst);
+          }
+        },
+        dst, 
+        src, 
+        true );
+    }
 
-      ////FEEvaluation<dim, degree, n_q_points_1d, dim, number>   normal_vector( matrix_free );
-      ////FEEvaluation<dim, degree, n_q_points_1d, 1, number>     levelset( matrix_free );
+    void
+    create_rhs(VectorType & dst,
+               const BlockVectorType & src) const override
+    {
+      scratch_data.get_matrix_free().template cell_loop<VectorType, BlockVectorType>(
+        [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
+          FECellIntegrator<dim, 1, number>   curvature(      scratch_data.get_matrix_free(), comp, comp);
+          FECellIntegrator<dim, dim, number> normal_vector(  scratch_data.get_matrix_free(), comp, comp);
+          for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
+          {
+            curvature.reinit(cell);
 
-      ////matrix_free.template cell_loop<BlockVectorType, VectorType>(
-        ////[&](const auto &, auto &dst, const auto &src, auto macro_cells) {
-          ////for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
-          ////{
-            ////normal_vector.reinit(cell);
-            ////levelset.reinit(cell);
+            normal_vector.reinit(cell);
+            normal_vector.read_dof_values_plain(src);
+            normal_vector.evaluate(true, false);
 
-            ////levelset.gather_evaluate(src, false, true);
-            ////for (unsigned int q_index = 0; q_index < normal_vector.n_q_points; ++q_index)
-              ////normal_vector.submit_value( levelset.get_gradient(q_index), q_index );
+            for (unsigned int q_index = 0; q_index < curvature.n_q_points; ++q_index)
+            {
+              const auto n_phi = Reinitialization::OlssonOperator<dim,comp>::normalize(normal_vector.get_value(q_index));
+              curvature.submit_gradient( n_phi, q_index );
+            }
 
-            ////normal_vector.integrate(true, false);
-            ////normal_vector.distribute_local_to_global(dst);
-            /*
-             * @ bug? --> the following call yield a compilation error
-             */
-            //////normal_vector.integrate_scatter(true, false, dst);
-          ////}
-        ////},
-        ////dst,
-        ////src,
-        ////true);
-    //}
+            curvature.integrate_scatter(false, true, dst);
+          }
+        },
+        dst,
+        src,
+        true);
+    }
 
     private:
       const ScratchData<dim>& scratch_data;

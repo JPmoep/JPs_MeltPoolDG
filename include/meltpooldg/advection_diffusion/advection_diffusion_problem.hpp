@@ -54,7 +54,11 @@ namespace MeltPoolDG
             const double dt = time_iterator.get_next_time_increment();
             scratch_data->get_pcout()
               << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
-            advec_diff_operation.solve(dt);
+            /*
+             * compute the advection velocity for the current time
+             */
+            compute_advection_velocity(*base_in->get_advection_field());
+            advec_diff_operation.solve(dt, advection_velocity);
             /*
              *  do paraview output if requested
              */
@@ -92,19 +96,23 @@ namespace MeltPoolDG
 
         dof_handler.initialize(*base_in->triangulation, fe);
         scratch_data->attach_dof_handler(dof_handler);
-
+        scratch_data->attach_dof_handler(dof_handler);
         /*
-         *  create partitioning
+         *  create the partititioning
          */
         scratch_data->create_partitioning();
         /*
-         *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
+         *  make hanging nodes and dirichlet constraints (Note: at the moment no time-dependent
          *  dirichlet constraints are supported)
          */
+        hanging_node_constraints.clear();
+        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs());
+        DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
+        hanging_node_constraints.close();
+        
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
-        DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-
+        constraints.merge(hanging_node_constraints);
         for (const auto &bc : base_in->get_boundary_conditions().dirichlet_bc)
           {
             VectorTools::interpolate_boundary_values(dof_handler,
@@ -115,11 +123,13 @@ namespace MeltPoolDG
         constraints.close();
 
         scratch_data->attach_constraint_matrix(constraints);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints);
         /*
          *  create quadrature rule
          */
         QGauss<1> quad_1d_temp(base_in->parameters.base.n_q_points_1d);
 
+        scratch_data->attach_quadrature(quad_1d_temp);
         scratch_data->attach_quadrature(quad_1d_temp);
         /*
          *  create the matrix-free object
@@ -128,13 +138,12 @@ namespace MeltPoolDG
         /*
          *  initialize the time iterator
          */
-        TimeIteratorData<double> time_data;
-        time_data.start_time       = base_in->parameters.advec_diff.start_time;
-        time_data.end_time         = base_in->parameters.advec_diff.end_time;
-        time_data.time_increment   = base_in->parameters.advec_diff.time_step_size;
-        time_data.max_n_time_steps = 10000;
-
-        time_iterator.initialize(time_data);
+        time_iterator.initialize(TimeIteratorData<double>{
+                    base_in->parameters.advec_diff.start_time,
+                    base_in->parameters.advec_diff.end_time,
+                    base_in->parameters.advec_diff.time_step_size,
+                    base_in->parameters.advec_diff.max_n_steps,
+                    false});
 
         /*
          *  set initial conditions of the levelset function
@@ -149,22 +158,43 @@ namespace MeltPoolDG
                              initial_solution);
 
         initial_solution.update_ghost_values();
-
         /*
          *    initialize the advection-diffusion operation class
          */
-        advection_velocity = base_in->get_advection_field();
         AssertThrow(base_in->get_advection_field(), 
                     ExcMessage(" It seems that your SimulationBase object does not contain "
                                "a valid advection velocity. A shared_ptr to your advection velocity "
                                "function, e.g., AdvectionFunc<dim> must be specified as follows: "
                                "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();" 
                               ));
-
         advec_diff_operation.initialize(scratch_data,
                                         initial_solution,
-                                        base_in->parameters,
-                                        *advection_velocity);
+                                        base_in->parameters);
+      }
+      
+      void
+      compute_advection_velocity(TensorFunction<1,dim>& advec_func)
+      {
+        scratch_data->initialize_dof_vector(advection_velocity);
+        /*
+         *  set the current time to the advection field function
+         */
+        advec_func.set_time(time_iterator.get_current_time());
+        /*
+         *  work around to interpolate a vector-valued quantity on a scalar DoFHandler
+         *  @todo: could be shifted to a utility function
+         */
+        for (auto d = 0; d < dim; ++d)
+        {
+          VectorTools::interpolate(scratch_data->get_mapping(),
+                                   scratch_data->get_dof_handler(),
+                                   ScalarFunctionFromFunctionObject<dim>(
+                                     [&](const Point<dim> &p) {
+                                       return advec_func.value(p)[d];
+                                     }),
+                                   advection_velocity.block(d));
+        }
+        advection_velocity.update_ghost_values();
       }
 
       void
@@ -185,31 +215,13 @@ namespace MeltPoolDG
             /*
              *  output advection velocity
              */
-            BlockVectorType advection;
-            scratch_data->initialize_dof_vector(advection);
-
             if (parameters.paraview.print_advection)
-              {
-                advection_velocity->set_time(time_iterator.get_current_time());
-                /*
-                 *  work around to interpolate a vector-valued quantity on a scalar DoFHandler
-                 */
-                for (auto d = 0; d < dim; ++d)
-                  {
-                    VectorTools::interpolate(scratch_data->get_mapping(),
-                                             scratch_data->get_dof_handler(),
-                                             ScalarFunctionFromFunctionObject<dim>(
-                                               [&](const Point<dim> &p) {
-                                                 return advection_velocity->value(p)[d];
-                                               }),
-                                             advection.block(d));
-                    advection.block(d).update_ghost_values();
-
-                    data_out.add_data_vector(dof_handler,
-                                             advection.block(d),
-                                             "advection_velocity_" + std::to_string(d));
-                  }
-              }
+            {
+              for (auto d = 0; d < dim; ++d)
+                  data_out.add_data_vector(dof_handler,
+                                           advection_velocity.block(d),
+                                           "advection_velocity_" + std::to_string(d));
+            }
             /*
              * write data to vtu file
              */
@@ -220,6 +232,7 @@ namespace MeltPoolDG
                                                 scratch_data->get_mpi_comm(), 
                                                 parameters.paraview.n_digits_timestep, 
                                                 parameters.paraview.n_groups);
+
             /*
              * write data of boundary -- @todo: move to own utility function
              */
@@ -250,8 +263,9 @@ namespace MeltPoolDG
     private:
       DoFHandler<dim>                         dof_handler;
       AffineConstraints<double>               constraints;
+      AffineConstraints<double>               hanging_node_constraints;
       std::shared_ptr<ScratchData<dim>>       scratch_data;
-      std::shared_ptr<TensorFunction<1, dim>> advection_velocity;
+      BlockVectorType                         advection_velocity;
       TimeIterator<double>                    time_iterator;
       AdvectionDiffusionOperation<dim>        advec_diff_operation;
     };

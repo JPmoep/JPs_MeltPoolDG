@@ -20,7 +20,7 @@ namespace MeltPoolDG
 namespace NormalVector
 {
 
-  template<int dim, unsigned int comp=0, typename number = double>
+  template<int dim, unsigned int comp, typename number = double>
   class NormalVectorOperator: public OperatorBase<number, 
                                 LinearAlgebra::distributed::BlockVector<number>, 
                                 LinearAlgebra::distributed::Vector<number>>
@@ -41,11 +41,12 @@ namespace NormalVector
       }
 
       void
-      assemble_matrixbased( const VectorType & levelset_in, 
+      assemble_matrixbased( const VectorType & level_set_in, 
                             SparseMatrixType & matrix, 
                             BlockVectorType & rhs ) const override
       {
         
+      level_set_in.update_ghost_values();
       const auto& mapping = scratch_data.get_mapping();
 
       FEValues<dim> fe_values( mapping,
@@ -53,7 +54,7 @@ namespace NormalVector
                                scratch_data.get_matrix_free().get_quadrature(comp),
                                update_values | update_gradients | update_quadrature_points | update_JxW_values );
 
-      const unsigned int                    dofs_per_cell =scratch_data.get_n_dofs_per_cell();
+      const unsigned int                    dofs_per_cell =scratch_data.get_n_dofs_per_cell(comp);
 
       FullMatrix<double>                    normal_cell_matrix( dofs_per_cell, dofs_per_cell );
       std::vector<Vector<double>>           normal_cell_rhs(    dim, Vector<double>(dofs_per_cell) );
@@ -76,7 +77,7 @@ namespace NormalVector
         for(auto& normal_cell : normal_cell_rhs)
             normal_cell =    0.0;
 
-        fe_values.get_function_gradients( levelset_in, normal_at_q );  //compute normals from level set solution at tau=0
+        fe_values.get_function_gradients( level_set_in, normal_at_q );  //compute normals from level set solution at tau=0
         for (const unsigned int q_index : fe_values.quadrature_point_indices())
         {
           for (unsigned int i=0; i<dofs_per_cell; ++i)
@@ -86,29 +87,29 @@ namespace NormalVector
             
             for (unsigned int j=0; j<dofs_per_cell; ++j)
             {
-                const double phi_j             = fe_values.shape_value(j, q_index);
-                const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(j, q_index);
-                
-                 //clang-format off
-                normal_cell_matrix( i, j ) += ( 
-                                                phi_i * phi_j 
-                                                + 
-                                                damping * grad_phi_i * grad_phi_j  
-                                              )
-                                              * 
-                                              fe_values.JxW( q_index ) ;
-                 //clang-format on
+              const double phi_j             = fe_values.shape_value(j, q_index);
+              const Tensor<1,dim> grad_phi_j = fe_values.shape_grad(j, q_index);
+              
+              //clang-format off
+              normal_cell_matrix( i, j ) += ( 
+                                              phi_i * phi_j 
+                                              + 
+                                              damping * grad_phi_i * grad_phi_j  
+                                            )
+                                            * 
+                                            fe_values.JxW( q_index ) ;
+              //clang-format on
             }
      
             for (unsigned int d=0; d<dim; ++d)
             {
-                 //clang-format off
-                normal_cell_rhs[d](i) += phi_i
-                                         * 
-                                         normal_at_q[ q_index ][ d ]  
-                                         * 
-                                         fe_values.JxW( q_index );
-                   //clang-format on
+              //clang-format off
+              normal_cell_rhs[d](i) += phi_i
+                                       * 
+                                       normal_at_q[ q_index ][ d ]  
+                                       * 
+                                       fe_values.JxW( q_index );
+              //clang-format on
             }
           }
         }
@@ -117,12 +118,12 @@ namespace NormalVector
         cell->get_dof_indices(local_dof_indices);
 
         scratch_data.get_constraint(comp).distribute_local_to_global( normal_cell_matrix,
-                                                 local_dof_indices,
-                                                 matrix);
+                                                                      local_dof_indices,
+                                                                      matrix);
         for (unsigned int d=0; d<dim; ++d)
             scratch_data.get_constraint(comp).distribute_local_to_global( normal_cell_rhs[d],
-                                                     local_dof_indices,
-                                                     rhs.block(d) );
+                                                                          local_dof_indices,
+                                                                          rhs.block(d) );
          
       } // end of cell loop
       matrix.compress( VectorOperation::add );
@@ -138,10 +139,10 @@ namespace NormalVector
     vmult(BlockVectorType & dst,
           const BlockVectorType & src) const override
     {
-      FECellIntegrator<dim, dim, number>   normal( scratch_data.get_matrix_free(), comp, comp, comp);
 
       scratch_data.get_matrix_free().template cell_loop<BlockVectorType, BlockVectorType>( [&] 
         (const auto&, auto& dst, const auto& src, auto cell_range) {
+          FECellIntegrator<dim, dim, number>   normal( scratch_data.get_matrix_free(), comp, comp);
           for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
           {
             normal.reinit(cell);
@@ -151,32 +152,36 @@ namespace NormalVector
             {
                 normal.submit_value(              normal.get_value(    q_index ), q_index);
                 normal.submit_gradient( damping * normal.get_gradient( q_index ), q_index );
-              }
-              normal.integrate_scatter(true, true, dst);
             }
-          },
-          dst, 
-          src, 
-          true );
+
+            normal.integrate_scatter(true, true, dst);
+          }
+        },
+        dst, 
+        src, 
+        true );
     }
 
     void
     create_rhs(BlockVectorType & dst,
                const VectorType & src) const override
     {
-      FECellIntegrator<dim, dim, number>   normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
-      FECellIntegrator<dim, 1, number>     levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
+      const int n_comp_fe_system = 0;
+      FECellIntegrator<dim, dim, number>   normal_vector(  scratch_data.get_matrix_free(),comp,comp,n_comp_fe_system );
+      FECellIntegrator<dim, 1, number>     level_set(      scratch_data.get_matrix_free(),comp,comp,n_comp_fe_system );
 
       scratch_data.get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
           for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
           {
             normal_vector.reinit(cell);
-            levelset.reinit(cell);
 
-            levelset.gather_evaluate(src, false, true);
+            level_set.reinit(cell);
+            level_set.read_dof_values_plain(src);
+            level_set.evaluate(false, true);
+
             for (unsigned int q_index = 0; q_index < normal_vector.n_q_points; ++q_index)
-              normal_vector.submit_value( levelset.get_gradient(q_index), q_index );
+              normal_vector.submit_value( level_set.get_gradient(q_index), q_index );
 
             normal_vector.integrate_scatter(true, false, dst);
           }
@@ -188,9 +193,9 @@ namespace NormalVector
 
     static
     void
-    get_unit_normals_at_quadrature( const FEValues<dim>& fe_values,
-                                    const BlockVectorType& normal_vector_field_in, 
-                                    std::vector<Tensor<1,dim>>& unit_normal_at_quadrature)
+    get_unit_normals_at_quadrature( const FEValues<dim>        &fe_values,
+                                    const BlockVectorType      &normal_vector_field_in, 
+                                    std::vector<Tensor<1,dim>> &unit_normal_at_quadrature)
     {
       for (unsigned int d=0; d<dim; ++d )
       {

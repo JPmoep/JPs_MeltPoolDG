@@ -25,7 +25,7 @@ namespace LevelSet
    *     Level set model including advection, reinitialization and curvature computation
    *     of the level set function.
    */
-  template <int dim, int comp=0>
+  template <int dim, int comp_advec_diff=0, int comp_no_dirichlet=1>
   class LevelSetOperation 
   {
   private:
@@ -42,11 +42,9 @@ namespace LevelSet
     void 
     initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                const VectorType &                             solution_level_set_in,
-               const Parameters<double>&                      data_in,
-               const std::shared_ptr<TensorFunction<1,dim>>  &advection_velocity_in )
+               const Parameters<double>&                      data_in)
     {
       scratch_data       = scratch_data_in;
-      advection_velocity = advection_velocity_in;
       /*
        *  set the level set data
        */
@@ -56,8 +54,7 @@ namespace LevelSet
        */
       advec_diff_operation.initialize(scratch_data,
                                       solution_level_set_in, 
-                                      data_in,
-                                      *advection_velocity_in);
+                                      data_in);
       /*
        *  set the parameters for the levelset problem; already determined parameters
        *  from the initialize call of advec_diff_operation are overwritten.
@@ -90,12 +87,13 @@ namespace LevelSet
     }
 
     void
-    solve(const double dt) 
+    solve(const double dt,
+          const BlockVectorType& advection_velocity) 
     {
       /*
        *  solve the advection step of the level set function 
        */
-      advec_diff_operation.solve( dt );
+      advec_diff_operation.solve( dt, advection_velocity );
       /*
        *  solve the reinitialization problem of the level set equation
        */
@@ -143,14 +141,13 @@ namespace LevelSet
     }
 
     std::shared_ptr<const ScratchData<dim>>             scratch_data;    
-    std::shared_ptr<TensorFunction<1,dim>>              advection_velocity;
      /*
      *  The following objects are the operations, which are performed for solving the
      *  level set equation.
      */
-    AdvectionDiffusionOperation<dim,1>           advec_diff_operation;
-    ReinitializationOperation<dim,0>             reinit_operation;
-    Curvature::CurvatureOperation<dim, 0>        curvature_operation;
+    AdvectionDiffusionOperation<dim,   comp_advec_diff, comp_no_dirichlet> advec_diff_operation;
+    ReinitializationOperation<dim,     comp_no_dirichlet>                  reinit_operation;
+    Curvature::CurvatureOperation<dim, comp_no_dirichlet>                  curvature_operation;
 
      /*
      *  The reinitialization of the level set function is a "pseudo"-time-dependent

@@ -224,7 +224,7 @@ int main(int argc, char* argv[])
   Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
   
   MPI_Comm mpi_communicator(MPI_COMM_WORLD); 
-  std::string input_file =  std::string(SOURCE_DIR) + "/rotating_bubble.json";
+  std::string input_file =  std::string(SOURCE_DIR) + "/rotating_bubble_mf.json";
   
   const dealii::ConditionalOStream pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0 );
   Parameters<double> parameters;

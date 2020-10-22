@@ -29,7 +29,7 @@ namespace Reinitialization
    *     property of the level set equation
    */
   
-  template <int dim, unsigned int comp=0>
+  template <int dim, unsigned int comp>
   class ReinitializationOperation 
   {
   private:
@@ -54,7 +54,7 @@ namespace Reinitialization
                const Parameters<double>&                      data_in )
     {
       scratch_data = scratch_data_in;
-      scratch_data->initialize_dof_vector(solution_level_set); 
+      scratch_data->initialize_dof_vector(solution_level_set, comp); 
       /*
        *    initialize the (local) parameters of the reinitialization
        *    from the global user-defined parameters
@@ -87,7 +87,7 @@ namespace Reinitialization
       /*
        *    copy the given solution into the member variable
        */
-      scratch_data->initialize_dof_vector(solution_level_set);
+      scratch_data->initialize_dof_vector(solution_level_set, comp);
       solution_level_set.copy_locally_owned_data_from(solution_level_set_in);
       solution_level_set.update_ghost_values();
       /*
@@ -104,8 +104,8 @@ namespace Reinitialization
     {
       VectorType src, rhs;
 
-      scratch_data->initialize_dof_vector(src);
-      scratch_data->initialize_dof_vector(rhs);
+      scratch_data->initialize_dof_vector(src, comp);
+      scratch_data->initialize_dof_vector(rhs, comp);
       
       reinit_operator->set_time_increment(d_tau);
 
@@ -114,7 +114,7 @@ namespace Reinitialization
       if (reinit_data.do_matrix_free)
       {
         VectorType src_rhs;
-        scratch_data->initialize_dof_vector(src_rhs);
+        scratch_data->initialize_dof_vector(src_rhs, comp);
         src_rhs.copy_locally_owned_data_from(solution_level_set);
         src_rhs.update_ghost_values();
         reinit_operator->create_rhs( rhs, src_rhs);
@@ -198,15 +198,15 @@ namespace Reinitialization
     }
   
   private:
-    std::shared_ptr<const ScratchData<dim>>   scratch_data;
+    std::shared_ptr<const ScratchData<dim>>        scratch_data;
     /*
      *  This shared pointer will point to your user-defined reinitialization operator.
      */
-    std::unique_ptr<OperatorBase<double>>     reinit_operator;
+    std::unique_ptr<OperatorBase<double>>          reinit_operator;
     /*
      *   Computation of the normal vectors
      */
-    NormalVector::NormalVectorOperation<dim>  normal_vector_operation;
+    NormalVector::NormalVectorOperation<dim,comp>  normal_vector_operation;
     
   };
 } // namespace Reinitialization

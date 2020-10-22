@@ -54,7 +54,8 @@ namespace LevelSet
       {
         const double dt = time_iterator.get_next_time_increment();   
         scratch_data->get_pcout() << "| ls: t= " << std::setw(10) << std::left << time_iterator.get_current_time();
-        level_set_operation.solve(dt);
+        compute_advection_velocity(*base_in->get_advection_field());
+        level_set_operation.solve(dt, advection_velocity);
         /*
          *  do paraview output if requested
          */
@@ -97,20 +98,19 @@ namespace LevelSet
       /*
        *  make hanging nodes constraints
        */
-      constraints.clear();
-      constraints.reinit(scratch_data->get_locally_relevant_dofs());
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-      constraints.close();
-
-      scratch_data->attach_constraint_matrix(constraints);
      
       /*
        *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
        *  dirichlet constraints are supported)
        */
+      hanging_node_constraints.clear();
+      hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs());
+      DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
+      hanging_node_constraints.close();
+      
       constraints_dirichlet.clear();
       constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
-      DoFTools::make_hanging_node_constraints(dof_handler, constraints_dirichlet);
+      constraints_dirichlet.merge(hanging_node_constraints);
       for (const auto& bc : base_in->get_boundary_conditions().dirichlet_bc) 
       {
         VectorTools::interpolate_boundary_values( dof_handler,
@@ -120,6 +120,7 @@ namespace LevelSet
       }
       constraints_dirichlet.close(); 
 
+      scratch_data->attach_constraint_matrix(hanging_node_constraints);
       scratch_data->attach_constraint_matrix(constraints_dirichlet);
       /*
        *  create quadrature rule
@@ -156,7 +157,6 @@ namespace LevelSet
       /*
        *    initialize the levelset operation class
        */
-      advection_velocity = base_in->get_advection_field();
       AssertThrow(base_in->get_advection_field(), 
                   ExcMessage(" It seems that your SimulationBase object does not contain "
                              "a valid advection velocity. A shared_ptr to your advection velocity "
@@ -166,10 +166,33 @@ namespace LevelSet
       
       level_set_operation.initialize(scratch_data, 
                                      initial_solution, 
-                                     base_in->parameters, 
-                                     advection_velocity);
+                                     base_in->parameters);
     }
 
+    void
+    compute_advection_velocity(TensorFunction<1,dim>& advec_func)
+    {
+      scratch_data->initialize_dof_vector(advection_velocity);
+      /*
+       *  set the current time to the advection field function
+       */
+      advec_func.set_time(time_iterator.get_current_time());
+      /*
+       *  work around to interpolate a vector-valued quantity on a scalar DoFHandler
+       *  @todo: could be shifted to a utility function
+       */
+      for (auto d = 0; d < dim; ++d)
+      {
+        VectorTools::interpolate(scratch_data->get_mapping(),
+                                 scratch_data->get_dof_handler(),
+                                 ScalarFunctionFromFunctionObject<dim>(
+                                   [&](const Point<dim> &p) {
+                                     return advec_func.value(p)[d];
+                                   }),
+                                 advection_velocity.block(d));
+      }
+      advection_velocity.update_ghost_values();
+    }
     /*
      *  This function is to create paraview output
      */
@@ -197,30 +220,12 @@ namespace LevelSet
         /*
          *  output advection velocity
          */
-        BlockVectorType advection;
-        scratch_data->initialize_dof_vector(advection);
-
         if (parameters.paraview.print_advection)
         {
-          advection_velocity->set_time(time_iterator.get_current_time());
-          /*
-           *  work around to interpolate a vector-valued quantity on a scalar DoFHandler
-           */
           for (auto d = 0; d < dim; ++d)
-            {
-              VectorTools::interpolate(scratch_data->get_mapping(),
-                                       scratch_data->get_dof_handler(),
-                                       ScalarFunctionFromFunctionObject<dim>(
-                                         [&](const Point<dim> &p) {
-                                           return advection_velocity->value(p)[d];
-                                         }),
-                                       advection.block(d));
-              advection.block(d).update_ghost_values();
-
-              data_out.add_data_vector(dof_handler,
-                                       advection.block(d),
-                                       "advection_velocity_" + std::to_string(d));
-            }
+            data_out.add_data_vector(dof_handler,
+                                   advection_velocity.block(d),
+                                   "advection_velocity_" + std::to_string(d));
         }
         /*
         * write data to vtu file
@@ -260,13 +265,13 @@ namespace LevelSet
   private:
     DoFHandler<dim>                                      dof_handler;
     AffineConstraints<double>                            constraints_dirichlet;
-    AffineConstraints<double>                            constraints;
+    AffineConstraints<double>                            hanging_node_constraints;
     
     std::shared_ptr<ScratchData<dim>>                    scratch_data; 
-    std::shared_ptr<TensorFunction<1,dim>>               advection_velocity;
+    BlockVectorType                                      advection_velocity;
     
     TimeIterator<double>                                 time_iterator;
-    LevelSetOperation<dim>                               level_set_operation;
+    LevelSetOperation<dim, 1, 0>                         level_set_operation;
   };
 } // namespace LevelSet
 } // namespace MeltPoolDG

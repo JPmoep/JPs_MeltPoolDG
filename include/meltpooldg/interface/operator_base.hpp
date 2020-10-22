@@ -81,7 +81,32 @@ namespace MeltPoolDG
           
           this->system_matrix.reinit( dsp );  
         }
-        
+
+        template<int dim>
+        void 
+        create_rhs_and_apply_dirichlet_mf(DoFVectorType          &rhs,
+                                          const SrcRhsVectorType &src,
+                                          const ScratchData<dim> &scratch_data,
+                                          const int dof_idx      =0
+                                          )
+        {
+          DoFVectorType bc_values;
+          scratch_data.initialize_bc_vector(bc_values, dof_idx);
+          /*
+           * perform matrix-vector multiplication (with unconstrained system and constrained set in Vector)
+           */
+          this->vmult(rhs, bc_values);
+
+          /*
+           * Modify right-hand side
+           */
+          rhs *= -1.0;
+          this->create_rhs( rhs, src);
+
+          // clear constrainted values
+          scratch_data.get_constraint(dof_idx).set_zero(rhs);
+        }
+         
         const SparseMatrixType &
         get_system_matrix() const
         {

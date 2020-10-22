@@ -1,1 +1,2 @@
 ADD_SUBDIRECTORY(rotating_bubble)
+ADD_SUBDIRECTORY(rotating_bubble_mf)
