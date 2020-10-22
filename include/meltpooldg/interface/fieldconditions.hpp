@@ -4,13 +4,13 @@
 
 namespace MeltPoolDG
 {
-    using namespace dealii;
+  using namespace dealii;
 
-    template<int dim>
-    struct FieldConditions
-    {
-        std::shared_ptr<Function<dim>>           initial_field;
-        std::shared_ptr<TensorFunction<1,dim>>   advection_field;
-        std::shared_ptr<Function<dim>>           exact_solution_field;
-    };
+  template <int dim>
+  struct FieldConditions
+  {
+    std::shared_ptr<Function<dim>>          initial_field;
+    std::shared_ptr<TensorFunction<1, dim>> advection_field;
+    std::shared_ptr<Function<dim>>          exact_solution_field;
+  };
 } // namespace MeltPoolDG

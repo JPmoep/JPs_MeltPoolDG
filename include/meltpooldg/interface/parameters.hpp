@@ -24,9 +24,9 @@ namespace MeltPoolDG
   template <typename number = double>
   struct AdaptiveMeshingData
   {
-    bool   do_amr                          = false;
-    double upper_perc_to_refine            = 0.0;
-    double lower_perc_to_coarsen           = 0.0;
+    bool         do_amr                    = false;
+    double       upper_perc_to_refine      = 0.0;
+    double       lower_perc_to_coarsen     = 0.0;
     unsigned int max_grid_refinement_level = 12;
     unsigned int min_grid_refinement_level = 1;
   };
@@ -60,14 +60,15 @@ namespace MeltPoolDG
   template <typename number = double>
   struct AdvectionDiffusionData
   {
-    number   diffusivity     = 0.0;
-    number   theta           = 0.5;
-    number   start_time      = 0.0;
-    number   end_time        = 1.0;
-    number   time_step_size  = 0.01;
-    unsigned int max_n_steps = 1000000;
-    bool     do_matrix_free  = false;
-    bool     do_print_l2norm = true;
+    number       diffusivity     = 0.0;
+    number       theta           = 0.5;
+    number       start_time      = 0.0;
+    number       end_time        = 1.0;
+    number       time_step_size  = 0.01;
+    unsigned int max_n_steps     = 1000000;
+    bool         do_matrix_free  = false;
+    bool         do_print_l2norm = true;
+    AdvectionDiffusionData() {}
   };
 
   template <typename number = double>
@@ -137,19 +138,17 @@ namespace MeltPoolDG
       if (base.n_q_points_1d == -1)
         base.n_q_points_1d = base.degree + 1;
       /*
-       *  set the min grid refinement level if not user-specified 
+       *  set the min grid refinement level if not user-specified
        */
-      if (amr.min_grid_refinement_level== 1)
+      if (amr.min_grid_refinement_level == 1)
         amr.min_grid_refinement_level = base.global_refinements;
-
     }
-    
+
     void
     print_parameters(const dealii::ConditionalOStream &pcout)
     {
       if (base.do_print_parameters)
-        prm.print_parameters(pcout.get_stream(),
-                             ParameterHandler::OutputStyle::Text);
+        prm.print_parameters(pcout.get_stream(), ParameterHandler::OutputStyle::Text);
     }
 
     void
@@ -177,9 +176,10 @@ namespace MeltPoolDG
        */
       prm.enter_subsection("base");
       {
-        prm.add_parameter("application name",
-                           base.application_name,
-                           "Sets the base name for the application that will be fed to the problem type.");
+        prm.add_parameter(
+          "application name",
+          base.application_name,
+          "Sets the base name for the application that will be fed to the problem type.");
         prm.add_parameter("problem name",
                           base.problem_name,
                           "Sets the base name for the problem that should be solved.");
@@ -191,10 +191,9 @@ namespace MeltPoolDG
         prm.add_parameter("n q points 1d",
                           base.n_q_points_1d,
                           "Defines the number of quadrature points");
-        prm.add_parameter(
-          "do print parameters",
-          base.do_print_parameters,
-          "Sets this parameter to true to list parameters in output");
+        prm.add_parameter("do print parameters",
+                          base.do_print_parameters,
+                          "Sets this parameter to true to list parameters in output");
       }
       prm.leave_subsection();
       /*
@@ -202,19 +201,19 @@ namespace MeltPoolDG
        */
       prm.enter_subsection("adaptive meshing");
       {
-        prm.add_parameter(
-          "do amr",
-          amr.do_amr,
-          "Sets this parameter to true to activate adaptive meshing");
+        prm.add_parameter("do amr",
+                          amr.do_amr,
+                          "Sets this parameter to true to activate adaptive meshing");
         prm.add_parameter("upper perc to refine",
                           amr.upper_perc_to_refine,
                           "Defines the (upper) percentage of elements that should be refined");
         prm.add_parameter("lower perc to coarsen",
-                           amr.lower_perc_to_coarsen,
+                          amr.lower_perc_to_coarsen,
                           "Defines the (lower) percentage of elements that should be coarsened");
-        prm.add_parameter("max grid refinement level",
-                          amr.max_grid_refinement_level,
-                          "Defines the number of maximum refinement steps one grid cell will be undergone.");
+        prm.add_parameter(
+          "max grid refinement level",
+          amr.max_grid_refinement_level,
+          "Defines the number of maximum refinement steps one grid cell will be undergone.");
       }
       prm.leave_subsection();
       /*
@@ -439,7 +438,7 @@ namespace MeltPoolDG
       }
       prm.leave_subsection();
     }
-   
+
     ParameterHandler prm;
 
     BaseData<number>               base;

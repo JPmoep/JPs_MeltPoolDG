@@ -9,6 +9,7 @@
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
+#include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operator.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
@@ -20,7 +21,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    template <int dim, int comp = 0, int comp_hanging_node_constraints=comp+1>
+    template <int dim, int comp = 0, int comp_hanging_node_constraints = comp + 1>
     class AdvectionDiffusionOperation
     {
     private:
@@ -65,11 +66,10 @@ namespace MeltPoolDG
 
 
       void
-      solve(const double dt,
-            const BlockVectorType& advection_velocity)
+      solve(const double dt, const BlockVectorType &advection_velocity)
       {
         create_operator(advection_velocity);
-        
+
         VectorType src, rhs;
 
         scratch_data->initialize_dof_vector(src);
@@ -84,10 +84,9 @@ namespace MeltPoolDG
             /*
              * apply dirichlet boundary values
              */
-            auto advec_diff_operator_no_bc =
-              std::make_unique<AdvectionDiffusionOperator<dim, comp_hanging_node_constraints, double>>(*scratch_data,
-                                                                                                        advection_velocity,
-                                                                                                        advec_diff_data);
+            auto advec_diff_operator_no_bc = std::make_unique<
+              AdvectionDiffusionOperator<dim, comp_hanging_node_constraints, double>>(
+              *scratch_data, advection_velocity, advec_diff_data);
             advec_diff_operator_no_bc->set_time_increment(dt);
             advec_diff_operator_no_bc->create_rhs_and_apply_dirichlet_mf(rhs,
                                                                          solution_advected_field,
@@ -96,12 +95,8 @@ namespace MeltPoolDG
             /*
              * solve linear system A*u_0 = f-A*u_D
              */
-            iter = LinearSolve< VectorType,
-                                SolverGMRES<VectorType>,
-                                OperatorBase<double>>
-                                ::solve( *advec_diff_operator,
-                                          src,
-                                          rhs );
+            iter = LinearSolve<VectorType, SolverGMRES<VectorType>, OperatorBase<double>>::solve(
+              *advec_diff_operator, src, rhs);
           }
         else
           {
@@ -113,18 +108,13 @@ namespace MeltPoolDG
             advec_diff_operator->assemble_matrixbased(solution_advected_field,
                                                       advec_diff_operator->system_matrix,
                                                       rhs);
-            iter = LinearSolve<VectorType, 
-                               SolverGMRES<VectorType>, 
-                               SparseMatrixType>
-                               ::solve(advec_diff_operator->system_matrix, 
-                                       src, 
-                                       rhs);
-
+            iter = LinearSolve<VectorType, SolverGMRES<VectorType>, SparseMatrixType>::solve(
+              advec_diff_operator->system_matrix, src, rhs);
           }
-        
+
         scratch_data->get_constraint(comp).distribute(src);
 
-        solution_advected_field = src; 
+        solution_advected_field = src;
         solution_advected_field.update_ghost_values();
 
         if (advec_diff_data.do_print_l2norm)
@@ -158,7 +148,7 @@ namespace MeltPoolDG
         if (!advec_diff_data.do_matrix_free)
           advec_diff_operator->initialize_matrix_based<dim, comp>(*scratch_data);
       }
-      
+
     private:
       std::shared_ptr<const ScratchData<dim>> scratch_data;
       /*
