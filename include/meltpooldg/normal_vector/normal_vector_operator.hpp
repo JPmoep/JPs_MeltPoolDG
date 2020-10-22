@@ -139,11 +139,10 @@ namespace NormalVector
     vmult(BlockVectorType & dst,
           const BlockVectorType & src) const override
     {
-      const int n_comp_fe_system = 0;
-      FECellIntegrator<dim, dim, number>   normal( scratch_data.get_matrix_free(), comp, comp, n_comp_fe_system);
 
       scratch_data.get_matrix_free().template cell_loop<BlockVectorType, BlockVectorType>( [&] 
         (const auto&, auto& dst, const auto& src, auto cell_range) {
+          FECellIntegrator<dim, dim, number>   normal( scratch_data.get_matrix_free(), comp, comp);
           for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
           {
             normal.reinit(cell);

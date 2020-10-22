@@ -160,11 +160,11 @@ class OlssonOperator : public OperatorBase<number,
        
         AssertThrow(eps_>0.0, ExcMessage("reinitialization operator: epsilon must be set"));
         
-        FECellIntegrator<dim, 1, number>   levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
-        FECellIntegrator<dim, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>( [&] 
           (const auto&, auto& dst, const auto& src, auto cell_range) {
+            FECellIntegrator<dim, 1, number>   levelset(      scratch_data.get_matrix_free(),comp,comp,comp );
+            FECellIntegrator<dim, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,comp );
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
             {
               levelset.reinit(cell);
@@ -210,11 +210,11 @@ class OlssonOperator : public OperatorBase<number,
           return 0.5 * ( make_vectorized_array<number>(1.) - phi * phi );
       };
 
-      FECellIntegrator<dim, 1, number>   psi(           scratch_data.get_matrix_free(),comp,comp,0);
-      FECellIntegrator<dim, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,0);
   
       scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
+          FECellIntegrator<dim, 1, number>   psi(           scratch_data.get_matrix_free(),comp,comp,0);
+          FECellIntegrator<dim, dim, number> normal_vector( scratch_data.get_matrix_free(),comp,comp,0);
           for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
           {
             psi.reinit(cell);

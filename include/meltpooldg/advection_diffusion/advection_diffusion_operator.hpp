@@ -165,8 +165,10 @@ namespace MeltPoolDG
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>( [&] 
           (const auto&, auto& dst, const auto& src, auto cell_range) {
+
             FECellIntegrator<dim, 1, number>   advected_field(  scratch_data.get_matrix_free(),comp/*dof_idx*/,comp/*quad_idx*/);
             FECellIntegrator<dim, dim, number> velocity(        scratch_data.get_matrix_free(),comp/*dof_idx*/,comp/*quad_idx*/);
+
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
             {
               advected_field.reinit(cell);
