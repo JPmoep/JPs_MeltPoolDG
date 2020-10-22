@@ -118,8 +118,8 @@ namespace MeltPoolDG
                                                        fe_values.shape_grad( i, q_index) * 
                                                        fe_values.shape_grad( j, q_index) 
                                                        +
-                                                       fe_values.shape_value( i, q_index) ) *
-                                                       velocity_grad_phi_j 
+                                                       fe_values.shape_value( i, q_index)  *
+                                                       velocity_grad_phi_j )
                               ) * fe_values.JxW(q_index);
                   // clang-format on
                 }
@@ -161,15 +161,12 @@ namespace MeltPoolDG
             const VectorType & src) const override
       {
         AssertThrow(this->d_tau>0.0, ExcMessage("advection diffusion operator: d_tau must be set"));
-        src.update_ghost_values();
-        
 
-        const int comp_fe_system = 0; // @todo: might be changed for FESystem
-        FECellIntegrator<dim, 1, number>   advected_field(  scratch_data.get_matrix_free(),comp,comp,comp_fe_system );
-        FECellIntegrator<dim, dim, number> velocity(        scratch_data.get_matrix_free(),comp,comp,comp_fe_system );
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>( [&] 
           (const auto&, auto& dst, const auto& src, auto cell_range) {
+            FECellIntegrator<dim, 1, number>   advected_field(  scratch_data.get_matrix_free(),comp/*dof_idx*/,comp/*quad_idx*/);
+            FECellIntegrator<dim, dim, number> velocity(        scratch_data.get_matrix_free(),comp/*dof_idx*/,comp/*quad_idx*/);
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
             {
               advected_field.reinit(cell);
@@ -208,20 +205,21 @@ namespace MeltPoolDG
       const VectorType & src) const override
       {
         /*
-         * To assemble the RHS including the dirichlet BC, the procedure described in dealii step-50 is incorporated.
+         * This function creates the rhs of the advection-diffusion problem. When inhomogeneous dirichlet BC are 
+         * prescribed, the rhs vector is modified including BC terms. Thus the src vector will NOT be zeroed
+         * during the cell_loop.
          */
         AssertThrow(this->d_tau>0.0, ExcMessage("advection diffusion operator: d_tau must be set"));
         
-        src.update_ghost_values();
-        const int comp_fe_system = 0; // @todo: might be changed for FESystem
-        FECellIntegrator<dim, 1, number, VectorizedArrayType> advected_field_bc(  scratch_data.get_matrix_free(), comp, comp, comp_fe_system );
-        FECellIntegrator<dim, 1, number, VectorizedArrayType> advected_field(     scratch_data.get_matrix_free(), comp, comp, comp_fe_system );
-        FECellIntegrator<dim, dim, number> velocity(                              scratch_data.get_matrix_free(), comp, comp, comp_fe_system );
-    
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
+    
+            FECellIntegrator<dim, 1, number, VectorizedArrayType> advected_field( scratch_data.get_matrix_free(), comp/*dof_idx*/, comp/*quad_idx*/);
+            FECellIntegrator<dim, dim, number> velocity(                          scratch_data.get_matrix_free(), comp/*dof_idx*/, comp/*quad_idx*/);
+            
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
             {
+    
               advected_field.reinit(cell);
               advected_field.gather_evaluate(src, true, true);
               

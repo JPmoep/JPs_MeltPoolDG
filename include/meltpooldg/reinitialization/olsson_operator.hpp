@@ -39,7 +39,7 @@ class OlssonOperator : public OperatorBase<number,
         : scratch_data     (  scratch_data_in ) 
         , eps              ( constant_epsilon )
         , eps_scale_factor ( eps_scale_factor )
-        , n                ( n_in             )
+        , normal_vec       ( n_in             )
         {
         }
       
@@ -77,7 +77,7 @@ class OlssonOperator : public OperatorBase<number,
         rhs      = 0.0;
         matrix   = 0.0;
         
-        this->n.update_ghost_values();
+        this->normal_vec.update_ghost_values();
 
         for (const auto &cell : scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
         if (cell->is_locally_owned())
@@ -92,7 +92,7 @@ class OlssonOperator : public OperatorBase<number,
           fe_values.get_function_values(     levelset_old, psi_at_q );     // compute values of old solution at tau_n
           fe_values.get_function_gradients(  levelset_old, grad_psi_at_q ); // compute gradients of old solution at tau_n
           NormalVector::NormalVectorOperator<dim,comp>::get_unit_normals_at_quadrature(fe_values,
-                                         n,
+                                         this->normal_vec,
                                          normal_at_q);
 
           for (const unsigned int q_index : fe_values.quadrature_point_indices())
@@ -154,8 +154,6 @@ class OlssonOperator : public OperatorBase<number,
       vmult(VectorType & dst,
             const VectorType & src) const override
       {
-        src.update_ghost_values();
-        
         AssertThrow(this->d_tau>0.0, ExcMessage("reinitialization operator: d_tau must be set"));
         
         const double eps_ = eps > 0 ? eps : eps_scale_factor * scratch_data.get_min_cell_size(comp); // @ todo: check how cell size can be extracted from matrix free class
@@ -173,7 +171,7 @@ class OlssonOperator : public OperatorBase<number,
               levelset.gather_evaluate(src, true, true);
               
               normal_vector.reinit(cell);
-              normal_vector.read_dof_values(this->n);
+              normal_vector.read_dof_values_plain(this->normal_vec);
               normal_vector.evaluate(true, false);
 
               for (unsigned int q_index=0; q_index<levelset.n_q_points; q_index++)
@@ -196,13 +194,11 @@ class OlssonOperator : public OperatorBase<number,
           true );
     }
 
-
     void
     create_rhs(VectorType & dst,
                const VectorType & src) const override
     {
-      src.update_ghost_values();
-      this->n.update_ghost_values();
+      this->normal_vec.update_ghost_values();
 
       AssertThrow(this->d_tau>0.0, ExcMessage("reinitialization matrix-free operator: d_tau must be set"));
       const double eps_ = eps > 0 ? eps : eps_scale_factor * scratch_data.get_min_cell_size(comp); // @ todo: check how cell size can be extracted from matrix free class
@@ -225,7 +221,7 @@ class OlssonOperator : public OperatorBase<number,
             psi.gather_evaluate(src, true, true);
             
             normal_vector.reinit(cell);
-            normal_vector.read_dof_values(n);
+            normal_vector.read_dof_values_plain(this->normal_vec);
             normal_vector.evaluate(true, false);
 
             for (unsigned int q_index = 0; q_index < psi.n_q_points; ++q_index)
@@ -249,13 +245,13 @@ class OlssonOperator : public OperatorBase<number,
     void
     set_normal_vector_field(const BlockVectorType & normal_vector) 
     {
-      n.reinit(dim);
+      this->normal_vec.reinit(dim);
       for (unsigned int d=0; d<dim; ++d)
       {
-        scratch_data.initialize_dof_vector(n.block(d), comp);
-        n.block(d).copy_locally_owned_data_from(normal_vector.block(d));
+        scratch_data.initialize_dof_vector(this->normal_vec.block(d), comp);
+        this->normal_vec.block(d).copy_locally_owned_data_from(normal_vector.block(d));
       }
-      n.update_ghost_values();
+      this->normal_vec.update_ghost_values();
     }
 
     static
@@ -282,7 +278,7 @@ class OlssonOperator : public OperatorBase<number,
     
     double eps = -1.0; 
     double eps_scale_factor; 
-    const BlockVectorType& n;
+    const BlockVectorType& normal_vec;
 
 };
 }   // namespace Reinitialization

@@ -12,12 +12,13 @@ namespace MeltPoolDG
   template <typename number = double>
   struct BaseData
   {
-    std::string  application_name   = "none";
-    std::string  problem_name       = "none";
-    unsigned int dimension          = 2;
-    unsigned int global_refinements = 1;
-    unsigned int degree             = 1;
-    int          n_q_points_1d      = -1;
+    std::string  application_name    = "none";
+    std::string  problem_name        = "none";
+    unsigned int dimension           = 2;
+    unsigned int global_refinements  = 1;
+    unsigned int degree              = 1;
+    int          n_q_points_1d       = -1;
+    bool         do_print_parameters = true;
   };
 
   template <typename number = double>
@@ -59,13 +60,14 @@ namespace MeltPoolDG
   template <typename number = double>
   struct AdvectionDiffusionData
   {
-    number diffusivity     = 0.0;
-    number theta           = 0.5;
-    number start_time      = 0.0;
-    number end_time        = 1.0;
-    number time_step_size  = 0.01;
-    bool   do_matrix_free  = false;
-    bool   do_print_l2norm = true;
+    number   diffusivity     = 0.0;
+    number   theta           = 0.5;
+    number   start_time      = 0.0;
+    number   end_time        = 1.0;
+    number   time_step_size  = 0.01;
+    unsigned int max_n_steps = 1000000;
+    bool     do_matrix_free  = false;
+    bool     do_print_l2norm = true;
   };
 
   template <typename number = double>
@@ -145,8 +147,9 @@ namespace MeltPoolDG
     void
     print_parameters(const dealii::ConditionalOStream &pcout)
     {
-      prm.print_parameters(pcout.get_stream(),
-                           ParameterHandler::OutputStyle::Text);
+      if (base.do_print_parameters)
+        prm.print_parameters(pcout.get_stream(),
+                             ParameterHandler::OutputStyle::Text);
     }
 
     void
@@ -188,6 +191,10 @@ namespace MeltPoolDG
         prm.add_parameter("n q points 1d",
                           base.n_q_points_1d,
                           "Defines the number of quadrature points");
+        prm.add_parameter(
+          "do print parameters",
+          base.do_print_parameters,
+          "Sets this parameter to true to list parameters in output");
       }
       prm.leave_subsection();
       /*
@@ -233,6 +240,9 @@ namespace MeltPoolDG
           advec_diff.time_step_size,
           "Sets the step size for time stepping. For non-uniform "
           "time stepping, this parameter determines the size of the first time step.");
+        prm.add_parameter("advec diff max n steps",
+                          advec_diff.max_n_steps,
+                          "Sets the maximum number of advection diffusion steps");
         prm.add_parameter(
           "advec diff do matrix free",
           advec_diff.do_matrix_free,

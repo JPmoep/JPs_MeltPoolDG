@@ -139,8 +139,6 @@ namespace NormalVector
     vmult(BlockVectorType & dst,
           const BlockVectorType & src) const override
     {
-      src.update_ghost_values();
-
       const int n_comp_fe_system = 0;
       FECellIntegrator<dim, dim, number>   normal( scratch_data.get_matrix_free(), comp, comp, n_comp_fe_system);
 
@@ -169,8 +167,6 @@ namespace NormalVector
     create_rhs(BlockVectorType & dst,
                const VectorType & src) const override
     {
-      src.update_ghost_values();
-
       const int n_comp_fe_system = 0;
       FECellIntegrator<dim, dim, number>   normal_vector(  scratch_data.get_matrix_free(),comp,comp,n_comp_fe_system );
       FECellIntegrator<dim, 1, number>     level_set(      scratch_data.get_matrix_free(),comp,comp,n_comp_fe_system );

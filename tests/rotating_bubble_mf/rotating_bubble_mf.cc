@@ -230,9 +230,6 @@ int main(int argc, char* argv[])
   Parameters<double> parameters;
   parameters.process_parameters_file(input_file);
 
-  if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-    parameters.print_parameters(std::cout);
-
   using namespace MeltPoolDG::Test::RotatingBubble;
 
   std::shared_ptr<SimulationBase<2>> test = std::make_shared<Simulation<2>>(input_file, mpi_communicator);

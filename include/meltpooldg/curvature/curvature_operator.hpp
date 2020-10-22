@@ -137,10 +137,7 @@ namespace Curvature
     vmult(VectorType & dst,
           const VectorType & src) const override
     {
-      src.update_ghost_values();
-
-      const int n_comp_fe_system = 0;
-      FECellIntegrator<dim, 1, number> curvature( scratch_data.get_matrix_free(), comp, comp, n_comp_fe_system);
+      FECellIntegrator<dim, 1, number> curvature( scratch_data.get_matrix_free(), comp, comp);
 
       scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>( [&] 
         (const auto&, auto& dst, const auto& src, auto cell_range) {
@@ -167,11 +164,8 @@ namespace Curvature
     create_rhs(VectorType & dst,
                const BlockVectorType & src) const override
     {
-      src.update_ghost_values();
-                
-      const int n_comp_fe_system = 0;
-      FECellIntegrator<dim, 1, number>   curvature(      scratch_data.get_matrix_free(), comp, comp, n_comp_fe_system );
-      FECellIntegrator<dim, dim, number> normal_vector(  scratch_data.get_matrix_free(), comp, comp, n_comp_fe_system );
+      FECellIntegrator<dim, 1, number>   curvature(      scratch_data.get_matrix_free(), comp, comp);
+      FECellIntegrator<dim, dim, number> normal_vector(  scratch_data.get_matrix_free(), comp, comp);
 
       scratch_data.get_matrix_free().template cell_loop<VectorType, BlockVectorType>(
         [&](const auto &, auto &dst, const auto &src, auto macro_cells) {

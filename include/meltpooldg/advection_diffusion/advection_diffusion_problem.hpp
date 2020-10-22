@@ -102,7 +102,7 @@ namespace MeltPoolDG
          */
         scratch_data->create_partitioning();
         /*
-           *  make hanging nodes and dirichlet constraints (Note: at the moment no time-dependent
+         *  make hanging nodes and dirichlet constraints (Note: at the moment no time-dependent
          *  dirichlet constraints are supported)
          */
         hanging_node_constraints.clear();
@@ -142,7 +142,7 @@ namespace MeltPoolDG
                     base_in->parameters.advec_diff.start_time,
                     base_in->parameters.advec_diff.end_time,
                     base_in->parameters.advec_diff.time_step_size,
-                    10000,
+                    base_in->parameters.advec_diff.max_n_steps,
                     false});
 
         /*
