@@ -15,7 +15,6 @@ template <int dim,
           int n_components,
           typename Number,
           typename VectorizedArrayType = VectorizedArray<Number>>
-using FECellIntegrator =
-  FEEvaluation<dim, -1, 0, n_components, Number, VectorizedArrayType>;
+using FECellIntegrator = FEEvaluation<dim, -1, 0, n_components, Number, VectorizedArrayType>;
 
 DEAL_II_NAMESPACE_CLOSE

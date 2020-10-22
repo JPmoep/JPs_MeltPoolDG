@@ -23,6 +23,7 @@
 
 // MeltPoolDG
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
+#include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
@@ -109,7 +110,7 @@ namespace MeltPoolDG
         hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs());
         DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
         hanging_node_constraints.close();
-        
+
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
         constraints.merge(hanging_node_constraints);
@@ -138,12 +139,12 @@ namespace MeltPoolDG
         /*
          *  initialize the time iterator
          */
-        time_iterator.initialize(TimeIteratorData<double>{
-                    base_in->parameters.advec_diff.start_time,
-                    base_in->parameters.advec_diff.end_time,
-                    base_in->parameters.advec_diff.time_step_size,
-                    base_in->parameters.advec_diff.max_n_steps,
-                    false});
+        time_iterator.initialize(
+          TimeIteratorData<double>{base_in->parameters.advec_diff.start_time,
+                                   base_in->parameters.advec_diff.end_time,
+                                   base_in->parameters.advec_diff.time_step_size,
+                                   base_in->parameters.advec_diff.max_n_steps,
+                                   false});
 
         /*
          *  set initial conditions of the levelset function
@@ -161,19 +162,18 @@ namespace MeltPoolDG
         /*
          *    initialize the advection-diffusion operation class
          */
-        AssertThrow(base_in->get_advection_field(), 
-                    ExcMessage(" It seems that your SimulationBase object does not contain "
-                               "a valid advection velocity. A shared_ptr to your advection velocity "
-                               "function, e.g., AdvectionFunc<dim> must be specified as follows: "
-                               "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();" 
-                              ));
-        advec_diff_operation.initialize(scratch_data,
-                                        initial_solution,
-                                        base_in->parameters);
+        AssertThrow(
+          base_in->get_advection_field(),
+          ExcMessage(
+            " It seems that your SimulationBase object does not contain "
+            "a valid advection velocity. A shared_ptr to your advection velocity "
+            "function, e.g., AdvectionFunc<dim> must be specified as follows: "
+            "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();"));
+        advec_diff_operation.initialize(scratch_data, initial_solution, base_in->parameters);
       }
-      
+
       void
-      compute_advection_velocity(TensorFunction<1,dim>& advec_func)
+      compute_advection_velocity(TensorFunction<1, dim> &advec_func)
       {
         scratch_data->initialize_dof_vector(advection_velocity);
         /*
@@ -185,15 +185,13 @@ namespace MeltPoolDG
          *  @todo: could be shifted to a utility function
          */
         for (auto d = 0; d < dim; ++d)
-        {
-          VectorTools::interpolate(scratch_data->get_mapping(),
-                                   scratch_data->get_dof_handler(),
-                                   ScalarFunctionFromFunctionObject<dim>(
-                                     [&](const Point<dim> &p) {
-                                       return advec_func.value(p)[d];
-                                     }),
-                                   advection_velocity.block(d));
-        }
+          {
+            VectorTools::interpolate(scratch_data->get_mapping(),
+                                     scratch_data->get_dof_handler(),
+                                     ScalarFunctionFromFunctionObject<dim>(
+                                       [&](const Point<dim> &p) { return advec_func.value(p)[d]; }),
+                                     advection_velocity.block(d));
+          }
         advection_velocity.update_ghost_values();
       }
 
@@ -216,58 +214,58 @@ namespace MeltPoolDG
              *  output advection velocity
              */
             if (parameters.paraview.print_advection)
-            {
-              for (auto d = 0; d < dim; ++d)
+              {
+                for (auto d = 0; d < dim; ++d)
                   data_out.add_data_vector(dof_handler,
                                            advection_velocity.block(d),
                                            "advection_velocity_" + std::to_string(d));
-            }
+              }
             /*
              * write data to vtu file
              */
             data_out.build_patches();
-            data_out.write_vtu_with_pvtu_record("./", 
-                                                parameters.paraview.filename, 
-                                                time_step, 
-                                                scratch_data->get_mpi_comm(), 
-                                                parameters.paraview.n_digits_timestep, 
+            data_out.write_vtu_with_pvtu_record("./",
+                                                parameters.paraview.filename,
+                                                time_step,
+                                                scratch_data->get_mpi_comm(),
+                                                parameters.paraview.n_digits_timestep,
                                                 parameters.paraview.n_groups);
 
             /*
              * write data of boundary -- @todo: move to own utility function
              */
             if (parameters.paraview.print_boundary_id)
-            {
-              const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
-              const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
+              {
+                const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
+                const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
 
-              const unsigned int n_digits =
-                static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
+                const unsigned int n_digits =
+                  static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
 
-              std::string filename = "./solution_advection_diffusion_boundary_IDs" +
-                                     Utilities::int_to_string(rank, n_digits) + ".vtk";
-              std::ofstream output(filename.c_str());
+                std::string filename = "./solution_advection_diffusion_boundary_IDs" +
+                                       Utilities::int_to_string(rank, n_digits) + ".vtk";
+                std::ofstream output(filename.c_str());
 
-              GridOut           grid_out;
-              GridOutFlags::Vtk flags;
-              flags.output_cells         = false;
-              flags.output_faces         = true;
-              flags.output_edges         = false;
-              flags.output_only_relevant = false;
-              grid_out.set_flags(flags);
-              grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
-            }
+                GridOut           grid_out;
+                GridOutFlags::Vtk flags;
+                flags.output_cells         = false;
+                flags.output_faces         = true;
+                flags.output_edges         = false;
+                flags.output_only_relevant = false;
+                grid_out.set_flags(flags);
+                grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
+              }
           }
       }
 
     private:
-      DoFHandler<dim>                         dof_handler;
-      AffineConstraints<double>               constraints;
-      AffineConstraints<double>               hanging_node_constraints;
-      std::shared_ptr<ScratchData<dim>>       scratch_data;
-      BlockVectorType                         advection_velocity;
-      TimeIterator<double>                    time_iterator;
-      AdvectionDiffusionOperation<dim>        advec_diff_operation;
+      DoFHandler<dim>                   dof_handler;
+      AffineConstraints<double>         constraints;
+      AffineConstraints<double>         hanging_node_constraints;
+      std::shared_ptr<ScratchData<dim>> scratch_data;
+      BlockVectorType                   advection_velocity;
+      TimeIterator<double>              time_iterator;
+      AdvectionDiffusionOperation<dim>  advec_diff_operation;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG
