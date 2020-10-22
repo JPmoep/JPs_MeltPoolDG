@@ -68,7 +68,8 @@ namespace MeltPoolDG
     unsigned int max_n_steps     = 1000000;
     bool         do_matrix_free  = false;
     bool         do_print_l2norm = true;
-    AdvectionDiffusionData() {}
+    AdvectionDiffusionData()
+    {}
   };
 
   template <typename number = double>

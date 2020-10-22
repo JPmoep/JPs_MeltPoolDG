@@ -9,9 +9,9 @@
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
-#include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operator.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
+#include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
@@ -21,7 +21,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    	template <int dim, int comp = 0, int comp_hanging_node_constraints = comp + 1>
+    template <int dim, int comp = 0, int comp_hanging_node_constraints = comp + 1>
     class AdvectionDiffusionOperation
     {
     private:
