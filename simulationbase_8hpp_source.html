@@ -88,9 +88,9 @@ $(function() {
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;  {</div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;  <span class="keyword">public</span>:</div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;    <a class="code" href="classMeltPoolDG_1_1SimulationBase.html">SimulationBase</a>(std::string parameter_file_in, MPI_Comm mpi_communicator_in)</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;    : parameter_file(parameter_file_in)</div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;    , mpi_communicator(mpi_communicator_in)</div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;    , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;      : parameter_file(parameter_file_in)</div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;      , mpi_communicator(mpi_communicator_in)</div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;      , pcout(std::cout, Utilities::MPI::this_mpi_process(mpi_communicator) == 0)</div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;    {</div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;      set_parameters();</div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;    }</div>
@@ -116,57 +116,59 @@ $(function() {
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    create()</div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    {</div>
 <div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;      create_spatial_discretization();</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;      AssertThrow(this-&gt;triangulation,</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;                  ExcMessage(<span class="stringliteral">&quot;It seems that your SimulationBase object does not contain&quot;</span></div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;                             <span class="stringliteral">&quot; a valid triangulation object. A shared_ptr to your triangulation&quot;</span></div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;                             <span class="stringliteral">&quot; must be specified as follows for a serialized triangulation &quot;</span></div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;                             <span class="stringliteral">&quot; this-&gt;triangulation = std::make_shared&lt;Triangulation&lt;dim&gt;&gt;(); &quot;</span></div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;                             <span class="stringliteral">&quot; or for a parallel triangulation &quot;</span></div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;                             <span class="stringliteral">&quot; this-&gt;triangulation = std::make_shared&lt;parallel::distributed::Triangulation&lt;dim&gt;&gt;(this-&gt;mpi_communicator); &quot;</span></div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;                            ));</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;      set_boundary_conditions();</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;      set_field_conditions();</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;      AssertThrow(this-&gt;field_conditions.initial_field,</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;                  ExcMessage(<span class="stringliteral">&quot;It seems that your SimulationBase object does not contain &quot;</span></div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;                             <span class="stringliteral">&quot;a valid initial field function. A shared_ptr to your initial field &quot;</span></div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;                             <span class="stringliteral">&quot;function, e.g., MyInitializeFunc&lt;dim&gt; must be specified as follows: &quot;</span></div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;                             <span class="stringliteral">&quot;this-&gt;field_conditions.initial_field = std::make_shared&lt;MyInitializeFunc&lt;dim&gt;&gt;();&quot;</span> </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;                            ));</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    };</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    <span class="comment">/*</span></div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;<span class="comment">     * getter functions</span></div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;<span class="comment">     */</span></div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    <span class="keyword">virtual</span> MPI_Comm</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    get_mpi_communicator()<span class="keyword"> const</span></div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<span class="keyword">    </span>{</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;      <span class="keywordflow">return</span> this-&gt;mpi_communicator;</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    };</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;    std::shared_ptr&lt;FieldConditions&lt;dim&gt;&gt;</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;    get_field_conditions()<span class="keyword"> const</span></div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;<span class="keyword">    </span>{</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;      <span class="keywordflow">return</span> std::make_shared&lt;FieldConditions&lt;dim&gt;&gt;(this-&gt;field_conditions);</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;    }</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;    std::shared_ptr&lt;TensorFunction&lt;1, dim&gt;&gt;</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;    get_advection_field()<span class="keyword"> const</span></div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="keyword">    </span>{</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;      <span class="keywordflow">return</span> this-&gt;field_conditions.advection_field;</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;    }</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;    <span class="keyword">const</span> <a class="code" href="structMeltPoolDG_1_1BoundaryConditions.html">BoundaryConditions&lt;dim&gt;</a> &amp;</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;    get_boundary_conditions()<span class="keyword"> const</span></div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="keyword">    </span>{</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;      <span class="keywordflow">return</span> this-&gt;boundary_conditions;</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;    }</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;    <span class="keyword">const</span> std::string                             parameter_file;</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;    <span class="keyword">const</span> MPI_Comm                                mpi_communicator;</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;    <span class="keyword">const</span> dealii::ConditionalOStream              pcout;</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;    <a class="code" href="structMeltPoolDG_1_1Parameters.html">Parameters&lt;double&gt;</a>                            parameters;</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;    std::shared_ptr&lt;Triangulation&lt;dim, spacedim&gt;&gt; triangulation;</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;    <a class="code" href="structMeltPoolDG_1_1FieldConditions.html">FieldConditions&lt;dim&gt;</a>                          field_conditions;</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;    <a class="code" href="structMeltPoolDG_1_1BoundaryConditions.html">BoundaryConditions&lt;dim&gt;</a>                       boundary_conditions;</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;  };</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;} <span class="comment">// namespace MeltPoolDG</span></div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;      AssertThrow(</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;        this-&gt;triangulation,</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;        ExcMessage(</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;          <span class="stringliteral">&quot;It seems that your SimulationBase object does not contain&quot;</span></div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;          <span class="stringliteral">&quot; a valid triangulation object. A shared_ptr to your triangulation&quot;</span></div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;          <span class="stringliteral">&quot; must be specified as follows for a serialized triangulation &quot;</span></div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;          <span class="stringliteral">&quot; this-&gt;triangulation = std::make_shared&lt;Triangulation&lt;dim&gt;&gt;(); &quot;</span></div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;          <span class="stringliteral">&quot; or for a parallel triangulation &quot;</span></div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;          <span class="stringliteral">&quot; this-&gt;triangulation = std::make_shared&lt;parallel::distributed::Triangulation&lt;dim&gt;&gt;(this-&gt;mpi_communicator); &quot;</span>));</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;      set_boundary_conditions();</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;      set_field_conditions();</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;      AssertThrow(</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;        this-&gt;field_conditions.initial_field,</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;        ExcMessage(</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;          <span class="stringliteral">&quot;It seems that your SimulationBase object does not contain &quot;</span></div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;          <span class="stringliteral">&quot;a valid initial field function. A shared_ptr to your initial field &quot;</span></div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;          <span class="stringliteral">&quot;function, e.g., MyInitializeFunc&lt;dim&gt; must be specified as follows: &quot;</span></div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;          <span class="stringliteral">&quot;this-&gt;field_conditions.initial_field = std::make_shared&lt;MyInitializeFunc&lt;dim&gt;&gt;();&quot;</span>));</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    };</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;    <span class="comment">/*</span></div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;<span class="comment">     * getter functions</span></div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="comment">     */</span></div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    <span class="keyword">virtual</span> MPI_Comm</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    get_mpi_communicator()<span class="keyword"> const</span></div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;<span class="keyword">    </span>{</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;      <span class="keywordflow">return</span> this-&gt;mpi_communicator;</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;    };</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;    std::shared_ptr&lt;FieldConditions&lt;dim&gt;&gt;</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;    get_field_conditions()<span class="keyword"> const</span></div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;<span class="keyword">    </span>{</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;      <span class="keywordflow">return</span> std::make_shared&lt;FieldConditions&lt;dim&gt;&gt;(this-&gt;field_conditions);</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;    }</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;    std::shared_ptr&lt;TensorFunction&lt;1, dim&gt;&gt;</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    get_advection_field()<span class="keyword"> const</span></div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="keyword">    </span>{</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;      <span class="keywordflow">return</span> this-&gt;field_conditions.advection_field;</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;    }</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;    <span class="keyword">const</span> <a class="code" href="structMeltPoolDG_1_1BoundaryConditions.html">BoundaryConditions&lt;dim&gt;</a> &amp;</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;    get_boundary_conditions()<span class="keyword"> const</span></div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="keyword">    </span>{</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;      <span class="keywordflow">return</span> this-&gt;boundary_conditions;</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;    }</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;    <span class="keyword">const</span> std::string                             parameter_file;</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;    <span class="keyword">const</span> MPI_Comm                                mpi_communicator;</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;    <span class="keyword">const</span> dealii::ConditionalOStream              pcout;</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;    <a class="code" href="structMeltPoolDG_1_1Parameters.html">Parameters&lt;double&gt;</a>                            parameters;</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;    std::shared_ptr&lt;Triangulation&lt;dim, spacedim&gt;&gt; triangulation;</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;    <a class="code" href="structMeltPoolDG_1_1FieldConditions.html">FieldConditions&lt;dim&gt;</a>                          field_conditions;</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;    <a class="code" href="structMeltPoolDG_1_1BoundaryConditions.html">BoundaryConditions&lt;dim&gt;</a>                       boundary_conditions;</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;  };</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;} <span class="comment">// namespace MeltPoolDG</span></div>
 </div><!-- fragment --></div><!-- contents -->
 <div class="ttc" id="astructMeltPoolDG_1_1Parameters_html"><div class="ttname"><a href="structMeltPoolDG_1_1Parameters.html">MeltPoolDG::Parameters&lt; double &gt;</a></div></div>
 <div class="ttc" id="aclassMeltPoolDG_1_1SimulationBase_html"><div class="ttname"><a href="classMeltPoolDG_1_1SimulationBase.html">MeltPoolDG::SimulationBase</a></div><div class="ttdef"><b>Definition:</b> simulationbase.hpp:17</div></div>
