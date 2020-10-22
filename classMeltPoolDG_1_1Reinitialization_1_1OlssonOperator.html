@@ -67,6 +67,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="classMeltPoolDG_1_1Reinitialization_1_1OlssonOperator-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">MeltPoolDG::Reinitialization::OlssonOperator&lt; dim, comp, number &gt; Class Template Reference</div>  </div>
@@ -118,9 +119,21 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_time_increment</b
 <tr class="memitem:a41e5eff6644751cd0a1a24b467697f6a inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memItemLeft" align="right" valign="top"><a id="a41e5eff6644751cd0a1a24b467697f6a"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize_matrix_based</b> (const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data)</td></tr>
 <tr class="separator:a41e5eff6644751cd0a1a24b467697f6a inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4000aa358b78977d6f8949ff25387ce5 inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memItemLeft" align="right" valign="top"><a id="a4000aa358b78977d6f8949ff25387ce5"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>create_rhs_and_apply_dirichlet_mf</b> (LinearAlgebra::distributed::Vector&lt; double &gt; &amp;rhs, const LinearAlgebra::distributed::Vector&lt; double &gt; &amp;src, const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data, const int dof_idx=0)</td></tr>
+<tr class="separator:a4000aa358b78977d6f8949ff25387ce5 inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a70624be0f265c7bb32e2424623309b27 inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memItemLeft" align="right" valign="top"><a id="a70624be0f265c7bb32e2424623309b27"></a>
 const SparseMatrixType &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>get_system_matrix</b> () const</td></tr>
 <tr class="separator:a70624be0f265c7bb32e2424623309b27 inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:adbecee04fc4817e0c3617dcf671cfd1b"><td class="memItemLeft" align="right" valign="top"><a id="adbecee04fc4817e0c3617dcf671cfd1b"></a>
+static vector&#160;</td><td class="memItemRight" valign="bottom"><b>normalize</b> (const scalar &amp;in)</td></tr>
+<tr class="separator:adbecee04fc4817e0c3617dcf671cfd1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a55d9c6d7c93d1f4e5cbe090abd023735"><td class="memItemLeft" align="right" valign="top"><a id="a55d9c6d7c93d1f4e5cbe090abd023735"></a>
+static vector&#160;</td><td class="memItemRight" valign="bottom"><b>normalize</b> (const vector &amp;in)</td></tr>
+<tr class="separator:a55d9c6d7c93d1f4e5cbe090abd023735"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
 Additional Inherited Members</h2></td></tr>

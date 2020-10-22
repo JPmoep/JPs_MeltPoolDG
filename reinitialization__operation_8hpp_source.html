@@ -100,7 +100,7 @@ $(function() {
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="comment">   *     property of the level set equation</span></div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="comment">   */</span></div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  </div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="keyword">template</span> &lt;<span class="keywordtype">int</span> dim, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> comp=0&gt;</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="keyword">template</span> &lt;<span class="keywordtype">int</span> dim, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> comp&gt;</div>
 <div class="line"><a name="l00033"></a><span class="lineno"><a class="line" href="classMeltPoolDG_1_1Reinitialization_1_1ReinitializationOperation.html">   33</a></span>&#160;  <span class="keyword">class </span><a class="code" href="classMeltPoolDG_1_1Reinitialization_1_1ReinitializationOperation.html">ReinitializationOperation</a> </div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  {</div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keyword">private</span>:</div>
@@ -125,7 +125,7 @@ $(function() {
 <div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;               <span class="keyword">const</span> <a class="code" href="structMeltPoolDG_1_1Parameters.html">Parameters&lt;double&gt;</a>&amp;                      data_in )</div>
 <div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    {</div>
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;      scratch_data = scratch_data_in;</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;      scratch_data-&gt;initialize_dof_vector(solution_level_set); </div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;      scratch_data-&gt;initialize_dof_vector(solution_level_set, comp); </div>
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;      <span class="comment">/*</span></div>
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="comment">       *    initialize the (local) parameters of the reinitialization</span></div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="comment">       *    from the global user-defined parameters</span></div>
@@ -158,7 +158,7 @@ $(function() {
 <div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;      <span class="comment">/*</span></div>
 <div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="comment">       *    copy the given solution into the member variable</span></div>
 <div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<span class="comment">       */</span></div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;      scratch_data-&gt;initialize_dof_vector(solution_level_set);</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;      scratch_data-&gt;initialize_dof_vector(solution_level_set, comp);</div>
 <div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;      solution_level_set.copy_locally_owned_data_from(solution_level_set_in);</div>
 <div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;      solution_level_set.update_ghost_values();</div>
 <div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;      <span class="comment">/*</span></div>
@@ -175,8 +175,8 @@ $(function() {
 <div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;    {</div>
 <div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;      VectorType src, rhs;</div>
 <div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160; </div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;      scratch_data-&gt;initialize_dof_vector(src);</div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;      scratch_data-&gt;initialize_dof_vector(rhs);</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;      scratch_data-&gt;initialize_dof_vector(src, comp);</div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;      scratch_data-&gt;initialize_dof_vector(rhs, comp);</div>
 <div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;      </div>
 <div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;      reinit_operator-&gt;set_time_increment(d_tau);</div>
 <div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160; </div>
@@ -185,7 +185,7 @@ $(function() {
 <div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;      <span class="keywordflow">if</span> (reinit_data.do_matrix_free)</div>
 <div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;      {</div>
 <div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;        VectorType src_rhs;</div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;        scratch_data-&gt;initialize_dof_vector(src_rhs);</div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;        scratch_data-&gt;initialize_dof_vector(src_rhs, comp);</div>
 <div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;        src_rhs.copy_locally_owned_data_from(solution_level_set);</div>
 <div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;        src_rhs.update_ghost_values();</div>
 <div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;        reinit_operator-&gt;create_rhs( rhs, src_rhs);</div>
@@ -269,15 +269,15 @@ $(function() {
 <div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160;    }</div>
 <div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;  </div>
 <div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;  <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;    std::shared_ptr&lt;const ScratchData&lt;dim&gt;&gt;   scratch_data;</div>
+<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;    std::shared_ptr&lt;const ScratchData&lt;dim&gt;&gt;        scratch_data;</div>
 <div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;    <span class="comment">/*</span></div>
 <div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160;<span class="comment">     *  This shared pointer will point to your user-defined reinitialization operator.</span></div>
 <div class="line"><a name="l00204"></a><span class="lineno">  204</span>&#160;<span class="comment">     */</span></div>
-<div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;    std::unique_ptr&lt;OperatorBase&lt;double&gt;&gt;     reinit_operator;</div>
+<div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;    std::unique_ptr&lt;OperatorBase&lt;double&gt;&gt;          reinit_operator;</div>
 <div class="line"><a name="l00206"></a><span class="lineno">  206</span>&#160;    <span class="comment">/*</span></div>
 <div class="line"><a name="l00207"></a><span class="lineno">  207</span>&#160;<span class="comment">     *   Computation of the normal vectors</span></div>
 <div class="line"><a name="l00208"></a><span class="lineno">  208</span>&#160;<span class="comment">     */</span></div>
-<div class="line"><a name="l00209"></a><span class="lineno">  209</span>&#160;    <a class="code" href="classMeltPoolDG_1_1NormalVector_1_1NormalVectorOperation.html">NormalVector::NormalVectorOperation&lt;dim&gt;</a>  normal_vector_operation;</div>
+<div class="line"><a name="l00209"></a><span class="lineno">  209</span>&#160;    <a class="code" href="classMeltPoolDG_1_1NormalVector_1_1NormalVectorOperation.html">NormalVector::NormalVectorOperation&lt;dim,comp&gt;</a>  normal_vector_operation;</div>
 <div class="line"><a name="l00210"></a><span class="lineno">  210</span>&#160;    </div>
 <div class="line"><a name="l00211"></a><span class="lineno">  211</span>&#160;  };</div>
 <div class="line"><a name="l00212"></a><span class="lineno">  212</span>&#160;} <span class="comment">// namespace Reinitialization</span></div>
@@ -289,7 +289,7 @@ $(function() {
 <div class="ttc" id="aclassMeltPoolDG_1_1Reinitialization_1_1ReinitializationOperation_html"><div class="ttname"><a href="classMeltPoolDG_1_1Reinitialization_1_1ReinitializationOperation.html">MeltPoolDG::Reinitialization::ReinitializationOperation</a></div><div class="ttdef"><b>Definition:</b> reinitialization_operation.hpp:34</div></div>
 <div class="ttc" id="aclassMeltPoolDG_1_1OperatorBase_html"><div class="ttname"><a href="classMeltPoolDG_1_1OperatorBase.html">MeltPoolDG::OperatorBase</a></div><div class="ttdef"><b>Definition:</b> operator_base.hpp:16</div></div>
 <div class="ttc" id="astructMeltPoolDG_1_1ReinitializationData_html"><div class="ttname"><a href="structMeltPoolDG_1_1ReinitializationData.html">MeltPoolDG::ReinitializationData&lt; double &gt;</a></div></div>
-<div class="ttc" id="aclassMeltPoolDG_1_1NormalVector_1_1NormalVectorOperation_html"><div class="ttname"><a href="classMeltPoolDG_1_1NormalVector_1_1NormalVectorOperation.html">MeltPoolDG::NormalVector::NormalVectorOperation&lt; dim &gt;</a></div></div>
+<div class="ttc" id="aclassMeltPoolDG_1_1NormalVector_1_1NormalVectorOperation_html"><div class="ttname"><a href="classMeltPoolDG_1_1NormalVector_1_1NormalVectorOperation.html">MeltPoolDG::NormalVector::NormalVectorOperation</a></div><div class="ttdef"><b>Definition:</b> normal_vector_operation.hpp:43</div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by&#160;<a href="http://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.8.20

@@ -104,9 +104,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af491e0ce767c188f3bee9ec90b324fba"><td class="memItemLeft" align="right" valign="top"><a id="af491e0ce767c188f3bee9ec90b324fba"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>NormalVectorOperator</b> (const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data_in, const double damping_in)</td></tr>
 <tr class="separator:af491e0ce767c188f3bee9ec90b324fba"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aafb1cda2b60a2145dfd11430331faca3"><td class="memItemLeft" align="right" valign="top"><a id="aafb1cda2b60a2145dfd11430331faca3"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>assemble_matrixbased</b> (const VectorType &amp;levelset_in, SparseMatrixType &amp;matrix, BlockVectorType &amp;rhs) const override</td></tr>
-<tr class="separator:aafb1cda2b60a2145dfd11430331faca3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0988675bb1f149faf1b3658aaf61d248"><td class="memItemLeft" align="right" valign="top"><a id="a0988675bb1f149faf1b3658aaf61d248"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>assemble_matrixbased</b> (const VectorType &amp;level_set_in, SparseMatrixType &amp;matrix, BlockVectorType &amp;rhs) const override</td></tr>
+<tr class="separator:a0988675bb1f149faf1b3658aaf61d248"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1a44d9a8f9d31e3abee219e1331abf8d"><td class="memItemLeft" align="right" valign="top"><a id="a1a44d9a8f9d31e3abee219e1331abf8d"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>vmult</b> (BlockVectorType &amp;dst, const BlockVectorType &amp;src) const override</td></tr>
 <tr class="separator:a1a44d9a8f9d31e3abee219e1331abf8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -132,6 +132,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_time_increment</b
 <tr class="memitem:a41e5eff6644751cd0a1a24b467697f6a inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memItemLeft" align="right" valign="top"><a id="a41e5eff6644751cd0a1a24b467697f6a"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize_matrix_based</b> (const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data)</td></tr>
 <tr class="separator:a41e5eff6644751cd0a1a24b467697f6a inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4000aa358b78977d6f8949ff25387ce5 inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memItemLeft" align="right" valign="top"><a id="a4000aa358b78977d6f8949ff25387ce5"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>create_rhs_and_apply_dirichlet_mf</b> (LinearAlgebra::distributed::BlockVector&lt; double &gt; &amp;rhs, const LinearAlgebra::distributed::Vector&lt; double &gt; &amp;src, const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data, const int dof_idx=0)</td></tr>
+<tr class="separator:a4000aa358b78977d6f8949ff25387ce5 inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a70624be0f265c7bb32e2424623309b27 inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memItemLeft" align="right" valign="top"><a id="a70624be0f265c7bb32e2424623309b27"></a>
 const SparseMatrixType &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>get_system_matrix</b> () const</td></tr>
 <tr class="separator:a70624be0f265c7bb32e2424623309b27 inherit pub_methods_classMeltPoolDG_1_1OperatorBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
