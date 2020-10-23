@@ -21,6 +21,7 @@
 #include <deal.II/grid/grid_tools.h>
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
+
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 namespace MeltPoolDG
 {

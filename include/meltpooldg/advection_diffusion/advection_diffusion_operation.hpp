@@ -9,9 +9,9 @@
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
-#include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operator.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
+#include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
