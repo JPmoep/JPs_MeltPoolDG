@@ -12,6 +12,8 @@
 
 #include <deal.II/numerics/error_estimator.h>
 #include <deal.II/numerics/vector_tools.h>
+
+#include <deal.II/simplex/grid_generator.h>
 // c++
 #include <cmath>
 #include <iostream>
@@ -103,16 +105,32 @@ namespace MeltPoolDG
         void
         create_spatial_discretization()
         {
-          if (dim == 1)
+          if (dim == 1 || this->parameters.base.do_simplex)
             {
               AssertDimension(Utilities::MPI::n_mpi_processes(this->mpi_communicator), 1);
               this->triangulation = std::make_shared<Triangulation<dim>>();
             }
           else
-            this->triangulation =
-              std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
-          GridGenerator::hyper_cube(*this->triangulation, left_domain, right_domain);
-          this->triangulation->refine_global(this->parameters.base.global_refinements);
+            {
+              this->triangulation =
+                std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+            }
+
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (this->parameters.base.do_simplex)
+            {
+              GridGenerator::subdivided_hyper_cube_with_simplices(
+                *this->triangulation,
+                Utilities::pow(2, this->parameters.base.global_refinements),
+                left_domain,
+                right_domain);
+            }
+          else
+#endif
+            {
+              GridGenerator::hyper_cube(*this->triangulation, left_domain, right_domain);
+              this->triangulation->refine_global(this->parameters.base.global_refinements);
+            }
         }
 
         void

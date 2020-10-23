@@ -165,21 +165,25 @@ namespace MeltPoolDG
     build()
     {
       this->matrix_free.clear();
+
+      // We are building MatrixFree only if 1D quadrature rules have been
+      // provided
       if (this->quad_1D.size() > 0)
         this->matrix_free.reinit(*this->mapping,
                                  this->dof_handler,
                                  this->constraint,
                                  this->quad_1D);
-      else
-        AssertThrow(false, ExcMessage("ScratchData: quad_1D is missing"));
     }
-    /*
+
+    /**
      * initialize vectors
      */
     void
     initialize_dof_vector(VectorType &vec, const unsigned int dof_idx = 0) const
     {
-      matrix_free.initialize_dof_vector(vec, dof_idx);
+      vec.reinit(get_locally_owned_dofs(dof_idx),
+                 get_locally_relevant_dofs(dof_idx),
+                 get_mpi_comm(dof_idx));
     }
 
     void
@@ -281,7 +285,7 @@ namespace MeltPoolDG
     const DoFHandler<dim, spacedim> &
     get_dof_handler(const unsigned int dof_idx = 0) const
     {
-      return this->matrix_free.get_dof_handler(dof_idx);
+      return *this->dof_handler[dof_idx];
     }
 
     const std::vector<const DoFHandler<dim, spacedim> *> &
@@ -293,7 +297,7 @@ namespace MeltPoolDG
     unsigned int
     get_n_dofs_per_cell(const unsigned int dof_idx = 0) const
     {
-      return this->matrix_free.get_dof_handler(dof_idx).get_fe().n_dofs_per_cell();
+      return get_dof_handler(dof_idx).get_fe().n_dofs_per_cell();
     }
 
     const double &

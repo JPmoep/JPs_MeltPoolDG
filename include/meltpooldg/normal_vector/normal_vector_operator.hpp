@@ -46,8 +46,8 @@ namespace MeltPoolDG
         const auto &mapping = scratch_data.get_mapping();
 
         FEValues<dim> fe_values(mapping,
-                                scratch_data.get_matrix_free().get_dof_handler(comp).get_fe(),
-                                scratch_data.get_matrix_free().get_quadrature(comp),
+                                scratch_data.get_dof_handler(comp).get_fe(),
+                                scratch_data.get_quadrature(comp),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
 
@@ -64,8 +64,7 @@ namespace MeltPoolDG
         matrix = 0.0;
         rhs    = 0.0;
 
-        for (const auto &cell :
-             scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
+        for (const auto &cell : scratch_data.get_dof_handler(comp).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               fe_values.reinit(cell);

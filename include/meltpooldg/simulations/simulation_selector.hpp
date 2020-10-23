@@ -43,7 +43,7 @@ namespace MeltPoolDG
         /* add your simulation here*/
         else
           AssertThrow(false,
-                      ExcMessage("The input-fle for your requested application does not exist"));
+                      ExcMessage("The input-file for your requested application does not exist"));
       }
     };
   } // namespace Simulation
