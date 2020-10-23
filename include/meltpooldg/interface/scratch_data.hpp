@@ -42,10 +42,13 @@ namespace MeltPoolDG
     using BlockVectorType = LinearAlgebra::distributed::BlockVector<number>;
 
   public:
-    ScratchData() = default;
+    ScratchData(const bool do_matrix_free = true)
+      : do_matrix_free(do_matrix_free)
+    {}
 
     ScratchData(const ScratchData &scratch_data)
     {
+      this->do_matrix_free = scratch_data.do_matrix_free;
       this->reinit(scratch_data.get_mapping(),
                    scratch_data.get_dof_handlers(),
                    scratch_data.get_constraints(),
@@ -181,9 +184,12 @@ namespace MeltPoolDG
     void
     initialize_dof_vector(VectorType &vec, const unsigned int dof_idx = 0) const
     {
-      vec.reinit(get_locally_owned_dofs(dof_idx),
-                 get_locally_relevant_dofs(dof_idx),
-                 get_mpi_comm(dof_idx));
+      if (do_matrix_free)
+        matrix_free.initialize_dof_vector(vec, dof_idx);
+      else
+        vec.reinit(get_locally_owned_dofs(dof_idx),
+                   get_locally_relevant_dofs(dof_idx),
+                   get_mpi_comm(dof_idx));
     }
 
     void
@@ -357,6 +363,8 @@ namespace MeltPoolDG
       */
 
   private:
+    bool do_matrix_free;
+
     std::unique_ptr<Mapping<dim, spacedim>>                   mapping;
     std::vector<const DoFHandler<dim, spacedim> *>            dof_handler;
     std::vector<const AffineConstraints<number> *>            constraint;
