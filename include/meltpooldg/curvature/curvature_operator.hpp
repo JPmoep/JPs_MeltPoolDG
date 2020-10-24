@@ -60,8 +60,8 @@ namespace MeltPoolDG
 
         const auto &  mapping = scratch_data.get_mapping();
         FEValues<dim> fe_values(mapping,
-                                scratch_data.get_matrix_free().get_dof_handler(comp).get_fe(),
-                                scratch_data.get_matrix_free().get_quadrature(comp),
+                                scratch_data.get_dof_handler(comp).get_fe(),
+                                scratch_data.get_quadrature(comp),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
 
@@ -78,8 +78,7 @@ namespace MeltPoolDG
         matrix = 0.0;
         rhs    = 0.0;
 
-        for (const auto &cell :
-             scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
+        for (const auto &cell : scratch_data.get_dof_handler(comp).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               fe_values.reinit(cell);
@@ -130,8 +129,8 @@ namespace MeltPoolDG
       vmult(VectorType &dst, const VectorType &src) const override
       {
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
-          [&](const auto &, auto &dst, const auto &src, auto cell_range) {
-            FECellIntegrator<dim, 1, number> curvature(scratch_data.get_matrix_free(), comp, comp);
+          [&](const auto &matrix_free, auto &dst, const auto &src, auto cell_range) {
+            FECellIntegrator<dim, 1, number> curvature(matrix_free, comp, comp);
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
                 curvature.reinit(cell);
@@ -155,11 +154,9 @@ namespace MeltPoolDG
       create_rhs(VectorType &dst, const BlockVectorType &src) const override
       {
         scratch_data.get_matrix_free().template cell_loop<VectorType, BlockVectorType>(
-          [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
-            FECellIntegrator<dim, 1, number> curvature(scratch_data.get_matrix_free(), comp, comp);
-            FECellIntegrator<dim, dim, number> normal_vector(scratch_data.get_matrix_free(),
-                                                             comp,
-                                                             comp);
+          [&](const auto &matrix_free, auto &dst, const auto &src, auto macro_cells) {
+            FECellIntegrator<dim, 1, number>   curvature(matrix_free, comp, comp);
+            FECellIntegrator<dim, dim, number> normal_vector(matrix_free, comp, comp);
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 curvature.reinit(cell);
