@@ -162,7 +162,6 @@ namespace MeltPoolDG
           /*
            *  setup DoFHandler
            */
-          ;
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
           dof_handler.initialize(*base_in->triangulation,

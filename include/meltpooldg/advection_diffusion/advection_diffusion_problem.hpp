@@ -14,12 +14,16 @@
 
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/mapping.h>
+#include <deal.II/fe/mapping_fe.h>
 
 #include <deal.II/grid/grid_out.h>
 
 #include <deal.II/lac/generic_linear_algebra.h>
 
 #include <deal.II/numerics/data_out.h>
+
+#include <deal.II/simplex/fe_lib.h>
+#include <deal.II/simplex/quadrature_lib.h>
 
 // MeltPoolDG
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
@@ -84,18 +88,30 @@ namespace MeltPoolDG
         /*
          *  setup scratch data
          */
-        scratch_data = std::make_shared<ScratchData<dim>>();
+        scratch_data =
+          std::make_shared<ScratchData<dim>>(base_in->parameters.reinit.do_matrix_free);
         /*
          *  setup mapping
          */
-        const auto mapping = MappingQGeneric<dim>(base_in->parameters.base.degree);
-        scratch_data->set_mapping(mapping);
-        /*
-         *  setup DoFHandler
-         */
-        FE_Q<dim> fe(base_in->parameters.base.degree);
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          scratch_data->set_mapping(
+            MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+        else
+#endif
+          scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+          /*
+           *  setup DoFHandler
+           */
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          dof_handler.initialize(*base_in->triangulation,
+                                 Simplex::FE_P<dim>(base_in->parameters.base.degree));
+        else
+#endif
+          dof_handler.initialize(*base_in->triangulation,
+                                 FE_Q<dim>(base_in->parameters.base.degree));
 
-        dof_handler.initialize(*base_in->triangulation, fe);
         scratch_data->attach_dof_handler(dof_handler);
         scratch_data->attach_dof_handler(dof_handler);
         /*
@@ -116,10 +132,8 @@ namespace MeltPoolDG
         constraints.merge(hanging_node_constraints);
         for (const auto &bc : base_in->get_boundary_conditions().dirichlet_bc)
           {
-            VectorTools::interpolate_boundary_values(dof_handler,
-                                                     bc.first,
-                                                     *bc.second,
-                                                     constraints);
+            VectorTools::interpolate_boundary_values(
+              scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);
           }
         constraints.close();
 
@@ -128,10 +142,24 @@ namespace MeltPoolDG
         /*
          *  create quadrature rule
          */
-        QGauss<1> quad_1d_temp(base_in->parameters.base.n_q_points_1d);
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          scratch_data->attach_quadrature(Simplex::QGauss<dim>(
+            dim == 2 ? (base_in->parameters.base.n_q_points_1d == 1 ? 3 : 7) :
+                       (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
+        else
+#endif
+          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
 
-        scratch_data->attach_quadrature(quad_1d_temp);
-        scratch_data->attach_quadrature(quad_1d_temp);
+          // TODO: only do once!
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          scratch_data->attach_quadrature(Simplex::QGauss<dim>(
+            dim == 2 ? (base_in->parameters.base.n_q_points_1d == 1 ? 3 : 7) :
+                       (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
+        else
+#endif
+          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
         /*
          *  create the matrix-free object
          */
@@ -152,7 +180,8 @@ namespace MeltPoolDG
         VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution);
 
-        VectorTools::project(dof_handler,
+        VectorTools::project(scratch_data->get_mapping(),
+                             dof_handler,
                              constraints,
                              scratch_data->get_quadrature(),
                              *base_in->get_field_conditions()->initial_field,
@@ -223,7 +252,7 @@ namespace MeltPoolDG
             /*
              * write data to vtu file
              */
-            data_out.build_patches();
+            data_out.build_patches(scratch_data->get_mapping());
             data_out.write_vtu_with_pvtu_record("./",
                                                 parameters.paraview.filename,
                                                 time_step,

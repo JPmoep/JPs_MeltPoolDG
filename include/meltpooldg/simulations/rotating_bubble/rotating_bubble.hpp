@@ -222,6 +222,10 @@ namespace MeltPoolDG
                       face->set_boundary_id(do_nothing);
                   }
             }
+          else
+            {
+              (void)do_nothing; // suppress unused variable for 1D
+            }
         }
 
         void
