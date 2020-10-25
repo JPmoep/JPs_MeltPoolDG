@@ -68,6 +68,7 @@ $(function() {
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="classMeltPoolDG_1_1OperatorBase-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">MeltPoolDG::OperatorBase&lt; number, DoFVectorType, SrcRhsVectorType &gt; Class Template Reference</div>  </div>
@@ -91,14 +92,17 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>print_me</b> 
 <tr class="memitem:a71ebe815352d3374a91759ada299730c"><td class="memItemLeft" align="right" valign="top"><a id="a71ebe815352d3374a91759ada299730c"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>set_time_increment</b> (const double dt)</td></tr>
 <tr class="separator:a71ebe815352d3374a91759ada299730c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a41e5eff6644751cd0a1a24b467697f6a"><td class="memTemplParams" colspan="2"><a id="a41e5eff6644751cd0a1a24b467697f6a"></a>
-template&lt;unsigned int dim, unsigned int comp&gt; </td></tr>
-<tr class="memitem:a41e5eff6644751cd0a1a24b467697f6a"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>initialize_matrix_based</b> (const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data)</td></tr>
-<tr class="separator:a41e5eff6644751cd0a1a24b467697f6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4000aa358b78977d6f8949ff25387ce5"><td class="memTemplParams" colspan="2"><a id="a4000aa358b78977d6f8949ff25387ce5"></a>
+<tr class="memitem:ad33fb2dcf319a1e56af579fe65fb75ef"><td class="memItemLeft" align="right" valign="top"><a id="ad33fb2dcf319a1e56af579fe65fb75ef"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>reset_indices</b> (const unsigned int dof_idx_in, const unsigned int quad_idx_in)</td></tr>
+<tr class="separator:ad33fb2dcf319a1e56af579fe65fb75ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a23ee945f1ff88ee2fef5985830300e00"><td class="memTemplParams" colspan="2"><a id="a23ee945f1ff88ee2fef5985830300e00"></a>
 template&lt;int dim&gt; </td></tr>
-<tr class="memitem:a4000aa358b78977d6f8949ff25387ce5"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>create_rhs_and_apply_dirichlet_mf</b> (DoFVectorType &amp;rhs, const SrcRhsVectorType &amp;src, const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data, const int dof_idx=0)</td></tr>
-<tr class="separator:a4000aa358b78977d6f8949ff25387ce5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a23ee945f1ff88ee2fef5985830300e00"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>initialize_matrix_based</b> (const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data)</td></tr>
+<tr class="separator:a23ee945f1ff88ee2fef5985830300e00"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a329ecf857f220fa0d2c5f6491bcd2a41"><td class="memTemplParams" colspan="2"><a id="a329ecf857f220fa0d2c5f6491bcd2a41"></a>
+template&lt;int dim&gt; </td></tr>
+<tr class="memitem:a329ecf857f220fa0d2c5f6491bcd2a41"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>create_rhs_and_apply_dirichlet_mf</b> (DoFVectorType &amp;rhs, const SrcRhsVectorType &amp;src, const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt; &amp;scratch_data, const unsigned int dof_idx, const unsigned int dof_no_bc_idx)</td></tr>
+<tr class="separator:a329ecf857f220fa0d2c5f6491bcd2a41"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a70624be0f265c7bb32e2424623309b27"><td class="memItemLeft" align="right" valign="top"><a id="a70624be0f265c7bb32e2424623309b27"></a>
 const SparseMatrixType &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>get_system_matrix</b> () const</td></tr>
 <tr class="separator:a70624be0f265c7bb32e2424623309b27"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -114,6 +118,15 @@ SparseMatrixType&#160;</td><td class="memItemRight" valign="bottom"><b>system_ma
 <tr class="memitem:a96863dc5eae71242777b3517c3dc84ac"><td class="memItemLeft" align="right" valign="top"><a id="a96863dc5eae71242777b3517c3dc84ac"></a>
 SparsityPatternType&#160;</td><td class="memItemRight" valign="bottom"><b>dsp</b></td></tr>
 <tr class="separator:a96863dc5eae71242777b3517c3dc84ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
+Protected Attributes</h2></td></tr>
+<tr class="memitem:ad4bdef81f13dd277f57cfba4aa2e4889"><td class="memItemLeft" align="right" valign="top"><a id="ad4bdef81f13dd277f57cfba4aa2e4889"></a>
+unsigned int&#160;</td><td class="memItemRight" valign="bottom"><b>dof_idx</b> = 0</td></tr>
+<tr class="separator:ad4bdef81f13dd277f57cfba4aa2e4889"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b74b404543c39fc837f082d5ea6db41"><td class="memItemLeft" align="right" valign="top"><a id="a5b74b404543c39fc837f082d5ea6db41"></a>
+unsigned int&#160;</td><td class="memItemRight" valign="bottom"><b>quad_idx</b> = 0</td></tr>
+<tr class="separator:a5b74b404543c39fc837f082d5ea6db41"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/meltpooldg/interface/<a class="el" href="operator__base_8hpp_source.html">operator_base.hpp</a></li>

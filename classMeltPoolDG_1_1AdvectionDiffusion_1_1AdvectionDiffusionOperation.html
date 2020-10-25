@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.20"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeltPoolDG: MeltPoolDG::AdvectionDiffusion::AdvectionDiffusionOperation&lt; dim, comp, comp_hanging_node_constraints &gt; Class Template Reference</title>
+<title>MeltPoolDG: MeltPoolDG::AdvectionDiffusion::AdvectionDiffusionOperation&lt; dim &gt; Class Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -70,27 +70,27 @@ $(function() {
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classMeltPoolDG_1_1AdvectionDiffusion_1_1AdvectionDiffusionOperation-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">MeltPoolDG::AdvectionDiffusion::AdvectionDiffusionOperation&lt; dim, comp, comp_hanging_node_constraints &gt; Class Template Reference</div>  </div>
+<div class="title">MeltPoolDG::AdvectionDiffusion::AdvectionDiffusionOperation&lt; dim &gt; Class Template Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a5a160123f387fa712f532ee7e3d6c107"><td class="memItemLeft" align="right" valign="top"><a id="a5a160123f387fa712f532ee7e3d6c107"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize</b> (const std::shared_ptr&lt; const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt;&gt; &amp;scratch_data_in, const VectorType &amp;solution_advected_field_in, const <a class="el" href="structMeltPoolDG_1_1Parameters.html">Parameters</a>&lt; double &gt; &amp;data_in)</td></tr>
-<tr class="separator:a5a160123f387fa712f532ee7e3d6c107"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a634997aef85372b1028cacb5b277baf9"><td class="memItemLeft" align="right" valign="top"><a id="a634997aef85372b1028cacb5b277baf9"></a>
+<tr class="memitem:a0abf43b21513bc7cc2d820961487b2ca"><td class="memItemLeft" align="right" valign="top"><a id="a0abf43b21513bc7cc2d820961487b2ca"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize</b> (const std::shared_ptr&lt; const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt;&gt; &amp;scratch_data_in, const VectorType &amp;solution_advected_field_in, const <a class="el" href="structMeltPoolDG_1_1Parameters.html">Parameters</a>&lt; double &gt; &amp;data_in, const unsigned int dof_idx_in, const unsigned int dof_no_bc_idx_in, const unsigned int quad_idx_in)</td></tr>
+<tr class="separator:a0abf43b21513bc7cc2d820961487b2ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a318da6cbee4145dcab3163e71e32f709"><td class="memItemLeft" align="right" valign="top"><a id="a318da6cbee4145dcab3163e71e32f709"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>solve</b> (const double dt, const BlockVectorType &amp;advection_velocity)</td></tr>
-<tr class="separator:a634997aef85372b1028cacb5b277baf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a318da6cbee4145dcab3163e71e32f709"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:adba91ab49fee1e3b01d5b8890e79d3e9"><td class="memItemLeft" align="right" valign="top"><a id="adba91ab49fee1e3b01d5b8890e79d3e9"></a>
+<tr class="memitem:a06bcf6ce748de1996a56cd7e48b93c6a"><td class="memItemLeft" align="right" valign="top"><a id="a06bcf6ce748de1996a56cd7e48b93c6a"></a>
 VectorType&#160;</td><td class="memItemRight" valign="bottom"><b>solution_advected_field</b></td></tr>
-<tr class="separator:adba91ab49fee1e3b01d5b8890e79d3e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aecd86d1e3e07054cc53e1eb14cc4c1c6"><td class="memItemLeft" align="right" valign="top"><a id="aecd86d1e3e07054cc53e1eb14cc4c1c6"></a>
+<tr class="separator:a06bcf6ce748de1996a56cd7e48b93c6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa40104b1b613952bb4ca9d5cf39d5bc6"><td class="memItemLeft" align="right" valign="top"><a id="aa40104b1b613952bb4ca9d5cf39d5bc6"></a>
 <a class="el" href="structMeltPoolDG_1_1AdvectionDiffusionData.html">AdvectionDiffusionData</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>advec_diff_data</b></td></tr>
-<tr class="separator:aecd86d1e3e07054cc53e1eb14cc4c1c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:aa40104b1b613952bb4ca9d5cf39d5bc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/meltpooldg/advection_diffusion/<a class="el" href="advection__diffusion__operation_8hpp_source.html">advection_diffusion_operation.hpp</a></li>

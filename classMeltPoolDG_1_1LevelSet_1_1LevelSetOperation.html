@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.20"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeltPoolDG: MeltPoolDG::LevelSet::LevelSetOperation&lt; dim, comp_advec_diff, comp_no_dirichlet &gt; Class Template Reference</title>
+<title>MeltPoolDG: MeltPoolDG::LevelSet::LevelSetOperation&lt; dim &gt; Class Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -70,33 +70,33 @@ $(function() {
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classMeltPoolDG_1_1LevelSet_1_1LevelSetOperation-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">MeltPoolDG::LevelSet::LevelSetOperation&lt; dim, comp_advec_diff, comp_no_dirichlet &gt; Class Template Reference</div>  </div>
+<div class="title">MeltPoolDG::LevelSet::LevelSetOperation&lt; dim &gt; Class Template Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ab6c0abb7873cd58a45fba6e6f309b0e5"><td class="memItemLeft" align="right" valign="top"><a id="ab6c0abb7873cd58a45fba6e6f309b0e5"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize</b> (const std::shared_ptr&lt; const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt;&gt; &amp;scratch_data_in, const VectorType &amp;solution_level_set_in, const <a class="el" href="structMeltPoolDG_1_1Parameters.html">Parameters</a>&lt; double &gt; &amp;data_in)</td></tr>
-<tr class="separator:ab6c0abb7873cd58a45fba6e6f309b0e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6f641bae0126c94a00d52282e8a6e149"><td class="memItemLeft" align="right" valign="top"><a id="a6f641bae0126c94a00d52282e8a6e149"></a>
+<tr class="memitem:a2503f45f413acae44b2c384006b42f86"><td class="memItemLeft" align="right" valign="top"><a id="a2503f45f413acae44b2c384006b42f86"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize</b> (const std::shared_ptr&lt; const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt;&gt; &amp;scratch_data_in, const VectorType &amp;solution_level_set_in, const <a class="el" href="structMeltPoolDG_1_1Parameters.html">Parameters</a>&lt; double &gt; &amp;data_in, const unsigned int dof_idx_in, const unsigned int dof_no_bc_idx_in, const unsigned int quad_idx_in)</td></tr>
+<tr class="separator:a2503f45f413acae44b2c384006b42f86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6bde18a9dfcb3e8ad7582d40a6763bec"><td class="memItemLeft" align="right" valign="top"><a id="a6bde18a9dfcb3e8ad7582d40a6763bec"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>solve</b> (const double dt, const BlockVectorType &amp;advection_velocity)</td></tr>
-<tr class="separator:a6f641bae0126c94a00d52282e8a6e149"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a6bde18a9dfcb3e8ad7582d40a6763bec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a374fab4d99992715cc2acde426e536ac"><td class="memItemLeft" align="right" valign="top"><a id="a374fab4d99992715cc2acde426e536ac"></a>
+<tr class="memitem:a566ca8c41b4ca2c57b5b794967b0426a"><td class="memItemLeft" align="right" valign="top"><a id="a566ca8c41b4ca2c57b5b794967b0426a"></a>
 <a class="el" href="structMeltPoolDG_1_1LevelSetData.html">LevelSetData</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>level_set_data</b></td></tr>
-<tr class="separator:a374fab4d99992715cc2acde426e536ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a40b565ab6601cc55df7f6227d53387c7"><td class="memItemLeft" align="right" valign="top"><a id="a40b565ab6601cc55df7f6227d53387c7"></a>
+<tr class="separator:a566ca8c41b4ca2c57b5b794967b0426a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add0fd7a49d5a7333b134c4d1631d14aa"><td class="memItemLeft" align="right" valign="top"><a id="add0fd7a49d5a7333b134c4d1631d14aa"></a>
 const VectorType &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>solution_level_set</b> = advec_diff_operation.solution_advected_field</td></tr>
-<tr class="separator:a40b565ab6601cc55df7f6227d53387c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1300b0b0e6ddc81ce6afaef3f7a35989"><td class="memItemLeft" align="right" valign="top"><a id="a1300b0b0e6ddc81ce6afaef3f7a35989"></a>
+<tr class="separator:add0fd7a49d5a7333b134c4d1631d14aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7ec14a61c7fd43b5d986c01f1e4a94b3"><td class="memItemLeft" align="right" valign="top"><a id="a7ec14a61c7fd43b5d986c01f1e4a94b3"></a>
 const VectorType &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>solution_curvature</b> = curvature_operation.solution_curvature</td></tr>
-<tr class="separator:a1300b0b0e6ddc81ce6afaef3f7a35989"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aef169f2bd34b5d0701775b477a067cf6"><td class="memItemLeft" align="right" valign="top"><a id="aef169f2bd34b5d0701775b477a067cf6"></a>
+<tr class="separator:a7ec14a61c7fd43b5d986c01f1e4a94b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ca88810ad8e24dd241717c6de800a40"><td class="memItemLeft" align="right" valign="top"><a id="a5ca88810ad8e24dd241717c6de800a40"></a>
 const BlockVectorType &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>solution_normal_vector</b> = reinit_operation.solution_normal_vector</td></tr>
-<tr class="separator:aef169f2bd34b5d0701775b477a067cf6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a5ca88810ad8e24dd241717c6de800a40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/meltpooldg/level_set/<a class="el" href="level__set__operation_8hpp_source.html">level_set_operation.hpp</a></li>

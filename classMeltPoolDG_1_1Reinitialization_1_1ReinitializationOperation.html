@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.20"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeltPoolDG: MeltPoolDG::Reinitialization::ReinitializationOperation&lt; dim, comp &gt; Class Template Reference</title>
+<title>MeltPoolDG: MeltPoolDG::Reinitialization::ReinitializationOperation&lt; dim &gt; Class Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -70,44 +70,44 @@ $(function() {
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classMeltPoolDG_1_1Reinitialization_1_1ReinitializationOperation-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">MeltPoolDG::Reinitialization::ReinitializationOperation&lt; dim, comp &gt; Class Template Reference</div>  </div>
+<div class="title">MeltPoolDG::Reinitialization::ReinitializationOperation&lt; dim &gt; Class Template Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a5ac0ad058f6e3100caa42914bc1656cd"><td class="memItemLeft" align="right" valign="top"><a id="a5ac0ad058f6e3100caa42914bc1656cd"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize</b> (const std::shared_ptr&lt; const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt;&gt; &amp;scratch_data_in, const VectorType &amp;solution_level_set_in, const <a class="el" href="structMeltPoolDG_1_1Parameters.html">Parameters</a>&lt; double &gt; &amp;data_in)</td></tr>
-<tr class="separator:a5ac0ad058f6e3100caa42914bc1656cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aee6a5cb5a422c598c5a15a4f163a5394"><td class="memItemLeft" align="right" valign="top"><a id="aee6a5cb5a422c598c5a15a4f163a5394"></a>
+<tr class="memitem:a602608fa5c1ec6ad2cace6a67f650fef"><td class="memItemLeft" align="right" valign="top"><a id="a602608fa5c1ec6ad2cace6a67f650fef"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize</b> (const std::shared_ptr&lt; const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a>&lt; dim &gt;&gt; &amp;scratch_data_in, const VectorType &amp;solution_level_set_in, const <a class="el" href="structMeltPoolDG_1_1Parameters.html">Parameters</a>&lt; double &gt; &amp;data_in, const unsigned int dof_idx_in, const unsigned int quad_idx_in)</td></tr>
+<tr class="separator:a602608fa5c1ec6ad2cace6a67f650fef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade674a60952287f59befdf3636640d3d"><td class="memItemLeft" align="right" valign="top"><a id="ade674a60952287f59befdf3636640d3d"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>update_initial_solution</b> (const VectorType &amp;solution_level_set_in)</td></tr>
-<tr class="separator:aee6a5cb5a422c598c5a15a4f163a5394"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e67ad99f891d22c882f11dc79e906c8"><td class="memItemLeft" align="right" valign="top"><a id="a7e67ad99f891d22c882f11dc79e906c8"></a>
+<tr class="separator:ade674a60952287f59befdf3636640d3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a02a29eb3fc8af6e66f1729b65385ddf7"><td class="memItemLeft" align="right" valign="top"><a id="a02a29eb3fc8af6e66f1729b65385ddf7"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>solve</b> (const double d_tau)</td></tr>
-<tr class="separator:a7e67ad99f891d22c882f11dc79e906c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a02a29eb3fc8af6e66f1729b65385ddf7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a939798750a1024eae11cc2bed83dac04"><td class="memItemLeft" align="right" valign="top"><a id="a939798750a1024eae11cc2bed83dac04"></a>
+<tr class="memitem:afb1b8caf347f0acbb2d85f415e735c7e"><td class="memItemLeft" align="right" valign="top"><a id="afb1b8caf347f0acbb2d85f415e735c7e"></a>
 <a class="el" href="structMeltPoolDG_1_1ReinitializationData.html">ReinitializationData</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>reinit_data</b></td></tr>
-<tr class="separator:a939798750a1024eae11cc2bed83dac04"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6987df58169734d1f280a164ff2f6eb8"><td class="memItemLeft" align="right" valign="top"><a id="a6987df58169734d1f280a164ff2f6eb8"></a>
+<tr class="separator:afb1b8caf347f0acbb2d85f415e735c7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac64708af7d3914f652433156234ac34b"><td class="memItemLeft" align="right" valign="top"><a id="ac64708af7d3914f652433156234ac34b"></a>
 VectorType&#160;</td><td class="memItemRight" valign="bottom"><b>solution_level_set</b></td></tr>
-<tr class="separator:a6987df58169734d1f280a164ff2f6eb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a925fb8ab07a1106e923196ad3d51e607"><td class="memItemLeft" align="right" valign="top">const BlockVectorType &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>solution_normal_vector</b></td></tr>
-<tr class="separator:a925fb8ab07a1106e923196ad3d51e607"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:ac64708af7d3914f652433156234ac34b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a29ac45e7f89d6ab9027a4f129b81bf"><td class="memItemLeft" align="right" valign="top">const BlockVectorType &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>solution_normal_vector</b></td></tr>
+<tr class="separator:a8a29ac45e7f89d6ab9027a4f129b81bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Data Documentation</h2>
-<a id="a925fb8ab07a1106e923196ad3d51e607"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a925fb8ab07a1106e923196ad3d51e607">&#9670;&nbsp;</a></span>solution_normal_vector</h2>
+<a id="a8a29ac45e7f89d6ab9027a4f129b81bf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a29ac45e7f89d6ab9027a4f129b81bf">&#9670;&nbsp;</a></span>solution_normal_vector</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;int dim, unsigned int comp&gt; </div>
+template&lt;int dim&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">const BlockVectorType&amp; <a class="el" href="classMeltPoolDG_1_1Reinitialization_1_1ReinitializationOperation.html">MeltPoolDG::Reinitialization::ReinitializationOperation</a>&lt; dim, comp &gt;::solution_normal_vector</td>
+          <td class="memname">const BlockVectorType&amp; <a class="el" href="classMeltPoolDG_1_1Reinitialization_1_1ReinitializationOperation.html">MeltPoolDG::Reinitialization::ReinitializationOperation</a>&lt; dim &gt;::solution_normal_vector</td>
         </tr>
       </table>
 </div><div class="memdoc">
