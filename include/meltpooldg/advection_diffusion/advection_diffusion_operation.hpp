@@ -21,7 +21,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    template <unsigned int dim>
+    template <int dim>
     class AdvectionDiffusionOperation
     {
     private:

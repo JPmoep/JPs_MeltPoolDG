@@ -66,7 +66,7 @@ namespace MeltPoolDG
       this->quad_idx = quad_idx_in;
     }
 
-    template <unsigned int dim>
+    template <int dim>
     void
     initialize_matrix_based(const ScratchData<dim> &scratch_data)
     {
