@@ -58,8 +58,8 @@ namespace MeltPoolDG
                  const unsigned int                             quad_idx_in)
       {
         scratch_data = scratch_data_in;
-        dof_idx       = dof_idx_in;
-        quad_idx      = quad_idx_in;
+        dof_idx      = dof_idx_in;
+        quad_idx     = quad_idx_in;
         /*
          *  initialize curvature data
          */
@@ -127,8 +127,10 @@ namespace MeltPoolDG
       {
         const double damping_parameter =
           scratch_data->get_min_cell_size(dof_idx) * curvature_data.damping_scale_factor;
-        curvature_operator =
-          std::make_unique<CurvatureOperator<dim>>(*scratch_data, damping_parameter, dof_idx, quad_idx);
+        curvature_operator = std::make_unique<CurvatureOperator<dim>>(*scratch_data,
+                                                                      damping_parameter,
+                                                                      dof_idx,
+                                                                      quad_idx);
         /*
          *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
          *  apply it to the system matrix. This functionality is part of the OperatorBase class.
@@ -147,7 +149,7 @@ namespace MeltPoolDG
        */
       std::unique_ptr<OperatorBase<double, VectorType, BlockVectorType>> curvature_operator;
       /*
-       *  Based on the following indices the correct DoFHandler or quadrature rule from 
+       *  Based on the following indices the correct DoFHandler or quadrature rule from
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
        *  multiple DoFHandlers, quadrature rules, etc.
        */

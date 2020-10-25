@@ -150,7 +150,8 @@ namespace MeltPoolDG
                        (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
         else
 #endif
-          quad_idx = scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+          quad_idx =
+            scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
 
           // @TODO: only do once!
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
@@ -199,12 +200,8 @@ namespace MeltPoolDG
             "a valid advection velocity. A shared_ptr to your advection velocity "
             "function, e.g., AdvectionFunc<dim> must be specified as follows: "
             "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();"));
-        advec_diff_operation.initialize(scratch_data, 
-                                        initial_solution, 
-                                        base_in->parameters, 
-                                        dof_idx, 
-                                        dof_no_bc_idx, 
-                                        quad_idx);
+        advec_diff_operation.initialize(
+          scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
       }
 
       void

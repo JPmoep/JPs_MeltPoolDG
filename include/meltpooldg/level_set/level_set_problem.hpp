@@ -138,12 +138,13 @@ namespace MeltPoolDG
           }
         constraints_dirichlet.close();
 
-        const unsigned int dof_no_bc_idx = scratch_data->attach_constraint_matrix(hanging_node_constraints);
+        const unsigned int dof_no_bc_idx =
+          scratch_data->attach_constraint_matrix(hanging_node_constraints);
         const unsigned int dof_idx = scratch_data->attach_constraint_matrix(constraints_dirichlet);
         /*
          *  create quadrature rule
          */
-        
+
         unsigned int quad_idx = 0;
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
@@ -152,7 +153,8 @@ namespace MeltPoolDG
                        (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
         else
 #endif
-          quad_idx = scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+          quad_idx =
+            scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
 
           // TODO: only do once!
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
@@ -200,7 +202,8 @@ namespace MeltPoolDG
             "function, e.g., AdvectionFunc<dim> must be specified as follows: "
             "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();"));
 
-        level_set_operation.initialize(scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
+        level_set_operation.initialize(
+          scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
       }
 
       void
@@ -305,8 +308,8 @@ namespace MeltPoolDG
       std::shared_ptr<ScratchData<dim>> scratch_data;
       BlockVectorType                   advection_velocity;
 
-      TimeIterator<double>         time_iterator;
-      LevelSetOperation<dim>       level_set_operation;
+      TimeIterator<double>   time_iterator;
+      LevelSetOperation<dim> level_set_operation;
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

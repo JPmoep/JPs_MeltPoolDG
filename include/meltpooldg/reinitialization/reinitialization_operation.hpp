@@ -57,8 +57,8 @@ namespace MeltPoolDG
                  const unsigned int                             quad_idx_in)
       {
         scratch_data = scratch_data_in;
-        dof_idx = dof_idx_in;
-        quad_idx = quad_idx_in;
+        dof_idx      = dof_idx_in;
+        quad_idx     = quad_idx_in;
         scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
         scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
         /*
@@ -196,8 +196,8 @@ namespace MeltPoolDG
              *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
              *  apply it to the system matrix. This functionality is part of the OperatorBase class.
              */
-        
-        if (!reinit_data.do_matrix_free)
+
+            if (!reinit_data.do_matrix_free)
               reinit_operator->initialize_matrix_based<dim>(*scratch_data);
       }
       void
@@ -218,7 +218,7 @@ namespace MeltPoolDG
        */
       NormalVector::NormalVectorOperation<dim> normal_vector_operation;
       /*
-       *  Based on the following indices the correct DoFHandler or quadrature rule from 
+       *  Based on the following indices the correct DoFHandler or quadrature rule from
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
        *  multiple DoFHandlers, quadrature rules, etc.
        */

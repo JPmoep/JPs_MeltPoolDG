@@ -44,12 +44,12 @@ namespace MeltPoolDG
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_level_set_in,
                  const Parameters<double> &                     data_in,
-                 const unsigned int                             dof_idx_in, 
-                 const unsigned int                             dof_no_bc_idx_in, 
-                 const unsigned int                             quad_idx_in) 
+                 const unsigned int                             dof_idx_in,
+                 const unsigned int                             dof_no_bc_idx_in,
+                 const unsigned int                             quad_idx_in)
       {
         scratch_data = scratch_data_in;
-        dof_idx = dof_idx_in;
+        dof_idx      = dof_idx_in;
         /*
          *  set the level set data
          */
@@ -57,7 +57,8 @@ namespace MeltPoolDG
         /*
          *  initialize the advection_diffusion problem
          */
-        advec_diff_operation.initialize(scratch_data, solution_level_set_in, data_in, dof_idx, dof_no_bc_idx_in, quad_idx_in);
+        advec_diff_operation.initialize(
+          scratch_data, solution_level_set_in, data_in, dof_idx, dof_no_bc_idx_in, quad_idx_in);
         /*
          *  set the parameters for the levelset problem; already determined parameters
          *  from the initialize call of advec_diff_operation are overwritten.
@@ -66,7 +67,8 @@ namespace MeltPoolDG
         /*
          *    initialize the reinitialization operation class
          */
-        reinit_operation.initialize(scratch_data, solution_level_set_in, data_in, dof_no_bc_idx_in, quad_idx_in);
+        reinit_operation.initialize(
+          scratch_data, solution_level_set_in, data_in, dof_no_bc_idx_in, quad_idx_in);
         /*
          *  The initial solution of the level set equation will be reinitialized.
          */
@@ -142,8 +144,8 @@ namespace MeltPoolDG
           TimeIteratorData<double>{0.0,
                                    100000.,
                                    data_in.reinit.dtau > 0.0 ?
-                                   data_in.reinit.dtau :
-                                   scratch_data->get_min_cell_size(dof_idx) *
+                                     data_in.reinit.dtau :
+                                     scratch_data->get_min_cell_size(dof_idx) *
                                        data_in.reinit.scale_factor_epsilon,
                                    data_in.reinit.max_n_steps,
                                    false});
@@ -185,7 +187,6 @@ namespace MeltPoolDG
        *    accessible for output_results.
        */
       const BlockVectorType &solution_normal_vector = reinit_operation.solution_normal_vector;
-      
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

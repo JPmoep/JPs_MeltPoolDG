@@ -58,11 +58,11 @@ namespace MeltPoolDG
     {
       d_tau = dt;
     }
-    
-    void 
+
+    void
     reset_indices(const unsigned int dof_idx_in, const unsigned int quad_idx_in)
     {
-      this->dof_idx = dof_idx_in;
+      this->dof_idx  = dof_idx_in;
       this->quad_idx = quad_idx_in;
     }
 
@@ -125,11 +125,13 @@ namespace MeltPoolDG
     double              d_tau = 0.0;
     SparseMatrixType    system_matrix;
     SparsityPatternType dsp;
+
   protected:
-    /* 
-     * dof_idx/quad_idx can be overwritten from the derived operator class by calling the reset_indices function
+    /*
+     * dof_idx/quad_idx can be overwritten from the derived operator class by calling the
+     * reset_indices function
      * */
-    unsigned int dof_idx = 0;   
-    unsigned int quad_idx = 0;  
+    unsigned int dof_idx  = 0;
+    unsigned int quad_idx = 0;
   };
 } // namespace MeltPoolDG

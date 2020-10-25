@@ -32,10 +32,10 @@ namespace MeltPoolDG
       using VectorizedArrayType = VectorizedArray<number>;
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;
 
-      NormalVectorOperator(const ScratchData<dim> &scratch_data_in, 
-                           const double           damping_in,
-                           const unsigned int     dof_idx_in,
-                           const unsigned int     quad_idx_in )
+      NormalVectorOperator(const ScratchData<dim> &scratch_data_in,
+                           const double            damping_in,
+                           const unsigned int      dof_idx_in,
+                           const unsigned int      quad_idx_in)
         : scratch_data(scratch_data_in)
         , damping(damping_in)
       {
@@ -113,13 +113,11 @@ namespace MeltPoolDG
               // assembly
               cell->get_dof_indices(local_dof_indices);
 
-              scratch_data.get_constraint(this->dof_idx).distribute_local_to_global(normal_cell_matrix,
-                                                                           local_dof_indices,
-                                                                           matrix);
+              scratch_data.get_constraint(this->dof_idx)
+                .distribute_local_to_global(normal_cell_matrix, local_dof_indices, matrix);
               for (unsigned int d = 0; d < dim; ++d)
-                scratch_data.get_constraint(this->dof_idx).distribute_local_to_global(normal_cell_rhs[d],
-                                                                             local_dof_indices,
-                                                                             rhs.block(d));
+                scratch_data.get_constraint(this->dof_idx)
+                  .distribute_local_to_global(normal_cell_rhs[d], local_dof_indices, rhs.block(d));
 
             } // end of cell loop
         matrix.compress(VectorOperation::add);
@@ -135,7 +133,9 @@ namespace MeltPoolDG
       {
         scratch_data.get_matrix_free().template cell_loop<BlockVectorType, BlockVectorType>(
           [&](const auto &, auto &dst, const auto &src, auto cell_range) {
-            FECellIntegrator<dim, dim, number> normal(scratch_data.get_matrix_free(), this->dof_idx, this->quad_idx);
+            FECellIntegrator<dim, dim, number> normal(scratch_data.get_matrix_free(),
+                                                      this->dof_idx,
+                                                      this->quad_idx);
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
                 normal.reinit(cell);
@@ -162,8 +162,8 @@ namespace MeltPoolDG
                                                          this->dof_idx,
                                                          this->quad_idx);
         FECellIntegrator<dim, 1, number>   level_set(scratch_data.get_matrix_free(),
-                                                         this->dof_idx,
-                                                         this->quad_idx);
+                                                   this->dof_idx,
+                                                   this->quad_idx);
 
         scratch_data.get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
           [&](const auto &, auto &dst, const auto &src, auto macro_cells) {

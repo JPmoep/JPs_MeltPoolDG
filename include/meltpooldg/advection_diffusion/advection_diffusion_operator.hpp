@@ -145,8 +145,8 @@ namespace MeltPoolDG
               // assembly
               cell->get_dof_indices(local_dof_indices);
 
-              scratch_data.get_constraint(this->dof_idx).distribute_local_to_global(
-                cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
+              scratch_data.get_constraint(this->dof_idx)
+                .distribute_local_to_global(cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
             }
 
         matrix.compress(VectorOperation::add);
@@ -166,11 +166,9 @@ namespace MeltPoolDG
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &matrix_free, auto &dst, const auto &src, auto cell_range) {
             FECellIntegrator<dim, 1, number>   advected_field(matrix_free,
-                                                            this->dof_idx, 
+                                                            this->dof_idx,
                                                             this->quad_idx);
-            FECellIntegrator<dim, dim, number> velocity(matrix_free,
-                                                        this->dof_idx,
-                                                        this->quad_idx);
+            FECellIntegrator<dim, dim, number> velocity(matrix_free, this->dof_idx, this->quad_idx);
 
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
@@ -219,9 +217,7 @@ namespace MeltPoolDG
             FECellIntegrator<dim, 1, number, VectorizedArrayType> advected_field(matrix_free,
                                                                                  this->dof_idx,
                                                                                  this->quad_idx);
-            FECellIntegrator<dim, dim, number>                    velocity(matrix_free,
-                                                                           this->dof_idx,
-                                                                           this->quad_idx);
+            FECellIntegrator<dim, dim, number> velocity(matrix_free, this->dof_idx, this->quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {

@@ -36,7 +36,7 @@ namespace MeltPoolDG
                      const double &          constant_epsilon,
                      const double &          eps_scale_factor,
                      const unsigned int      dof_idx_in,
-                     const unsigned int      quad_idx_in )
+                     const unsigned int      quad_idx_in)
         : scratch_data(scratch_data_in)
         , eps(constant_epsilon)
         , eps_scale_factor(eps_scale_factor)
@@ -135,8 +135,8 @@ namespace MeltPoolDG
               // assembly
               cell->get_dof_indices(local_dof_indices);
 
-              scratch_data.get_constraint(this->dof_idx).distribute_local_to_global(
-                cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
+              scratch_data.get_constraint(this->dof_idx)
+                .distribute_local_to_global(cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
             }
 
         matrix.compress(VectorOperation::add);
@@ -158,7 +158,8 @@ namespace MeltPoolDG
             eps :
             eps_scale_factor *
               scratch_data.get_min_cell_size(
-                this->dof_idx); // @ todo: check how cell size can be extracted from matrix free class
+                this
+                  ->dof_idx); // @ todo: check how cell size can be extracted from matrix free class
 
         AssertThrow(eps_ > 0.0, ExcMessage("reinitialization operator: epsilon must be set"));
 
@@ -169,8 +170,8 @@ namespace MeltPoolDG
                                                       this->dof_idx,
                                                       this->quad_idx);
             FECellIntegrator<dim, dim, number> normal_vector(scratch_data.get_matrix_free(),
-                                                      this->dof_idx,
-                                                      this->quad_idx);
+                                                             this->dof_idx,
+                                                             this->quad_idx);
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
                 levelset.reinit(cell);
@@ -214,7 +215,8 @@ namespace MeltPoolDG
             eps :
             eps_scale_factor *
               scratch_data.get_min_cell_size(
-                this->dof_idx); // @ todo: check how cell size can be extracted from matrix free class
+                this
+                  ->dof_idx); // @ todo: check how cell size can be extracted from matrix free class
 
         AssertThrow(eps_ > 0.0,
                     ExcMessage("reinitialization matrix-free operator: epsilon must be set"));
@@ -226,12 +228,12 @@ namespace MeltPoolDG
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
-            FECellIntegrator<dim, 1, number>   psi(scratch_data.get_matrix_free(), 
-                                                      this->dof_idx,
-                                                      this->quad_idx);
+            FECellIntegrator<dim, 1, number>   psi(scratch_data.get_matrix_free(),
+                                                 this->dof_idx,
+                                                 this->quad_idx);
             FECellIntegrator<dim, dim, number> normal_vector(scratch_data.get_matrix_free(),
-                                                      this->dof_idx,
-                                                      this->quad_idx);
+                                                             this->dof_idx,
+                                                             this->quad_idx);
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 psi.reinit(cell);

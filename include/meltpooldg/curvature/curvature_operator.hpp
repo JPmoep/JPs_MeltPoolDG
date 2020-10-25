@@ -116,8 +116,9 @@ namespace MeltPoolDG
 
               // assembly
               cell->get_dof_indices(local_dof_indices);
-              scratch_data.get_constraint(this->dof_idx).distribute_local_to_global(
-                curvature_cell_matrix, curvature_cell_rhs, local_dof_indices, matrix, rhs);
+              scratch_data.get_constraint(this->dof_idx)
+                .distribute_local_to_global(
+                  curvature_cell_matrix, curvature_cell_rhs, local_dof_indices, matrix, rhs);
 
             } // end of cell loop
         matrix.compress(VectorOperation::add);
@@ -158,8 +159,10 @@ namespace MeltPoolDG
       {
         scratch_data.get_matrix_free().template cell_loop<VectorType, BlockVectorType>(
           [&](const auto &matrix_free, auto &dst, const auto &src, auto macro_cells) {
-            FECellIntegrator<dim, 1, number>   curvature(matrix_free, this->dof_idx, this->quad_idx);
-            FECellIntegrator<dim, dim, number> normal_vector(matrix_free, this->dof_idx, this->quad_idx);
+            FECellIntegrator<dim, 1, number> curvature(matrix_free, this->dof_idx, this->quad_idx);
+            FECellIntegrator<dim, dim, number> normal_vector(matrix_free,
+                                                             this->dof_idx,
+                                                             this->quad_idx);
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 curvature.reinit(cell);
