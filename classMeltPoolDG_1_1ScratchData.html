@@ -75,6 +75,9 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a05effcd79a63d24ff5c627b441a8a685"><td class="memItemLeft" align="right" valign="top"><a id="a05effcd79a63d24ff5c627b441a8a685"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>ScratchData</b> (const bool do_matrix_free=true)</td></tr>
+<tr class="separator:a05effcd79a63d24ff5c627b441a8a685"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0d2e9dc7520284c1083b3f6eec76c8e3"><td class="memItemLeft" align="right" valign="top"><a id="a0d2e9dc7520284c1083b3f6eec76c8e3"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>ScratchData</b> (const <a class="el" href="classMeltPoolDG_1_1ScratchData.html">ScratchData</a> &amp;scratch_data)</td></tr>
 <tr class="separator:a0d2e9dc7520284c1083b3f6eec76c8e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -102,8 +105,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>create_partitioning</
 <tr class="memitem:a22636cb6304a0f48e942ba3170310f08"><td class="memItemLeft" align="right" valign="top"><a id="a22636cb6304a0f48e942ba3170310f08"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>build</b> ()</td></tr>
 <tr class="separator:a22636cb6304a0f48e942ba3170310f08"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f59092033037eeb5843e4bf7740cb0d"><td class="memItemLeft" align="right" valign="top"><a id="a2f59092033037eeb5843e4bf7740cb0d"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize_dof_vector</b> (VectorType &amp;vec, const unsigned int dof_idx=0) const</td></tr>
+<tr class="memitem:a2f59092033037eeb5843e4bf7740cb0d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMeltPoolDG_1_1ScratchData.html#a2f59092033037eeb5843e4bf7740cb0d">initialize_dof_vector</a> (VectorType &amp;vec, const unsigned int dof_idx=0) const</td></tr>
 <tr class="separator:a2f59092033037eeb5843e4bf7740cb0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a804a616f4e7a128f707afbdc798e3e36"><td class="memItemLeft" align="right" valign="top"><a id="a804a616f4e7a128f707afbdc798e3e36"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize_dof_vector</b> (BlockVectorType &amp;vec, const unsigned int dof_idx=0) const</td></tr>
@@ -197,6 +199,45 @@ template&lt;int dim, int spacedim = dim, typename number  = double, typename Vec
 </table>
 </div><div class="memdoc">
 <p>Getter functions. </p>
+
+</div>
+</div>
+<a id="a2f59092033037eeb5843e4bf7740cb0d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2f59092033037eeb5843e4bf7740cb0d">&#9670;&nbsp;</a></span>initialize_dof_vector()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;int dim, int spacedim = dim, typename number  = double, typename VectorizedArrayType  = VectorizedArray&lt;number&gt;&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classMeltPoolDG_1_1ScratchData.html">MeltPoolDG::ScratchData</a>&lt; dim, spacedim, number, VectorizedArrayType &gt;::initialize_dof_vector </td>
+          <td>(</td>
+          <td class="paramtype">VectorType &amp;&#160;</td>
+          <td class="paramname"><em>vec</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const unsigned int&#160;</td>
+          <td class="paramname"><em>dof_idx</em> = <code>0</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>initialize vectors </p>
 
 </div>
 </div>

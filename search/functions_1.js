@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['reinit_140',['reinit',['../classMeltPoolDG_1_1ScratchData.html#a3f7a354c7cd3a3701bfc648ff158390f',1,'MeltPoolDG::ScratchData']]]
+  ['initialize_5fdof_5fvector_141',['initialize_dof_vector',['../classMeltPoolDG_1_1ScratchData.html#a2f59092033037eeb5843e4bf7740cb0d',1,'MeltPoolDG::ScratchData']]]
 ];
