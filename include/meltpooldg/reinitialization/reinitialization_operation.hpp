@@ -29,7 +29,7 @@ namespace MeltPoolDG
      *     property of the level set equation
      */
 
-    template <int dim, unsigned int comp>
+    template <int dim>
     class ReinitializationOperation
     {
     private:
@@ -52,10 +52,15 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_level_set_in,
-                 const Parameters<double> &                     data_in)
+                 const Parameters<double> &                     data_in,
+                 const unsigned int                             dof_idx_in,
+                 const unsigned int                             quad_idx_in)
       {
         scratch_data = scratch_data_in;
-        scratch_data->initialize_dof_vector(solution_level_set, comp);
+        dof_idx      = dof_idx_in;
+        quad_idx     = quad_idx_in;
+        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
+        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
         /*
          *    initialize the (local) parameters of the reinitialization
          *    from the global user-defined parameters
@@ -64,7 +69,7 @@ namespace MeltPoolDG
         /*
          *    initialize normal_vector_field
          */
-        normal_vector_operation.initialize(scratch_data_in, data_in);
+        normal_vector_operation.initialize(scratch_data_in, data_in, dof_idx_in, quad_idx_in);
         /*
          *    compute the normal vector field and update the initial solution
          */
@@ -88,7 +93,7 @@ namespace MeltPoolDG
         /*
          *    copy the given solution into the member variable
          */
-        scratch_data->initialize_dof_vector(solution_level_set, comp);
+        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
         solution_level_set.copy_locally_owned_data_from(solution_level_set_in);
         solution_level_set.update_ghost_values();
         /*
@@ -105,8 +110,8 @@ namespace MeltPoolDG
       {
         VectorType src, rhs;
 
-        scratch_data->initialize_dof_vector(src, comp);
-        scratch_data->initialize_dof_vector(rhs, comp);
+        scratch_data->initialize_dof_vector(src, dof_idx);
+        scratch_data->initialize_dof_vector(rhs, dof_idx);
 
         reinit_operator->set_time_increment(d_tau);
 
@@ -115,7 +120,7 @@ namespace MeltPoolDG
         if (reinit_data.do_matrix_free)
           {
             VectorType src_rhs;
-            scratch_data->initialize_dof_vector(src_rhs, comp);
+            scratch_data->initialize_dof_vector(src_rhs, dof_idx);
             src_rhs.copy_locally_owned_data_from(solution_level_set);
             src_rhs.update_ghost_values();
             reinit_operator->create_rhs(rhs, src_rhs);
@@ -141,7 +146,7 @@ namespace MeltPoolDG
                                                                     src,
                                                                     rhs,
                                                                     preconditioner);
-            scratch_data->get_constraint(comp).distribute(src);
+            scratch_data->get_constraint(dof_idx).distribute(src);
           }
 
         solution_level_set += src;
@@ -150,7 +155,7 @@ namespace MeltPoolDG
 
         if (reinit_data.do_print_l2norm)
           {
-            const ConditionalOStream &pcout = scratch_data->get_pcout(comp);
+            const ConditionalOStream &pcout = scratch_data->get_pcout(dof_idx);
             pcout << "| CG: i=" << std::setw(5) << std::left << iter;
             pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10)
                   << src.linfty_norm();
@@ -171,11 +176,13 @@ namespace MeltPoolDG
       {
         if (reinit_data.modeltype == "olsson2007")
           {
-            reinit_operator = std::make_unique<OlssonOperator<dim, comp, double>>(
+            reinit_operator = std::make_unique<OlssonOperator<dim, double>>(
               *scratch_data,
               normal_vector_operation.solution_normal_vector,
               reinit_data.constant_epsilon,
-              reinit_data.scale_factor_epsilon);
+              reinit_data.scale_factor_epsilon,
+              dof_idx,
+              quad_idx);
           }
         /*
          * add your desired operators here
@@ -189,14 +196,15 @@ namespace MeltPoolDG
              *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
              *  apply it to the system matrix. This functionality is part of the OperatorBase class.
              */
+
             if (!reinit_data.do_matrix_free)
-              reinit_operator->initialize_matrix_based<dim, comp>(*scratch_data);
+              reinit_operator->initialize_matrix_based<dim>(*scratch_data);
       }
       void
       update_operator()
       {
         if (!reinit_data.do_matrix_free)
-          reinit_operator->initialize_matrix_based<dim, comp>(*scratch_data);
+          reinit_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 
     private:
@@ -208,7 +216,14 @@ namespace MeltPoolDG
       /*
        *   Computation of the normal vectors
        */
-      NormalVector::NormalVectorOperation<dim, comp> normal_vector_operation;
+      NormalVector::NormalVectorOperation<dim> normal_vector_operation;
+      /*
+       *  Based on the following indices the correct DoFHandler or quadrature rule from
+       *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
+       *  multiple DoFHandlers, quadrature rules, etc.
+       */
+      unsigned int dof_idx;
+      unsigned int quad_idx;
     };
   } // namespace Reinitialization
 } // namespace MeltPoolDG

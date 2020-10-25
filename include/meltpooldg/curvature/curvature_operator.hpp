@@ -20,7 +20,7 @@ namespace MeltPoolDG
 {
   namespace Curvature
   {
-    /*
+    /**
      *  This function calculates the curvature of the current level set function being
      *  the solution of an intermediate projection step
      *
@@ -31,7 +31,7 @@ namespace MeltPoolDG
      *  level set function n_ϕ.
      *
      */
-    template <int dim, unsigned int comp = 0, typename number = double>
+    template <int dim, typename number = double>
     class CurvatureOperator : public OperatorBase<number,
                                                   LinearAlgebra::distributed::Vector<number>,
                                                   LinearAlgebra::distributed::BlockVector<number>>
@@ -44,10 +44,13 @@ namespace MeltPoolDG
 
       // clang-format off
       CurvatureOperator( const ScratchData<dim>& scratch_data_in,
-                         const double            damping_in )
+                         const double            damping_in,
+                         const unsigned int      dof_idx_in,
+                         const unsigned int      quad_idx_in )
       : scratch_data( scratch_data_in )
       , damping     ( damping_in      )
       {
+        this->reset_indices(dof_idx_in, quad_idx_in);
       }
       // clang-format on
 
@@ -60,12 +63,12 @@ namespace MeltPoolDG
 
         const auto &  mapping = scratch_data.get_mapping();
         FEValues<dim> fe_values(mapping,
-                                scratch_data.get_dof_handler(comp).get_fe(),
-                                scratch_data.get_quadrature(comp),
+                                scratch_data.get_dof_handler(this->dof_idx).get_fe(),
+                                scratch_data.get_quadrature(this->quad_idx),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
 
-        const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell(comp);
+        const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell(this->dof_idx);
 
         FullMatrix<double>                   curvature_cell_matrix(dofs_per_cell, dofs_per_cell);
         Vector<double>                       curvature_cell_rhs(dofs_per_cell);
@@ -78,7 +81,7 @@ namespace MeltPoolDG
         matrix = 0.0;
         rhs    = 0.0;
 
-        for (const auto &cell : scratch_data.get_dof_handler(comp).active_cell_iterators())
+        for (const auto &cell : scratch_data.get_dof_handler(this->dof_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               fe_values.reinit(cell);
@@ -87,7 +90,7 @@ namespace MeltPoolDG
               curvature_cell_matrix = 0.0;
               curvature_cell_rhs    = 0.0;
 
-              NormalVector::NormalVectorOperator<dim, comp>::get_unit_normals_at_quadrature(
+              NormalVector::NormalVectorOperator<dim>::get_unit_normals_at_quadrature(
                 fe_values, solution_normal_vector_in, normal_at_q);
 
               for (const unsigned int q_index : fe_values.quadrature_point_indices())
@@ -113,8 +116,9 @@ namespace MeltPoolDG
 
               // assembly
               cell->get_dof_indices(local_dof_indices);
-              scratch_data.get_constraint(comp).distribute_local_to_global(
-                curvature_cell_matrix, curvature_cell_rhs, local_dof_indices, matrix, rhs);
+              scratch_data.get_constraint(this->dof_idx)
+                .distribute_local_to_global(
+                  curvature_cell_matrix, curvature_cell_rhs, local_dof_indices, matrix, rhs);
 
             } // end of cell loop
         matrix.compress(VectorOperation::add);
@@ -130,7 +134,7 @@ namespace MeltPoolDG
       {
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &matrix_free, auto &dst, const auto &src, auto cell_range) {
-            FECellIntegrator<dim, 1, number> curvature(matrix_free, comp, comp);
+            FECellIntegrator<dim, 1, number> curvature(matrix_free, this->dof_idx, this->quad_idx);
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
                 curvature.reinit(cell);
@@ -155,8 +159,10 @@ namespace MeltPoolDG
       {
         scratch_data.get_matrix_free().template cell_loop<VectorType, BlockVectorType>(
           [&](const auto &matrix_free, auto &dst, const auto &src, auto macro_cells) {
-            FECellIntegrator<dim, 1, number>   curvature(matrix_free, comp, comp);
-            FECellIntegrator<dim, dim, number> normal_vector(matrix_free, comp, comp);
+            FECellIntegrator<dim, 1, number> curvature(matrix_free, this->dof_idx, this->quad_idx);
+            FECellIntegrator<dim, dim, number> normal_vector(matrix_free,
+                                                             this->dof_idx,
+                                                             this->quad_idx);
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 curvature.reinit(cell);
@@ -167,7 +173,7 @@ namespace MeltPoolDG
 
                 for (unsigned int q_index = 0; q_index < curvature.n_q_points; ++q_index)
                   {
-                    const auto n_phi = Reinitialization::OlssonOperator<dim, comp>::normalize(
+                    const auto n_phi = Reinitialization::OlssonOperator<dim>::normalize(
                       normal_vector.get_value(q_index));
                     curvature.submit_gradient(n_phi, q_index);
                   }

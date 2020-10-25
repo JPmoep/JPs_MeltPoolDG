@@ -38,7 +38,7 @@ namespace MeltPoolDG
      *    !!!!
      */
 
-    template <int dim, unsigned int comp>
+    template <int dim>
     class NormalVectorOperation
     {
     private:
@@ -58,9 +58,13 @@ namespace MeltPoolDG
 
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-                 const Parameters<double> &                     data_in)
+                 const Parameters<double> &                     data_in,
+                 const unsigned int                             dof_idx_in,
+                 const unsigned int                             quad_idx_in)
       {
         scratch_data = scratch_data_in;
+        dof_idx      = dof_idx_in;
+        quad_idx     = quad_idx_in;
         /*
          *  initialize normal vector data
          */
@@ -82,8 +86,8 @@ namespace MeltPoolDG
       {
         BlockVectorType rhs;
 
-        scratch_data->initialize_dof_vector(rhs, comp);
-        scratch_data->initialize_dof_vector(solution_normal_vector, comp);
+        scratch_data->initialize_dof_vector(rhs, dof_idx);
+        scratch_data->initialize_dof_vector(solution_normal_vector, dof_idx);
 
         int iter = 0;
 
@@ -110,7 +114,7 @@ namespace MeltPoolDG
                 rhs.block(d));
           }
         for (unsigned int d = 0; d < dim; ++d)
-          scratch_data->get_constraint(comp).distribute(solution_normal_vector.block(d));
+          scratch_data->get_constraint(dof_idx).distribute(solution_normal_vector.block(d));
 
         if (normal_vector_data.do_print_l2norm)
           {
@@ -132,24 +136,32 @@ namespace MeltPoolDG
       create_operator()
       {
         const double damping_parameter =
-          scratch_data->get_min_cell_size(comp) * normal_vector_data.damping_scale_factor;
-        normal_vector_operator =
-          std::make_unique<NormalVectorOperator<dim, comp>>(*scratch_data, damping_parameter);
+          scratch_data->get_min_cell_size(dof_idx) * normal_vector_data.damping_scale_factor;
+        normal_vector_operator = std::make_unique<NormalVectorOperator<dim>>(*scratch_data,
+                                                                             damping_parameter,
+                                                                             dof_idx,
+                                                                             quad_idx);
         /*
          *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
          *  apply it to the system matrix. This functionality is part of the OperatorBase class.
          */
         if (!normal_vector_data.do_matrix_free)
-          normal_vector_operator->initialize_matrix_based<dim, comp>(*scratch_data);
+          normal_vector_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 
     private:
       std::shared_ptr<const ScratchData<dim>> scratch_data;
-
       /*
        *  This pointer will point to your user-defined normal vector operator.
        */
       std::unique_ptr<OperatorBase<double, BlockVectorType, VectorType>> normal_vector_operator;
+      /*
+       *  Based on the following indices the correct DoFHandler or quadrature rule from
+       *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
+       *  multiple DoFHandlers, quadrature rules, etc.
+       */
+      unsigned int dof_idx;
+      unsigned int quad_idx;
     };
   } // namespace NormalVector
 } // namespace MeltPoolDG

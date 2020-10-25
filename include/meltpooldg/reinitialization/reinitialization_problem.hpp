@@ -123,7 +123,8 @@ namespace MeltPoolDG
         /*
          *    initialize the reinitialization operation class
          */
-        reinit_operation.initialize(scratch_data, solution_level_set, base_in->parameters);
+        reinit_operation.initialize(
+          scratch_data, solution_level_set, base_in->parameters, dof_idx, quad_idx);
       }
 
       void
@@ -157,7 +158,8 @@ namespace MeltPoolDG
                            (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
             else
 #endif
-              scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+              quad_idx =
+                scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
           }
           /*
            *  setup DoFHandler
@@ -186,7 +188,7 @@ namespace MeltPoolDG
         constraints.close();
 
         if (do_initial_setup)
-          scratch_data->attach_constraint_matrix(constraints);
+          dof_idx = scratch_data->attach_constraint_matrix(constraints);
 
         /*
          *  create the matrix-free object
@@ -318,7 +320,9 @@ namespace MeltPoolDG
 
       std::shared_ptr<ScratchData<dim>> scratch_data;
       TimeIterator<double>              time_iterator;
-      ReinitializationOperation<dim, 0> reinit_operation;
+      ReinitializationOperation<dim>    reinit_operation;
+      unsigned int                      dof_idx;
+      unsigned int                      quad_idx;
     };
   } // namespace Reinitialization
 } // namespace MeltPoolDG
