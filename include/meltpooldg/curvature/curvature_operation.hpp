@@ -19,7 +19,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    template <int dim, unsigned int comp = 0>
+    template <int dim>
     class CurvatureOperation
     {
       /*
@@ -53,9 +53,13 @@ namespace MeltPoolDG
 
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-                 const Parameters<double> &                     data_in)
+                 const Parameters<double> &                     data_in,
+                 const unsigned int                             dof_idx_in,
+                 const unsigned int                             quad_idx_in)
       {
         scratch_data = scratch_data_in;
+        dof_idx       = dof_idx_in;
+        quad_idx      = quad_idx_in;
         /*
          *  initialize curvature data
          */
@@ -64,7 +68,7 @@ namespace MeltPoolDG
          *    initialize normal_vector_operation for computing the normal vector to the given
          *    scalar function for which the curvature should be calculated.
          */
-        normal_vector_operation.initialize(scratch_data, data_in);
+        normal_vector_operation.initialize(scratch_data, data_in, dof_idx, quad_idx);
         /*
          *  initialize the operator (input-dependent: matrix-based or matrix-free)
          */
@@ -81,8 +85,8 @@ namespace MeltPoolDG
 
         VectorType rhs;
 
-        scratch_data->initialize_dof_vector(rhs, comp);
-        scratch_data->initialize_dof_vector(solution_curvature, comp);
+        scratch_data->initialize_dof_vector(rhs, dof_idx);
+        scratch_data->initialize_dof_vector(solution_curvature, dof_idx);
         int iter = 0;
 
         if (curvature_data.do_matrix_free)
@@ -105,7 +109,7 @@ namespace MeltPoolDG
               curvature_operator->system_matrix, solution_curvature, rhs);
           }
 
-        scratch_data->get_constraint(comp).distribute(solution_curvature);
+        scratch_data->get_constraint(dof_idx).distribute(solution_curvature);
 
         if (curvature_data.do_print_l2norm)
           {
@@ -122,26 +126,33 @@ namespace MeltPoolDG
       create_operator()
       {
         const double damping_parameter =
-          scratch_data->get_min_cell_size(comp) * curvature_data.damping_scale_factor;
+          scratch_data->get_min_cell_size(dof_idx) * curvature_data.damping_scale_factor;
         curvature_operator =
-          std::make_unique<CurvatureOperator<dim, comp>>(*scratch_data, damping_parameter);
+          std::make_unique<CurvatureOperator<dim>>(*scratch_data, damping_parameter, dof_idx, quad_idx);
         /*
          *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
          *  apply it to the system matrix. This functionality is part of the OperatorBase class.
          */
         if (!curvature_data.do_matrix_free)
-          curvature_operator->initialize_matrix_based<dim, comp>(*scratch_data);
+          curvature_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 
     private:
       std::shared_ptr<const ScratchData<dim>> scratch_data;
 
-      NormalVector::NormalVectorOperation<dim, comp> normal_vector_operation;
+      NormalVector::NormalVectorOperation<dim> normal_vector_operation;
 
       /*
        *  This pointer will point to your user-defined curvature operator.
        */
       std::unique_ptr<OperatorBase<double, VectorType, BlockVectorType>> curvature_operator;
+      /*
+       *  Based on the following indices the correct DoFHandler or quadrature rule from 
+       *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
+       *  multiple DoFHandlers, quadrature rules, etc.
+       */
+      unsigned int dof_idx;
+      unsigned int quad_idx;
     };
   } // namespace Curvature
 } // namespace MeltPoolDG

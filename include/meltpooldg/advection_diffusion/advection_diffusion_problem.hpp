@@ -137,21 +137,22 @@ namespace MeltPoolDG
           }
         constraints.close();
 
-        scratch_data->attach_constraint_matrix(constraints);
-        scratch_data->attach_constraint_matrix(hanging_node_constraints);
+        const int dof_idx       = scratch_data->attach_constraint_matrix(constraints);
+        const int dof_no_bc_idx = scratch_data->attach_constraint_matrix(hanging_node_constraints);
         /*
          *  create quadrature rule
          */
+        unsigned int quad_idx = 0;
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          scratch_data->attach_quadrature(Simplex::QGauss<dim>(
+          quad_idx = scratch_data->attach_quadrature(Simplex::QGauss<dim>(
             dim == 2 ? (base_in->parameters.base.n_q_points_1d == 1 ? 3 : 7) :
                        (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
         else
 #endif
-          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+          quad_idx = scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
 
-          // TODO: only do once!
+          // @TODO: only do once!
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
           scratch_data->attach_quadrature(Simplex::QGauss<dim>(
@@ -198,7 +199,12 @@ namespace MeltPoolDG
             "a valid advection velocity. A shared_ptr to your advection velocity "
             "function, e.g., AdvectionFunc<dim> must be specified as follows: "
             "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();"));
-        advec_diff_operation.initialize(scratch_data, initial_solution, base_in->parameters);
+        advec_diff_operation.initialize(scratch_data, 
+                                        initial_solution, 
+                                        base_in->parameters, 
+                                        dof_idx, 
+                                        dof_no_bc_idx, 
+                                        quad_idx);
       }
 
       void

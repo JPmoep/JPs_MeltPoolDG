@@ -25,7 +25,7 @@ namespace MeltPoolDG
      *     Level set model including advection, reinitialization and curvature computation
      *     of the level set function.
      */
-    template <int dim, int comp_advec_diff = 0, int comp_no_dirichlet = 1>
+    template <int dim>
     class LevelSetOperation
     {
     private:
@@ -43,9 +43,13 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_level_set_in,
-                 const Parameters<double> &                     data_in)
+                 const Parameters<double> &                     data_in,
+                 const unsigned int                             dof_idx_in, 
+                 const unsigned int                             dof_no_bc_idx_in, 
+                 const unsigned int                             quad_idx_in) 
       {
         scratch_data = scratch_data_in;
+        dof_idx = dof_idx_in;
         /*
          *  set the level set data
          */
@@ -53,7 +57,7 @@ namespace MeltPoolDG
         /*
          *  initialize the advection_diffusion problem
          */
-        advec_diff_operation.initialize(scratch_data, solution_level_set_in, data_in);
+        advec_diff_operation.initialize(scratch_data, solution_level_set_in, data_in, dof_idx, dof_no_bc_idx_in, quad_idx_in);
         /*
          *  set the parameters for the levelset problem; already determined parameters
          *  from the initialize call of advec_diff_operation are overwritten.
@@ -62,7 +66,7 @@ namespace MeltPoolDG
         /*
          *    initialize the reinitialization operation class
          */
-        reinit_operation.initialize(scratch_data, solution_level_set_in, data_in);
+        reinit_operation.initialize(scratch_data, solution_level_set_in, data_in, dof_no_bc_idx_in, quad_idx_in);
         /*
          *  The initial solution of the level set equation will be reinitialized.
          */
@@ -83,7 +87,7 @@ namespace MeltPoolDG
         /*
          *    initialize the curvature operation class
          */
-        curvature_operation.initialize(scratch_data, data_in);
+        curvature_operation.initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
       }
 
       void
@@ -138,8 +142,8 @@ namespace MeltPoolDG
           TimeIteratorData<double>{0.0,
                                    100000.,
                                    data_in.reinit.dtau > 0.0 ?
-                                     data_in.reinit.dtau :
-                                     scratch_data->get_min_cell_size() *
+                                   data_in.reinit.dtau :
+                                   scratch_data->get_min_cell_size(dof_idx) *
                                        data_in.reinit.scale_factor_epsilon,
                                    data_in.reinit.max_n_steps,
                                    false});
@@ -150,9 +154,9 @@ namespace MeltPoolDG
        *  The following objects are the operations, which are performed for solving the
        *  level set equation.
        */
-      AdvectionDiffusionOperation<dim, comp_advec_diff, comp_no_dirichlet> advec_diff_operation;
-      ReinitializationOperation<dim, comp_no_dirichlet>                    reinit_operation;
-      Curvature::CurvatureOperation<dim, comp_no_dirichlet>                curvature_operation;
+      AdvectionDiffusionOperation<dim>   advec_diff_operation;
+      ReinitializationOperation<dim>     reinit_operation;
+      Curvature::CurvatureOperation<dim> curvature_operation;
 
       /*
        *  The reinitialization of the level set function is a "pseudo"-time-dependent
@@ -160,6 +164,10 @@ namespace MeltPoolDG
        *  needed.
        */
       TimeIterator<double> reinit_time_iterator;
+      /*
+       * select the relevant DoFHandler
+       */
+      unsigned int dof_idx;
 
     public:
       /*
@@ -177,6 +185,7 @@ namespace MeltPoolDG
        *    accessible for output_results.
        */
       const BlockVectorType &solution_normal_vector = reinit_operation.solution_normal_vector;
+      
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

@@ -21,7 +21,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    template <int dim, int comp = 0, int comp_hanging_node_constraints = comp + 1>
+    template <unsigned int dim>
     class AdvectionDiffusionOperation
     {
     private:
@@ -45,9 +45,15 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_advected_field_in,
-                 const Parameters<double> &                     data_in)
+                 const Parameters<double> &                     data_in,
+                 const unsigned int                             dof_idx_in, 
+                 const unsigned int                             dof_no_bc_idx_in,
+                 const unsigned int                             quad_idx_in)
       {
-        scratch_data = scratch_data_in;
+        scratch_data  = scratch_data_in;
+        dof_idx       = dof_idx_in;
+        quad_idx      = quad_idx_in;
+        dof_no_bc_idx = dof_no_bc_idx_in;
         /*
          *  set the advection diffusion data
          */
@@ -55,7 +61,7 @@ namespace MeltPoolDG
         /*
          *  set the initial solution of the advected field
          */
-        scratch_data->initialize_dof_vector(solution_advected_field, comp);
+        scratch_data->initialize_dof_vector(solution_advected_field, dof_idx);
         solution_advected_field.copy_locally_owned_data_from(solution_advected_field_in);
         solution_advected_field.update_ghost_values();
         /*
@@ -72,8 +78,8 @@ namespace MeltPoolDG
 
         VectorType src, rhs;
 
-        scratch_data->initialize_dof_vector(src);
-        scratch_data->initialize_dof_vector(rhs);
+        scratch_data->initialize_dof_vector(src, dof_idx);
+        scratch_data->initialize_dof_vector(rhs, dof_idx);
 
         advec_diff_operator->set_time_increment(dt);
 
@@ -84,17 +90,12 @@ namespace MeltPoolDG
             /*
              * apply dirichlet boundary values
              */
-            auto advec_diff_operator_no_bc = std::make_unique<
-              AdvectionDiffusionOperator<dim, comp_hanging_node_constraints, double>>(
-              *scratch_data, advection_velocity, advec_diff_data);
-            advec_diff_operator_no_bc->set_time_increment(dt);
-            advec_diff_operator_no_bc->create_rhs_and_apply_dirichlet_mf(rhs,
-                                                                         solution_advected_field,
-                                                                         *scratch_data,
-                                                                         comp /*dof_idx*/);
-            /*
-             * solve linear system A*u_0 = f-A*u_D
-             */
+            advec_diff_operator->create_rhs_and_apply_dirichlet_mf(rhs,
+                                                                   solution_advected_field,
+                                                                   *scratch_data,
+                                                                   dof_idx,
+                                                                   dof_no_bc_idx);
+            
             iter = LinearSolve<VectorType, SolverGMRES<VectorType>, OperatorBase<double>>::solve(
               *advec_diff_operator, src, rhs);
           }
@@ -112,7 +113,7 @@ namespace MeltPoolDG
               advec_diff_operator->system_matrix, src, rhs);
           }
 
-        scratch_data->get_constraint(comp).distribute(src);
+        scratch_data->get_constraint(dof_idx).distribute(src);
 
         solution_advected_field = src;
         solution_advected_field.update_ghost_values();
@@ -137,16 +138,17 @@ namespace MeltPoolDG
       create_operator(const BlockVectorType &advection_velocity)
       {
         advec_diff_operator =
-          std::make_unique<AdvectionDiffusionOperator<dim, comp, double>>(*scratch_data,
-                                                                          advection_velocity,
-                                                                          advec_diff_data);
-
+          std::make_unique<AdvectionDiffusionOperator<dim, double>>(*scratch_data,
+                                                                     advection_velocity,
+                                                                     advec_diff_data,
+                                                                     dof_idx,
+                                                                     quad_idx);
         /*
          *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
          *  apply it to the system matrix. This functionality is part of the OperatorBase class.
          */
         if (!advec_diff_data.do_matrix_free)
-          advec_diff_operator->initialize_matrix_based<dim, comp>(*scratch_data);
+          advec_diff_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 
     private:
@@ -155,6 +157,14 @@ namespace MeltPoolDG
        *  This pointer will point to your user-defined advection_diffusion operator.
        */
       std::unique_ptr<OperatorBase<double>> advec_diff_operator;
+      /*
+       *  Based on the following indices the correct DoFHandler or quadrature rule from 
+       *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
+       *  multiple DoFHandlers, quadrature rules, etc.
+       */
+      unsigned int dof_idx;
+      unsigned int quad_idx;
+      unsigned int dof_no_bc_idx;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

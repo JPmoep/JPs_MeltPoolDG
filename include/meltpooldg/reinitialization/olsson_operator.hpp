@@ -17,7 +17,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    template <int dim, unsigned int comp = 0, typename number = double>
+    template <int dim, typename number = double>
     class OlssonOperator : public OperatorBase<number,
                                                LinearAlgebra::distributed::Vector<number>,
                                                LinearAlgebra::distributed::Vector<number>>
@@ -34,12 +34,16 @@ namespace MeltPoolDG
       OlssonOperator(const ScratchData<dim> &scratch_data_in,
                      const BlockVectorType & n_in,
                      const double &          constant_epsilon,
-                     const double &          eps_scale_factor)
+                     const double &          eps_scale_factor,
+                     const unsigned int      dof_idx_in,
+                     const unsigned int      quad_idx_in )
         : scratch_data(scratch_data_in)
         , eps(constant_epsilon)
         , eps_scale_factor(eps_scale_factor)
         , normal_vec(n_in)
-      {}
+      {
+        this->reset_indices(dof_idx_in, quad_idx_in);
+      }
 
       /*
        *    this is the matrix-based implementation of the rhs and the system_matrix
@@ -54,8 +58,8 @@ namespace MeltPoolDG
         levelset_old.update_ghost_values();
 
         FEValues<dim>      fe_values(scratch_data.get_mapping(),
-                                scratch_data.get_dof_handler(comp).get_fe(),
-                                scratch_data.get_quadrature(comp),
+                                scratch_data.get_dof_handler(this->dof_idx).get_fe(),
+                                scratch_data.get_quadrature(this->quad_idx),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
         const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell();
@@ -76,7 +80,7 @@ namespace MeltPoolDG
 
         this->normal_vec.update_ghost_values();
 
-        for (const auto &cell : scratch_data.get_dof_handler(comp).active_cell_iterators())
+        for (const auto &cell : scratch_data.get_dof_handler(this->dof_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               cell_matrix = 0.0;
@@ -94,7 +98,7 @@ namespace MeltPoolDG
                                             psi_at_q); // compute values of old solution at tau_n
               fe_values.get_function_gradients(
                 levelset_old, grad_psi_at_q); // compute gradients of old solution at tau_n
-              NormalVector::NormalVectorOperator<dim, comp>::get_unit_normals_at_quadrature(
+              NormalVector::NormalVectorOperator<dim>::get_unit_normals_at_quadrature(
                 fe_values, this->normal_vec, normal_at_q);
 
               for (const unsigned int q_index : fe_values.quadrature_point_indices())
@@ -131,7 +135,7 @@ namespace MeltPoolDG
               // assembly
               cell->get_dof_indices(local_dof_indices);
 
-              scratch_data.get_constraint(comp).distribute_local_to_global(
+              scratch_data.get_constraint(this->dof_idx).distribute_local_to_global(
                 cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
             }
 
@@ -154,7 +158,7 @@ namespace MeltPoolDG
             eps :
             eps_scale_factor *
               scratch_data.get_min_cell_size(
-                comp); // @ todo: check how cell size can be extracted from matrix free class
+                this->dof_idx); // @ todo: check how cell size can be extracted from matrix free class
 
         AssertThrow(eps_ > 0.0, ExcMessage("reinitialization operator: epsilon must be set"));
 
@@ -162,13 +166,11 @@ namespace MeltPoolDG
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &, auto &dst, const auto &src, auto cell_range) {
             FECellIntegrator<dim, 1, number>   levelset(scratch_data.get_matrix_free(),
-                                                      comp,
-                                                      comp,
-                                                      comp);
+                                                      this->dof_idx,
+                                                      this->quad_idx);
             FECellIntegrator<dim, dim, number> normal_vector(scratch_data.get_matrix_free(),
-                                                             comp,
-                                                             comp,
-                                                             comp);
+                                                      this->dof_idx,
+                                                      this->quad_idx);
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
                 levelset.reinit(cell);
@@ -212,7 +214,7 @@ namespace MeltPoolDG
             eps :
             eps_scale_factor *
               scratch_data.get_min_cell_size(
-                comp); // @ todo: check how cell size can be extracted from matrix free class
+                this->dof_idx); // @ todo: check how cell size can be extracted from matrix free class
 
         AssertThrow(eps_ > 0.0,
                     ExcMessage("reinitialization matrix-free operator: epsilon must be set"));
@@ -224,11 +226,12 @@ namespace MeltPoolDG
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
-            FECellIntegrator<dim, 1, number>   psi(scratch_data.get_matrix_free(), comp, comp, 0);
+            FECellIntegrator<dim, 1, number>   psi(scratch_data.get_matrix_free(), 
+                                                      this->dof_idx,
+                                                      this->quad_idx);
             FECellIntegrator<dim, dim, number> normal_vector(scratch_data.get_matrix_free(),
-                                                             comp,
-                                                             comp,
-                                                             0);
+                                                      this->dof_idx,
+                                                      this->quad_idx);
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 psi.reinit(cell);
@@ -264,7 +267,7 @@ namespace MeltPoolDG
         this->normal_vec.reinit(dim);
         for (unsigned int d = 0; d < dim; ++d)
           {
-            scratch_data.initialize_dof_vector(this->normal_vec.block(d), comp);
+            scratch_data.initialize_dof_vector(this->normal_vec.block(d), this->dof_idx);
             this->normal_vec.block(d).copy_locally_owned_data_from(normal_vector.block(d));
           }
         this->normal_vec.update_ghost_values();
