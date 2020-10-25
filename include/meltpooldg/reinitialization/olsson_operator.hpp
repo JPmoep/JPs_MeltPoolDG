@@ -54,8 +54,8 @@ namespace MeltPoolDG
         levelset_old.update_ghost_values();
 
         FEValues<dim>      fe_values(scratch_data.get_mapping(),
-                                scratch_data.get_matrix_free().get_dof_handler(comp).get_fe(),
-                                scratch_data.get_matrix_free().get_quadrature(comp),
+                                scratch_data.get_dof_handler(comp).get_fe(),
+                                scratch_data.get_quadrature(comp),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
         const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell();
@@ -76,8 +76,7 @@ namespace MeltPoolDG
 
         this->normal_vec.update_ghost_values();
 
-        for (const auto &cell :
-             scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
+        for (const auto &cell : scratch_data.get_dof_handler(comp).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               cell_matrix = 0.0;

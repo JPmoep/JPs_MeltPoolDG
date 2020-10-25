@@ -1,9 +1,11 @@
 {
   "base" : { 
     "problem name"       : "level_set", 
+    "application name"   : "rotating_bubble",
     "dimension"          : "2",
     "global refinements" : "6",
-    "degree"             : "1"
+    "degree"             : "1",
+    "do print parameters": "false"
   },
   "levelset" : {
     "ls do reinitialization"    : "true",
@@ -13,21 +15,18 @@
     "ls start time"             : "0.0",
     "ls end time"               : 0.05,
     "ls time step size"         : "0.01",
-    "ls do matrix free"         : "true" 
+    "ls do matrix free"         : "false"
   },
   "reinitialization" : {
-    "reinit max n steps"      : "5",
-    "reinit modeltype"        : "olsson2007",
-    "reinit do matrix free"   : "true", 
-    "reinit do print l2norm"  : "true",
+    "reinit max n steps"     : "5",
+    "reinit modeltype"       : "olsson2007",
+    "reinit do matrix free"  : "false", 
+    "reinit do print l2norm" : "true",
     "reinit eps scale factor" : "0.5" 
   },
   "normal vector" : {
     "normal vec damping scale factor" : "0.5",
-    "normal vec do matrix free"       : "true" 
-  },
-  "curvature" : {
-    "curv do matrix free"       : "true" 
+    "normal vec do matrix free"  : "false"
   },
   "paraview" : {
     "paraview do output"           : "false"

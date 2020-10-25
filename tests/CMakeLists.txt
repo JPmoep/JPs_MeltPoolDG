@@ -1,2 +1,3 @@
-ADD_SUBDIRECTORY(rotating_bubble)
-ADD_SUBDIRECTORY(rotating_bubble_mf)
+SET(TEST_LIBRARIES run_simulation)
+SET(TEST_TARGET run_simulation)
+DEAL_II_PICKUP_TESTS()

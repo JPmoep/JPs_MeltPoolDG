@@ -22,6 +22,11 @@
 #include <deal.II/fe/fe_q.h>
 // for mapping
 #include <deal.II/fe/mapping.h>
+// for simplex
+#include <deal.II/fe/mapping_fe.h>
+
+#include <deal.II/simplex/fe_lib.h>
+#include <deal.II/simplex/quadrature_lib.h>
 // MeltPoolDG
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/scratch_data.hpp>
@@ -106,7 +111,8 @@ namespace MeltPoolDG
          */
         VectorType solution_level_set;
         scratch_data->initialize_dof_vector(solution_level_set);
-        VectorTools::project(dof_handler,
+        VectorTools::project(scratch_data->get_mapping(),
+                             dof_handler,
                              constraints,
                              scratch_data->get_quadrature(),
                              *base_in->get_field_conditions()->initial_field,
@@ -128,23 +134,42 @@ namespace MeltPoolDG
          */
         if (do_initial_setup)
           {
-            scratch_data = std::make_shared<ScratchData<dim>>();
+            scratch_data =
+              std::make_shared<ScratchData<dim>>(base_in->parameters.reinit.do_matrix_free);
             /*
              *  setup mapping
              */
-            const auto mapping = MappingQGeneric<dim>(base_in->parameters.base.degree);
-            scratch_data->set_mapping(mapping);
-            /*
-             *  create quadrature rule
-             */
-            QGauss<1> quad_1d_temp(base_in->parameters.base.n_q_points_1d);
-            scratch_data->attach_quadrature(quad_1d_temp);
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+            if (base_in->parameters.base.do_simplex)
+              scratch_data->set_mapping(
+                MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+            else
+#endif
+              scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+              /*
+               *  create quadrature rule
+               */
+
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+            if (base_in->parameters.base.do_simplex)
+              scratch_data->attach_quadrature(Simplex::QGauss<dim>(
+                dim == 2 ? (base_in->parameters.base.n_q_points_1d == 1 ? 3 : 7) :
+                           (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
+            else
+#endif
+              scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
           }
-        /*
-         *  setup DoFHandler
-         */
-        FE_Q<dim> fe(base_in->parameters.base.degree);
-        dof_handler.initialize(*base_in->triangulation, fe);
+          /*
+           *  setup DoFHandler
+           */
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          dof_handler.initialize(*base_in->triangulation,
+                                 Simplex::FE_P<dim>(base_in->parameters.base.degree));
+        else
+#endif
+          dof_handler.initialize(*base_in->triangulation,
+                                 FE_Q<dim>(base_in->parameters.base.degree));
 
         if (do_initial_setup)
           scratch_data->attach_dof_handler(dof_handler);
@@ -277,7 +302,7 @@ namespace MeltPoolDG
                                            "normal_" + std::to_string(d));
               }
 
-            data_out.build_patches();
+            data_out.build_patches(scratch_data->get_mapping());
             data_out.write_vtu_with_pvtu_record("./",
                                                 parameters.paraview.filename,
                                                 time_step,

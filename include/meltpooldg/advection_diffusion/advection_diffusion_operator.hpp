@@ -61,8 +61,8 @@ namespace MeltPoolDG
 
 
         FEValues<dim> fe_values(scratch_data.get_mapping(),
-                                scratch_data.get_matrix_free().get_dof_handler(comp).get_fe(),
-                                scratch_data.get_matrix_free().get_quadrature(comp),
+                                scratch_data.get_dof_handler(comp).get_fe(),
+                                scratch_data.get_quadrature(comp),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
 
@@ -83,8 +83,7 @@ namespace MeltPoolDG
 
         std::vector<Tensor<1, dim>> a(n_q_points, Tensor<1, dim>());
 
-        for (const auto &cell :
-             scratch_data.get_matrix_free().get_dof_handler(comp).active_cell_iterators())
+        for (const auto &cell : scratch_data.get_dof_handler(comp).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               cell_matrix = 0;
@@ -162,11 +161,11 @@ namespace MeltPoolDG
 
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
-          [&](const auto &, auto &dst, const auto &src, auto cell_range) {
-            FECellIntegrator<dim, 1, number>   advected_field(scratch_data.get_matrix_free(),
+          [&](const auto &matrix_free, auto &dst, const auto &src, auto cell_range) {
+            FECellIntegrator<dim, 1, number>   advected_field(matrix_free,
                                                             comp /*dof_idx*/,
                                                             comp /*quad_idx*/);
-            FECellIntegrator<dim, dim, number> velocity(scratch_data.get_matrix_free(),
+            FECellIntegrator<dim, dim, number> velocity(matrix_free,
                                                         comp /*dof_idx*/,
                                                         comp /*quad_idx*/);
 
@@ -213,10 +212,11 @@ namespace MeltPoolDG
                     ExcMessage("advection diffusion operator: d_tau must be set"));
 
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
-          [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
-            FECellIntegrator<dim, 1, number, VectorizedArrayType> advected_field(
-              scratch_data.get_matrix_free(), comp /*dof_idx*/, comp /*quad_idx*/);
-            FECellIntegrator<dim, dim, number> velocity(scratch_data.get_matrix_free(),
+          [&](const auto &matrix_free, auto &dst, const auto &src, auto macro_cells) {
+            FECellIntegrator<dim, 1, number, VectorizedArrayType> advected_field(matrix_free,
+                                                                                 comp /*dof_idx*/,
+                                                                                 comp /*quad_idx*/);
+            FECellIntegrator<dim, dim, number>                    velocity(matrix_free,
                                                         comp /*dof_idx*/,
                                                         comp /*quad_idx*/);
 

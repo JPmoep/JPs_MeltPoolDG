@@ -19,6 +19,7 @@ namespace MeltPoolDG
     unsigned int degree              = 1;
     int          n_q_points_1d       = -1;
     bool         do_print_parameters = true;
+    bool         do_simplex          = false;
   };
 
   template <typename number = double>
@@ -195,6 +196,7 @@ namespace MeltPoolDG
         prm.add_parameter("do print parameters",
                           base.do_print_parameters,
                           "Sets this parameter to true to list parameters in output");
+        prm.add_parameter("do simplex", base.do_simplex, "Use simplices");
       }
       prm.leave_subsection();
       /*
