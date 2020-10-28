@@ -1,0 +1,11 @@
+{
+    "base" : {
+      "problem name": "two_phase_flow",
+      "application name": "flow_past_zylinder",
+      "dimension": "2",
+      "degree": "1"
+    },
+    "flow" : {
+        "viscosity": "0.001"
+      }
+}

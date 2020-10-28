@@ -13,20 +13,41 @@ namespace MeltPoolDG
     class AdafloWrapper
     {
     public:
-      AdafloWrapper()
+      AdafloWrapper(const Triangulation<dim> & tria)
       {
+
+        FlowParameters params;
+
+        dynamic_cast<parallel::distributed::Triangulation<dim> &>(&tria);
+
+        navier_stokes = std::make_shared<avierStokes<dim>>(params, dynamic_cast<>);
+
         if constexpr (dim > 1)
           {
-            FlowParameters params;
+            
 
             parallel::distributed::Triangulation<dim> tria(MPI_COMM_WORLD);
 
-            NavierStokes<dim> navier_stokes(params, tria);
+            
           }
       }
 
     private:
+      shared_ptr<NavierStokes<dim>> navier_stokes;
     };
+
+    template <>
+    class AdafloWrapper<1>
+    {
+
+    public:
+      AdafloWrapper()
+      {
+        AssertThrow(false, ExcNotImplemented ());
+      }
+
+      private:
+    }
 
   } // namespace Flow
 } // namespace MeltPoolDG
