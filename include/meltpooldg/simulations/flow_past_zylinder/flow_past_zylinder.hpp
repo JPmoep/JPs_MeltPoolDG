@@ -18,6 +18,27 @@ namespace MeltPoolDG
     {
 
       using namespace dealii;
+
+      template <int dim>
+      class InitializePhi : public Function<dim>
+      {
+      public:
+        InitializePhi()
+          : Function<dim>()
+          , epsInterface(0.0313)
+        {}
+        virtual double
+        value(const Point<dim> &p, const unsigned int component = 0) const
+        {
+          (void)component;
+
+          Point<dim>   center = dim == 1 ? Point<dim>(0.0) : Point<dim>(1.3, 0.2);
+          const double radius = 0.1;
+
+          return UtilityFunctions::CharacteristicFunctions::sgn(
+            UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius));
+        }
+
       /* for constant Dirichlet conditions we could also use the ConstantFunction
        * utility from dealii
        */
@@ -105,6 +126,7 @@ namespace MeltPoolDG
         void
         set_boundary_conditions()
         {
+            this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>();
         }
 
         void

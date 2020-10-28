@@ -3,22 +3,22 @@
     "problem name": "two_phase_flow",
     "application name": "flow_past_zylinder",
     "dimension": "2",
-    "degree": "1"
+    "degree": "2"
   },
   "flow" : {
-      "viscosity": "0.001"
+    "viscosity": "0.001"
     },
   "Time stepping" : {
     "scheme"           : "bdf_2",
-  "  end time"         : "8.",
-  "  step size"        : "0.02"
+    "end time"         : "8.",
+    "step size"        : "0.02"
   },
   "Navier-Stokes" : {
     "physical type"      : "incompressible",
-  "  dimension"         : "0",
-  "  global refinements" : "0",
-  "  velocity degree"    : "2",
-  "  viscosity"          : "0.001"
+    "dimension"         : "2",
+    "global refinements" : "0",
+    "velocity degree"    : "2",
+    "viscosity"          : "0.001"
   },
   "Solver" : {
     "linearization scheme"         : "coupled implicit Newton",

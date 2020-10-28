@@ -32,6 +32,8 @@
 #include <meltpooldg/flow/adaflo_wrapper.hpp>
 #include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 
+#include <deal.II/fe/fe_system.h>
+
 namespace MeltPoolDG
 {
   namespace Flow
@@ -58,15 +60,15 @@ namespace MeltPoolDG
                                                       adaflo_params);
 
         // output_results(0,base_in->parameters);
-
         while (!time_iterator.is_finished())
         {
             const double dt = time_iterator.get_next_time_increment();
+            to_block_vector(adaflo->get_velocity(),advection_velocity);
             adaflo->solve();
-            // output_results(time_iterator.get_current_time_step_number(), 
-                          //  base_in->parameters);
-        }
-        // 
+            output_results(time_iterator.get_current_time_step_number(), 
+                            base_in->parameters);
+            level_set_operation.solve(dt, advection_velocity);
+        } 
       }
 
       std::string
@@ -86,19 +88,66 @@ namespace MeltPoolDG
         /*
          *  setup scratch data
          */
-        scratch_data =
-          std::make_shared<ScratchData<dim>>(/*do_matrix_free*/ true);
+        scratch_data = std::make_shared<ScratchData<dim>>(/*do_matrix_free*/ false);
         /*
          *  setup mapping
          */
         scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
-          /*
-           *  setup DoFHandler
-           */
+        /*
+         *  setup DoFHandler adaflo
+         */
+        dof_handler_adaflo.initialize(*base_in->triangulation,
+                                FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
+        /*
+         *  setup DoFHandler adaflo
+         */
         dof_handler.initialize(*base_in->triangulation,
-                                 FE_Q<dim>(base_in->parameters.base.degree));
+                                FE_Q<dim>(base_in->parameters.base.degree));
 
+        scratch_data->attach_dof_handler(dof_handler_adaflo);
         scratch_data->attach_dof_handler(dof_handler);
+        scratch_data->attach_dof_handler(dof_handler);
+/*
+         *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
+         *  dirichlet constraints are supported)
+         */
+        hanging_node_constraints.clear();
+        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs());
+        DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
+        hanging_node_constraints.close();
+
+        constraints_dirichlet.clear();
+        constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
+        constraints_dirichlet.merge(hanging_node_constraints);
+        for (const auto &bc : base_in->get_boundary_conditions().dirichlet_bc)
+          {
+            VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
+                                                     dof_handler,
+                                                     bc.first,
+                                                     *bc.second,
+                                                     constraints_dirichlet);
+          }
+        constraints_dirichlet.close();
+
+
+
+        scratch_data->attach_constraint_matrix(dummy);
+        const unsigned int dof_no_bc_idx =
+          scratch_data->attach_constraint_matrix(hanging_node_constraints);
+        const unsigned int dof_idx = scratch_data->attach_constraint_matrix(constraints_dirichlet);
+
+
+       /*
+         *  create quadrature rule
+         */
+
+        scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+        unsigned int quad_idx = scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+        scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+        /*
+         *  create the matrix-free object
+         */
+        scratch_data->build();
 
         time_iterator.initialize(TimeIteratorData<double>{0.0 /*start*/,
                                                     8 /*end*/,
@@ -106,7 +155,59 @@ namespace MeltPoolDG
                                                     1000 /*max_steps*/,
                                                     false /*cfl_condition-->not supported yet*/});
 
+        scratch_data->initialize_dof_vector(advection_velocity, dof_idx);
+        /*
+         *  set initial conditions of the levelset function
+         */
+        VectorType initial_solution;
+        scratch_data->initialize_dof_vector(initial_solution);
+        VectorTools::project(scratch_data->get_mapping(),
+                             dof_handler,
+                             constraints_dirichlet,
+                             scratch_data->get_quadrature(),
+                             *base_in->get_field_conditions()->initial_field,
+                             initial_solution);
 
+        initial_solution.update_ghost_values();
+        /*
+         *    initialize the levelset operation class
+         */
+        level_set_operation.initialize( scratch_data, 
+                                        initial_solution, 
+                                        base_in->parameters, 
+                                        dof_idx, 
+                                        dof_no_bc_idx, 
+                                        quad_idx);
+      }
+
+      void
+      to_block_vector(const VectorType& in, BlockVectorType& out)
+      {
+        for (const auto &cell_adaflo : dof_handler_adaflo.active_cell_iterators())
+          if (cell_adaflo->is_locally_owned())
+          {
+              Vector<double> local(dof_handler_adaflo.get_fe().n_dofs_per_cell());
+              cell_adaflo->get_dof_values(in, local);
+
+
+              auto cell = DoFCellAccessor<dim, dim, false>(&scratch_data->get_triangulation(),
+                                              cell_adaflo->level(), 
+                                              cell_adaflo->index(),   
+                                             &dof_handler);
+              
+              for (unsigned int d=0; d<dim; ++d)
+              {
+                const unsigned int n_dofs_per_component = dof_handler.get_fe().n_dofs_per_cell();
+                Vector<double> local_component(n_dofs_per_component);
+
+                for(unsigned int c = 0; c < n_dofs_per_component; ++c)
+                  local_component[c] = local[c * dim + d];
+
+                 cell.set_dof_values(local_component, out.block(d));
+              }
+          }
+
+        out.update_ghost_values();
       }
       /*
        *  This function is to create paraview output
@@ -121,9 +222,13 @@ namespace MeltPoolDG
          *  output advected field
         */
         DataOut<dim> data_out;
-        data_out.attach_dof_handler(scratch_data->get_dof_handler());
+        data_out.attach_dof_handler(dof_handler);
 
-        data_out.add_data_vector(adaflo->get_velocity(), "velocity");
+        // data_out.add_data_vector(adaflo->get_velocity(), "velocity");
+        for (auto d = 0; d < dim; ++d)
+          data_out.add_data_vector(dof_handler,
+                                   advection_velocity.block(d),
+                                  "advection_velocity_" + std::to_string(d));
 
         data_out.build_patches(scratch_data->get_mapping());
         data_out.write_vtu_with_pvtu_record("./",
@@ -131,16 +236,23 @@ namespace MeltPoolDG
                                             time_step,
                                             scratch_data->get_mpi_comm(),
                                             parameters.paraview.n_digits_timestep,
-                                                parameters.paraview.n_groups);
+                                            parameters.paraview.n_groups);
 
         // }
       }
     private:
       TimeIterator<double> time_iterator;
-      DoFHandler<dim>      dof_handler;
+      DoFHandler<dim>      dof_handler_adaflo;
+      DoFHandler<dim>           dof_handler;
 
-      std::shared_ptr<ScratchData<dim>> scratch_data;
+      AffineConstraints<double> dummy_constraints;
+      AffineConstraints<double> constraints_dirichlet;
+      AffineConstraints<double> hanging_node_constraints;
+
+      BlockVectorType                     advection_velocity;
+      std::shared_ptr<ScratchData<dim>>   scratch_data;
       std::shared_ptr<AdafloWrapper<dim>> adaflo;
+      LevelSetOperation<dim> level_set_operation;
     };
   } // namespace TwoPhaseFlow
 } // namespace MeltPoolDG

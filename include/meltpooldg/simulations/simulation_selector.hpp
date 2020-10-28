@@ -23,25 +23,25 @@ namespace MeltPoolDG
                      const std::string parameter_file,
                      const MPI_Comm    mpi_communicator)
       {
-        if (simulation_name == "reinit_circle")
-          return std::make_shared<ReinitCircle::SimulationReinit<dim>>(parameter_file,
-                                                                       mpi_communicator);
-        else if (simulation_name == "reinit_circle_amr")
-          {
-            return std::make_shared<ReinitCircleAMR::SimulationReinit<dim>>(parameter_file,
-                                                                            mpi_communicator);
-          }
-        else if (simulation_name == "advection_diffusion")
-          {
-            return std::make_shared<AdvectionDiffusion::SimulationAdvec<dim>>(parameter_file,
-                                                                              mpi_communicator);
-          }
-        else if (simulation_name == "rotating_bubble")
-          {
-            return std::make_shared<RotatingBubble::SimulationRotatingBubble<dim>>(
-              parameter_file, mpi_communicator);
-          }
-        else if (simulation_name == "flow_past_zylinder")
+        // if (simulation_name == "reinit_circle")
+        //   return std::make_shared<ReinitCircle::SimulationReinit<dim>>(parameter_file,
+        //                                                                mpi_communicator);
+        // else if (simulation_name == "reinit_circle_amr")
+        //   {
+        //     return std::make_shared<ReinitCircleAMR::SimulationReinit<dim>>(parameter_file,
+        //                                                                     mpi_communicator);
+        //   }
+        // else if (simulation_name == "advection_diffusion")
+        //   {
+        //     return std::make_shared<AdvectionDiffusion::SimulationAdvec<dim>>(parameter_file,
+        //                                                                       mpi_communicator);
+        //   }
+        // else if (simulation_name == "rotating_bubble")
+        //   {
+        //     return std::make_shared<RotatingBubble::SimulationRotatingBubble<dim>>(
+        //       parameter_file, mpi_communicator);
+        //   }
+        if (simulation_name == "flow_past_zylinder")
           {
             return std::make_shared<FlowPastZylinder::SimulationFlowPastZylinder<dim>>(
               parameter_file, mpi_communicator);

@@ -19,16 +19,16 @@ namespace MeltPoolDG
     static std::shared_ptr<ProblemBase<dim>>
     get_problem(std::string problem_name)
     {
-      if (problem_name == "level_set")
-        return std::make_shared<LevelSet::LevelSetProblem<dim>>();
+      // if (problem_name == "level_set")
+      //   return std::make_shared<LevelSet::LevelSetProblem<dim>>();
 
-      else if (problem_name == "reinitialization")
-        return std::make_shared<Reinitialization::ReinitializationProblem<dim>>();
+      // else if (problem_name == "reinitialization")
+      //   return std::make_shared<Reinitialization::ReinitializationProblem<dim>>();
 
-      else if (problem_name == "advection_diffusion")
-        return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim>>();
+      // else if (problem_name == "advection_diffusion")
+      //   return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim>>();
 
-      else if (problem_name == "two_phase_flow")
+      if (problem_name == "two_phase_flow")
         return std::make_shared<Flow::TwoPhaseFlowProblem<dim>>();
       /* add your problem here*/
 
