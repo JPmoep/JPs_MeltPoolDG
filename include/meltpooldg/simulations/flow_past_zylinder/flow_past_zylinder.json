@@ -10,11 +10,18 @@
     "surface tension coefficient": "0.01"
   },
   "levelset" : {
-    "ls do reinitialization": "false",
+    "ls do reinitialization": "true",
     "ls artificial diffusivity": "0.0",
     "ls do print l2norm": "true",
     "ls theta": "0.5",
     "ls do matrix free": "true"
+  },
+  "reinitialization" : {
+    "reinit max n steps": "5",
+    "reinit modeltype": "olsson2007",
+    "reinit do matrix free": "true",
+    "reinit do print l2norm": "true",
+    "reinit eps scale factor": "0.5"
   },
   "Time stepping" : {
     "scheme"           : "bdf_2",

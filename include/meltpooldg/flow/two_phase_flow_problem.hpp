@@ -81,7 +81,6 @@ namespace MeltPoolDG
             VectorType surface_out;
             scratch_data->initialize_dof_vector(surface_out, dof_adaflo_idx);
             from_block_vector(surface_tension_force, surface_out);
-            
             adaflo->set_surface_tension(surface_out);
         } 
       }

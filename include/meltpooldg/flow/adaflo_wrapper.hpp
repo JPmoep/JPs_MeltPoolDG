@@ -136,6 +136,12 @@ namespace Flow
       }
 
       void
+      set_density_viscosity()
+      {
+        
+      }
+
+      void
       solve()
       {
         AssertThrow(false, ExcNotImplemented ());
