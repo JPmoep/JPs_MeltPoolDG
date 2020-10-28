@@ -5,6 +5,7 @@
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/level_set/level_set_problem.hpp>
 #include <meltpooldg/reinitialization/reinitialization_problem.hpp>
+#include <meltpooldg/flow/two_phase_flow_problem.hpp>
 /* add your problem here*/
 
 namespace MeltPoolDG
@@ -27,6 +28,8 @@ namespace MeltPoolDG
       else if (problem_name == "advection_diffusion")
         return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim>>();
 
+      else if (problem_name == "two_phase_flow")
+        return std::make_shared<Flow::TwoPhaseFlowProblem<dim>>();
       /* add your problem here*/
 
       else

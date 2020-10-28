@@ -24,6 +24,7 @@ namespace MeltPoolDG
   {
     namespace AdvectionDiffusion
     {
+      using namespace dealii;
       /*
        * this function specifies the initial field of the level set equation
        */

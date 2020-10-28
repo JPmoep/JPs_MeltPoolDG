@@ -296,6 +296,12 @@ namespace MeltPoolDG
       return this->dof_handler;
     }
 
+    const Triangulation<dim>& 
+    get_triangulation() const
+    {
+      return this->get_dof_handler().get_triangulation();
+    }
+
     unsigned int
     get_n_dofs_per_cell(const unsigned int dof_idx = 0) const
     {

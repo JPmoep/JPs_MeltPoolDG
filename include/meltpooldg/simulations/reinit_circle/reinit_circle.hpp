@@ -27,6 +27,7 @@ namespace MeltPoolDG
   {
     namespace ReinitCircle
     {
+      using namespace dealii;
       /*
        * this function specifies the initial field of the level set equation
        */

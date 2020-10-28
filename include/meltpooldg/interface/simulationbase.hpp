@@ -1,6 +1,7 @@
 #pragma once
 // dealii
 #include <deal.II/distributed/tria.h>
+#include <deal.II/base/exceptions.h>
 // MeltPoolDG
 #include <meltpooldg/interface/boundaryconditions.hpp>
 #include <meltpooldg/interface/fieldconditions.hpp>
@@ -30,7 +31,7 @@ namespace MeltPoolDG
     set_parameters()
     {
       this->parameters.process_parameters_file(this->parameter_file);
-    };
+    }
 
     virtual void
     set_boundary_conditions() = 0;
@@ -56,14 +57,15 @@ namespace MeltPoolDG
           " this->triangulation = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator); "));
       set_boundary_conditions();
       set_field_conditions();
-      AssertThrow(
-        this->field_conditions.initial_field,
-        ExcMessage(
-          "It seems that your SimulationBase object does not contain "
-          "a valid initial field function. A shared_ptr to your initial field "
-          "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
-          "this->field_conditions.initial_field = std::make_shared<MyInitializeFunc<dim>>();"));
-    };
+    // @todo: shift to problems
+    //   AssertThrow(
+    //     this->field_conditions.initial_field,
+    //     ExcMessage(
+    //       "It seems that your SimulationBase object does not contain "
+    //       "a valid initial field function. A shared_ptr to your initial field "
+    //       "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+    //       "this->field_conditions.initial_field = std::make_shared<MyInitializeFunc<dim>>();"));
+    }
 
     /*
      * getter functions
@@ -72,7 +74,7 @@ namespace MeltPoolDG
     get_mpi_communicator() const
     {
       return this->mpi_communicator;
-    };
+    }
     std::shared_ptr<FieldConditions<dim>>
     get_field_conditions() const
     {

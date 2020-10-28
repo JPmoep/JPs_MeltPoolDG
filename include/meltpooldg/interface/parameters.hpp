@@ -1,6 +1,10 @@
 #pragma once
+
+
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/parameter_handler.h>
+
+#include <adaflo/parameters.h>
 // c++
 #include <fstream>
 #include <iostream>
@@ -69,8 +73,14 @@ namespace MeltPoolDG
     unsigned int max_n_steps     = 1000000;
     bool         do_matrix_free  = false;
     bool         do_print_l2norm = true;
-    AdvectionDiffusionData()
-    {}
+  };
+
+  template <typename number = double>
+  struct FlowData
+  {
+    number      viscosity = 0.0;
+    number      density   = 1.0;
+    std::string solver_type = "incompressible";
   };
 
   template <typename number = double>
@@ -115,6 +125,40 @@ namespace MeltPoolDG
     std::string filename_volume_output   = "my_volumes.txt";
   };
 
+  struct
+  AdafloWrapperParameters
+  {
+  //     template<typename number>
+      AdafloWrapperParameters(const std::string &parameter_filename="/home/magdalena/constitutiveModelling/adaflo/tests/flow_past_cylinder.prm")
+      : params(parameter_filename)
+      {
+        params.time_step_scheme = TimeStepping::bdf_2;
+        params.end_time = 8;
+        params.time_step_size_start = 0.02; 
+        params.physical_type   = FlowParameters::PhysicalType::incompressible;
+        params.dimension       = 2; //mp_params.base.dimension;
+        params.global_refinements = 0;
+        params.velocity_degree = 3; //mp_params.base.degree;
+        params.viscosity       = 0.001;//mp_params.flow.viscosity;
+        params.linearization   = FlowParameters::Linearization::coupled_implicit_newton;
+        params.max_nl_iteration = 10;
+        params.tol_nl_iteration = 1e-9;
+        params.max_lin_iteration = 30;
+        params.tol_lin_iteration = 1e-5;
+        params.rel_lin_iteration = 1;
+        params.precondition_velocity = FlowParameters::PreconditionVelocity::u_ilu_scalar;
+        params.precondition_pressure = FlowParameters::PreconditionPressure::p_mass_ilu;
+        params.iterations_before_inner_solvers = 30;
+      }
+
+      const FlowParameters& get_parameters() const
+      {
+        return this->params;
+      }
+      FlowParameters params;
+  };
+
+
   template <typename number = double>
   struct Parameters
   {
@@ -144,6 +188,7 @@ namespace MeltPoolDG
        */
       if (amr.min_grid_refinement_level == 1)
         amr.min_grid_refinement_level = base.global_refinements;
+
     }
 
     void
@@ -370,7 +415,22 @@ namespace MeltPoolDG
                           "Defines if the l2norm of the curvature result should be printed)");
       }
       prm.leave_subsection();
-
+      /*
+       *   flow
+       */
+      prm.enter_subsection("flow");
+      {
+        prm.add_parameter("viscosity",
+                          flow.viscosity,
+                          "viscosity of the flow field");
+        prm.add_parameter("density",
+                          flow.density,
+                          "density of the flow field");
+        prm.add_parameter("solver type",
+                          flow.solver_type,
+                          "solver type of the flow problem");                          
+      }
+      prm.leave_subsection();
       /*
        *   paraview
        */
@@ -449,10 +509,12 @@ namespace MeltPoolDG
     LevelSetData<number>           ls;
     ReinitializationData<number>   reinit;
     AdvectionDiffusionData<number> advec_diff;
+    FlowData<number>               flow;
     NormalVectorData<number>       normal_vec;
     CurvatureData<number>          curv;
     ParaviewData<number>           paraview;
     OutputData<number>             output;
+    AdafloWrapperParameters        adaflo_params;
   };
 
 
