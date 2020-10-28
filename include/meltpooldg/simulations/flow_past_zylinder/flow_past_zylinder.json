@@ -7,7 +7,14 @@
   },
   "flow" : {
     "viscosity": "0.001"
-    },
+  },
+  "levelset" : {
+    "ls do reinitialization": "false",
+    "ls artificial diffusivity": "0.0",
+    "ls do print l2norm": "true",
+    "ls theta": "0.5",
+    "ls do matrix free": "true"
+  },
   "Time stepping" : {
     "scheme"           : "bdf_2",
     "end time"         : "8.",

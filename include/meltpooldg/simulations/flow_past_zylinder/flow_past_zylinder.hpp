@@ -25,7 +25,6 @@ namespace MeltPoolDG
       public:
         InitializePhi()
           : Function<dim>()
-          , epsInterface(0.0313)
         {}
         virtual double
         value(const Point<dim> &p, const unsigned int component = 0) const
@@ -38,6 +37,7 @@ namespace MeltPoolDG
           return UtilityFunctions::CharacteristicFunctions::sgn(
             UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius));
         }
+      };
 
       /* for constant Dirichlet conditions we could also use the ConstantFunction
        * utility from dealii
@@ -81,40 +81,40 @@ namespace MeltPoolDG
 
           if constexpr(dim == 2)
           {
-  Point<2> p1(0,0);
-  Point<2> p2(2.5, 0.4);
-  std::vector<unsigned int> refinements({50, 8});
-  Triangulation<2> tmp;
-  GridGenerator::subdivided_hyper_rectangle(tmp, refinements, p1, p2);
-  std::set<Triangulation<2>::active_cell_iterator> cells_in_void;
-  for (Triangulation<2>::active_cell_iterator cell = tmp.begin();
-       cell != tmp.end(); ++cell)
-    if (cell->center()[0] > 0.45 && cell->center()[0]<0.55 &&
-        cell->center()[1] > 0.15 && cell->center()[1]<0.25)
-      cells_in_void.insert(cell);
-  GridGenerator::create_triangulation_with_removed_cells(tmp, cells_in_void, *this->triangulation);
+            Point<2> p1(0,0);
+            Point<2> p2(2.5, 0.4);
+            std::vector<unsigned int> refinements({50, 8});
+            Triangulation<2> tmp;
+            GridGenerator::subdivided_hyper_rectangle(tmp, refinements, p1, p2);
+            std::set<Triangulation<2>::active_cell_iterator> cells_in_void;
+            for (Triangulation<2>::active_cell_iterator cell = tmp.begin();
+                cell != tmp.end(); ++cell)
+              if (cell->center()[0] > 0.45 && cell->center()[0]<0.55 &&
+                  cell->center()[1] > 0.15 && cell->center()[1]<0.25)
+                cells_in_void.insert(cell);
+            GridGenerator::create_triangulation_with_removed_cells(tmp, cells_in_void, *this->triangulation);
 
-  // shift cells at the upper end of the domain from 0.40 to 0.41. It
-  // corresponds to faces with id 3
-  for (Triangulation<2>::cell_iterator cell = this->triangulation->begin();
-       cell != this->triangulation->end(); ++cell)
-    if (cell->at_boundary(3) && cell->face(3)->center()[1] > 0.39999999999)
-      for (unsigned int v=0; v<GeometryInfo<2>::vertices_per_face; ++v)
-        cell->face(3)->vertex(v)[1] = 0.41;
+            // shift cells at the upper end of the domain from 0.40 to 0.41. It
+            // corresponds to faces with id 3
+            for (Triangulation<2>::cell_iterator cell = this->triangulation->begin();
+                cell != this->triangulation->end(); ++cell)
+              if (cell->at_boundary(3) && cell->face(3)->center()[1] > 0.39999999999)
+                for (unsigned int v=0; v<GeometryInfo<2>::vertices_per_face; ++v)
+                  cell->face(3)->vertex(v)[1] = 0.41;
 
-  // Set the left boundary (inflow) to 1, the right to 2, the rest to 0.
-  for (Triangulation<2>::active_cell_iterator cell=this->triangulation->begin() ;
-       cell != this->triangulation->end(); ++cell)
-    for (unsigned int f=0; f<GeometryInfo<2>::faces_per_cell; ++f)
-      if (cell->face(f)->at_boundary())
-        {
-          if (std::abs(cell->face(f)->center()[0]) < 1e-12)
-            cell->face(f)->set_all_boundary_ids(1);
-          else if (std::abs(cell->face(f)->center()[0]-2.5) < 1e-12)
-            cell->face(f)->set_all_boundary_ids(2);
-          else
-            cell->face(f)->set_all_boundary_ids(0);
-        }
+            // Set the left boundary (inflow) to 1, the right to 2, the rest to 0.
+            for (Triangulation<2>::active_cell_iterator cell=this->triangulation->begin() ;
+                cell != this->triangulation->end(); ++cell)
+              for (unsigned int f=0; f<GeometryInfo<2>::faces_per_cell; ++f)
+                if (cell->face(f)->at_boundary())
+                  {
+                    if (std::abs(cell->face(f)->center()[0]) < 1e-12)
+                      cell->face(f)->set_all_boundary_ids(1);
+                    else if (std::abs(cell->face(f)->center()[0]-2.5) < 1e-12)
+                      cell->face(f)->set_all_boundary_ids(2);
+                    else
+                      cell->face(f)->set_all_boundary_ids(0);
+                  }
           }
           else
           {
@@ -126,12 +126,34 @@ namespace MeltPoolDG
         void
         set_boundary_conditions()
         {
-            this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>();
+          /*
+           *  create a pair of (boundary_id, dirichlet_function)
+           */
+          // constexpr types::boundary_id inflow_bc  = 42;
+          // constexpr types::boundary_id do_nothing = 0;
+
+           this->boundary_conditions.dirichlet_bc.emplace(
+             std::make_pair(0, std::make_shared<DirichletCondition<dim>>())); 
+           this->boundary_conditions.dirichlet_bc.emplace(
+             std::make_pair(1, std::make_shared<DirichletCondition<dim>>()));
+          // if constexpr (dim == 2)
+          //   {
+          //     for (auto &face : this->triangulation->active_face_iterators())
+          //       if ((face->at_boundary()))
+          //         {
+          //             face->set_boundary_id(inflow_bc);
+          //         }
+          //   }
+          // else
+          //   {
+          //     (void)do_nothing; // suppress unused variable for 1D
+          //   }
         }
 
         void
         set_field_conditions()
         {
+            this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>();
         }
       };
 
