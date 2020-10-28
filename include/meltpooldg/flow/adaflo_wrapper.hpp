@@ -55,25 +55,19 @@ namespace Flow
        */
       template<int space_dim, typename number, typename VectorizedArrayType>
       AdafloWrapper(ScratchData<dim, space_dim, number, VectorizedArrayType> & scratch_data, 
-                    const AdafloWrapperParameters parameters_in)
+                    const AdafloWrapperParameters & parameters_in) : navier_stokes(
+                    parameters_in.get_parameters(),
+                    *const_cast<parallel::distributed::Triangulation<dim> *>(dynamic_cast<const parallel::distributed::Triangulation<dim> *>(&scratch_data.get_triangulation()))
+                    )
       {
-        auto tria_parallel = const_cast<parallel::distributed::Triangulation<dim> *>(dynamic_cast<const parallel::distributed::Triangulation<dim> *>(&scratch_data.get_triangulation()));
-
-        AssertThrow(tria_parallel, ExcMessage ("You need to provide a parallel::distributed::Triangulation!"));
-
-        const FlowParameters params = parameters_in.get_parameters();
-
-        // create Navier-Stokes solver
-        navier_stokes = std::make_shared<NavierStokes<dim>>(params, *tria_parallel);
-
         // set boundary conditions
-        navier_stokes->set_no_slip_boundary(0);
-        navier_stokes->set_velocity_dirichlet_boundary(1, std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., true)));
+        navier_stokes.set_no_slip_boundary(0);
+        navier_stokes.set_velocity_dirichlet_boundary(1, std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., true)));
 
-        navier_stokes->set_open_boundary_with_normal_flux(2, std::shared_ptr<Function<dim> > (new Functions::ZeroFunction<dim>(1)));
+        navier_stokes.set_open_boundary_with_normal_flux(2, std::shared_ptr<Function<dim> > (new Functions::ZeroFunction<dim>(1)));
 
         // set initial condition
-        navier_stokes->setup_problem(InflowVelocity<dim>(0., false));
+        navier_stokes.setup_problem(InflowVelocity<dim>(0., false));
       }
 
       /**
@@ -81,21 +75,21 @@ namespace Flow
        */
       void
       solve()
-      {
-        navier_stokes->advance_time_step();
+      {          
+        navier_stokes.advance_time_step();
       }
 
       const LinearAlgebra::distributed::Vector<double> &
       get_velocity() const
       {
-        return navier_stokes->solution.block(0);
+        return navier_stokes.solution.block(0);
       }
 
     private:
       /**
        * Reference to the actual Navier-Stokes solver from adaflo
        */
-      std::shared_ptr<NavierStokes<dim>> navier_stokes;
+      NavierStokes<dim> navier_stokes;
     };
 
     /**

@@ -57,16 +57,16 @@ namespace MeltPoolDG
         adaflo = std::make_shared<AdafloWrapper<dim>>(*scratch_data, 
                                                       adaflo_params);
 
-        output_results(0,base_in->parameters);
+        // output_results(0,base_in->parameters);
 
         while (!time_iterator.is_finished())
         {
             const double dt = time_iterator.get_next_time_increment();
             adaflo->solve();
-            output_results(time_iterator.get_current_time_step_number(), 
-                           base_in->parameters);
+            // output_results(time_iterator.get_current_time_step_number(), 
+                          //  base_in->parameters);
         }
-        
+        // 
       }
 
       std::string
@@ -127,10 +127,10 @@ namespace MeltPoolDG
 
         data_out.build_patches(scratch_data->get_mapping());
         data_out.write_vtu_with_pvtu_record("./",
-                                                parameters.paraview.filename,
-                                                time_step,
-                                                scratch_data->get_mpi_comm(),
-                                                parameters.paraview.n_digits_timestep,
+                                            parameters.paraview.filename,
+                                            time_step,
+                                            scratch_data->get_mpi_comm(),
+                                            parameters.paraview.n_digits_timestep,
                                                 parameters.paraview.n_groups);
 
         // }

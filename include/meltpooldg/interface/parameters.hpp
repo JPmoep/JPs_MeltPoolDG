@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/parameter_handler.h>
 
@@ -128,27 +127,16 @@ namespace MeltPoolDG
   struct
   AdafloWrapperParameters
   {
-  //     template<typename number>
-      AdafloWrapperParameters(const std::string &parameter_filename="/home/magdalena/constitutiveModelling/adaflo/tests/flow_past_cylinder.prm")
-      : params(parameter_filename)
+      AdafloWrapperParameters()
       {
-        params.time_step_scheme = TimeStepping::bdf_2;
-        params.end_time = 8;
-        params.time_step_size_start = 0.02; 
-        params.physical_type   = FlowParameters::PhysicalType::incompressible;
-        params.dimension       = 2; //mp_params.base.dimension;
-        params.global_refinements = 0;
-        params.velocity_degree = 3; //mp_params.base.degree;
-        params.viscosity       = 0.001;//mp_params.flow.viscosity;
-        params.linearization   = FlowParameters::Linearization::coupled_implicit_newton;
-        params.max_nl_iteration = 10;
-        params.tol_nl_iteration = 1e-9;
-        params.max_lin_iteration = 30;
-        params.tol_lin_iteration = 1e-5;
-        params.rel_lin_iteration = 1;
-        params.precondition_velocity = FlowParameters::PreconditionVelocity::u_ilu_scalar;
-        params.precondition_pressure = FlowParameters::PreconditionPressure::p_mass_ilu;
-        params.iterations_before_inner_solvers = 30;
+      }
+
+      void
+      parse_parameters(const std::string &parameter_filename) 
+      {
+        ParameterHandler prm_adaflo;
+        params.declare_parameters(prm_adaflo);
+        params.parse_parameters(parameter_filename, prm_adaflo);
       }
 
       const FlowParameters& get_parameters() const
@@ -189,6 +177,10 @@ namespace MeltPoolDG
       if (amr.min_grid_refinement_level == 1)
         amr.min_grid_refinement_level = base.global_refinements;
 
+      /*
+       *  parameters for adaflo
+       */
+      adaflo_params.parse_parameters(parameter_filename);
     }
 
     void
