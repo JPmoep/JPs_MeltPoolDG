@@ -85,6 +85,12 @@ namespace Flow
         return navier_stokes.solution.block(0);
       }
 
+      void
+      set_surface_tension(const LinearAlgebra::distributed::Vector<double> & vec)
+      {
+        navier_stokes.user_rhs.block(0).copy_locally_owned_data_from(vec);
+      }
+
     private:
       /**
        * Reference to the actual Navier-Stokes solver from adaflo
@@ -119,7 +125,14 @@ namespace Flow
       const LinearAlgebra::distributed::Vector<double> &
       get_velocity() const
       {
+        AssertThrow(false, ExcNotImplemented ());
         return dummy;
+      }
+
+      void
+      set_surface_tension(const LinearAlgebra::distributed::Vector<double> & )
+      {
+        AssertThrow(false, ExcNotImplemented ());
       }
 
       void

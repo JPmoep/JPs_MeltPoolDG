@@ -6,7 +6,8 @@
     "degree": "2"
   },
   "flow" : {
-    "viscosity": "0.001"
+    "viscosity": "0.001",
+    "surface tension coefficient": "0.01"
   },
   "levelset" : {
     "ls do reinitialization": "false",

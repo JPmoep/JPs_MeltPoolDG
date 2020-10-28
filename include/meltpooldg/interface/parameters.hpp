@@ -78,6 +78,7 @@ namespace MeltPoolDG
   struct FlowData
   {
     number      viscosity = 0.0;
+    number      surface_tension_coefficient = 0.0;
     number      density   = 1.0;
     std::string solver_type = "incompressible";
   };
@@ -418,6 +419,9 @@ namespace MeltPoolDG
         prm.add_parameter("density",
                           flow.density,
                           "density of the flow field");
+        prm.add_parameter("surface tension coefficient",
+                          flow.surface_tension_coefficient,
+                          "constant coefficient for calculating surface tension");
         prm.add_parameter("solver type",
                           flow.solver_type,
                           "solver type of the flow problem");                          

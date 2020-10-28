@@ -48,8 +48,10 @@ namespace MeltPoolDG
                  const unsigned int                             dof_no_bc_idx_in,
                  const unsigned int                             quad_idx_in)
       {
-        scratch_data = scratch_data_in;
-        dof_idx      = dof_idx_in;
+        scratch_data  = scratch_data_in;
+        dof_idx       = dof_idx_in;
+        dof_no_bc_idx = dof_no_bc_idx_in;
+        quad_idx      = quad_idx_in;
         /*
          *  set the level set data
          */
@@ -126,7 +128,49 @@ namespace MeltPoolDG
          *    compute the curvature
          */
         curvature_operation.solve(advec_diff_operation.solution_advected_field);
-      }
+    }
+
+    void
+    compute_surface_tension(BlockVectorType& force_rhs, const double surface_tension_coefficient) const
+    {
+      scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
+        [&](const auto &matrix_free, auto &force_rhs, const auto &, auto macro_cells) {
+            FECellIntegrator<dim, 1, double>   level_set(matrix_free,
+                                                         dof_idx,
+                                                         quad_idx);
+
+            FECellIntegrator<dim, 1, double>   curvature(matrix_free, 
+                                                         dof_no_bc_idx, 
+                                                         quad_idx);
+
+            FECellIntegrator<dim, dim, double> surface_tension(matrix_free,
+                                                               dof_no_bc_idx,
+                                                               quad_idx);
+
+            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
+            {
+              level_set.reinit(cell);
+              level_set.gather_evaluate(solution_level_set, true, true);
+
+              surface_tension.reinit(cell);
+
+              curvature.reinit(cell);
+              curvature.read_dof_values_plain(solution_curvature);
+              curvature.evaluate(true, false);
+
+              for (unsigned int q_index = 0; q_index < surface_tension.n_q_points; ++q_index)
+              {
+                  surface_tension.submit_value(surface_tension_coefficient * 
+                                              level_set.get_gradient(q_index) *  // must be adopted --> level set be between zero and 1
+                                              curvature.get_value(q_index), q_index); 
+              }
+              surface_tension.integrate_scatter(true, false, force_rhs);
+            }
+        },
+        force_rhs,
+        nullptr,
+        true);
+    }
 
     private:
       void
@@ -170,6 +214,8 @@ namespace MeltPoolDG
        * select the relevant DoFHandler
        */
       unsigned int dof_idx;
+      unsigned int dof_no_bc_idx;
+      unsigned int quad_idx;
 
     public:
       /*

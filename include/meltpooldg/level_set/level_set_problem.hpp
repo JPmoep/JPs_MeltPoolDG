@@ -190,7 +190,6 @@ namespace MeltPoolDG
                              initial_solution);
 
         initial_solution.update_ghost_values();
-
         /*
          *    initialize the levelset operation class
          */

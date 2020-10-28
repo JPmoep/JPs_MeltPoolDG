@@ -57,9 +57,8 @@ namespace MeltPoolDG
       {
         initialize(base_in);
 
-        auto adaflo_params = base_in->parameters.adaflo_params;
         adaflo = std::make_shared<AdafloWrapper<dim>>(*scratch_data, 
-                                                      adaflo_params);
+                                                      base_in->parameters.adaflo_params);
 
         // output_results(0,base_in->parameters);
         while (!time_iterator.is_finished())
@@ -68,13 +67,22 @@ namespace MeltPoolDG
             
             adaflo->solve();
             
-            to_block_vector(adaflo->get_velocity(),advection_velocity);
-
+            to_block_vector(adaflo->get_velocity(), advection_velocity);
             output_results(time_iterator.get_current_time_step_number(), 
                             base_in->parameters);
+
             level_set_operation.solve(dt, advection_velocity);
 
-            // level_set_operation.get_surface_tension();
+            BlockVectorType                     surface_tension_force;
+            scratch_data->initialize_dof_vector(surface_tension_force, 0);
+            level_set_operation.compute_surface_tension(surface_tension_force, 
+                                                        base_in->parameters.flow.surface_tension_coefficient);
+
+            VectorType surface_out;
+            scratch_data->initialize_dof_vector(surface_out, dof_adaflo_idx);
+            from_block_vector(surface_tension_force, surface_out);
+            
+            adaflo->set_surface_tension(surface_out);
         } 
       }
 
@@ -114,6 +122,7 @@ namespace MeltPoolDG
         // scratch_data->attach_dof_handler(dof_handler_adaflo);
         scratch_data->attach_dof_handler(dof_handler);
         scratch_data->attach_dof_handler(dof_handler);
+        scratch_data->attach_dof_handler(dof_handler_adaflo);
         /*
          *  create partitioning
          */
@@ -140,13 +149,12 @@ namespace MeltPoolDG
           }
         constraints_dirichlet.close();
 
-
-
         // scratch_data->attach_constraint_matrix(dummy_constraint);
         const unsigned int dof_no_bc_idx =
           scratch_data->attach_constraint_matrix(hanging_node_constraints);
-        const unsigned int dof_idx = scratch_data->attach_constraint_matrix(constraints_dirichlet);
-
+        const unsigned int dof_idx        = scratch_data->attach_constraint_matrix(constraints_dirichlet);
+        
+        dof_adaflo_idx = scratch_data->attach_constraint_matrix(dummy_constraints);
         /*
          *  create quadrature rule
          */
@@ -179,6 +187,8 @@ namespace MeltPoolDG
         /*
          *    initialize the levelset operation class
          */
+
+        
         level_set_operation.initialize( scratch_data, 
                                         initial_solution, 
                                         base_in->parameters, 
@@ -216,6 +226,37 @@ namespace MeltPoolDG
 
         out.update_ghost_values();
       }
+
+      void
+      from_block_vector(const BlockVectorType& in, VectorType& out) const
+      {
+        in.update_ghost_values();
+        for (const auto &cell_adaflo : dof_handler_adaflo.active_cell_iterators())
+          if (cell_adaflo->is_locally_owned())
+          {
+              auto cell = DoFCellAccessor<dim, dim, false>(&scratch_data->get_triangulation(),
+                                              cell_adaflo->level(), 
+                                              cell_adaflo->index(),   
+                                             &dof_handler);
+
+              Vector<double> local(dof_handler_adaflo.get_fe().n_dofs_per_cell());
+              
+              for (unsigned int d=0; d<dim; ++d)
+              {
+                 const unsigned int n_dofs_per_component = dof_handler.get_fe().n_dofs_per_cell();
+                 Vector<double> local_component(n_dofs_per_component);
+
+                 cell.get_dof_values(in.block(d), local_component);
+
+                 for(unsigned int c = 0; c < n_dofs_per_component; ++c)
+                   local[c * dim + d] = local_component[c];
+              }
+              cell_adaflo->set_dof_values(local, out);
+          }
+
+        out.update_ghost_values();
+      }
+
       /*
        *  This function is to create paraview output
        */
@@ -224,7 +265,6 @@ namespace MeltPoolDG
       {
         // if (parameters.paraview.do_output)
         // {
-        //const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
         /*
          *  output advected field
         */
@@ -238,6 +278,14 @@ namespace MeltPoolDG
                                   "advection_velocity_" + std::to_string(d));
 
         data_out.add_data_vector(level_set_operation.solution_level_set, "level_set");
+
+        /*
+         * plot surface-tension
+         */
+        // for (auto d = 0; d < dim; ++d)
+        //   data_out.add_data_vector(dof_handler,
+        //                            surface_tension_force.block(d),
+        //                           "surface_tension_force_" + std::to_string(d));
 
         data_out.build_patches(scratch_data->get_mapping());
         data_out.write_vtu_with_pvtu_record("./",
@@ -256,8 +304,11 @@ namespace MeltPoolDG
 
       AffineConstraints<double> constraints_dirichlet;
       AffineConstraints<double> hanging_node_constraints;
+      AffineConstraints<double> dummy_constraints;
 
       BlockVectorType                     advection_velocity;
+
+      unsigned int dof_adaflo_idx;
       std::shared_ptr<ScratchData<dim>>   scratch_data;
       std::shared_ptr<AdafloWrapper<dim>> adaflo;
       LevelSet::LevelSetOperation<dim>    level_set_operation;
