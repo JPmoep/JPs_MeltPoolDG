@@ -115,6 +115,8 @@ namespace MeltPoolDG
     std::vector<types::boundary_id> &
     get_fix_pressure_constant_id(const std::string problem_name)
     {
+      if (!boundary_conditions_map[problem_name])
+        AssertThrow(false, ExcMessage("get_fix_pressure_constant_id: requested boundary condition not found"));
       return boundary_conditions_map[problem_name]->fix_pressure_constant;
     }
     
@@ -122,6 +124,8 @@ namespace MeltPoolDG
     std::vector<types::boundary_id> &
     get_symmetry_id(const std::string problem_name)
     {
+      if (!boundary_conditions_map[problem_name])
+        AssertThrow(false, ExcMessage("get_symmetry_id: requested boundary condition not found"));
       return boundary_conditions_map[problem_name]->symmetry_bc;
     }
     
@@ -182,7 +186,7 @@ namespace MeltPoolDG
       if( !boundary_conditions_map[operation_name] )
         boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
       
-      auto bc = boundary_conditions_map[operation_name]->no_slip_bc;
+      auto& bc = boundary_conditions_map[operation_name]->no_slip_bc;
       if ( std::find(bc.begin(), bc.end(), id)!=bc.end() )
         AssertThrow(false, ExcMessage("You try to attach a no slip boundary conditions "
                                       "for a boundary_id for which a boundary condition is already "
@@ -197,7 +201,7 @@ namespace MeltPoolDG
       if( !boundary_conditions_map[operation_name] )
         boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
       
-     auto bc = boundary_conditions_map[operation_name]->fix_pressure_constant;
+     auto& bc = boundary_conditions_map[operation_name]->fix_pressure_constant;
       if ( std::find(bc.begin(), bc.end(), id)!=bc.end() )
         AssertThrow(false, ExcMessage("You try to attach a no slip boundary conditions "
                                       "for a boundary_id for which a boundary condition is already "
@@ -212,9 +216,9 @@ namespace MeltPoolDG
       if( !boundary_conditions_map[operation_name] )
         boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
       
-      auto bc = boundary_conditions_map[operation_name]->symmetry_bc;
+      auto& bc = boundary_conditions_map[operation_name]->symmetry_bc;
       if ( std::find(bc.begin(), bc.end(), id)!=bc.end() )
-        AssertThrow(false, ExcMessage("You try to attach a no slip boundary conditions "
+        AssertThrow(false, ExcMessage("You try to attach a symmetry boundary conditions "
                                       "for a boundary_id for which a boundary condition is already "
                                       "specified. Check your input related to bc!"));
       bc.push_back(id); 

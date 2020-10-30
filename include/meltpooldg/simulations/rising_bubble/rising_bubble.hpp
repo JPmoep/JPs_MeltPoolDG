@@ -118,7 +118,6 @@ namespace MeltPoolDG
         void
         set_boundary_conditions()
         {
-          
            auto dirichlet = std::make_shared<DirichletCondition<dim>>();
 
            this->attach_no_slip_boundary_condition(0, "navier_stokes_u");
