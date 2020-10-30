@@ -6,7 +6,8 @@
     "degree": "2"
   },
   "flow" : {
-    "flow viscosity": "0.001",
+    "flow density": "0.001",
+    "flow viscosity": "0.005",
     "flow surface tension coefficient": "0.01",
     "flow start time": "0.0",
     "flow end time": "8.0",
@@ -28,6 +29,9 @@
   },
   "Time stepping" : {
     "scheme"           : "bdf_2"
+  },
+  "paraview" : {
+    "paraview do ouput": "false"
   },
   "Navier-Stokes" : {
     "physical type"      : "incompressible",

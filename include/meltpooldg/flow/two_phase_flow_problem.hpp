@@ -58,7 +58,7 @@ namespace MeltPoolDG
         scratch_data->initialize_dof_vector(surface_tension_force, dof_idx);
 
         // initialize phases and force(?) [TODO] 
-        update_phases(level_set_operation.solution_level_set);
+        update_phases(level_set_operation.solution_level_set, base_in->parameters);
         
         // TODO: re-enable?
         // output_results(0,base_in->parameters);
@@ -73,14 +73,11 @@ namespace MeltPoolDG
             // extract velocity form Navier-Stokes solver ...
             flow_operation->get_velocity(advection_velocity);
 
-            // TODO: why here?
-            output_results(n, base_in->parameters);
-
             // ... solve level-set problem with the given advection field
             level_set_operation.solve(dt, advection_velocity);
             
             // update 
-            update_phases(level_set_operation.solution_level_set);
+            update_phases(level_set_operation.solution_level_set, base_in->parameters);
             
             // accumulate forces: a) gravity force
             compute_gravity_force(surface_tension_force, false);
@@ -92,6 +89,7 @@ namespace MeltPoolDG
             //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_surface_tension(surface_tension_force);
 
+            output_results(n, base_in->parameters);
           }
       }
 
@@ -166,10 +164,10 @@ namespace MeltPoolDG
         scratch_data->build();
 
         time_iterator.initialize(
-          TimeIteratorData<double>{0.0 /*start*/,
-                                   8 /*end*/,
-                                   0.02 /*dt*/,
-                                   1000 /*max_steps*/,
+          TimeIteratorData<double>{base_in->parameters.flow.start_time,
+                                   base_in->parameters.flow.end_time,
+                                   base_in->parameters.flow.time_step_size,
+                                   base_in->parameters.flow.max_n_steps,
                                    false /*cfl_condition-->not supported yet*/});
 
         scratch_data->initialize_dof_vector(advection_velocity, dof_idx);
@@ -205,13 +203,8 @@ namespace MeltPoolDG
        * @todo Find a better place.
        */
       void
-      update_phases(const VectorType & vec)
+      update_phases(const VectorType & vec, const Parameters<double> &parameters) const
       {
-        const double density        = 1.0;   // TODO
-        const double density_diff   = 0.0;   // TODO
-        const double viscosity      = 0.001; // TODO
-        const double viscosity_diff = 0.0;   // TODO
-        
         double dummy;
           
       scratch_data->get_matrix_free().template cell_loop<double, VectorType>(
@@ -231,10 +224,10 @@ namespace MeltPoolDG
                   const auto indicator = (ls_values.get_value(q) + 1.0) * 0.5;
                   
                   // set density
-                  flow_operation->get_density(cell, q) = density + density_diff * indicator;
+                  flow_operation->get_density(cell, q) = parameters.flow.density + parameters.flow.density_difference * indicator;
                   
                   // set viscosity
-                  flow_operation->get_viscosity(cell, q) = viscosity + viscosity_diff * indicator;
+                  flow_operation->get_viscosity(cell, q) = parameters.flow.viscosity + parameters.flow.viscosity_difference * indicator;
                 }
             }
         },
