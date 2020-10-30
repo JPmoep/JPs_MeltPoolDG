@@ -8,6 +8,8 @@
 #  include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 # include <meltpooldg/interface/scratch_data.hpp>
 
+#include <meltpooldg/flow/flow_base.hpp>
+
 namespace MeltPoolDG
 {
 namespace Flow
@@ -46,7 +48,7 @@ namespace Flow
   };
 
     template <int dim>
-    class AdafloWrapper
+    class AdafloWrapper : public FlowBase
     {
     public:
 
@@ -74,20 +76,20 @@ namespace Flow
        * Solver time step
        */
       void
-      solve()
+      solve() override
       {          
         navier_stokes.advance_time_step();
       }
 
       void
-      get_velocity(LinearAlgebra::distributed::BlockVector<double> & vec) const
+      get_velocity(LinearAlgebra::distributed::BlockVector<double> & vec) const override
       {
         VectorTools::convert_fe_sytem_vector_to_block_vector(navier_stokes.solution.block(0), 
                 navier_stokes.get_dof_handler_u(), vec, dof_handler_meltpool);
       }
 
       void
-      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & vec)
+      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & vec) override
       {
         VectorTools::convert_block_vector_to_fe_sytem_vector(vec, 
           dof_handler_meltpool, navier_stokes.user_rhs.block(0), navier_stokes.get_dof_handler_u());
@@ -112,7 +114,7 @@ namespace Flow
      * and p4est.
      */
     template <>
-    class AdafloWrapper<1>
+    class AdafloWrapper<1> : public FlowBase
     {
     public:
       /**
@@ -131,19 +133,19 @@ namespace Flow
 
 
       void
-      get_velocity(LinearAlgebra::distributed::BlockVector<double> &) const
+      get_velocity(LinearAlgebra::distributed::BlockVector<double> &) const override
       {
         AssertThrow(false, ExcNotImplemented ());
       }
 
       void
-      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & )
+      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & ) override
       {
         AssertThrow(false, ExcNotImplemented ());
       }
 
       void
-      solve()
+      solve() override
       {
         AssertThrow(false, ExcNotImplemented ());
       }

@@ -259,7 +259,7 @@ namespace MeltPoolDG
       unsigned int dof_idx;
       unsigned int dof_adaflo_idx;
       std::shared_ptr<ScratchData<dim>>   scratch_data;
-      std::shared_ptr<AdafloWrapper<dim>> flow_operation;
+      std::shared_ptr<FlowBase> flow_operation;
       LevelSet::LevelSetOperation<dim>    level_set_operation;
     };
   } // namespace TwoPhaseFlow
