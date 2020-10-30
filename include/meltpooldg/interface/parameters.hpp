@@ -23,7 +23,7 @@ namespace MeltPoolDG
     int          n_q_points_1d       = -1;
     bool         do_print_parameters = true;
     bool         do_simplex          = false;
-    number         gravity           = 9.81;
+    number       gravity             = 0.981;
   };
 
   template <typename number = double>
@@ -238,6 +238,7 @@ namespace MeltPoolDG
                           base.do_print_parameters,
                           "Sets this parameter to true to list parameters in output");
         prm.add_parameter("do simplex", base.do_simplex, "Use simplices");
+        prm.add_parameter("gravity", base.gravity, "Set the value for the gravity");
       }
       prm.leave_subsection();
       /*

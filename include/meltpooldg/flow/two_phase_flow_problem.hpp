@@ -82,7 +82,7 @@ namespace MeltPoolDG
             update_phases(level_set_operation.solution_level_set, base_in->parameters);
             
             // accumulate forces: a) gravity force
-            compute_gravity_force(surface_tension_force, false);
+            compute_gravity_force(surface_tension_force,  base_in->parameters.base.gravity, false);
             
             // ... b) surface tension
             level_set_operation.compute_surface_tension(
@@ -243,13 +243,11 @@ namespace MeltPoolDG
        * @todo Find a better place.
        */
       void
-      compute_gravity_force(BlockVectorType & vec, const bool add = true) const
+      compute_gravity_force(BlockVectorType & vec, const double gravity, const bool add = true) const
       {
           
-        const double gravity = 0.00; // TODO
-          
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
-          [&](const auto &matrix_free, auto & force_rhs, const auto &, auto macro_cells) {
+          [&](const auto &matrix_free, auto & vec, const auto &, auto macro_cells) {
             
             FECellIntegrator<dim, dim, double> force_values(matrix_free, 0 /*TODO*/, 0 /*TODO*/);
   
@@ -262,11 +260,10 @@ namespace MeltPoolDG
                     Tensor<1, dim, VectorizedArray<double> > force;
                     
                     force[dim - 1] -= gravity * flow_operation->get_density(cell, q);
-                    
                     force_values.submit_value(force, q);
                   }
                 
-                force_values.integrate_scatter(true, false, force_rhs);
+                force_values.integrate_scatter(true, false, vec);
               }
           },
           vec,
