@@ -207,6 +207,9 @@ namespace MeltPoolDG
       void
       output_results(const unsigned int time_step, const Parameters<double> &parameters) const
       {
+        // update ghost values
+        advection_velocity.update_ghost_values();
+          
         // if (parameters.paraview.do_output)
         // {
         /*
@@ -240,6 +243,9 @@ namespace MeltPoolDG
                                             parameters.paraview.n_groups);
 
         // }
+        
+        // clear ghost values
+        advection_velocity.zero_out_ghosts();
       }
     private:
       TimeIterator<double> time_iterator;

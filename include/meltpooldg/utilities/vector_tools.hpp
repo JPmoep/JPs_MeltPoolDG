@@ -12,6 +12,8 @@ using namespace dealii;
       void
       convert_fe_sytem_vector_to_block_vector(const LinearAlgebra::distributed::Vector<Number>& in, const DoFHandler<dim, spacedim> & dof_handler_adaflo, LinearAlgebra::distributed::BlockVector<Number>& out, const DoFHandler<dim, spacedim> & dof_handler)
       {
+        in.update_ghost_values();
+          
         for (const auto &cell_adaflo : dof_handler_adaflo.active_cell_iterators())
           if (cell_adaflo->is_locally_owned())
           {
@@ -36,14 +38,14 @@ using namespace dealii;
               }
           }
 
-        out.update_ghost_values(); // TODO: needed?
+        in.zero_out_ghosts();
       }
 
       template<int dim, int spacedim, typename Number>
       void
       convert_block_vector_to_fe_sytem_vector(const LinearAlgebra::distributed::BlockVector<Number>& in, const DoFHandler<dim, spacedim> & dof_handler, LinearAlgebra::distributed::Vector<Number>& out, const DoFHandler<dim, spacedim> & dof_handler_adaflo)
       {
-        in.update_ghost_values(); // TODO: needed?
+        in.update_ghost_values();
         
         for (const auto &cell_adaflo : dof_handler_adaflo.active_cell_iterators())
           if (cell_adaflo->is_locally_owned())
@@ -68,7 +70,7 @@ using namespace dealii;
               cell_adaflo->set_dof_values(local, out);
           }
 
-        out.update_ghost_values(); // TODO: needed?
+        in.zero_out_ghosts();
       }
     }
 
