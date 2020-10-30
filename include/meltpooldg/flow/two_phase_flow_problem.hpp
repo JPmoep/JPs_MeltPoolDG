@@ -58,6 +58,15 @@ namespace MeltPoolDG
       {
         initialize(base_in);
 
+        // TODO: make class field?
+        BlockVectorType                     surface_tension_force;
+        scratch_data->initialize_dof_vector(surface_tension_force, dof_idx);
+        
+        // TODO: make part of AdafloWrapper
+        VectorType surface_out;
+        scratch_data->initialize_dof_vector(surface_out, dof_adaflo_idx);
+
+        // TODO: re-enable?
         // output_results(0,base_in->parameters);
         while (!time_iterator.is_finished())
         {
@@ -70,14 +79,9 @@ namespace MeltPoolDG
             output_results(n, base_in->parameters);
 
             level_set_operation.solve(dt, advection_velocity);
-
-            BlockVectorType                     surface_tension_force;
-            scratch_data->initialize_dof_vector(surface_tension_force, 0);
             level_set_operation.compute_surface_tension(surface_tension_force, 
                                                         base_in->parameters.flow.surface_tension_coefficient);
 
-            VectorType surface_out;
-            scratch_data->initialize_dof_vector(surface_out, dof_adaflo_idx);
             VectorTools::convert_block_vector_to_fe_sytem_vector(surface_tension_force, dof_handler, surface_out, dof_handler_adaflo);
             flow_operation->set_surface_tension(surface_out);
         } 
@@ -149,7 +153,7 @@ namespace MeltPoolDG
         // scratch_data->attach_constraint_matrix(dummy_constraint);
         const unsigned int dof_no_bc_idx =
           scratch_data->attach_constraint_matrix(hanging_node_constraints);
-        const unsigned int dof_idx        = scratch_data->attach_constraint_matrix(constraints_dirichlet);
+        dof_idx        = scratch_data->attach_constraint_matrix(constraints_dirichlet);
         
         dof_adaflo_idx = scratch_data->attach_constraint_matrix(dummy_constraints);
         /*
@@ -248,6 +252,7 @@ namespace MeltPoolDG
 
       BlockVectorType                     advection_velocity;
 
+      unsigned int dof_idx;
       unsigned int dof_adaflo_idx;
       std::shared_ptr<ScratchData<dim>>   scratch_data;
       std::shared_ptr<AdafloWrapper<dim>> flow_operation;
