@@ -67,7 +67,7 @@ namespace MeltPoolDG
             
             adaflo->solve();
             
-            to_block_vector(adaflo->get_velocity(), advection_velocity);
+            convert_fe_sytem_vector_to_block_vector(adaflo->get_velocity(), dof_handler_adaflo, advection_velocity, dof_handler);
             output_results(time_iterator.get_current_time_step_number(), 
                             base_in->parameters);
 
@@ -80,7 +80,7 @@ namespace MeltPoolDG
 
             VectorType surface_out;
             scratch_data->initialize_dof_vector(surface_out, dof_adaflo_idx);
-            from_block_vector(surface_tension_force, surface_out);
+            convert_block_vector_to_fe_sytem_vector(surface_tension_force, dof_handler, surface_out, dof_handler_adaflo);
             adaflo->set_surface_tension(surface_out);
         } 
       }
@@ -196,8 +196,9 @@ namespace MeltPoolDG
                                         quad_idx);
       }
 
-      void
-      to_block_vector(const VectorType& in, BlockVectorType& out) const
+      template<int spacedim>
+      static void
+      convert_fe_sytem_vector_to_block_vector(const VectorType& in, const DoFHandler<dim, spacedim> & dof_handler_adaflo, BlockVectorType& out, const DoFHandler<dim, spacedim> & dof_handler)
       {
         for (const auto &cell_adaflo : dof_handler_adaflo.active_cell_iterators())
           if (cell_adaflo->is_locally_owned())
@@ -206,7 +207,7 @@ namespace MeltPoolDG
               cell_adaflo->get_dof_values(in, local);
 
 
-              auto cell = DoFCellAccessor<dim, dim, false>(&scratch_data->get_triangulation(),
+              auto cell = DoFCellAccessor<dim, dim, false>(&dof_handler.get_triangulation(),
                                               cell_adaflo->level(), 
                                               cell_adaflo->index(),   
                                              &dof_handler);
@@ -223,17 +224,19 @@ namespace MeltPoolDG
               }
           }
 
-        out.update_ghost_values();
+        out.update_ghost_values(); // TODO: needed?
       }
 
-      void
-      from_block_vector(const BlockVectorType& in, VectorType& out) const
+      template<int spacedim>
+      static void
+      convert_block_vector_to_fe_sytem_vector(const BlockVectorType& in, const DoFHandler<dim, spacedim> & dof_handler, VectorType& out, const DoFHandler<dim, spacedim> & dof_handler_adaflo)
       {
-        in.update_ghost_values();
+        in.update_ghost_values(); // TODO: needed?
+        
         for (const auto &cell_adaflo : dof_handler_adaflo.active_cell_iterators())
           if (cell_adaflo->is_locally_owned())
           {
-              auto cell = DoFCellAccessor<dim, dim, false>(&scratch_data->get_triangulation(),
+              auto cell = DoFCellAccessor<dim, dim, false>(&dof_handler.get_triangulation(),
                                               cell_adaflo->level(), 
                                               cell_adaflo->index(),   
                                              &dof_handler);
@@ -253,7 +256,7 @@ namespace MeltPoolDG
               cell_adaflo->set_dof_values(local, out);
           }
 
-        out.update_ghost_values();
+        out.update_ghost_values(); // TODO: needed?
       }
 
       /*
