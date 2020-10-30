@@ -64,13 +64,33 @@ namespace Flow
         VectorTools::convert_block_vector_to_fe_sytem_vector(vec, 
           dof_handler_meltpool, navier_stokes.user_rhs.block(0), navier_stokes.get_dof_handler_u());
       }
-      
-      void
-      update_phases(const LinearAlgebra::distributed::Vector<double> & vec) override
+
+      virtual 
+      VectorizedArray<double> &
+      get_density(const unsigned int cell, const unsigned int q)
       {
-          (void) vec;
-          
-          // TODO
+        return navier_stokes.get_matrix().begin_densities(cell)[q];   
+      }
+      
+      virtual 
+      const VectorizedArray<double> &
+      get_density(const unsigned int cell, const unsigned int q) const
+      {
+        return navier_stokes.get_matrix().begin_densities(cell)[q];   
+      }
+      
+      virtual 
+      VectorizedArray<double> &
+      get_viscosity(const unsigned int cell, const unsigned int q)
+      {
+        return navier_stokes.get_matrix().begin_viscosities(cell)[q];   
+      }
+      
+      virtual 
+      const VectorizedArray<double> &
+      get_viscosity(const unsigned int cell, const unsigned int q) const
+      {
+        return navier_stokes.get_matrix().begin_viscosities(cell)[q];   
       }
 
     private:
@@ -128,11 +148,48 @@ namespace Flow
         AssertThrow(false, ExcNotImplemented ());
       }
       
-      void
-      update_phases(const LinearAlgebra::distributed::Vector<double> & ) override
+      virtual 
+      VectorizedArray<double> &
+      get_density(const unsigned int cell, const unsigned int q)
       {
         AssertThrow(false, ExcNotImplemented ());
+        (void) cell;
+        (void) q;
+        return dummy;   
       }
+      
+      virtual 
+      const VectorizedArray<double> &
+      get_density(const unsigned int cell, const unsigned int q) const
+      {
+        AssertThrow(false, ExcNotImplemented ());
+        (void) cell;
+        (void) q;
+        return dummy;   
+      }
+      
+      virtual 
+      VectorizedArray<double> &
+      get_viscosity(const unsigned int cell, const unsigned int q)
+      {
+        AssertThrow(false, ExcNotImplemented ());
+        (void) cell;
+        (void) q;
+        return dummy;   
+      }
+      
+      virtual 
+      const VectorizedArray<double> &
+      get_viscosity(const unsigned int cell, const unsigned int q) const
+      {
+        AssertThrow(false, ExcNotImplemented ());
+        (void) cell;
+        (void) q;
+        return dummy;   
+      }
+      
+      private:
+          VectorizedArray<double> dummy;
     };
 
 } // namespace Flow

@@ -131,7 +131,7 @@ namespace MeltPoolDG
     }
 
     void
-    compute_surface_tension(BlockVectorType& force_rhs, const double surface_tension_coefficient) const
+    compute_surface_tension(BlockVectorType& force_rhs, const double surface_tension_coefficient, const bool add) const
     {
       scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
         [&](const auto &matrix_free, auto &force_rhs, const auto &, auto macro_cells) {
@@ -169,7 +169,7 @@ namespace MeltPoolDG
         },
         force_rhs,
         nullptr,
-        true);
+        add);
     }
     /*
      *  getter functions for solution vectors

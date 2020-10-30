@@ -57,6 +57,9 @@ namespace MeltPoolDG
         BlockVectorType surface_tension_force;
         scratch_data->initialize_dof_vector(surface_tension_force, dof_idx);
 
+        // initialize phases and force(?) [TODO] 
+        update_phases(level_set_operation.solution_level_set);
+        
         // TODO: re-enable?
         // output_results(0,base_in->parameters);
         while (!time_iterator.is_finished())
@@ -64,20 +67,31 @@ namespace MeltPoolDG
             const auto dt = time_iterator.get_next_time_increment();
             const auto n  = time_iterator.get_current_time_step_number();
 
+            // solver Navier-Stokes problem
             flow_operation->solve();
 
+            // extract velocity form Navier-Stokes solver ...
             flow_operation->get_velocity(advection_velocity);
 
             // TODO: why here?
             output_results(n, base_in->parameters);
 
+            // ... solve level-set problem with the given advection field
             level_set_operation.solve(dt, advection_velocity);
+            
+            // update 
+            update_phases(level_set_operation.solution_level_set);
+            
+            // accumulate forces: a) gravity force
+            compute_gravity_force(surface_tension_force, false);
+            
+            // ... b) surface tension
             level_set_operation.compute_surface_tension(
-              surface_tension_force, base_in->parameters.flow.surface_tension_coefficient);
+              surface_tension_force, base_in->parameters.flow.surface_tension_coefficient, true);
 
+            //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_surface_tension(surface_tension_force);
 
-            flow_operation->update_phases(level_set_operation.solution_level_set);
           }
       }
 
@@ -185,6 +199,86 @@ namespace MeltPoolDG
                                                               base_in);
       }
 
+      /**
+       * Update material parameter of the phases.
+       * 
+       * @todo Find a better place.
+       */
+      void
+      update_phases(const VectorType & vec)
+      {
+        const double density        = 1.0;   // TODO
+        const double density_diff   = 0.0;   // TODO
+        const double viscosity      = 0.001; // TODO
+        const double viscosity_diff = 0.0;   // TODO
+        
+        double dummy;
+          
+      scratch_data->get_matrix_free().template cell_loop<double, VectorType>(
+        [&](const auto &matrix_free, auto &, const auto &src, auto macro_cells) {
+          
+          FECellIntegrator<dim, 1, double> ls_values(matrix_free, 0 /*TODO*/, 0 /*TODO*/);
+
+          for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
+            {
+              ls_values.reinit(cell);
+              ls_values.read_dof_values_plain(src);
+              ls_values.evaluate(true, false);
+              
+              for (unsigned int q = 0; q < ls_values.n_q_points; ++q)
+                {
+                  // convert level-set value to heaviside function
+                  const auto indicator = (ls_values.get_value(q) + 1.0) * 0.5;
+                  
+                  // set density
+                  flow_operation->get_density(cell, q) = density + density_diff * indicator;
+                  
+                  // set viscosity
+                  flow_operation->get_viscosity(cell, q) = viscosity + viscosity_diff * indicator;
+                }
+            }
+        },
+        dummy,
+        vec);
+      }
+
+      /**
+       * Compute gravity force.
+       * 
+       * @todo Find a better place.
+       */
+      void
+      compute_gravity_force(BlockVectorType & vec, const bool add = true) const
+      {
+          
+        const double gravity = 0.00; // TODO
+          
+        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
+          [&](const auto &matrix_free, auto & force_rhs, const auto &, auto macro_cells) {
+            
+            FECellIntegrator<dim, dim, double> force_values(matrix_free, 0 /*TODO*/, 0 /*TODO*/);
+  
+            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
+              {
+                force_values.reinit(cell);
+                
+                for (unsigned int q = 0; q < force_values.n_q_points; ++q)
+                  {
+                    Tensor<1, dim, VectorizedArray<double> > force;
+                    
+                    force[dim - 1] -= gravity * flow_operation->get_density(cell, q);
+                    
+                    force_values.submit_value(force, q);
+                  }
+                
+                force_values.integrate_scatter(true, false, force_rhs);
+              }
+          },
+          vec,
+          nullptr,
+          add);
+      }
+      
       /*
        *  This function is to create paraview output
        */
