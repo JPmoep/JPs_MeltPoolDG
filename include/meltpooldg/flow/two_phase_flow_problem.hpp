@@ -58,9 +58,6 @@ namespace MeltPoolDG
       {
         initialize(base_in);
 
-        adaflo = std::make_shared<AdafloWrapper<dim>>(*scratch_data, 
-                                                      base_in->parameters.adaflo_params);
-
         // output_results(0,base_in->parameters);
         while (!time_iterator.is_finished())
         {
@@ -195,6 +192,9 @@ namespace MeltPoolDG
                                         dof_idx, 
                                         dof_no_bc_idx, 
                                         quad_idx);
+        
+        adaflo = std::make_shared<AdafloWrapper<dim>>(*scratch_data, 
+                                                      base_in->parameters.adaflo_params);
       }
 
       /*
