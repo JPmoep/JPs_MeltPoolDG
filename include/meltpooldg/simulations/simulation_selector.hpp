@@ -9,6 +9,7 @@
 #include <meltpooldg/simulations/reinit_circle_amr/reinit_circle_amr.hpp>
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
 #include <meltpooldg/simulations/flow_past_zylinder/flow_past_zylinder.hpp>
+#include <meltpooldg/simulations/rising_bubble/rising_bubble.hpp>
 
 namespace MeltPoolDG
 {
@@ -44,6 +45,11 @@ namespace MeltPoolDG
         else if (simulation_name == "flow_past_zylinder")
           {
             return std::make_shared<FlowPastZylinder::SimulationFlowPastZylinder<dim>>(
+              parameter_file, mpi_communicator);
+          }
+        else if (simulation_name == "rising_bubble")
+          {
+            return std::make_shared<RisingBubble::SimulationRisingBubble<dim>>(
               parameter_file, mpi_communicator);
           }
         /* add your simulation here*/

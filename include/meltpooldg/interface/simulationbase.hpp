@@ -111,6 +111,13 @@ namespace MeltPoolDG
       return boundary_conditions_map[problem_name]->no_slip_bc;
     }
     
+    const
+    std::vector<types::boundary_id> &
+    get_symmetry_id(const std::string problem_name)
+    {
+      return boundary_conditions_map[problem_name]->symmetry_bc;
+    }
+    
     auto
     get_initial_condition(const std::string operation_name) 
     {
@@ -169,6 +176,21 @@ namespace MeltPoolDG
         boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
       
       auto bc = boundary_conditions_map[operation_name]->no_slip_bc;
+      if ( std::find(bc.begin(), bc.end(), id)!=bc.end() )
+        AssertThrow(false, ExcMessage("You try to attach a no slip boundary conditions "
+                                      "for a boundary_id for which a boundary condition is already "
+                                      "specified. Check your input related to bc!"));
+      bc.push_back(id); 
+    }
+    
+    void
+    attach_symmetry_boundary_condition(types::boundary_id id, 
+                                      const std::string operation_name)
+    {
+      if( !boundary_conditions_map[operation_name] )
+        boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
+      
+      auto bc = boundary_conditions_map[operation_name]->symmetry_bc;
       if ( std::find(bc.begin(), bc.end(), id)!=bc.end() )
         AssertThrow(false, ExcMessage("You try to attach a no slip boundary conditions "
                                       "for a boundary_id for which a boundary condition is already "
