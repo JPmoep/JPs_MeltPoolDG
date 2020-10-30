@@ -31,13 +31,8 @@ namespace MeltPoolDG
         double value (const Point<dim> &p,
                       const unsigned int /*component*/) const
         {
-          //Point<dim> distance_from_origin = p;
-          //for (unsigned int i=0; i<dim; ++i)
-            //distance_from_origin[i] = 0.5;
-
           Point<dim>   center = dim == 2 ? Point<dim>(0.5, 0.5) : Point<dim>(0.5, 0.5, 0.5);
           const double radius = 0.25;
-          //return UtilityFunctions::CharacteristicFunctions::sgn(p.distance(distance_from_origin) - radius);
           return UtilityFunctions::CharacteristicFunctions::sgn(
             UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius));
         }
@@ -98,7 +93,7 @@ namespace MeltPoolDG
                                                        subdivisions,
                                                        bottom_left,
                                                        top_right);
-
+            
             // set boundary indicator to 2 on left and right face -> symmetry boundary
             typename parallel::distributed::Triangulation<dim>::active_cell_iterator
             cell = this->triangulation->begin(),
@@ -110,6 +105,8 @@ namespace MeltPoolDG
                     (std::fabs(cell->face(face)->center()[0]-1)<1e-14 ||
                      std::fabs(cell->face(face)->center()[0])<1e-14))
                   cell->face(face)->set_boundary_id(2);
+
+            this->triangulation->refine_global(this->parameters.base.global_refinements);
           }
           else
           {
@@ -134,9 +131,7 @@ namespace MeltPoolDG
                                                      dirichlet,
                                                     "level_set");
 
-           this->attach_dirichlet_boundary_condition(0,
-                                     std::shared_ptr<Function<dim> >(new Functions::ZeroFunction<dim>(1)),
-                                     "navier_stokes_p");
+           this->attach_fix_pressure_constant_condition(0, "navier_stokes_p");
         }
 
         void

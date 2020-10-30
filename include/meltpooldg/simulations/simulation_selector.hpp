@@ -50,8 +50,9 @@ namespace MeltPoolDG
           }
         else if (simulation_name == "spurious_currents")
           {
-            return std::make_shared<SpuriousCurrents::SimulationSpuriousCurrents<dim>(
+            return std::make_shared<SpuriousCurrents::SimulationSpuriousCurrents<dim>>(
               parameter_file, mpi_communicator);
+          }
         else if (simulation_name == "rising_bubble")
           {
             return std::make_shared<RisingBubble::SimulationRisingBubble<dim>>(

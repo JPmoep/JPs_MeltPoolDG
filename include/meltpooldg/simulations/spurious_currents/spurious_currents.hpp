@@ -100,8 +100,8 @@ namespace MeltPoolDG
           auto dirichlet = std::make_shared<DirichletCondition<dim>>();
           this->attach_dirichlet_boundary_condition(0, dirichlet, "level_set");
           
-          this->attach_no_slip_boundary_condition(0, "navier_stokes");
-          this->attach_fix_pressure_constant_condition(0, "navier_stokes");
+          this->attach_no_slip_boundary_condition(0, "navier_stokes_u");
+          this->attach_fix_pressure_constant_condition(0, "navier_stokes_p");
 
         }
 
@@ -111,7 +111,7 @@ namespace MeltPoolDG
           this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>();
           
           this->attach_initial_condition(
-            std::make_shared<Functions::ZeroFunction<dim>>(dim), "navier_stokes");
+            std::make_shared<Functions::ZeroFunction<dim>>(dim), "navier_stokes_u");
         }
       };
 

@@ -2,6 +2,7 @@
   "base" : {
     "problem name": "two_phase_flow",
     "application name": "rising_bubble",
+    "global refinements": "3",
     "dimension": "2",
     "degree": "2"
   },
