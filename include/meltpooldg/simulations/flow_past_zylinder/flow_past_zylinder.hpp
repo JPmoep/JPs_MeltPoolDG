@@ -50,8 +50,8 @@ namespace MeltPoolDG
           fluctuating(fluctuating)
         {}
 
-        virtual void vector_value(const Point<dim> &p,
-                                        Vector<double>   &values) const
+        virtual void vector_value(const Point<dim>     &p,
+                                        Vector<double> &values) const
       {
         AssertDimension (values.size(), dim);
 
@@ -160,7 +160,7 @@ namespace MeltPoolDG
         set_boundary_conditions()
         {
           
-          auto dirichlet = std::make_shared<DirichletCondition<dim>>();
+           auto dirichlet = std::make_shared<DirichletCondition<dim>>();
 
            this->attach_dirichlet_boundary_condition(0, 
                                                      dirichlet,

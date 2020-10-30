@@ -81,6 +81,9 @@ namespace MeltPoolDG
     number      surface_tension_coefficient = 0.0;
     number      density   = 1.0;
     std::string solver_type = "incompressible";
+    number      start_time      = 0.0;
+    number      end_time        = 1.0;
+    number      time_step_size  = 0.05;
   };
 
   template <typename number = double>
@@ -159,6 +162,22 @@ namespace MeltPoolDG
        *  parameters for adaflo
        */
       adaflo_params.parse_parameters(parameter_filename);
+      if (base.problem_name=="two_phase_flow")
+      {
+      // note: by setting the differences to a non-zero value we force
+      //   adaflo to assume that we are running a simulation with variable
+      //   coefficients, i.e., it allocates memory for the data structures
+      //   variable_densities and variable_viscosities, which are accessed 
+      //   during NavierStokesMatrix::begin_densities() and
+      //   NavierStokesMatrix::begin_viscosity(). However, we do not actually
+      //   use these values, since we fill the density and viscosity 
+      //   differently.
+        adaflo_params.params.density_diff         = 1.0;
+        adaflo_params.params.viscosity_diff       = 1.0;
+        adaflo_params.params.start_time           = flow.start_time;
+        adaflo_params.params.end_time             = flow.end_time;
+        adaflo_params.params.time_step_size_start = flow.time_step_size;
+      }
     }
 
     void
@@ -390,18 +409,29 @@ namespace MeltPoolDG
        */
       prm.enter_subsection("flow");
       {
-        prm.add_parameter("viscosity",
+        prm.add_parameter("flow viscosity",
                           flow.viscosity,
                           "viscosity of the flow field");
-        prm.add_parameter("density",
+        prm.add_parameter("flow density",
                           flow.density,
                           "density of the flow field");
-        prm.add_parameter("surface tension coefficient",
+        prm.add_parameter("flow surface tension coefficient",
                           flow.surface_tension_coefficient,
                           "constant coefficient for calculating surface tension");
-        prm.add_parameter("solver type",
+        prm.add_parameter("flow solver type",
                           flow.solver_type,
                           "solver type of the flow problem");                          
+        prm.add_parameter("flow start time",
+                          flow.start_time,
+                          "Defines the start time for the solution of the levelset problem");
+        prm.add_parameter("flow end time",
+                          flow.end_time,
+                          "Sets the end time for the solution of the levelset problem");
+        prm.add_parameter("flow time step size",
+                           flow.time_step_size,
+                           "Sets the step size for time stepping. For non-uniform "
+                           "time stepping, this parameter determines the size of the first "
+                           "time step.");
       }
       prm.leave_subsection();
       /*
@@ -487,7 +517,7 @@ namespace MeltPoolDG
     CurvatureData<number>          curv;
     ParaviewData<number>           paraview;
     OutputData<number>             output;
-    Flow::AdafloWrapperParameters        adaflo_params;
+    Flow::AdafloWrapperParameters  adaflo_params;
   };
 
 
