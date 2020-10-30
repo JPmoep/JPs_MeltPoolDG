@@ -200,7 +200,10 @@ namespace MeltPoolDG
           constexpr types::boundary_id do_nothing = 0;
 
           auto dirichlet = std::make_shared<DirichletCondition<dim>>();
-          this->boundary_conditions.dirichlet_bc.insert({inflow_bc, dirichlet});
+          //this->boundary_conditions.dirichlet_bc.insert({inflow_bc, dirichlet});
+          this->attach_dirichlet_boundary_condition(inflow_bc, 
+                                                    dirichlet, 
+                                                    this->parameters.base.problem_name);
 
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed

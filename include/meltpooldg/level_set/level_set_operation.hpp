@@ -171,6 +171,10 @@ namespace MeltPoolDG
         nullptr,
         true);
     }
+    /*
+     *  getter functions for solution vectors
+     */
+    // @ todo
 
     private:
       void

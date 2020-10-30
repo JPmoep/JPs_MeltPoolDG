@@ -85,18 +85,73 @@ namespace MeltPoolDG
     {
       return this->field_conditions.advection_field;
     }
+
     const BoundaryConditions<dim> &
     get_boundary_conditions() const
     {
       return this->boundary_conditions;
     }
+    
+    auto
+    get_dirichlet_bc(const std::string problem_name) 
+    {
+      return boundary_conditions_map[problem_name]->dirichlet_bc;
+    }
+    
+    auto
+    get_neumann_bc(const std::string problem_name) 
+    {
+      return boundary_conditions_map[problem_name]->neumann_bc;
+    }
+  
+    const
+    std::vector<types::boundary_id> &
+    get_no_slip_id(const std::string problem_name)
+    {
+      return boundary_conditions_map[problem_name]->no_slip_bc;
+    }
+    
+    template <typename FunctionType>
+    void
+    attach_dirichlet_boundary_condition(types::boundary_id id, 
+                                        std::shared_ptr<FunctionType> boundary_function,
+                                        const std::string operation_name)
+    {
+      if( !boundary_conditions_map[operation_name] )
+        boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
+      
+      boundary_conditions_map[operation_name]->dirichlet_bc[id] = boundary_function;
+    }
+    
+    template <typename FunctionType>
+    void
+    attach_neumann_boundary_condition(types::boundary_id id, 
+                                      std::shared_ptr<FunctionType> boundary_function,
+                                      const std::string operation_name)
+    {
+      if( !boundary_conditions_map[operation_name] )
+        boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
+      
+      boundary_conditions_map[operation_name]->neumann_bc[id] = boundary_function;
+    }
+    
+    void
+    attach_no_slip_boundary_condition(types::boundary_id id, 
+                                      const std::string operation_name)
+    {
+      if( !boundary_conditions_map[operation_name] )
+        boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
+      
+      boundary_conditions_map[operation_name]->no_slip_bc.push_back(id); 
+    }
 
-    const std::string                             parameter_file;
-    const MPI_Comm                                mpi_communicator;
-    const dealii::ConditionalOStream              pcout;
-    Parameters<double>                            parameters;
-    std::shared_ptr<Triangulation<dim, spacedim>> triangulation;
-    FieldConditions<dim>                          field_conditions;
-    BoundaryConditions<dim>                       boundary_conditions;
+    const std::string                              parameter_file;
+    const MPI_Comm                                 mpi_communicator;
+    const dealii::ConditionalOStream               pcout;
+    Parameters<double>                             parameters;
+    std::shared_ptr<Triangulation<dim, spacedim>>  triangulation;
+    FieldConditions<dim>                           field_conditions;
+    BoundaryConditions<dim>                        boundary_conditions; // @todo delete
+    std::map<std::string, std::shared_ptr<BoundaryConditions<dim>>> boundary_conditions_map;
   };
 } // namespace MeltPoolDG

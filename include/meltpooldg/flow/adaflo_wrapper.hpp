@@ -56,17 +56,24 @@ namespace Flow
        * Constructor.
        */
       template<int space_dim, typename number, typename VectorizedArrayType>
-      AdafloWrapper(ScratchData<dim, space_dim, number, VectorizedArrayType> & scratch_data, const unsigned int idx,
-                    const AdafloWrapperParameters & parameters_in) : dof_handler_meltpool(scratch_data.get_dof_handler(idx)), navier_stokes(
+      AdafloWrapper(ScratchData<dim, space_dim, number, VectorizedArrayType> & scratch_data, 
+                    const unsigned int idx,
+                    const AdafloWrapperParameters & parameters_in,
+                    std::shared_ptr<SimulationBase<dim>> base_in ) : dof_handler_meltpool(scratch_data.get_dof_handler(idx)), navier_stokes(
                     parameters_in.get_parameters(),
                     *const_cast<parallel::distributed::Triangulation<dim> *>(dynamic_cast<const parallel::distributed::Triangulation<dim> *>(&scratch_data.get_triangulation()))
                     )
       {
         // set boundary conditions
-        navier_stokes.set_no_slip_boundary(0);
-        navier_stokes.set_velocity_dirichlet_boundary(1, std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., true)));
+        for (const auto& id : base_in->get_no_slip_id("navier_stokes"))
+          navier_stokes.set_no_slip_boundary(id);
+        for (const auto& dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes"))
+          navier_stokes.set_velocity_dirichlet_boundary(dirichlet_bc.first, dirichlet_bc.second);
+          //navier_stokes.set_velocity_dirichlet_boundary(1, std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., true)));
 
-        navier_stokes.set_open_boundary_with_normal_flux(2, std::shared_ptr<Function<dim> > (new Functions::ZeroFunction<dim>(1)));
+        for (const auto& neumann_bc : base_in->get_neumann_bc("navier_stokes"))
+          navier_stokes.set_open_boundary_with_normal_flux(neumann_bc.first, neumann_bc.second);
+          //navier_stokes.set_open_boundary_with_normal_flux(2, std::shared_ptr<Function<dim> > (new Functions::ZeroFunction<dim>(1)));
 
         // set initial condition
         navier_stokes.setup_problem(InflowVelocity<dim>(0., false));
@@ -130,11 +137,13 @@ namespace Flow
        */
       template<int space_dim, typename number, typename VectorizedArrayType>
       AdafloWrapper(ScratchData<1, space_dim, number, VectorizedArrayType> & scratch_data, const unsigned int idx,
-                    const AdafloWrapperParameters parameters_in)
+                    const AdafloWrapperParameters parameters_in,
+                    std::shared_ptr<SimulationBase<1>> base_in)
       {
         (void) scratch_data;
         (void) idx;
         (void) parameters_in;
+        (void) base_in;
 
         AssertThrow(false, ExcNotImplemented ());
       }

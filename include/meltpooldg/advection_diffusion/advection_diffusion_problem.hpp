@@ -130,7 +130,7 @@ namespace MeltPoolDG
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
         constraints.merge(hanging_node_constraints);
-        for (const auto &bc : base_in->get_boundary_conditions().dirichlet_bc)
+        for (const auto &bc : base_in->get_dirichlet_bc("advection_diffusion")) // @todo: add name of bc at a more central place
           {
             VectorTools::interpolate_boundary_values(
               scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);

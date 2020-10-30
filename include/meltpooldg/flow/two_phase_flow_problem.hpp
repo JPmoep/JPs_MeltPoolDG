@@ -127,7 +127,7 @@ namespace MeltPoolDG
         constraints_dirichlet.clear();
         constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
         constraints_dirichlet.merge(hanging_node_constraints);
-        for (const auto &bc : base_in->get_boundary_conditions().dirichlet_bc)
+        for (const auto &bc : base_in->get_dirichlet_bc("level_set")) // @todo: add name of bc at a more central place
           {
             dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
                                                              dof_handler,
@@ -180,9 +180,13 @@ namespace MeltPoolDG
         level_set_operation.initialize(
           scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
 
+        //flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
+                                                              //dof_idx,
+                                                              //base_in->parameters.adaflo_params);
         flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
                                                               dof_idx,
-                                                              base_in->parameters.adaflo_params);
+                                                              base_in->parameters.adaflo_params,
+                                                              base_in);
       }
 
       /*

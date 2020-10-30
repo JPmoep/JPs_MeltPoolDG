@@ -39,6 +39,39 @@ namespace MeltPoolDG
         }
       };
 
+      template <int dim>
+      class InflowVelocity : public Function<dim>
+      {
+      public:
+        InflowVelocity (const double time,
+                        const bool fluctuating)
+          :
+          Function<dim>(dim, time),
+          fluctuating(fluctuating)
+        {}
+
+        virtual void vector_value(const Point<dim> &p,
+                                        Vector<double>   &values) const
+      {
+        AssertDimension (values.size(), dim);
+
+        // inflow velocity according to Schaefer & Turek
+        const double Um = (dim == 2 ? 1.5 : 2.25);
+        const double H = 0.41;
+        double coefficient = Utilities::fixed_power<dim-1>(4.) * Um / Utilities::fixed_power<2*dim-2>(H);
+        values(0) = coefficient * p[1] * (H-p[1]);
+        if (dim == 3)
+          values(0) *= p[2] * (H-p[2]);
+        if (fluctuating)
+          values(0) *= std::sin(this->get_time()*numbers::PI/8.);
+        for (unsigned int d=1; d<dim; ++d)
+          values(d) = 0;
+      }
+
+      private:
+        const bool fluctuating;
+      };
+
       /* for constant Dirichlet conditions we could also use the ConstantFunction
        * utility from dealii
        */
@@ -126,28 +159,28 @@ namespace MeltPoolDG
         void
         set_boundary_conditions()
         {
-          /*
-           *  create a pair of (boundary_id, dirichlet_function)
-           */
-          // constexpr types::boundary_id inflow_bc  = 42;
-          // constexpr types::boundary_id do_nothing = 0;
+          
+          auto dirichlet = std::make_shared<DirichletCondition<dim>>();
 
-           this->boundary_conditions.dirichlet_bc.emplace(
-             std::make_pair(0, std::make_shared<DirichletCondition<dim>>())); 
-           this->boundary_conditions.dirichlet_bc.emplace(
-             std::make_pair(1, std::make_shared<DirichletCondition<dim>>()));
-          // if constexpr (dim == 2)
-          //   {
-          //     for (auto &face : this->triangulation->active_face_iterators())
-          //       if ((face->at_boundary()))
-          //         {
-          //             face->set_boundary_id(inflow_bc);
-          //         }
-          //   }
-          // else
-          //   {
-          //     (void)do_nothing; // suppress unused variable for 1D
-          //   }
+           this->attach_dirichlet_boundary_condition(0, 
+                                                     dirichlet,
+                                                     "level_set"); 
+           this->attach_dirichlet_boundary_condition(1, 
+                                                     dirichlet,
+                                                    "level_set");
+           this->attach_no_slip_boundary_condition(0, "navier_stokes");
+
+           this->attach_dirichlet_boundary_condition(1, 
+                                     std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., true)),
+                                     "navier_stokes");
+           
+           this->attach_neumann_boundary_condition(2, 
+                                                   std::shared_ptr<Function<dim> > (new Functions::ZeroFunction<dim>(1)),
+                                                   "navier_stokes");
+
+        //// set initial condition
+        //navier_stokes.setup_problem(InflowVelocity<dim>(0., false));
+
         }
 
         void
