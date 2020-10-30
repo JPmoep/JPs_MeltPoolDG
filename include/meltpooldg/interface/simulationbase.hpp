@@ -137,6 +137,11 @@ namespace MeltPoolDG
       if( !boundary_conditions_map[operation_name] )
         boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
       
+      if (boundary_conditions_map[operation_name]->dirichlet_bc.count(id) > 0)
+        AssertThrow(false, ExcMessage("You try to attach a dirichlet boundary conditions "
+                                      "for a boundary_id for which a boundary condition is already "
+                                      "specified. Check your input related to bc!"));
+
       boundary_conditions_map[operation_name]->dirichlet_bc[id] = boundary_function;
     }
     
@@ -149,6 +154,10 @@ namespace MeltPoolDG
       if( !boundary_conditions_map[operation_name] )
         boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
       
+      if (boundary_conditions_map[operation_name]->neumann_bc.count(id) > 0)
+        AssertThrow(false, ExcMessage("You try to attach a neumann boundary conditions "
+                                      "for a boundary_id for which a boundary condition is already "
+                                      "specified. Check your input related to bc!"));
       boundary_conditions_map[operation_name]->neumann_bc[id] = boundary_function;
     }
     
@@ -159,7 +168,12 @@ namespace MeltPoolDG
       if( !boundary_conditions_map[operation_name] )
         boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
       
-      boundary_conditions_map[operation_name]->no_slip_bc.push_back(id); 
+      auto bc = boundary_conditions_map[operation_name]->no_slip_bc;
+      if ( std::find(bc.begin(), bc.end(), id)!=bc.end() )
+        AssertThrow(false, ExcMessage("You try to attach a no slip boundary conditions "
+                                      "for a boundary_id for which a boundary condition is already "
+                                      "specified. Check your input related to bc!"));
+      bc.push_back(id); 
     }
 
     const std::string                                               parameter_file;
@@ -167,7 +181,7 @@ namespace MeltPoolDG
     const dealii::ConditionalOStream                                pcout;
     Parameters<double>                                              parameters;
     std::shared_ptr<Triangulation<dim, spacedim>>                   triangulation;
-    FieldConditions<dim>                                            field_conditions;
+    FieldConditions<dim>                                            field_conditions; //@todo delete
     BoundaryConditions<dim>                                         boundary_conditions; // @todo delete
     std::map<std::string, std::shared_ptr<BoundaryConditions<dim>>> boundary_conditions_map;
     std::map<std::string, std::shared_ptr<FieldConditions<dim>>>    field_conditions_map;
