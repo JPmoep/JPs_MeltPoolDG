@@ -6,8 +6,12 @@
     "degree": "2"
   },
   "flow" : {
-    "viscosity": "0.001",
-    "surface tension coefficient": "0.01"
+    "flow density"                     : "1.0",
+    "flow viscosity"                   : "0.1",
+    "flow surface tension coefficient" : "1.0",
+    "flow start time"                  : "0.0",
+    "flow end time"                    : "0.3",
+    "flow time step size"              : "0.01"
   },
   "levelset" : {
     "ls do reinitialization": "true",
@@ -17,16 +21,17 @@
     "ls do matrix free": "true"
   },
   "reinitialization" : {
-    "reinit max n steps": "20",
+    "reinit max n steps": "5",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
     "reinit eps scale factor": "0.5"
   },
   "Time stepping" : {
-    "scheme"           : "bdf_2",
-    "end time"         : "8.",
-    "step size"        : "0.02"
+    "scheme"           : "bdf_2"
+  },
+  "paraview" : {
+    "paraview do ouput": "false"
   },
   "Navier-Stokes" : {
     "physical type"      : "incompressible",
@@ -35,15 +40,11 @@
     "velocity degree"    : "2",
     "viscosity"          : "0.001",
     "Solver" : {
-      "linearization scheme"         : "coupled implicit Newton",
       "NL max iterations"            : "10",
       "NL tolerance"                 : "1.e-9",
-      "lin max iterations"           : "30",
-      "lin tolerance"                : "1.e-5",
-      "lin relative tolerance"       : "1",
-      "lin velocity preconditioner"  : "ilu scalar",
-      "lin pressure mass preconditioner" : "ilu",
-      "lin its before inner solvers" : "30"
+      "lin max iterations"           : "500",
+      "lin tolerance"                : "1.e-6",
+      "lin its before inner solvers" : "50"
     }
   }
 }

@@ -85,7 +85,8 @@ namespace MeltPoolDG
 
           if constexpr (dim == 2)
             {
-              GridGenerator::subdivided_hyper_cube (*this->triangulation, 20 /*TODO*/, -2.5, 2.5);
+              GridGenerator::hyper_cube (*this->triangulation, -2.5, 2.5);
+              this->triangulation->refine_global(6 /*TODO: parameter?*/);
             }
           else
             {
