@@ -60,6 +60,8 @@ namespace MeltPoolDG
         // initialize phases and force(?) [TODO] 
         update_phases(level_set_operation.solution_level_set, base_in->parameters);
         
+        output_results(0, base_in->parameters);
+        
         // TODO: re-enable?
         // output_results(0,base_in->parameters);
         while (!time_iterator.is_finished())

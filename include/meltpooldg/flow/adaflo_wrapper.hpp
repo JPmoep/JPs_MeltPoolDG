@@ -39,6 +39,8 @@ namespace Flow
           navier_stokes.set_symmetry_boundary(symmetry_id);
         for (const auto& no_slip_id : base_in->get_no_slip_id("navier_stokes_u"))
           navier_stokes.set_no_slip_boundary(no_slip_id);
+        for (const auto& fix_pressure_constant_id : base_in->get_fix_pressure_constant_id("navier_stokes"))
+          navier_stokes.fix_pressure_constant(fix_pressure_constant_id);
         for (const auto& dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes_u"))
           navier_stokes.set_velocity_dirichlet_boundary(dirichlet_bc.first, dirichlet_bc.second);
         /*
