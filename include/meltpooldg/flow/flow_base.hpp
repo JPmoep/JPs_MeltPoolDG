@@ -15,6 +15,9 @@ namespace MeltPoolDG
 
       virtual void
       set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> &vec) = 0;
+      
+      virtual void
+      update_phases(const LinearAlgebra::distributed::Vector<double> & vec) = 0;
     };
 
   } // namespace Flow

@@ -30,7 +30,6 @@
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/level_set/level_set_operation.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
-#include <meltpooldg/utilities/vector_tools.hpp>
 
 
 namespace MeltPoolDG
@@ -76,8 +75,9 @@ namespace MeltPoolDG
             level_set_operation.compute_surface_tension(
               surface_tension_force, base_in->parameters.flow.surface_tension_coefficient);
 
-
             flow_operation->set_surface_tension(surface_tension_force);
+
+            flow_operation->update_phases(level_set_operation.solution_level_set);
           }
       }
 

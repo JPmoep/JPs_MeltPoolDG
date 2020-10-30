@@ -5,10 +5,10 @@
 #  include <adaflo/navier_stokes.h>
 #  include <adaflo/parameters.h>
 
-#  include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
-# include <meltpooldg/interface/scratch_data.hpp>
-
+#include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 #include <meltpooldg/flow/flow_base.hpp>
+#include <meltpooldg/interface/scratch_data.hpp>
+#include <meltpooldg/utilities/vector_tools.hpp>
 
 namespace MeltPoolDG
 {
@@ -94,6 +94,14 @@ namespace Flow
         VectorTools::convert_block_vector_to_fe_sytem_vector(vec, 
           dof_handler_meltpool, navier_stokes.user_rhs.block(0), navier_stokes.get_dof_handler_u());
       }
+      
+      void
+      update_phases(const LinearAlgebra::distributed::Vector<double> & vec) override
+      {
+          (void) vec;
+          
+          // TODO
+      }
 
     private:
       /**
@@ -146,6 +154,12 @@ namespace Flow
 
       void
       solve() override
+      {
+        AssertThrow(false, ExcNotImplemented ());
+      }
+      
+      void
+      update_phases(const LinearAlgebra::distributed::Vector<double> & ) override
       {
         AssertThrow(false, ExcNotImplemented ());
       }
