@@ -61,13 +61,13 @@ namespace MeltPoolDG
         // output_results(0,base_in->parameters);
         while (!time_iterator.is_finished())
         {
-            const double dt = time_iterator.get_next_time_increment();
+            const auto dt = time_iterator.get_next_time_increment();
+            const auto n  = time_iterator.get_current_time_step_number();
             
-            adaflo->solve();
+            flow_operation->solve();
             
-            VectorTools::convert_fe_sytem_vector_to_block_vector(adaflo->get_velocity(), dof_handler_adaflo, advection_velocity, dof_handler);
-            output_results(time_iterator.get_current_time_step_number(), 
-                            base_in->parameters);
+            VectorTools::convert_fe_sytem_vector_to_block_vector(flow_operation->get_velocity(), dof_handler_adaflo, advection_velocity, dof_handler);
+            output_results(n, base_in->parameters);
 
             level_set_operation.solve(dt, advection_velocity);
 
@@ -79,7 +79,7 @@ namespace MeltPoolDG
             VectorType surface_out;
             scratch_data->initialize_dof_vector(surface_out, dof_adaflo_idx);
             VectorTools::convert_block_vector_to_fe_sytem_vector(surface_tension_force, dof_handler, surface_out, dof_handler_adaflo);
-            adaflo->set_surface_tension(surface_out);
+            flow_operation->set_surface_tension(surface_out);
         } 
       }
 
@@ -193,7 +193,7 @@ namespace MeltPoolDG
                                         dof_no_bc_idx, 
                                         quad_idx);
         
-        adaflo = std::make_shared<AdafloWrapper<dim>>(*scratch_data, 
+        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, 
                                                       base_in->parameters.adaflo_params);
       }
 
@@ -250,7 +250,7 @@ namespace MeltPoolDG
 
       unsigned int dof_adaflo_idx;
       std::shared_ptr<ScratchData<dim>>   scratch_data;
-      std::shared_ptr<AdafloWrapper<dim>> adaflo;
+      std::shared_ptr<AdafloWrapper<dim>> flow_operation;
       LevelSet::LevelSetOperation<dim>    level_set_operation;
     };
   } // namespace TwoPhaseFlow
