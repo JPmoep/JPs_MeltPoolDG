@@ -37,7 +37,9 @@ namespace MeltPoolDG
             Point<dim> center;
             for (unsigned int d=0; d<dim; ++d)
               center[d] = 0.02+0.01*d;
-            return p.distance(center) - 0.5;
+            
+          return UtilityFunctions::CharacteristicFunctions::sgn(
+            UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5));
         }
       };
 
