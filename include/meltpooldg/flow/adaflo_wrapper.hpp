@@ -79,10 +79,11 @@ namespace Flow
         navier_stokes.advance_time_step();
       }
 
-      const LinearAlgebra::distributed::Vector<double> &
-      get_velocity() const
+      void
+      get_velocity(LinearAlgebra::distributed::BlockVector<double> & vec) const
       {
-        return navier_stokes.solution.block(0);
+        VectorTools::convert_fe_sytem_vector_to_block_vector(navier_stokes.solution.block(0), 
+                navier_stokes.get_dof_handler_u(), vec, dof_handler_meltpool);
       }
 
       void
@@ -129,23 +130,16 @@ namespace Flow
       }
 
 
-      const LinearAlgebra::distributed::Vector<double> &
-      get_velocity() const
+      void
+      get_velocity(LinearAlgebra::distributed::BlockVector<double> &) const
       {
         AssertThrow(false, ExcNotImplemented ());
-        return dummy;
       }
 
       void
       set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & )
       {
         AssertThrow(false, ExcNotImplemented ());
-      }
-
-      void
-      set_density_viscosity()
-      {
-        
       }
 
       void

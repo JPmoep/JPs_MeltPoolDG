@@ -71,7 +71,9 @@ namespace MeltPoolDG
             
             flow_operation->solve();
             
-            VectorTools::convert_fe_sytem_vector_to_block_vector(flow_operation->get_velocity(), dof_handler_adaflo, advection_velocity, dof_handler);
+            flow_operation->get_velocity(advection_velocity);
+            
+            // TODO: why here?
             output_results(n, base_in->parameters);
 
             level_set_operation.solve(dt, advection_velocity);
