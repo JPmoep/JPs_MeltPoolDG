@@ -180,12 +180,8 @@ namespace MeltPoolDG
         level_set_operation.initialize(
           scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
 
-        //flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
-                                                              //dof_idx,
-                                                              //base_in->parameters.adaflo_params);
         flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
                                                               dof_idx,
-                                                              base_in->parameters.adaflo_params,
                                                               base_in);
       }
 

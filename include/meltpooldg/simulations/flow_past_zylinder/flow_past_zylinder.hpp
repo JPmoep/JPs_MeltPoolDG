@@ -178,8 +178,6 @@ namespace MeltPoolDG
                                                    std::shared_ptr<Function<dim> > (new Functions::ZeroFunction<dim>(1)),
                                                    "navier_stokes");
 
-        //// set initial condition
-        //navier_stokes.setup_problem(InflowVelocity<dim>(0., false));
 
         }
 
@@ -187,6 +185,8 @@ namespace MeltPoolDG
         set_field_conditions()
         {
             this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>();
+            this->attach_initial_condition( std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., false)),
+                                            "navier_stokes");
         }
       };
 

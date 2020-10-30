@@ -111,6 +111,23 @@ namespace MeltPoolDG
       return boundary_conditions_map[problem_name]->no_slip_bc;
     }
     
+    auto
+    get_initial_condition(const std::string operation_name) 
+    {
+      return field_conditions_map[operation_name]->initial_field;
+    }
+
+    template <typename FunctionType>
+    void
+    attach_initial_condition( std::shared_ptr<FunctionType> initial_function,
+                              const std::string operation_name)
+    {
+      if( !field_conditions_map[operation_name] )
+        field_conditions_map[operation_name] = std::make_shared<FieldConditions<dim>>();
+      
+      field_conditions_map[operation_name]->initial_field = initial_function;
+    }
+    
     template <typename FunctionType>
     void
     attach_dirichlet_boundary_condition(types::boundary_id id, 
@@ -145,13 +162,15 @@ namespace MeltPoolDG
       boundary_conditions_map[operation_name]->no_slip_bc.push_back(id); 
     }
 
-    const std::string                              parameter_file;
-    const MPI_Comm                                 mpi_communicator;
-    const dealii::ConditionalOStream               pcout;
-    Parameters<double>                             parameters;
-    std::shared_ptr<Triangulation<dim, spacedim>>  triangulation;
-    FieldConditions<dim>                           field_conditions;
-    BoundaryConditions<dim>                        boundary_conditions; // @todo delete
+    const std::string                                               parameter_file;
+    const MPI_Comm                                                  mpi_communicator;
+    const dealii::ConditionalOStream                                pcout;
+    Parameters<double>                                              parameters;
+    std::shared_ptr<Triangulation<dim, spacedim>>                   triangulation;
+    FieldConditions<dim>                                            field_conditions;
+    BoundaryConditions<dim>                                         boundary_conditions; // @todo delete
     std::map<std::string, std::shared_ptr<BoundaryConditions<dim>>> boundary_conditions_map;
+    std::map<std::string, std::shared_ptr<FieldConditions<dim>>>    field_conditions_map;
+
   };
 } // namespace MeltPoolDG
