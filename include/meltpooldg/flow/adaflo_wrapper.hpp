@@ -147,9 +147,6 @@ namespace Flow
       {
         AssertThrow(false, ExcNotImplemented ());
       }
-
-      private:
-        LinearAlgebra::distributed::Vector<double> dummy;
     };
 
 } // namespace Flow
