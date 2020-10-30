@@ -54,8 +54,8 @@ namespace Flow
        * Constructor.
        */
       template<int space_dim, typename number, typename VectorizedArrayType>
-      AdafloWrapper(ScratchData<dim, space_dim, number, VectorizedArrayType> & scratch_data, 
-                    const AdafloWrapperParameters & parameters_in) : navier_stokes(
+      AdafloWrapper(ScratchData<dim, space_dim, number, VectorizedArrayType> & scratch_data, const unsigned int idx,
+                    const AdafloWrapperParameters & parameters_in) : dof_handler_meltpool(scratch_data.get_dof_handler(idx)), navier_stokes(
                     parameters_in.get_parameters(),
                     *const_cast<parallel::distributed::Triangulation<dim> *>(dynamic_cast<const parallel::distributed::Triangulation<dim> *>(&scratch_data.get_triangulation()))
                     )
@@ -86,12 +86,18 @@ namespace Flow
       }
 
       void
-      set_surface_tension(const LinearAlgebra::distributed::Vector<double> & vec)
+      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & vec)
       {
-        navier_stokes.user_rhs.block(0).copy_locally_owned_data_from(vec);
+        VectorTools::convert_block_vector_to_fe_sytem_vector(vec, 
+          dof_handler_meltpool, navier_stokes.user_rhs.block(0), navier_stokes.get_dof_handler_u());
       }
 
     private:
+      /**
+       * 
+       */
+        const DoFHandler<dim> & dof_handler_meltpool;
+        
       /**
        * Reference to the actual Navier-Stokes solver from adaflo
        */
@@ -112,10 +118,11 @@ namespace Flow
        * Dummy constructor.
        */
       template<int space_dim, typename number, typename VectorizedArrayType>
-      AdafloWrapper(ScratchData<1, space_dim, number, VectorizedArrayType> & scratch_data, 
+      AdafloWrapper(ScratchData<1, space_dim, number, VectorizedArrayType> & scratch_data, const unsigned int idx,
                     const AdafloWrapperParameters parameters_in)
       {
         (void) scratch_data;
+        (void) idx;
         (void) parameters_in;
 
         AssertThrow(false, ExcNotImplemented ());
@@ -130,7 +137,7 @@ namespace Flow
       }
 
       void
-      set_surface_tension(const LinearAlgebra::distributed::Vector<double> & )
+      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & )
       {
         AssertThrow(false, ExcNotImplemented ());
       }

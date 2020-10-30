@@ -61,10 +61,6 @@ namespace MeltPoolDG
         // TODO: make class field?
         BlockVectorType                     surface_tension_force;
         scratch_data->initialize_dof_vector(surface_tension_force, dof_idx);
-        
-        // TODO: make part of AdafloWrapper
-        VectorType surface_out;
-        scratch_data->initialize_dof_vector(surface_out, dof_adaflo_idx);
 
         // TODO: re-enable?
         // output_results(0,base_in->parameters);
@@ -82,8 +78,8 @@ namespace MeltPoolDG
             level_set_operation.compute_surface_tension(surface_tension_force, 
                                                         base_in->parameters.flow.surface_tension_coefficient);
 
-            VectorTools::convert_block_vector_to_fe_sytem_vector(surface_tension_force, dof_handler, surface_out, dof_handler_adaflo);
-            flow_operation->set_surface_tension(surface_out);
+            
+            flow_operation->set_surface_tension(surface_tension_force);
         } 
       }
 
@@ -197,7 +193,7 @@ namespace MeltPoolDG
                                         dof_no_bc_idx, 
                                         quad_idx);
         
-        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, 
+        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, dof_idx,
                                                       base_in->parameters.adaflo_params);
       }
 
