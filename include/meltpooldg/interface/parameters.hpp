@@ -3,7 +3,7 @@
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/parameter_handler.h>
 
-#include <adaflo/parameters.h>
+#include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 // c++
 #include <fstream>
 #include <iostream>
@@ -124,29 +124,6 @@ namespace MeltPoolDG
     bool        do_compute_volume_output = 0;
     std::string filename_volume_output   = "my_volumes.txt";
   };
-
-  struct
-  AdafloWrapperParameters
-  {
-      AdafloWrapperParameters()
-      {
-      }
-
-      void
-      parse_parameters(const std::string &parameter_filename) 
-      {
-        ParameterHandler prm_adaflo;
-        params.declare_parameters(prm_adaflo);
-        params.parse_parameters(parameter_filename, prm_adaflo);
-      }
-
-      const FlowParameters& get_parameters() const
-      {
-        return this->params;
-      }
-      FlowParameters params;
-  };
-
 
   template <typename number = double>
   struct Parameters
@@ -510,7 +487,7 @@ namespace MeltPoolDG
     CurvatureData<number>          curv;
     ParaviewData<number>           paraview;
     OutputData<number>             output;
-    AdafloWrapperParameters        adaflo_params;
+    Flow::AdafloWrapperParameters        adaflo_params;
   };
 
 
