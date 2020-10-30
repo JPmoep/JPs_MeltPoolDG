@@ -29,6 +29,7 @@
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/level_set/level_set_operation.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
+#include <meltpooldg/utilities/vector_tools.hpp>
 #include <meltpooldg/flow/adaflo_wrapper.hpp>
 #include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 #include <meltpooldg/level_set/level_set_operation.hpp>
@@ -67,7 +68,7 @@ namespace MeltPoolDG
             
             adaflo->solve();
             
-            convert_fe_sytem_vector_to_block_vector(adaflo->get_velocity(), dof_handler_adaflo, advection_velocity, dof_handler);
+            VectorTools::convert_fe_sytem_vector_to_block_vector(adaflo->get_velocity(), dof_handler_adaflo, advection_velocity, dof_handler);
             output_results(time_iterator.get_current_time_step_number(), 
                             base_in->parameters);
 
@@ -80,7 +81,7 @@ namespace MeltPoolDG
 
             VectorType surface_out;
             scratch_data->initialize_dof_vector(surface_out, dof_adaflo_idx);
-            convert_block_vector_to_fe_sytem_vector(surface_tension_force, dof_handler, surface_out, dof_handler_adaflo);
+            VectorTools::convert_block_vector_to_fe_sytem_vector(surface_tension_force, dof_handler, surface_out, dof_handler_adaflo);
             adaflo->set_surface_tension(surface_out);
         } 
       }
@@ -140,7 +141,7 @@ namespace MeltPoolDG
         constraints_dirichlet.merge(hanging_node_constraints);
         for (const auto &bc : base_in->get_boundary_conditions().dirichlet_bc)
           {
-            VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
+            dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
                                                      dof_handler,
                                                      bc.first,
                                                      *bc.second,
@@ -175,7 +176,7 @@ namespace MeltPoolDG
          */
         VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution);
-        VectorTools::project(scratch_data->get_mapping(),
+        dealii::VectorTools::project(scratch_data->get_mapping(),
                              dof_handler,
                              constraints_dirichlet,
                              scratch_data->get_quadrature(),
@@ -194,69 +195,6 @@ namespace MeltPoolDG
                                         dof_idx, 
                                         dof_no_bc_idx, 
                                         quad_idx);
-      }
-
-      template<int spacedim>
-      static void
-      convert_fe_sytem_vector_to_block_vector(const VectorType& in, const DoFHandler<dim, spacedim> & dof_handler_adaflo, BlockVectorType& out, const DoFHandler<dim, spacedim> & dof_handler)
-      {
-        for (const auto &cell_adaflo : dof_handler_adaflo.active_cell_iterators())
-          if (cell_adaflo->is_locally_owned())
-          {
-              Vector<double> local(dof_handler_adaflo.get_fe().n_dofs_per_cell());
-              cell_adaflo->get_dof_values(in, local);
-
-
-              auto cell = DoFCellAccessor<dim, dim, false>(&dof_handler.get_triangulation(),
-                                              cell_adaflo->level(), 
-                                              cell_adaflo->index(),   
-                                             &dof_handler);
-              
-              for (unsigned int d=0; d<dim; ++d)
-              {
-                const unsigned int n_dofs_per_component = dof_handler.get_fe().n_dofs_per_cell();
-                Vector<double> local_component(n_dofs_per_component);
-
-                for(unsigned int c = 0; c < n_dofs_per_component; ++c)
-                  local_component[c] = local[c * dim + d];
-
-                 cell.set_dof_values(local_component, out.block(d));
-              }
-          }
-
-        out.update_ghost_values(); // TODO: needed?
-      }
-
-      template<int spacedim>
-      static void
-      convert_block_vector_to_fe_sytem_vector(const BlockVectorType& in, const DoFHandler<dim, spacedim> & dof_handler, VectorType& out, const DoFHandler<dim, spacedim> & dof_handler_adaflo)
-      {
-        in.update_ghost_values(); // TODO: needed?
-        
-        for (const auto &cell_adaflo : dof_handler_adaflo.active_cell_iterators())
-          if (cell_adaflo->is_locally_owned())
-          {
-              auto cell = DoFCellAccessor<dim, dim, false>(&dof_handler.get_triangulation(),
-                                              cell_adaflo->level(), 
-                                              cell_adaflo->index(),   
-                                             &dof_handler);
-
-              Vector<double> local(dof_handler_adaflo.get_fe().n_dofs_per_cell());
-              
-              for (unsigned int d=0; d<dim; ++d)
-              {
-                 const unsigned int n_dofs_per_component = dof_handler.get_fe().n_dofs_per_cell();
-                 Vector<double> local_component(n_dofs_per_component);
-
-                 cell.get_dof_values(in.block(d), local_component);
-
-                 for(unsigned int c = 0; c < n_dofs_per_component; ++c)
-                   local[c * dim + d] = local_component[c];
-              }
-              cell_adaflo->set_dof_values(local, out);
-          }
-
-        out.update_ghost_values(); // TODO: needed?
       }
 
       /*
