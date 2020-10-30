@@ -17,7 +17,7 @@
     "ls do matrix free": "true"
   },
   "reinitialization" : {
-    "reinit max n steps": "5",
+    "reinit max n steps": "20",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
