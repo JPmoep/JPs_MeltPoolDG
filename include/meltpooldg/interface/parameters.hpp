@@ -164,6 +164,7 @@ namespace MeltPoolDG
       /*
        *  parameters for adaflo
        */
+#ifdef MELT_POOL_DG_WITH_ADAFLO
       adaflo_params.parse_parameters(parameter_filename);
 
       if (base.problem_name=="two_phase_flow")
@@ -184,6 +185,7 @@ namespace MeltPoolDG
         adaflo_params.params.end_time             = flow.end_time;
         adaflo_params.params.time_step_size_start = flow.time_step_size;
       }
+#endif
     }
 
     void

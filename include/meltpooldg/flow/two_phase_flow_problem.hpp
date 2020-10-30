@@ -25,6 +25,7 @@
 
 #include <deal.II/grid/grid_out.h>
 // MeltPoolDG
+#include <meltpooldg/flow/flow_base.hpp>
 #include <meltpooldg/flow/adaflo_wrapper.hpp>
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
@@ -194,9 +195,13 @@ namespace MeltPoolDG
         level_set_operation.initialize(
           scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
 
+#ifdef MELT_POOL_DG_WITH_ADAFLO
         flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
                                                               dof_idx,
                                                               base_in);
+#else
+        AssertThrow(false, ExcNotImplemented ());
+#endif
       }
 
       /**
