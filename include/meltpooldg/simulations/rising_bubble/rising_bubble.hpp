@@ -126,9 +126,6 @@ namespace MeltPoolDG
            this->attach_dirichlet_boundary_condition(0, 
                                                      dirichlet,
                                                      "level_set"); 
-           this->attach_dirichlet_boundary_condition(1, 
-                                                     dirichlet,
-                                                    "level_set");
 
            this->attach_fix_pressure_constant_condition(0, "navier_stokes_p");
         }

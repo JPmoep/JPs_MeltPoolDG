@@ -2,6 +2,7 @@
 // dealii
 #include <deal.II/base/point.h>
 #include <deal.II/base/utilities.h>
+#include <deal.II/base/vectorization.h>
 
 #include <deal.II/lac/generic_linear_algebra.h>
 
@@ -91,5 +92,6 @@ namespace MeltPoolDG
                                       const Point<dim> &start,
                                       const Point<dim> &end);
     } // namespace DistanceFunctions
+    
   }   // namespace UtilityFunctions
 } // namespace MeltPoolDG

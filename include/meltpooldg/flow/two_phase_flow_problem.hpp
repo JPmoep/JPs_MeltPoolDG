@@ -152,7 +152,6 @@ namespace MeltPoolDG
           }
         constraints_dirichlet.close();
 
-        // scratch_data->attach_constraint_matrix(dummy_constraint);
         const unsigned int dof_no_bc_idx =
           scratch_data->attach_constraint_matrix(hanging_node_constraints);
         dof_idx = scratch_data->attach_constraint_matrix(constraints_dirichlet);
@@ -210,7 +209,7 @@ namespace MeltPoolDG
        * @todo Find a better place.
        */
       void
-      update_phases(const VectorType & vec, const Parameters<double> &parameters) const
+      update_phases(const VectorType & src, const Parameters<double> &parameters) const
       {
         double dummy;
           
@@ -227,7 +226,7 @@ namespace MeltPoolDG
               
               for (unsigned int q = 0; q < ls_values.n_q_points; ++q)
                 {
-                  // convert level-set value to heaviside function
+                  // convert level-set value to heaviside function @todo (to be also compatible with other functions)
                   const auto indicator = (ls_values.get_value(q) + 1.0) * 0.5;
                   
                   // set density
@@ -239,7 +238,7 @@ namespace MeltPoolDG
             }
         },
         dummy,
-        vec);
+        src);
       }
 
       /**
@@ -328,7 +327,6 @@ namespace MeltPoolDG
 
       AffineConstraints<double> constraints_dirichlet;
       AffineConstraints<double> hanging_node_constraints;
-      AffineConstraints<double> dummy_constraints;
 
       BlockVectorType advection_velocity;
 
