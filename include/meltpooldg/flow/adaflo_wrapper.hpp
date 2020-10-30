@@ -32,16 +32,36 @@ namespace Flow
                         *const_cast<parallel::distributed::Triangulation<dim> *>(dynamic_cast<const parallel::distributed::Triangulation<dim> *>(&scratch_data.get_triangulation()))
                       )
       {
-        for (const auto& no_slip_id : base_in->get_no_slip_id("navier_stokes"))
+        /*
+         * Boundary conditions for the velocity field
+         */
+        for (const auto& symmetry_id : base_in->get_symmetry_id("navier_stokes_u"))
+          navier_stokes.set_symmetry_boundary(symmetry_id);
+        for (const auto& no_slip_id : base_in->get_no_slip_id("navier_stokes_u"))
           navier_stokes.set_no_slip_boundary(no_slip_id);
         for (const auto& fix_pressure_constant_id : base_in->get_fix_pressure_constant_id("navier_stokes"))
           navier_stokes.fix_pressure_constant(fix_pressure_constant_id);
-        for (const auto& dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes"))
+        for (const auto& dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes_u"))
           navier_stokes.set_velocity_dirichlet_boundary(dirichlet_bc.first, dirichlet_bc.second);
-        for (const auto& neumann_bc : base_in->get_neumann_bc("navier_stokes"))
+        /*
+         * Boundary conditions for the pressure field
+         */
+        for (const auto& neumann_bc : base_in->get_neumann_bc("navier_stokes_p"))
           navier_stokes.set_open_boundary_with_normal_flux(neumann_bc.first, neumann_bc.second);
+        // @ todo: is this correct?
+        for (const auto& dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes_p"))
+          navier_stokes.fix_pressure_constant(dirichlet_bc.first, dirichlet_bc.second);
+        /*
+         * Initial conditions of the navier stokes problem
+         */
+       AssertThrow(base_in->get_initial_condition("navier_stokes_u"),
+         ExcMessage(
+           "It seems that your SimulationBase object does not contain "
+           "a valid initial field function. A shared_ptr to your initial field "
+           "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+           "this->field_conditions.initial_field = std::make_shared<MyInitializeFunc<dim>>();"));
+        navier_stokes.setup_problem(*base_in->get_initial_condition("navier_stokes_u"));
 
-        navier_stokes.setup_problem(*base_in->get_initial_condition("navier_stokes"));
       }
 
       /**

@@ -168,17 +168,16 @@ namespace MeltPoolDG
            this->attach_dirichlet_boundary_condition(1, 
                                                      dirichlet,
                                                     "level_set");
-           this->attach_no_slip_boundary_condition(0, "navier_stokes");
+
+           this->attach_no_slip_boundary_condition(0, "navier_stokes_u");
 
            this->attach_dirichlet_boundary_condition(1, 
                                      std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., true)),
-                                     "navier_stokes");
+                                     "navier_stokes_u");
            
            this->attach_neumann_boundary_condition(2, 
                                                    std::shared_ptr<Function<dim> > (new Functions::ZeroFunction<dim>(1)),
-                                                   "navier_stokes");
-
-
+                                                   "navier_stokes_p");
         }
 
         void
@@ -186,7 +185,7 @@ namespace MeltPoolDG
         {
             this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>();
             this->attach_initial_condition( std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., false)),
-                                            "navier_stokes");
+                                            "navier_stokes_u");
         }
       };
 

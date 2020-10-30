@@ -17,6 +17,7 @@ namespace MeltPoolDG
     std::map<types::boundary_id, std::shared_ptr<Function<dim>>>  outflow;
     std::vector<types::boundary_id>                               no_slip_bc;
     std::vector<types::boundary_id>                               fix_pressure_constant;
+    std::vector<types::boundary_id>                               symmetry_bc;
 
     //inline DEAL_II_ALWAYS_INLINE BoundaryTypesLevelSet
     //get_boundary_type(types::boundary_id id)
