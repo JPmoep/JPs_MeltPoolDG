@@ -43,8 +43,8 @@ namespace MeltPoolDG
           }
         else if (simulation_name == "slotted_disc")
           {
-            return std::make_shared<SlottedDisc::SimulationSlottedDisc<dim>>(
-              parameter_file, mpi_communicator);
+            return std::make_shared<SlottedDisc::SimulationSlottedDisc<dim>>(parameter_file,
+                                                                             mpi_communicator);
           }
         /* add your simulation here*/
         else
