@@ -120,10 +120,15 @@ namespace MeltPoolDG
         {
            auto dirichlet = std::make_shared<DirichletCondition<dim>>();
 
+           // lower, right and left faces
            this->attach_no_slip_boundary_condition(0, "navier_stokes_u");
+           // upper face
            this->attach_symmetry_boundary_condition(2, "navier_stokes_u");
            
            this->attach_dirichlet_boundary_condition(0, 
+                                                     dirichlet,
+                                                     "level_set"); 
+           this->attach_dirichlet_boundary_condition(2, 
                                                      dirichlet,
                                                      "level_set"); 
 

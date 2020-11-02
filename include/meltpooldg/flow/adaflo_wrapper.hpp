@@ -41,7 +41,7 @@ namespace Flow
           navier_stokes.set_no_slip_boundary(no_slip_id);
         for (const auto& dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes_u"))
           navier_stokes.set_velocity_dirichlet_boundary(dirichlet_bc.first, dirichlet_bc.second);
-        /*
+         /*
          * Boundary conditions for the pressure field
          */
         for (const auto& neumann_bc : base_in->get_neumann_bc("navier_stokes_p"))
@@ -78,7 +78,7 @@ namespace Flow
       }
 
       void
-      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & vec) override
+      set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> & vec) override
       {
         VectorTools::convert_block_vector_to_fe_sytem_vector(vec, 
           dof_handler_meltpool, navier_stokes.user_rhs.block(0), navier_stokes.get_dof_handler_u());
@@ -156,7 +156,7 @@ namespace Flow
       }
 
       void
-      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> & ) override
+      set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> & ) override
       {
         AssertThrow(false, ExcNotImplemented ());
       }

@@ -14,7 +14,7 @@ namespace MeltPoolDG
       get_velocity(LinearAlgebra::distributed::BlockVector<double> &vec) const = 0;
 
       virtual void
-      set_surface_tension(const LinearAlgebra::distributed::BlockVector<double> &vec) = 0;
+      set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> &vec) = 0;
       
       virtual 
       VectorizedArray<double> &

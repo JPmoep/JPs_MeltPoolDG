@@ -151,7 +151,7 @@ namespace MeltPoolDG
           },
           dst,
           src,
-          true);
+          true /*zero out dst*/);
       }
 
       void
@@ -183,7 +183,7 @@ namespace MeltPoolDG
           },
           dst,
           src,
-          true);
+          true /*zero out dst*/);
       }
 
     private:

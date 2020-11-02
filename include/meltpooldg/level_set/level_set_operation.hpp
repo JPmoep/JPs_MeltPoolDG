@@ -92,6 +92,10 @@ namespace MeltPoolDG
          *    initialize the curvature operation class
          */
         curvature_operation.initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
+        /*
+         *    compute the curvature of the initial level set field
+         */
+        curvature_operation.solve(advec_diff_operation.solution_advected_field);
       }
 
       void
@@ -131,8 +135,9 @@ namespace MeltPoolDG
     }
 
     void
-    compute_surface_tension(BlockVectorType& force_rhs, const double surface_tension_coefficient, const bool add) const
+    compute_surface_tension(BlockVectorType & force_rhs, const double surface_tension_coefficient, const bool add)
     {
+      
       scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
         [&](const auto &matrix_free, auto &force_rhs, const auto &, auto macro_cells) {
             FECellIntegrator<dim, 1, double>   level_set(matrix_free,
@@ -237,6 +242,12 @@ namespace MeltPoolDG
        *    accessible for output_results.
        */
       const BlockVectorType &solution_normal_vector = reinit_operation.solution_normal_vector;
+      /*
+       *    This is the surface_tension vector calculated after level set and reinitialization update
+       */
+      //BlockVectorType surface_tension_force;
+
+
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

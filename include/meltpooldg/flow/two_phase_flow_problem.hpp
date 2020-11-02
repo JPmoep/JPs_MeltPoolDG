@@ -54,22 +54,21 @@ namespace MeltPoolDG
       {
         initialize(base_in);
 
-        // TODO: make class field?
-        BlockVectorType surface_tension_force;
-        scratch_data->initialize_dof_vector(surface_tension_force, dof_idx);
-
         // initialize phases and force(?) [TODO] 
         update_phases(level_set_operation.solution_level_set, base_in->parameters);
-        
-        output_results(0, base_in->parameters);
+        // accumulate forces: a) gravity force
+        compute_gravity_force(force_rhs, base_in->parameters.base.gravity, true);
+        // ... b) surface tension
+        level_set_operation.compute_surface_tension(
+          force_rhs, base_in->parameters.flow.surface_tension_coefficient, false);
         
         // TODO: re-enable?
-        // output_results(0,base_in->parameters);
+        output_results(0,base_in->parameters);
+        
         while (!time_iterator.is_finished())
           {
             const auto dt = time_iterator.get_next_time_increment();
             const auto n  = time_iterator.get_current_time_step_number();
-
             // solver Navier-Stokes problem
             flow_operation->solve();
 
@@ -83,14 +82,13 @@ namespace MeltPoolDG
             update_phases(level_set_operation.solution_level_set, base_in->parameters);
             
             // accumulate forces: a) gravity force
-            compute_gravity_force(surface_tension_force,  base_in->parameters.base.gravity, false);
-            
+            compute_gravity_force(force_rhs, base_in->parameters.base.gravity, true);
             // ... b) surface tension
             level_set_operation.compute_surface_tension(
-              surface_tension_force, base_in->parameters.flow.surface_tension_coefficient, true);
-
+              force_rhs, base_in->parameters.flow.surface_tension_coefficient, false);
+            
             //  ... and set forces within the Navier-Stokes solver
-            flow_operation->set_surface_tension(surface_tension_force);
+            flow_operation->set_force_rhs(force_rhs);
 
             output_results(n, base_in->parameters);
           }
@@ -152,13 +150,13 @@ namespace MeltPoolDG
           }
         constraints_dirichlet.close();
 
-        const unsigned int dof_no_bc_idx =
+        dof_no_bc_idx =
           scratch_data->attach_constraint_matrix(hanging_node_constraints);
         dof_idx = scratch_data->attach_constraint_matrix(constraints_dirichlet);
         /*
          *  create quadrature rule
          */
-        unsigned int quad_idx =
+        quad_idx =
           scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
         /*
          *  create the matrix-free object
@@ -189,8 +187,6 @@ namespace MeltPoolDG
         /*
          *    initialize the levelset operation class
          */
-
-
         level_set_operation.initialize(
           scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
 
@@ -201,6 +197,16 @@ namespace MeltPoolDG
 #else
         AssertThrow(false, ExcNotImplemented ());
 #endif
+       /*
+         *    initialize the force vector for calculating surface tension
+         */
+        scratch_data->initialize_dof_vector(force_rhs, dof_no_bc_idx);  
+       /*
+         *    initialize the density and viscosity vector (for postprocessing)
+         */
+        scratch_data->initialize_dof_vector(density, dof_no_bc_idx);  
+        scratch_data->initialize_dof_vector(viscosity, dof_no_bc_idx);  
+
       }
 
       /**
@@ -213,10 +219,13 @@ namespace MeltPoolDG
       {
         double dummy;
           
+      std::cout << "density: " << parameters.flow.density << std::endl;
+      std::cout << "viscosity: " << parameters.flow.viscosity << std::endl;
+
       scratch_data->get_matrix_free().template cell_loop<double, VectorType>(
         [&](const auto &matrix_free, auto &, const auto &src, auto macro_cells) {
           
-          FECellIntegrator<dim, 1, double> ls_values(matrix_free, 0 /*TODO*/, 0 /*TODO*/);
+          FECellIntegrator<dim, 1, double> ls_values(matrix_free, dof_idx, quad_idx);
 
           for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
             {
@@ -231,7 +240,6 @@ namespace MeltPoolDG
                   
                   // set density
                   flow_operation->get_density(cell, q) = parameters.flow.density + parameters.flow.density_difference * indicator;
-                  
                   // set viscosity
                   flow_operation->get_viscosity(cell, q) = parameters.flow.viscosity + parameters.flow.viscosity_difference * indicator;
                 }
@@ -253,7 +261,7 @@ namespace MeltPoolDG
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
           [&](const auto &matrix_free, auto & vec, const auto &, auto macro_cells) {
             
-            FECellIntegrator<dim, dim, double> force_values(matrix_free, 0 /*TODO*/, 0 /*TODO*/);
+            FECellIntegrator<dim, dim, double> force_values(matrix_free, dof_no_bc_idx, quad_idx);
   
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
@@ -272,17 +280,71 @@ namespace MeltPoolDG
           },
           vec,
           nullptr,
-          add);
+          !add);
+      }
+
+      void
+      create_density_dof_vector(VectorType & vec) 
+      {
+        scratch_data->get_matrix_free().template cell_loop<VectorType, std::nullptr_t>(
+          [&](const auto &matrix_free, auto & vec, const auto &, auto macro_cells) {
+            
+            FECellIntegrator<dim, 1, double> density_values(matrix_free, dof_no_bc_idx, quad_idx );
+  
+            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
+              {
+                density_values.reinit(cell);
+                
+                for (unsigned int q = 0; q < density_values.n_q_points; ++q)
+                {
+                  density_values.submit_value(flow_operation->get_density(cell, q), q);
+                  std::cout << "density cell:" << flow_operation->get_density(cell, q) << std::endl;
+                }
+                density_values.integrate_scatter(true, false, vec);
+              }
+          },
+          vec,
+          nullptr,
+          true /*zero out dst*/);
+      }
+      
+      void
+      create_viscosity_dof_vector(VectorType & vec)
+      {
+        scratch_data->get_matrix_free().template cell_loop<VectorType, std::nullptr_t>(
+          [&](const auto &matrix_free, auto & vec, const auto &, auto macro_cells) {
+            
+            FECellIntegrator<dim, 1, double> viscosity_values(matrix_free, dof_no_bc_idx, quad_idx );
+  
+            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
+              {
+                viscosity_values.reinit(cell);
+                
+                for (unsigned int q = 0; q < viscosity_values.n_q_points; ++q)
+                  viscosity_values.submit_value(flow_operation->get_viscosity(cell, q), q);
+                
+                viscosity_values.integrate_scatter(true, false, vec);
+              }
+          },
+          vec,
+          nullptr,
+          true /*zero out dst*/ );
       }
       
       /*
        *  This function is to create paraview output
        */
       void
-      output_results(const unsigned int time_step, const Parameters<double> &parameters) const
+      output_results(const unsigned int time_step, const Parameters<double> &parameters) 
       {
         // update ghost values
         advection_velocity.update_ghost_values();
+        force_rhs.update_ghost_values();
+
+        create_density_dof_vector(density);
+        create_viscosity_dof_vector(viscosity);
+        density.update_ghost_values();
+        viscosity.update_ghost_values();
 
         // if (parameters.paraview.do_output)
         // {
@@ -302,10 +364,23 @@ namespace MeltPoolDG
         /*
          * plot surface-tension
          */
-        // for (auto d = 0; d < dim; ++d)
-        //   data_out.add_data_vector(dof_handler,
-        //                            surface_tension_force.block(d),
-        //                           "surface_tension_force_" + std::to_string(d));
+         for (auto d = 0; d < dim; ++d)
+           data_out.add_data_vector(dof_handler,
+                                    force_rhs.block(d),
+                                   "force_" + std::to_string(d));
+        /*
+         * plot density_distribution
+         */
+        data_out.add_data_vector(dof_handler,
+                                 density,
+                                 "density");
+        
+        /*
+         * plot viscosity distribution 
+         */
+        data_out.add_data_vector(dof_handler,
+                                 viscosity,
+                                 "viscosity");
 
         data_out.build_patches(scratch_data->get_mapping());
         data_out.write_vtu_with_pvtu_record("./",
@@ -319,6 +394,9 @@ namespace MeltPoolDG
 
         // clear ghost values
         advection_velocity.zero_out_ghosts();
+        force_rhs.zero_out_ghosts();
+        density.zero_out_ghosts();
+        viscosity.zero_out_ghosts();
       }
 
     private:
@@ -329,8 +407,13 @@ namespace MeltPoolDG
       AffineConstraints<double> hanging_node_constraints;
 
       BlockVectorType advection_velocity;
+      BlockVectorType force_rhs;
+      VectorType density;
+      VectorType viscosity;
 
       unsigned int                      dof_idx;
+      unsigned int                      dof_no_bc_idx;
+      unsigned int                      quad_idx;
       std::shared_ptr<ScratchData<dim>> scratch_data;
       std::shared_ptr<FlowBase>         flow_operation;
       LevelSet::LevelSetOperation<dim>  level_set_operation;
