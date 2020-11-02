@@ -3,7 +3,8 @@
     "problem name": "two_phase_flow",
     "application name": "spurious_currents",
     "dimension": "2",
-    "degree": "2"
+    "degree": "2",
+    "gravity": "0.0"
   },
   "flow" : {
     "flow density"                     : "1.0",

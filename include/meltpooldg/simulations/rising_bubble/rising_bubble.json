@@ -2,7 +2,7 @@
   "base" : {
     "problem name": "two_phase_flow",
     "application name": "rising_bubble",
-    "global refinements": "3",
+    "global refinements": "4",
     "dimension": "2",
     "degree": "2"
   },
@@ -13,7 +13,7 @@
     "flow viscosity difference": "-0.009",
     "flow surface tension coefficient": "0.0245",
     "flow start time": "0.0",
-    "flow end time": "8.0",
+    "flow end time": "1.0",
     "flow time step size": "0.02"
   },
   "levelset" : {
@@ -24,11 +24,17 @@
     "ls do matrix free": "true"
   },
   "reinitialization" : {
-    "reinit max n steps": "5",
+    "reinit max n steps": "10",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
-    "reinit eps scale factor": "0.5"
+    "reinit scale factor epsilon": "0.7107"
+  },
+  "normal vector": { 
+    "normal vec damping scale factor": "0.025",
+    "normal vec do matrix free": "true"},
+  "curvature" : {
+    "curv do matrix free": "false"
   },
   "paraview" : {
     "paraview do output": "true"

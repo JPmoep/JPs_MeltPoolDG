@@ -1,4 +1,6 @@
 #pragma once
+
+#ifdef MELT_POOL_DG_WITH_ADAFLO
 // deal-specific libraries
 #include <deal.II/base/function.h>
 #include <deal.II/base/point.h>
@@ -86,7 +88,8 @@ namespace MeltPoolDG
           if constexpr (dim == 2)
             {
               GridGenerator::hyper_cube (*this->triangulation, -2.5, 2.5);
-              this->triangulation->refine_global(6 /*TODO: parameter?*/);
+              this->triangulation->refine_global(this->parameters.base.global_refinements);
+
             }
           else
             {
@@ -118,3 +121,5 @@ namespace MeltPoolDG
     } // namespace SpuriousCurrents
   }   // namespace Simulation
 } // namespace MeltPoolDG
+
+#endif

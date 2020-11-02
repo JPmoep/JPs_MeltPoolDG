@@ -139,7 +139,6 @@ namespace MeltPoolDG
 
         constraints_dirichlet.clear();
         constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
-        constraints_dirichlet.merge(hanging_node_constraints);
         for (const auto &bc : base_in->get_dirichlet_bc("level_set")) // @todo: add name of bc at a more central place
           {
             dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
@@ -148,6 +147,7 @@ namespace MeltPoolDG
                                                              *bc.second,
                                                              constraints_dirichlet);
           }
+        constraints_dirichlet.merge(hanging_node_constraints);
         constraints_dirichlet.close();
 
         dof_no_bc_idx =
@@ -158,6 +158,8 @@ namespace MeltPoolDG
          */
         quad_idx =
           scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+
+        n_q_points_1d = base_in->parameters.base.n_q_points_1d;
         /*
          *  create the matrix-free object
          */
@@ -237,6 +239,7 @@ namespace MeltPoolDG
                   
                   // set density
                   flow_operation->get_density(cell, q) = parameters.flow.density + parameters.flow.density_difference * indicator;
+
                   // set viscosity
                   flow_operation->get_viscosity(cell, q) = parameters.flow.viscosity + parameters.flow.viscosity_difference * indicator;
                 }
@@ -283,48 +286,21 @@ namespace MeltPoolDG
       void
       create_density_dof_vector(VectorType & vec) 
       {
-        scratch_data->get_matrix_free().template cell_loop<VectorType, std::nullptr_t>(
-          [&](const auto &matrix_free, auto & vec, const auto &, auto macro_cells) {
-            
-            FECellIntegrator<dim, 1, double> density_values(matrix_free, dof_no_bc_idx, quad_idx );
-  
-            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
-              {
-                density_values.reinit(cell);
-                
-                for (unsigned int q = 0; q < density_values.n_q_points; ++q)
-                {
-                  density_values.submit_value(flow_operation->get_density(cell, q), q);
-                }
-                density_values.integrate_scatter(true, false, vec);
-              }
-          },
-          vec,
-          nullptr,
-          true /*zero out dst*/);
+        //@todo: does not compile
+        //dealii::VectorTools::project(std::make_shared<MatrixFree<dim,double,VectorizedArray<double>>(scratch_data->get_matrix_free()),
+                                     //scratch_data->get_constraint(dof_no_bc_idx),
+                                     //1,
+                                      //[&] (const unsigned int cell,
+                                           //const unsigned int q) -> VectorizedArray<double>
+                                     //{ 
+                                     //return  flow_operation->get_density(cell, q); 
+                                     //},
+                                     //vec);
       }
       
       void
-      create_viscosity_dof_vector(VectorType & vec)
+      create_viscosity_dof_vector(VectorType & vec) const
       {
-        scratch_data->get_matrix_free().template cell_loop<VectorType, std::nullptr_t>(
-          [&](const auto &matrix_free, auto & vec, const auto &, auto macro_cells) {
-            
-            FECellIntegrator<dim, 1, double> viscosity_values(matrix_free, dof_no_bc_idx, quad_idx );
-  
-            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
-              {
-                viscosity_values.reinit(cell);
-                
-                for (unsigned int q = 0; q < viscosity_values.n_q_points; ++q)
-                  viscosity_values.submit_value(flow_operation->get_viscosity(cell, q), q);
-                
-                viscosity_values.integrate_scatter(true, false, vec);
-              }
-          },
-          vec,
-          nullptr,
-          true /*zero out dst*/ );
       }
       
       /*
@@ -339,9 +315,11 @@ namespace MeltPoolDG
 
         create_density_dof_vector(density);
         create_viscosity_dof_vector(viscosity);
+
         density.update_ghost_values();
         viscosity.update_ghost_values();
-
+        level_set_operation.solution_curvature.update_ghost_values();
+        level_set_operation.solution_normal_vector.update_ghost_values();
         // if (parameters.paraview.do_output)
         // {
         /*
@@ -355,7 +333,21 @@ namespace MeltPoolDG
                                    advection_velocity.block(d),
                                    "advection_velocity_" + std::to_string(d));
 
+        /*
+         * level set
+         */
         data_out.add_data_vector(level_set_operation.solution_level_set, "level_set");
+        /*
+         * curvature
+         */
+        
+        data_out.add_data_vector(level_set_operation.solution_curvature, "curvature");
+        /*
+         *  output normal vector field
+         */
+         for (unsigned int d = 0; d < dim; ++d)
+            data_out.add_data_vector(level_set_operation.solution_normal_vector.block(d),
+                                     "normal_" + std::to_string(d));
 
         /*
          * plot surface-tension
@@ -370,7 +362,6 @@ namespace MeltPoolDG
         data_out.add_data_vector(dof_handler,
                                  density,
                                  "density");
-        
         /*
          * plot viscosity distribution 
          */
@@ -393,6 +384,8 @@ namespace MeltPoolDG
         force_rhs.zero_out_ghosts();
         density.zero_out_ghosts();
         viscosity.zero_out_ghosts();
+        level_set_operation.solution_curvature.zero_out_ghosts();
+        level_set_operation.solution_normal_vector.zero_out_ghosts();
       }
 
     private:
@@ -410,6 +403,7 @@ namespace MeltPoolDG
       unsigned int                      dof_idx;
       unsigned int                      dof_no_bc_idx;
       unsigned int                      quad_idx;
+      int n_q_points_1d;
       std::shared_ptr<ScratchData<dim>> scratch_data;
       std::shared_ptr<FlowBase>         flow_operation;
       LevelSet::LevelSetOperation<dim>  level_set_operation;

@@ -1,4 +1,6 @@
 #pragma once
+
+#ifdef MELT_POOL_DG_WITH_ADAFLO
 // deal-specific libraries
 #include <deal.II/base/function.h>
 #include <deal.II/base/point.h>
@@ -192,3 +194,4 @@ namespace MeltPoolDG
     } // namespace FlowPastZylinder
   }   // namespace Simulation
 } // namespace MeltPoolDG
+#endif

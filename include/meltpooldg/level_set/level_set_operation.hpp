@@ -167,6 +167,7 @@ namespace MeltPoolDG
               {
                   surface_tension.submit_value(surface_tension_coefficient * 
                                               level_set.get_gradient(q_index) *  // must be adopted --> level set be between zero and 1
+                                              0.5 *
                                               curvature.get_value(q_index), q_index); 
               }
               surface_tension.integrate_scatter(true, false, force_rhs);
@@ -182,6 +183,12 @@ namespace MeltPoolDG
     // @ todo
 
     private:
+      void 
+      transform_level_set_to_heaviside()
+      {
+        // @todo
+      }
+
       void
       set_level_set_parameters(const Parameters<double> &data_in)
       {
