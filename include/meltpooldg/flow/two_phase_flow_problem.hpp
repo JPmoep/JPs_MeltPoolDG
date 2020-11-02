@@ -56,13 +56,13 @@ namespace MeltPoolDG
 
         // initialize phases and force(?) [TODO] 
         update_phases(level_set_operation.solution_level_set, base_in->parameters);
+
         // accumulate forces: a) gravity force
-        compute_gravity_force(force_rhs, base_in->parameters.base.gravity, true);
+        compute_gravity_force(force_rhs, base_in->parameters.base.gravity);
         // ... b) surface tension
         level_set_operation.compute_surface_tension(
-          force_rhs, base_in->parameters.flow.surface_tension_coefficient, false);
+          force_rhs, base_in->parameters.flow.surface_tension_coefficient, true /*add to force vector*/ );
         
-        // TODO: re-enable?
         output_results(0,base_in->parameters);
         
         while (!time_iterator.is_finished())
@@ -82,10 +82,10 @@ namespace MeltPoolDG
             update_phases(level_set_operation.solution_level_set, base_in->parameters);
             
             // accumulate forces: a) gravity force
-            compute_gravity_force(force_rhs, base_in->parameters.base.gravity, true);
+            compute_gravity_force(force_rhs, base_in->parameters.base.gravity); 
             // ... b) surface tension
             level_set_operation.compute_surface_tension(
-              force_rhs, base_in->parameters.flow.surface_tension_coefficient, false);
+              force_rhs, base_in->parameters.flow.surface_tension_coefficient, true /*add to force vector*/);
             
             //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_force_rhs(force_rhs);
@@ -218,9 +218,6 @@ namespace MeltPoolDG
       update_phases(const VectorType & src, const Parameters<double> &parameters) const
       {
         double dummy;
-          
-      std::cout << "density: " << parameters.flow.density << std::endl;
-      std::cout << "viscosity: " << parameters.flow.viscosity << std::endl;
 
       scratch_data->get_matrix_free().template cell_loop<double, VectorType>(
         [&](const auto &matrix_free, auto &, const auto &src, auto macro_cells) {
@@ -255,7 +252,7 @@ namespace MeltPoolDG
        * @todo Find a better place.
        */
       void
-      compute_gravity_force(BlockVectorType & vec, const double gravity, const bool add = true) const
+      compute_gravity_force(BlockVectorType & vec, const double gravity, const bool add = false) const
       {
           
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
@@ -298,7 +295,6 @@ namespace MeltPoolDG
                 for (unsigned int q = 0; q < density_values.n_q_points; ++q)
                 {
                   density_values.submit_value(flow_operation->get_density(cell, q), q);
-                  std::cout << "density cell:" << flow_operation->get_density(cell, q) << std::endl;
                 }
                 density_values.integrate_scatter(true, false, vec);
               }
