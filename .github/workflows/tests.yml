@@ -36,7 +36,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: setup
       run: |
-         "git clone https://github.com/MeltPoolDG/adaflo.git    && \
+         command="git clone https://github.com/MeltPoolDG/adaflo.git    && \
           mkdir adaflo-build                                    && \
           cd adaflo-build                                       && \
           cmake ../adaflo                                       && \
@@ -54,4 +54,3 @@ jobs:
 
          echo $command
          docker run -t dealii/dealii:master-focal /bin/sh -c "$command";
-
