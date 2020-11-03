@@ -1,6 +1,5 @@
 #pragma once
 // MeltPoolDG
-#include <meltpooldg/interface/problem_selector.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 // simulations
