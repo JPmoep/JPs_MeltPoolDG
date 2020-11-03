@@ -12,34 +12,34 @@ namespace MeltPoolDG
   template <int dim>
   struct BoundaryConditions
   {
-    std::map<types::boundary_id, std::shared_ptr<Function<dim>>>  dirichlet_bc;
-    std::map<types::boundary_id, std::shared_ptr<Function<dim>>>  neumann_bc;
-    std::map<types::boundary_id, std::shared_ptr<Function<dim>>>  outflow;
-    std::vector<types::boundary_id>                               no_slip_bc;
-    std::vector<types::boundary_id>                               fix_pressure_constant;
-    std::vector<types::boundary_id>                               symmetry_bc;
+    std::map<types::boundary_id, std::shared_ptr<Function<dim>>> dirichlet_bc;
+    std::map<types::boundary_id, std::shared_ptr<Function<dim>>> neumann_bc;
+    std::map<types::boundary_id, std::shared_ptr<Function<dim>>> outflow;
+    std::vector<types::boundary_id>                              no_slip_bc;
+    std::vector<types::boundary_id>                              fix_pressure_constant;
+    std::vector<types::boundary_id>                              symmetry_bc;
 
-    //inline DEAL_II_ALWAYS_INLINE BoundaryTypesLevelSet
-    //get_boundary_type(types::boundary_id id)
+    // inline DEAL_II_ALWAYS_INLINE BoundaryTypesLevelSet
+    // get_boundary_type(types::boundary_id id)
     //{
-      //if (dirichlet_bc.find(id) != dirichlet_bc.end())
-        //return BoundaryTypesLevelSet::dirichlet_bc;
-      //// else if(neumann_bc.find(id) != neumann_bc.end())
-      //// return BoundaryTypesLevelSet::neumann_bc;
-      //// else if(wall_bc.find(id) != wall_bc.end())
-      //// return BoundaryTypesLevelSet::wall_bc;
-      /*
-       * For pure convective problems no boundary conditions must be set on
-       * outflow boundaries.
-       */
-      //else if (outflow.find(id) != outflow.end())
-        //return BoundaryTypesLevelSet::outflow;
-      //else
-        //{
-          //AssertThrow(false, ExcMessage("for specified boundary_id: " + std::string(id)));
+    // if (dirichlet_bc.find(id) != dirichlet_bc.end())
+    // return BoundaryTypesLevelSet::dirichlet_bc;
+    //// else if(neumann_bc.find(id) != neumann_bc.end())
+    //// return BoundaryTypesLevelSet::neumann_bc;
+    //// else if(wall_bc.find(id) != wall_bc.end())
+    //// return BoundaryTypesLevelSet::wall_bc;
+    /*
+     * For pure convective problems no boundary conditions must be set on
+     * outflow boundaries.
+     */
+    // else if (outflow.find(id) != outflow.end())
+    // return BoundaryTypesLevelSet::outflow;
+    // else
+    //{
+    // AssertThrow(false, ExcMessage("for specified boundary_id: " + std::string(id)));
 
-          //return BoundaryTypesLevelSet::undefined;
-        //}
+    // return BoundaryTypesLevelSet::undefined;
+    //}
     //}
     //
 

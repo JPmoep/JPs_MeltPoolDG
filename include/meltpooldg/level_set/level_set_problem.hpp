@@ -132,10 +132,10 @@ namespace MeltPoolDG
         for (const auto &bc : base_in->get_dirichlet_bc("level_set"))
           {
             dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
-                                                     dof_handler,
-                                                     bc.first,
-                                                     *bc.second,
-                                                     constraints_dirichlet);
+                                                             dof_handler,
+                                                             bc.first,
+                                                             *bc.second,
+                                                             constraints_dirichlet);
           }
         constraints_dirichlet.close();
 
@@ -181,35 +181,35 @@ namespace MeltPoolDG
         /*
          *  set initial conditions of the levelset function
          */
-        AssertThrow(base_in->get_initial_condition("level_set"),
-        ExcMessage(
-          "It seems that your SimulationBase object does not contain "
-          "a valid initial field function for the level set field. A shared_ptr to your initial field "
-          "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
-          "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
-          "'level_set') "));
+        AssertThrow(
+          base_in->get_initial_condition("level_set"),
+          ExcMessage(
+            "It seems that your SimulationBase object does not contain "
+            "a valid initial field function for the level set field. A shared_ptr to your initial field "
+            "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+            "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
+            "'level_set') "));
 
         VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution);
         dealii::VectorTools::project(scratch_data->get_mapping(),
-                             dof_handler,
-                             constraints_dirichlet,
-                             scratch_data->get_quadrature(),
-                             *base_in->get_initial_condition("level_set"),
-                             initial_solution);
+                                     dof_handler,
+                                     constraints_dirichlet,
+                                     scratch_data->get_quadrature(),
+                                     *base_in->get_initial_condition("level_set"),
+                                     initial_solution);
 
         initial_solution.update_ghost_values();
         /*
          *    initialize the levelset operation class
          */
-        AssertThrow(
-          base_in->get_advection_field("level_set"),
-          ExcMessage(
-            " It seems that your SimulationBase object does not contain "
-            "a valid advection velocity. A shared_ptr to your advection velocity "
-            "function, e.g., AdvectionFunc<dim> must be specified as follows: "
-            "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
-            "'level_set') "));
+        AssertThrow(base_in->get_advection_field("level_set"),
+                    ExcMessage(
+                      " It seems that your SimulationBase object does not contain "
+                      "a valid advection velocity. A shared_ptr to your advection velocity "
+                      "function, e.g., AdvectionFunc<dim> must be specified as follows: "
+                      "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
+                      "'level_set') "));
 
         level_set_operation.initialize(
           scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
@@ -230,10 +230,12 @@ namespace MeltPoolDG
         for (auto d = 0; d < dim; ++d)
           {
             dealii::VectorTools::interpolate(scratch_data->get_mapping(),
-                                     scratch_data->get_dof_handler(),
-                                     ScalarFunctionFromFunctionObject<dim>(
-                                       [&](const Point<dim> &p) { return advec_func.value(p)[d]; }),
-                                     advection_velocity.block(d));
+                                             scratch_data->get_dof_handler(),
+                                             ScalarFunctionFromFunctionObject<dim>(
+                                               [&](const Point<dim> &p) {
+                                                 return advec_func.value(p)[d];
+                                               }),
+                                             advection_velocity.block(d));
           }
         advection_velocity.update_ghost_values();
       }
@@ -246,8 +248,8 @@ namespace MeltPoolDG
         if (parameters.paraview.do_output)
           {
             MeltPoolDG::VectorTools::update_ghost_values(level_set_operation.solution_level_set,
-                                level_set_operation.solution_normal_vector,
-                                advection_velocity);
+                                                         level_set_operation.solution_normal_vector,
+                                                         advection_velocity);
 
             const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
             /*
@@ -312,8 +314,8 @@ namespace MeltPoolDG
               }
 
             MeltPoolDG::VectorTools::zero_out_ghosts(level_set_operation.solution_level_set,
-                            level_set_operation.solution_normal_vector,
-                            advection_velocity);
+                                                     level_set_operation.solution_normal_vector,
+                                                     advection_velocity);
           }
       }
 

@@ -296,7 +296,7 @@ namespace MeltPoolDG
       return this->dof_handler;
     }
 
-    const Triangulation<dim>& 
+    const Triangulation<dim> &
     get_triangulation() const
     {
       return this->get_dof_handler().get_triangulation();

@@ -75,7 +75,7 @@ namespace MeltPoolDG
       solve(const double dt, const BlockVectorType &advection_velocity)
       {
         advection_velocity.update_ghost_values();
-        
+
         create_operator(advection_velocity);
 
         VectorType src, rhs;
@@ -124,7 +124,7 @@ namespace MeltPoolDG
             pcout << "\t |ϕ|2 = " << std::setw(15) << std::left << std::setprecision(10)
                   << solution_advected_field.l2_norm() << std::endl;
           }
-        
+
         advection_velocity.zero_out_ghosts();
       }
 

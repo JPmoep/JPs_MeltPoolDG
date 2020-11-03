@@ -136,8 +136,9 @@ namespace MeltPoolDG
       create_operator()
       {
         //@todo the following lines would correspond to adaflo
-        //const double damping_parameter =
-          //std::pow(scratch_data->get_min_cell_size(dof_idx),2) * normal_vector_data.damping_scale_factor;
+        // const double damping_parameter =
+        // std::pow(scratch_data->get_min_cell_size(dof_idx),2) *
+        // normal_vector_data.damping_scale_factor;
         const double damping_parameter =
           scratch_data->get_min_cell_size(dof_idx) * normal_vector_data.damping_scale_factor;
         normal_vector_operator = std::make_unique<NormalVectorOperator<dim>>(*scratch_data,

@@ -130,7 +130,8 @@ namespace MeltPoolDG
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
         constraints.merge(hanging_node_constraints);
-        for (const auto &bc : base_in->get_dirichlet_bc("advection_diffusion")) // @todo: add name of bc at a more central place
+        for (const auto &bc : base_in->get_dirichlet_bc(
+               "advection_diffusion")) // @todo: add name of bc at a more central place
           {
             VectorTools::interpolate_boundary_values(
               scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);
@@ -179,13 +180,14 @@ namespace MeltPoolDG
         /*
          *  set initial conditions of the levelset function
          */
-        AssertThrow(base_in->get_initial_condition("advection_diffusion"),
-        ExcMessage(
-          "It seems that your SimulationBase object does not contain "
-          "a valid initial field function for the level set field. A shared_ptr to your initial field "
-          "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
-          "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
-          "'advection_diffusion') "));
+        AssertThrow(
+          base_in->get_initial_condition("advection_diffusion"),
+          ExcMessage(
+            "It seems that your SimulationBase object does not contain "
+            "a valid initial field function for the level set field. A shared_ptr to your initial field "
+            "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+            "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
+            "'advection_diffusion') "));
         VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution);
 
@@ -200,14 +202,13 @@ namespace MeltPoolDG
         /*
          *    initialize the advection-diffusion operation class
          */
-        AssertThrow(
-          base_in->get_advection_field("advection_diffusion"),
-          ExcMessage(
-            " It seems that your SimulationBase object does not contain "
-            "a valid advection velocity. A shared_ptr to your advection velocity "
-            "function, e.g., AdvectionFunc<dim> must be specified as follows: "
-            "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
-            "'advection_diffusion') "));
+        AssertThrow(base_in->get_advection_field("advection_diffusion"),
+                    ExcMessage(
+                      " It seems that your SimulationBase object does not contain "
+                      "a valid advection velocity. A shared_ptr to your advection velocity "
+                      "function, e.g., AdvectionFunc<dim> must be specified as follows: "
+                      "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
+                      "'advection_diffusion') "));
         advec_diff_operation.initialize(
           scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
       }
