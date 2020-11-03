@@ -16,7 +16,7 @@ namespace MeltPoolDG
 {
   namespace Simulation
   {
-    namespace FlowPastZylinder
+    namespace FlowPastCylinder
     {
 
       using namespace dealii;
@@ -99,10 +99,10 @@ namespace MeltPoolDG
        */
 
       template <int dim>
-      class SimulationFlowPastZylinder : public SimulationBase<dim>
+      class SimulationFlowPastCylinder : public SimulationBase<dim>
       {
       public:
-        SimulationFlowPastZylinder(std::string parameter_file, const MPI_Comm mpi_communicator)
+        SimulationFlowPastCylinder(std::string parameter_file, const MPI_Comm mpi_communicator)
           : SimulationBase<dim>(parameter_file, mpi_communicator)
         {
           this->set_parameters();
@@ -185,13 +185,14 @@ namespace MeltPoolDG
         void
         set_field_conditions()
         {
-            this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>();
+            this->attach_initial_condition( std::make_shared<InitializePhi<dim>>(),
+                                              "level_set");
             this->attach_initial_condition( std::shared_ptr<Function<dim> >(new InflowVelocity<dim>(0., false)),
                                             "navier_stokes_u");
         }
       };
 
-    } // namespace FlowPastZylinder
+    } // namespace FlowPastCylinder
   }   // namespace Simulation
 } // namespace MeltPoolDG
 #endif

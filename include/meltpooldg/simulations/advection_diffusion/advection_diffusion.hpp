@@ -200,7 +200,7 @@ namespace MeltPoolDG
           constexpr types::boundary_id do_nothing = 0;
 
           auto dirichlet = std::make_shared<DirichletCondition<dim>>();
-          //this->boundary_conditions.dirichlet_bc.insert({inflow_bc, dirichlet});
+          
           this->attach_dirichlet_boundary_condition(inflow_bc, 
                                                     dirichlet, 
                                                     this->parameters.base.problem_name);
@@ -248,9 +248,12 @@ namespace MeltPoolDG
         void
         set_field_conditions() final
         {
-          this->field_conditions.initial_field        = std::make_shared<InitializePhi<dim>>();
-          this->field_conditions.advection_field      = std::make_shared<AdvectionField<dim>>();
-          this->field_conditions.exact_solution_field = std::make_shared<ExactSolution<dim>>(0.01);
+          this->attach_initial_condition( std::make_shared<InitializePhi<dim>>(),
+                                              "advection_diffusion");
+          this->attach_advection_field( std::make_shared<AdvectionField<dim>>(),
+                                              "advection_diffusion");
+          this->attach_exact_solution( std::make_shared<ExactSolution<dim>>(0.01),
+                                              "advection_diffusion");
         }
 
       private:

@@ -62,7 +62,7 @@ namespace MeltPoolDG
             /*
              * compute the advection velocity for the current time
              */
-            compute_advection_velocity(*base_in->get_advection_field());
+            compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
             advec_diff_operation.solve(dt, advection_velocity);
             /*
              *  do paraview output if requested
@@ -179,6 +179,13 @@ namespace MeltPoolDG
         /*
          *  set initial conditions of the levelset function
          */
+        AssertThrow(base_in->get_initial_condition("advection_diffusion"),
+        ExcMessage(
+          "It seems that your SimulationBase object does not contain "
+          "a valid initial field function for the level set field. A shared_ptr to your initial field "
+          "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+          "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
+          "'advection_diffusion') "));
         VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution);
 
@@ -186,7 +193,7 @@ namespace MeltPoolDG
                              dof_handler,
                              constraints,
                              scratch_data->get_quadrature(),
-                             *base_in->get_field_conditions()->initial_field,
+                             *base_in->get_initial_condition("advection_diffusion"),
                              initial_solution);
 
         initial_solution.update_ghost_values();
@@ -194,12 +201,13 @@ namespace MeltPoolDG
          *    initialize the advection-diffusion operation class
          */
         AssertThrow(
-          base_in->get_advection_field(),
+          base_in->get_advection_field("advection_diffusion"),
           ExcMessage(
             " It seems that your SimulationBase object does not contain "
             "a valid advection velocity. A shared_ptr to your advection velocity "
             "function, e.g., AdvectionFunc<dim> must be specified as follows: "
-            "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();"));
+            "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
+            "'advection_diffusion') "));
         advec_diff_operation.initialize(
           scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
       }

@@ -6,9 +6,8 @@
 // simulations
 #include <meltpooldg/simulations/advection_diffusion/advection_diffusion.hpp>
 #include <meltpooldg/simulations/reinit_circle/reinit_circle.hpp>
-#include <meltpooldg/simulations/reinit_circle_amr/reinit_circle_amr.hpp>
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
-#include <meltpooldg/simulations/flow_past_zylinder/flow_past_zylinder.hpp>
+#include <meltpooldg/simulations/flow_past_cylinder/flow_past_cylinder.hpp>
 #include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
 #include <meltpooldg/simulations/rising_bubble/rising_bubble.hpp>
 
@@ -28,36 +27,21 @@ namespace MeltPoolDG
          if (simulation_name == "reinit_circle")
            return std::make_shared<ReinitCircle::SimulationReinit<dim>>(parameter_file,
                                                                         mpi_communicator);
-         else if (simulation_name == "reinit_circle_amr")
-           {
-             return std::make_shared<ReinitCircleAMR::SimulationReinit<dim>>(parameter_file,
-                                                                             mpi_communicator);
-           }
          else if (simulation_name == "advection_diffusion")
-           {
              return std::make_shared<AdvectionDiffusion::SimulationAdvec<dim>>(parameter_file,
                                                                                mpi_communicator);
-           }
          else if (simulation_name == "rotating_bubble")
-           {
              return std::make_shared<RotatingBubble::SimulationRotatingBubble<dim>>(
                parameter_file, mpi_communicator);
-           }
-        else if (simulation_name == "flow_past_zylinder")
-          {
-            return std::make_shared<FlowPastZylinder::SimulationFlowPastZylinder<dim>>(
+        else if (simulation_name == "flow_past_cylinder")
+            return std::make_shared<FlowPastCylinder::SimulationFlowPastCylinder<dim>>(
               parameter_file, mpi_communicator);
-          }
         else if (simulation_name == "spurious_currents")
-          {
             return std::make_shared<SpuriousCurrents::SimulationSpuriousCurrents<dim>>(
               parameter_file, mpi_communicator);
-          }
         else if (simulation_name == "rising_bubble")
-          {
             return std::make_shared<RisingBubble::SimulationRisingBubble<dim>>(
               parameter_file, mpi_communicator);
-          }
         /* add your simulation here*/
         else
           AssertThrow(false,

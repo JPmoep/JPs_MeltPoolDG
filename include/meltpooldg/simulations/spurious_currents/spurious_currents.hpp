@@ -111,7 +111,8 @@ namespace MeltPoolDG
         void
         set_field_conditions()
         {
-          this->field_conditions.initial_field = std::make_shared<InitializePhi<dim>>();
+          this->attach_initial_condition( std::make_shared<InitializePhi<dim>>(),
+                                            "level_set");
           
           this->attach_initial_condition(
             std::make_shared<Functions::ZeroFunction<dim>>(dim), "navier_stokes_u");

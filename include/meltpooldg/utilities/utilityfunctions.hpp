@@ -33,6 +33,21 @@ namespace MeltPoolDG
       return tria_parallel != nullptr ? tria_parallel->get_communicator() : MPI_COMM_SELF;
     }
 
+    /**
+     * This function returns heaviside values for a given VectorizedArray. The limit to
+     * distinguish between 0 and 1 can be adjusted by the argument "limit". This function is particularly 
+     * suited in the context of MatrixFree routines. 
+     */
+    template<typename number>
+    VectorizedArray<number>
+    heaviside(const VectorizedArray<number> &in, const number limit=0.0)
+    {
+      VectorizedArray<number> out;
+      for (unsigned int v=0; v<VectorizedArray<number>::size(); ++v)
+        out = (in[v]>limit) ? 1 : 0;
+      return out;
+    }
+
     namespace CharacteristicFunctions
     {
       inline double

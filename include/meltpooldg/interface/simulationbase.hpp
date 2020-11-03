@@ -57,84 +57,11 @@ namespace MeltPoolDG
           " this->triangulation = std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator); "));
       set_boundary_conditions();
       set_field_conditions();
-    // @todo: shift to problems
-    //   AssertThrow(
-    //     this->field_conditions.initial_field,
-    //     ExcMessage(
-    //       "It seems that your SimulationBase object does not contain "
-    //       "a valid initial field function. A shared_ptr to your initial field "
-    //       "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
-    //       "this->field_conditions.initial_field = std::make_shared<MyInitializeFunc<dim>>();"));
     }
 
-    /*
-     * getter functions
+    /**
+     * Attach functions for field conditions
      */
-    virtual MPI_Comm
-    get_mpi_communicator() const
-    {
-      return this->mpi_communicator;
-    }
-    std::shared_ptr<FieldConditions<dim>>
-    get_field_conditions() const
-    {
-      return std::make_shared<FieldConditions<dim>>(this->field_conditions);
-    }
-    std::shared_ptr<TensorFunction<1, dim>>
-    get_advection_field() const
-    {
-      return this->field_conditions.advection_field;
-    }
-
-    const BoundaryConditions<dim> &
-    get_boundary_conditions() const
-    {
-      return this->boundary_conditions;
-    }
-    
-    auto
-    get_dirichlet_bc(const std::string problem_name) 
-    {
-      return boundary_conditions_map[problem_name]->dirichlet_bc;
-    }
-    
-    auto
-    get_neumann_bc(const std::string problem_name) 
-    {
-      return boundary_conditions_map[problem_name]->neumann_bc;
-    }
-  
-    const
-    std::vector<types::boundary_id> &
-    get_no_slip_id(const std::string problem_name)
-    {
-      return boundary_conditions_map[problem_name]->no_slip_bc;
-    }
-  
-    const
-    std::vector<types::boundary_id> &
-    get_fix_pressure_constant_id(const std::string problem_name)
-    {
-      if (!boundary_conditions_map[problem_name])
-        AssertThrow(false, ExcMessage("get_fix_pressure_constant_id: requested boundary condition not found"));
-      return boundary_conditions_map[problem_name]->fix_pressure_constant;
-    }
-    
-    const
-    std::vector<types::boundary_id> &
-    get_symmetry_id(const std::string problem_name)
-    {
-      if (!boundary_conditions_map[problem_name])
-        AssertThrow(false, ExcMessage("get_symmetry_id: requested boundary condition not found"));
-      return boundary_conditions_map[problem_name]->symmetry_bc;
-    }
-    
-    auto
-    get_initial_condition(const std::string operation_name) 
-    {
-      return field_conditions_map[operation_name]->initial_field;
-    }
-
     template <typename FunctionType>
     void
     attach_initial_condition( std::shared_ptr<FunctionType> initial_function,
@@ -145,6 +72,32 @@ namespace MeltPoolDG
       
       field_conditions_map[operation_name]->initial_field = initial_function;
     }
+
+    template <typename FunctionType>
+    void
+    attach_advection_field( std::shared_ptr<FunctionType> advection_velocity,
+                              const std::string operation_name)
+    {
+      if( !field_conditions_map[operation_name] )
+        field_conditions_map[operation_name] = std::make_shared<FieldConditions<dim>>();
+      
+      field_conditions_map[operation_name]->advection_field = advection_velocity;
+    }
+    
+    template <typename FunctionType>
+    void
+    attach_exact_solution( std::shared_ptr<FunctionType> exact_solution,
+                              const std::string operation_name)
+    {
+      if( !field_conditions_map[operation_name] )
+        field_conditions_map[operation_name] = std::make_shared<FieldConditions<dim>>();
+      
+      field_conditions_map[operation_name]->exact_solution_field = exact_solution;
+    }
+    
+    /**
+     * Attach functions for boundary conditions
+     */
     
     template <typename FunctionType>
     void
@@ -224,15 +177,85 @@ namespace MeltPoolDG
       bc.push_back(id); 
     }
 
+    /*
+     * getter functions
+     */
+    virtual MPI_Comm
+    get_mpi_communicator() const
+    {
+      return this->mpi_communicator;
+    }
+    
+    /**
+     * Getter functions for field conditions
+     */
+    auto
+    get_initial_condition(const std::string operation_name) 
+    {
+      return field_conditions_map[operation_name]->initial_field;
+    }
+    
+    std::shared_ptr<TensorFunction<1, dim>>
+    get_advection_field(const std::string operation_name) 
+    {
+      return field_conditions_map[operation_name]->advection_field;
+    }
+    
+    auto
+    get_exact_solution(const std::string operation_name) 
+    {
+      return field_conditions_map[operation_name]->exact_solution_field;
+    }
+    
+    /**
+     * Attach functions for boundary conditions
+     */
+    auto
+    get_dirichlet_bc(const std::string operation_name) 
+    {
+      return boundary_conditions_map[operation_name]->dirichlet_bc;
+    }
+    
+    auto
+    get_neumann_bc(const std::string operation_name) 
+    {
+      return boundary_conditions_map[operation_name]->neumann_bc;
+    }
+  
+    const
+    std::vector<types::boundary_id> &
+    get_no_slip_id(const std::string operation_name)
+    {
+      return boundary_conditions_map[operation_name]->no_slip_bc;
+    }
+  
+    const
+    std::vector<types::boundary_id> &
+    get_fix_pressure_constant_id(const std::string operation_name)
+    {
+      if (!boundary_conditions_map[operation_name])
+        AssertThrow(false, ExcMessage("get_fix_pressure_constant_id: requested boundary condition not found"));
+      return boundary_conditions_map[operation_name]->fix_pressure_constant;
+    }
+    
+    const
+    std::vector<types::boundary_id> &
+    get_symmetry_id(const std::string operation_name)
+    {
+      if (!boundary_conditions_map[operation_name])
+        AssertThrow(false, ExcMessage("get_symmetry_id: requested boundary condition not found"));
+      return boundary_conditions_map[operation_name]->symmetry_bc;
+    }
+    
+  public:
     const std::string                                               parameter_file;
     const MPI_Comm                                                  mpi_communicator;
     const dealii::ConditionalOStream                                pcout;
     Parameters<double>                                              parameters;
     std::shared_ptr<Triangulation<dim, spacedim>>                   triangulation;
-    FieldConditions<dim>                                            field_conditions; //@todo delete
-    BoundaryConditions<dim>                                         boundary_conditions; // @todo delete
-    std::map<std::string, std::shared_ptr<BoundaryConditions<dim>>> boundary_conditions_map;
+  private:
     std::map<std::string, std::shared_ptr<FieldConditions<dim>>>    field_conditions_map;
+    std::map<std::string, std::shared_ptr<BoundaryConditions<dim>>> boundary_conditions_map;
 
   };
 } // namespace MeltPoolDG

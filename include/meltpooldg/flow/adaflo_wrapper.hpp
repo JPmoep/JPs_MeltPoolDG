@@ -51,12 +51,12 @@ namespace Flow
         /*
          * Initial conditions of the navier stokes problem
          */
-       AssertThrow(base_in->get_initial_condition("navier_stokes_u"),
-         ExcMessage(
-           "It seems that your SimulationBase object does not contain "
-           "a valid initial field function. A shared_ptr to your initial field "
-           "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
-           "this->field_conditions.initial_field = std::make_shared<MyInitializeFunc<dim>>();"));
+        AssertThrow(base_in->get_initial_condition("navier_stokes_u"),
+        ExcMessage(
+          "It seems that your SimulationBase object does not contain "
+          "a valid initial field function for the level set field. A shared_ptr to your initial field "
+          "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+          "  this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), 'navier_stokes_u') "));
         navier_stokes.setup_problem(*base_in->get_initial_condition("navier_stokes_u"));
 
       }
@@ -84,37 +84,33 @@ namespace Flow
           dof_handler_meltpool, navier_stokes.user_rhs.block(0), navier_stokes.get_dof_handler_u());
       }
 
-      virtual 
-      VectorizedArray<double> &
-      get_density(const unsigned int cell, const unsigned int q)
+      VectorizedArray<double> & 
+      get_density(const unsigned int cell, const unsigned int q) override
       {
         return navier_stokes.get_matrix().begin_densities(cell)[q];   
       }
       
-      virtual 
       const VectorizedArray<double> &
-      get_density(const unsigned int cell, const unsigned int q) const
+      get_density(const unsigned int cell, const unsigned int q) const override
       {
         return navier_stokes.get_matrix().begin_densities(cell)[q];   
       }
       
-      virtual 
       VectorizedArray<double> &
-      get_viscosity(const unsigned int cell, const unsigned int q)
+      get_viscosity(const unsigned int cell, const unsigned int q) override
       {
         return navier_stokes.get_matrix().begin_viscosities(cell)[q];   
       }
       
-      virtual 
       const VectorizedArray<double> &
-      get_viscosity(const unsigned int cell, const unsigned int q) const
+      get_viscosity(const unsigned int cell, const unsigned int q) const override
       {
         return navier_stokes.get_matrix().begin_viscosities(cell)[q];   
       }
 
     private:
       /**
-       * 
+       * Reference to the dof_handler attached to scratch_data in the two_phase_flow_problem class
        */
         const DoFHandler<dim> & dof_handler_meltpool;
         
@@ -167,9 +163,8 @@ namespace Flow
         AssertThrow(false, ExcNotImplemented ());
       }
       
-      virtual 
       VectorizedArray<double> &
-      get_density(const unsigned int cell, const unsigned int q)
+      get_density(const unsigned int cell, const unsigned int q) override
       {
         AssertThrow(false, ExcNotImplemented ());
         (void) cell;
@@ -177,9 +172,8 @@ namespace Flow
         return dummy;   
       }
       
-      virtual 
       const VectorizedArray<double> &
-      get_density(const unsigned int cell, const unsigned int q) const
+      get_density(const unsigned int cell, const unsigned int q) const override
       {
         AssertThrow(false, ExcNotImplemented ());
         (void) cell;
@@ -187,9 +181,8 @@ namespace Flow
         return dummy;   
       }
       
-      virtual 
       VectorizedArray<double> &
-      get_viscosity(const unsigned int cell, const unsigned int q)
+      get_viscosity(const unsigned int cell, const unsigned int q) override
       {
         AssertThrow(false, ExcNotImplemented ());
         (void) cell;
@@ -197,9 +190,8 @@ namespace Flow
         return dummy;   
       }
       
-      virtual 
       const VectorizedArray<double> &
-      get_viscosity(const unsigned int cell, const unsigned int q) const
+      get_viscosity(const unsigned int cell, const unsigned int q) const override
       {
         AssertThrow(false, ExcNotImplemented ());
         (void) cell;

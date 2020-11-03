@@ -1,7 +1,7 @@
 {
   "base" : {
     "problem name": "two_phase_flow",
-    "application name": "flow_past_zylinder",
+    "application name": "flow_past_cylinder",
     "dimension": "2",
     "degree": "2"
   },
@@ -10,7 +10,7 @@
     "flow viscosity": "0.005",
     "flow surface tension coefficient": "0.01",
     "flow start time": "0.0",
-    "flow end time": "8.0",
+    "flow end time": "2.0",
     "flow time step size": "0.02"
   },
   "levelset" : {

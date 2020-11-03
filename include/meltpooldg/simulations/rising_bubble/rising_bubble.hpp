@@ -40,26 +40,6 @@ namespace MeltPoolDG
         }
       };
 
-      /* for constant Dirichlet conditions we could also use the ConstantFunction
-       * utility from dealii
-       */
-      template <int dim>
-      class DirichletCondition : public Function<dim>
-      {
-      public:
-        DirichletCondition()
-          : Function<dim>()
-        {}
-
-        double
-        value(const Point<dim> &p, const unsigned int component = 0) const
-        {
-          (void)p;
-          (void)component;
-          return -1.0;
-        }
-      };
-
       /*
        *      This class collects all relevant input data for the level set simulation
        */
@@ -120,7 +100,7 @@ namespace MeltPoolDG
         void
         set_boundary_conditions()
         {
-           auto dirichlet = std::make_shared<DirichletCondition<dim>>();
+           auto dirichlet = std::make_shared<Functions::ConstantFunction<dim>>(-1.0);
 
            // lower, right and left faces
            this->attach_no_slip_boundary_condition(0, "navier_stokes_u");
@@ -140,7 +120,8 @@ namespace MeltPoolDG
         void
         set_field_conditions()
         {
-            this->field_conditions.initial_field = std::make_shared<InitialValuesLS<dim>>();
+            this->attach_initial_condition( std::make_shared<InitialValuesLS<dim>>(),
+                                            "level_set");
             this->attach_initial_condition( std::shared_ptr<Function<dim> >(new Functions::ZeroFunction<dim>(dim)),
                                             "navier_stokes_u");
         }

@@ -1,4 +1,10 @@
- #pragma once
+/* ---------------------------------------------------------------------
+ *
+ * Author: Magdalena Schreter, Peter Münch, TUM, October 2020
+ *
+ * ---------------------------------------------------------------------*/
+
+#pragma once
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
  #include <adaflo/parameters.h>

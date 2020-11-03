@@ -109,13 +109,23 @@ namespace MeltPoolDG
         /*
          *  set initial conditions of the levelset function
          */
+        AssertThrow(base_in->get_initial_condition("level_set"),
+        ExcMessage(
+          "It seems that your SimulationBase object does not contain "
+          "a valid initial field function for the level set field. A shared_ptr to your initial field "
+          "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+          "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
+          "'level_set') "));
         VectorType solution_level_set;
         scratch_data->initialize_dof_vector(solution_level_set);
-        VectorTools::project(scratch_data->get_mapping(),
+        
+        auto ic = base_in->get_initial_condition("level_set");
+
+        dealii::VectorTools::project(scratch_data->get_mapping(),
                              dof_handler,
                              constraints,
                              scratch_data->get_quadrature(),
-                             *base_in->get_field_conditions()->initial_field,
+                             *ic,
                              solution_level_set);
 
         solution_level_set.update_ghost_values();
