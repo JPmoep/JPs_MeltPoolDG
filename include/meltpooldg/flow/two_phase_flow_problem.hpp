@@ -248,7 +248,6 @@ namespace MeltPoolDG
       void
       compute_gravity_force(BlockVectorType & vec, const double gravity, const bool add = false) const
       {
-          
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
           [&](const auto &matrix_free, auto & vec, const auto &, auto macro_cells) {
             
@@ -312,6 +311,7 @@ namespace MeltPoolDG
                                             force_rhs,
                                             density,
                                             viscosity,
+                                            level_set_operation.solution_level_set,
                                             level_set_operation.solution_curvature,
                                             level_set_operation.solution_normal_vector);
 
@@ -378,6 +378,7 @@ namespace MeltPoolDG
                                       force_rhs,
                                       density,
                                       viscosity,
+                                      level_set_operation.solution_level_set,
                                       level_set_operation.solution_curvature,
                                       level_set_operation.solution_normal_vector );
       }
