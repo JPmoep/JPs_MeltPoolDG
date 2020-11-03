@@ -48,7 +48,6 @@ namespace MeltPoolDG
           return UtilityFunctions::CharacteristicFunctions::sgn(
             UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius));
         }
-
       };
 
       template <int dim>
@@ -126,10 +125,8 @@ namespace MeltPoolDG
         void
         set_field_conditions()
         {
-          this->attach_initial_condition( std::make_shared<InitializePhi<dim>>(),
-                                            "level_set");
-          this->attach_exact_solution( std::make_shared<ExactSolution<dim>>(0.01),
-                                            "level_set");
+          this->attach_initial_condition(std::make_shared<InitializePhi<dim>>(), "level_set");
+          this->attach_exact_solution(std::make_shared<ExactSolution<dim>>(0.01), "level_set");
         }
 
       private:

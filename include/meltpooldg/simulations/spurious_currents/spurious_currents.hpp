@@ -31,14 +31,14 @@ namespace MeltPoolDG
         {}
         virtual double
         value(const Point<dim> &p, const unsigned int component = 0) const
-        {    
-            (void) component;
-            
-            // set radius of bubble to 0.5, slightly shifted away from the center
-            Point<dim> center;
-            for (unsigned int d=0; d<dim; ++d)
-              center[d] = 0.02+0.01*d;
-            
+        {
+          (void)component;
+
+          // set radius of bubble to 0.5, slightly shifted away from the center
+          Point<dim> center;
+          for (unsigned int d = 0; d < dim; ++d)
+            center[d] = 0.02 + 0.01 * d;
+
           return UtilityFunctions::CharacteristicFunctions::sgn(
             UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5));
         }
@@ -66,7 +66,7 @@ namespace MeltPoolDG
 
           if constexpr (dim == 2)
             {
-              GridGenerator::hyper_cube (*this->triangulation, -2.5, 2.5);
+              GridGenerator::hyper_cube(*this->triangulation, -2.5, 2.5);
               this->triangulation->refine_global(this->parameters.base.global_refinements);
             }
           else
@@ -78,7 +78,8 @@ namespace MeltPoolDG
         void
         set_boundary_conditions() override
         {
-          this->attach_dirichlet_boundary_condition(0,  std::make_shared<Functions::ConstantFunction<dim>>(-1), "level_set");
+          this->attach_dirichlet_boundary_condition(
+            0, std::make_shared<Functions::ConstantFunction<dim>>(-1), "level_set");
           this->attach_no_slip_boundary_condition(0, "navier_stokes_u");
           this->attach_fix_pressure_constant_condition(0, "navier_stokes_p");
         }
@@ -86,10 +87,9 @@ namespace MeltPoolDG
         void
         set_field_conditions() override
         {
-          this->attach_initial_condition( std::make_shared<InitializePhi<dim>>(),
-                                         "level_set");
-          this->attach_initial_condition( std::make_shared<Functions::ZeroFunction<dim>>(dim),
-                                            "navier_stokes_u");
+          this->attach_initial_condition(std::make_shared<InitializePhi<dim>>(), "level_set");
+          this->attach_initial_condition(std::make_shared<Functions::ZeroFunction<dim>>(dim),
+                                         "navier_stokes_u");
         }
       };
 
