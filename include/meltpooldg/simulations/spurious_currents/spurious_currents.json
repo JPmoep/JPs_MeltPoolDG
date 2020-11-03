@@ -4,7 +4,8 @@
     "application name": "spurious_currents",
     "dimension": "2",
     "degree": "2",
-    "gravity": "0.0"
+    "global refinements": "6",
+    "gravity": "0.00"
   },
   "flow" : {
     "flow density"                     : "1.0",
@@ -22,17 +23,25 @@
     "ls do matrix free": "true"
   },
   "reinitialization" : {
-    "reinit max n steps": "5",
+    "reinit max n steps": "10",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
     "reinit eps scale factor": "0.5"
   },
+  "normal vector": { 
+    "normal vec damping scale factor": "0.05",
+    "normal vec do matrix free": "true"},
+  "curvature" : {
+    "curv damping scale factor": "0.000",
+    "curv do matrix free": "false"
+  },
   "Time stepping" : {
     "scheme"           : "bdf_2"
   },
   "paraview" : {
-    "paraview do ouput": "false"
+    "paraview do output": "true",
+    "paraview filename": "sol_spurious_currents"
   },
   "Navier-Stokes" : {
     "physical type"      : "incompressible",

@@ -1,9 +1,14 @@
+/* ---------------------------------------------------------------------
+ *
+ * Author: Peter Münch, Magdalena Schreter, TUM, October 2020
+ *
+ * ---------------------------------------------------------------------*/
 #pragma once
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
 
-#  include <adaflo/navier_stokes.h>
-#  include <adaflo/parameters.h>
+#include <adaflo/navier_stokes.h>
+#include <adaflo/parameters.h>
 
 #include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 #include <meltpooldg/flow/flow_base.hpp>
@@ -41,7 +46,7 @@ namespace Flow
           navier_stokes.set_no_slip_boundary(no_slip_id);
         for (const auto& dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes_u"))
           navier_stokes.set_velocity_dirichlet_boundary(dirichlet_bc.first, dirichlet_bc.second);
-         /*
+        /*
          * Boundary conditions for the pressure field
          */
         for (const auto& neumann_bc : base_in->get_neumann_bc("navier_stokes_p"))
@@ -58,7 +63,6 @@ namespace Flow
           "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
           "  this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), 'navier_stokes_u') "));
         navier_stokes.setup_problem(*base_in->get_initial_condition("navier_stokes_u"));
-
       }
 
       /**

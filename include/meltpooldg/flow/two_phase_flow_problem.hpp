@@ -67,7 +67,6 @@ namespace MeltPoolDG
             
             //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_force_rhs(force_rhs);
-
             // solver Navier-Stokes problem
             flow_operation->solve();
 
@@ -182,7 +181,6 @@ namespace MeltPoolDG
          */
         level_set_operation.initialize(
           scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
-
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
                                                               dof_idx,
@@ -264,7 +262,6 @@ namespace MeltPoolDG
                     force[dim - 1] -= gravity * flow_operation->get_density(cell, q);
                     force_values.submit_value(force, q);
                   }
-                
                 force_values.integrate_scatter(true, false, vec);
               }
           },
@@ -314,7 +311,6 @@ namespace MeltPoolDG
                                             level_set_operation.solution_level_set,
                                             level_set_operation.solution_curvature,
                                             level_set_operation.solution_normal_vector);
-
 
           /*
            *  output advected field
@@ -371,16 +367,15 @@ namespace MeltPoolDG
                                               parameters.paraview.n_digits_timestep,
                                               parameters.paraview.n_groups);
 
+          // clear ghost values
+          VectorTools::zero_out_ghosts( advection_velocity,
+                                        force_rhs,
+                                        density,
+                                        viscosity,
+                                        level_set_operation.solution_level_set,
+                                        level_set_operation.solution_curvature,
+                                        level_set_operation.solution_normal_vector );
         }
-
-        // clear ghost values
-        VectorTools::zero_out_ghosts( advection_velocity,
-                                      force_rhs,
-                                      density,
-                                      viscosity,
-                                      level_set_operation.solution_level_set,
-                                      level_set_operation.solution_curvature,
-                                      level_set_operation.solution_normal_vector );
       }
 
     private:

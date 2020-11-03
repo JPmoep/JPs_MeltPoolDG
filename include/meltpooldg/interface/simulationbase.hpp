@@ -189,19 +189,22 @@ namespace MeltPoolDG
     /**
      * Getter functions for field conditions
      */
-    auto
+    const
+    std::shared_ptr<Function<dim>>&
     get_initial_condition(const std::string operation_name) 
     {
       return field_conditions_map[operation_name]->initial_field;
     }
     
-    std::shared_ptr<TensorFunction<1, dim>>
+    const
+    std::shared_ptr<TensorFunction<1, dim>>&
     get_advection_field(const std::string operation_name) 
     {
       return field_conditions_map[operation_name]->advection_field;
     }
     
-    auto
+    const
+    std::shared_ptr<Function<dim>>&
     get_exact_solution(const std::string operation_name) 
     {
       return field_conditions_map[operation_name]->exact_solution_field;
@@ -210,13 +213,15 @@ namespace MeltPoolDG
     /**
      * Attach functions for boundary conditions
      */
-    auto
+    const
+    auto&
     get_dirichlet_bc(const std::string operation_name) 
     {
       return boundary_conditions_map[operation_name]->dirichlet_bc;
     }
     
-    auto
+    const
+    auto&
     get_neumann_bc(const std::string operation_name) 
     {
       return boundary_conditions_map[operation_name]->neumann_bc;
