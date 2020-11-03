@@ -54,4 +54,3 @@ jobs:
 
          echo $command
          docker run -t dealii/dealii:master-focal /bin/sh -c "$command";
-
