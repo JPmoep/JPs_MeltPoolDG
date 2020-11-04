@@ -31,10 +31,12 @@ namespace MeltPoolDG
                     const unsigned int                                        idx,
                     std::shared_ptr<SimulationBase<dim>>                      base_in)
         : dof_handler_meltpool(scratch_data.get_dof_handler(idx))
+        , timer(std::cout, TimerOutput::never, TimerOutput::wall_times)
         , navier_stokes(base_in->parameters.adaflo_params.get_parameters(),
                         *const_cast<parallel::distributed::Triangulation<dim> *>(
                           dynamic_cast<const parallel::distributed::Triangulation<dim> *>(
-                            &scratch_data.get_triangulation())))
+                            &scratch_data.get_triangulation())),
+                        &timer)
       {
         /*
          * Boundary conditions for the velocity field
@@ -122,6 +124,11 @@ namespace MeltPoolDG
        * Reference to the dof_handler attached to scratch_data in the two_phase_flow_problem class
        */
       const DoFHandler<dim> &dof_handler_meltpool;
+
+      /**
+       * Timer
+       */
+      TimerOutput timer;
 
       /**
        * Reference to the actual Navier-Stokes solver from adaflo

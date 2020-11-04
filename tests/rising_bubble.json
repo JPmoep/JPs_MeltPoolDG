@@ -49,6 +49,7 @@
     "velocity degree"    : "2",
     "viscosity"          : "0.01",
     "adaflo" : {
+      "Output options" : {"output verbosity" : "1"},
       "Navier-Stokes" : {
         "dimension"         : "2",
         "global refinements" : "0",
