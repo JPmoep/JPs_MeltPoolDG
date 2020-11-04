@@ -85,7 +85,7 @@ namespace MeltPoolDG
       }
 
       template <int dim>
-      inline double infinte_line(const Point<dim>& p, Point<dim>& fix_p1, Point<dim>& fix_p2)
+      inline double infinte_line(const Point<dim>& p, const Point<dim>& fix_p1, const Point<dim>& fix_p2)
       {
         if (dim == 3)
           return std::sqrt(std::pow((fix_p2[1]-fix_p1[1])*(fix_p1[2]-p[2]) - (fix_p2[2]-fix_p1[2])*(fix_p1[1] - p[1]), 2) + 

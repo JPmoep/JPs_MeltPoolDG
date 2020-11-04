@@ -29,7 +29,6 @@ namespace MeltPoolDG
       public:
         InitializePhi()
           : Function<dim>()
-          , epsInterface(0.0313)
         {}
         virtual double
         value(const Point<dim> &p, const unsigned int component = 0) const
@@ -124,20 +123,6 @@ namespace MeltPoolDG
           return UtilityFunctions::CharacteristicFunctions::sgn(d_min);
         }
 
-        void
-        setEpsInterface(double eps)
-        {
-          this->epsInterface = eps;
-        }
-
-        double
-        getEpsInterface()
-        {
-          return this->epsInterface;
-        }
-
-      private:
-        double epsInterface;
       };
 
       template <int dim>
@@ -264,8 +249,8 @@ namespace MeltPoolDG
               const double x  = p[0];
               const double y  = p[1];
 
-              value_[0] = 4 * y;  // pi/314 * (50 - y);      //4*y;
-              value_[1] = -4 * x; // pi/314 * (x - 50);      //-4*x;
+              value_[0] = 4*y;
+              value_[1] = -4*x;
             }
           else
             AssertThrow(false, ExcMessage("Advection field for dim!=2 not implemented"));
