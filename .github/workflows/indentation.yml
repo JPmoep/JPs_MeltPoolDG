@@ -17,7 +17,7 @@ jobs:
         source: '.'
         exclude: ''
         extensions: 'hpp,cpp'
-        clangFormatVersion: 11
+        clangFormatVersion: 10
         inplace: true
     - run: |
         git diff
