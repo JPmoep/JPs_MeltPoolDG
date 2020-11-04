@@ -178,11 +178,13 @@ namespace MeltPoolDG
           //   NavierStokesMatrix::begin_viscosity(). However, we do not actually
           //   use these values, since we fill the density and viscosity
           //   differently.
-          adaflo_params.params.density_diff         = 1.0;
-          adaflo_params.params.viscosity_diff       = 1.0;
+          adaflo_params.params.density_diff   = 1.0;
+          adaflo_params.params.viscosity_diff = 1.0;
 
-          flow.density = (adaflo_params.params.density > 0.0 ) ? adaflo_params.params.density : flow.density;
-          flow.viscosity = (adaflo_params.params.viscosity> 0.0 ) ? adaflo_params.params.viscosity: flow.viscosity;
+          flow.density =
+            (adaflo_params.params.density > 0.0) ? adaflo_params.params.density : flow.density;
+          flow.viscosity = (adaflo_params.params.viscosity > 0.0) ? adaflo_params.params.viscosity :
+                                                                    flow.viscosity;
 
           /// synchronize time stepping schemes
           adaflo_params.params.start_time           = flow.start_time;
