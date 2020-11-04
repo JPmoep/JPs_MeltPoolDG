@@ -318,7 +318,9 @@ namespace MeltPoolDG
           constexpr types::boundary_id inflow_bc  = 42;
           constexpr types::boundary_id do_nothing = 0;
 
-          this->boundary_conditions.dirichlet_bc[inflow_bc] = std::make_shared<DirichletCondition<dim>>();
+          this->attach_dirichlet_boundary_condition(inflow_bc,
+                                                    std::make_shared<DirichletCondition<dim>>(),
+                                                    this->parameters.base.problem_name);
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
            *  due to the hyperbolic nature of the analyzed problem
@@ -362,9 +364,9 @@ namespace MeltPoolDG
         void
         set_field_conditions()
         {
-          this->field_conditions.initial_field        = std::make_shared<InitializePhi<dim>>();
-          this->field_conditions.advection_field      = std::make_shared<AdvectionField<dim>>();
-          this->field_conditions.exact_solution_field = std::make_shared<ExactSolution<dim>>(0.01);
+          this->attach_initial_condition(std::make_shared<InitializePhi<dim>>(), "level_set");
+          this->attach_advection_field(std::make_shared<AdvectionField<dim>>(), "level_set");
+          this->attach_exact_solution(std::make_shared<ExactSolution<dim>>(0.01), "level_set");
         }
 
       private:
