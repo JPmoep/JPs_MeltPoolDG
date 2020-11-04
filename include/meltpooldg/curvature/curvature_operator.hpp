@@ -138,7 +138,8 @@ namespace MeltPoolDG
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
                 curvature.reinit(cell);
-                curvature.gather_evaluate(src, true, true);
+                curvature.read_dof_values_plain(src);
+                curvature.evaluate(true, true);
 
                 for (unsigned int q_index = 0; q_index < curvature.n_q_points; ++q_index)
                   {
@@ -151,7 +152,7 @@ namespace MeltPoolDG
           },
           dst,
           src,
-          true);
+          true /*zero out dst*/);
       }
 
       void
@@ -183,7 +184,7 @@ namespace MeltPoolDG
           },
           dst,
           src,
-          true);
+          true /*zero out dst*/);
       }
 
     private:

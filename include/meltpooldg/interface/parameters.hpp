@@ -1,6 +1,9 @@
 #pragma once
+
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/parameter_handler.h>
+
+#include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 // c++
 #include <fstream>
 #include <iostream>
@@ -20,6 +23,7 @@ namespace MeltPoolDG
     int          n_q_points_1d       = -1;
     bool         do_print_parameters = true;
     bool         do_simplex          = false;
+    number       gravity             = 0.0;
   };
 
   template <typename number = double>
@@ -69,8 +73,21 @@ namespace MeltPoolDG
     unsigned int max_n_steps     = 1000000;
     bool         do_matrix_free  = false;
     bool         do_print_l2norm = true;
-    AdvectionDiffusionData()
-    {}
+  };
+
+  template <typename number = double>
+  struct FlowData
+  {
+    number       density                     = 0.0;
+    number       density_difference          = 0.0;
+    number       viscosity                   = 0.0;
+    number       viscosity_difference        = 0.0;
+    number       surface_tension_coefficient = 0.0;
+    std::string  solver_type                 = "incompressible";
+    number       start_time                  = 0.0;
+    number       end_time                    = 1.0;
+    number       time_step_size              = 0.05;
+    unsigned int max_n_steps                 = 1000000;
   };
 
   template <typename number = double>
@@ -144,6 +161,39 @@ namespace MeltPoolDG
        */
       if (amr.min_grid_refinement_level == 1)
         amr.min_grid_refinement_level = base.global_refinements;
+
+        /*
+         *  parameters for adaflo
+         */
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+      adaflo_params.parse_parameters(parameter_filename);
+
+      if (base.problem_name == "two_phase_flow")
+        {
+          // WARNING: by setting the differences to a non-zero value we force
+          //   adaflo to assume that we are running a simulation with variable
+          //   coefficients, i.e., it allocates memory for the data structures
+          //   variable_densities and variable_viscosities, which are accessed
+          //   during NavierStokesMatrix::begin_densities() and
+          //   NavierStokesMatrix::begin_viscosity(). However, we do not actually
+          //   use these values, since we fill the density and viscosity
+          //   differently.
+          adaflo_params.params.density_diff   = 1.0;
+          adaflo_params.params.viscosity_diff = 1.0;
+
+          flow.density =
+            (adaflo_params.params.density > 0.0) ? adaflo_params.params.density : flow.density;
+          flow.viscosity = (adaflo_params.params.viscosity > 0.0) ? adaflo_params.params.viscosity :
+                                                                    flow.viscosity;
+
+          /// synchronize time stepping schemes
+          adaflo_params.params.start_time           = flow.start_time;
+          adaflo_params.params.end_time             = flow.end_time;
+          adaflo_params.params.time_step_size_start = flow.time_step_size;
+          adaflo_params.params.time_step_size_min   = flow.time_step_size;
+          adaflo_params.params.time_step_size_max   = flow.time_step_size;
+        }
+#endif
     }
 
     void
@@ -197,6 +247,7 @@ namespace MeltPoolDG
                           base.do_print_parameters,
                           "Sets this parameter to true to list parameters in output");
         prm.add_parameter("do simplex", base.do_simplex, "Use simplices");
+        prm.add_parameter("gravity", base.gravity, "Set the value for the gravity");
       }
       prm.leave_subsection();
       /*
@@ -370,7 +421,40 @@ namespace MeltPoolDG
                           "Defines if the l2norm of the curvature result should be printed)");
       }
       prm.leave_subsection();
-
+      /*
+       *   flow
+       */
+      prm.enter_subsection("flow");
+      {
+        prm.add_parameter("flow density", flow.density, "density of the flow field");
+        prm.add_parameter("flow density difference",
+                          flow.density_difference,
+                          "density difference of the two-phase flow field");
+        prm.add_parameter("flow viscosity", flow.viscosity, "viscosity of the flow field");
+        prm.add_parameter("flow viscosity difference",
+                          flow.viscosity_difference,
+                          "viscosity difference of the two-phase flow field");
+        prm.add_parameter("flow density", flow.density, "density of the flow field");
+        prm.add_parameter("flow surface tension coefficient",
+                          flow.surface_tension_coefficient,
+                          "constant coefficient for calculating surface tension");
+        prm.add_parameter("flow solver type", flow.solver_type, "solver type of the flow problem");
+        prm.add_parameter("flow start time",
+                          flow.start_time,
+                          "Defines the start time for the solution of the levelset problem");
+        prm.add_parameter("flow end time",
+                          flow.end_time,
+                          "Sets the end time for the solution of the levelset problem");
+        prm.add_parameter("flow time step size",
+                          flow.time_step_size,
+                          "Sets the step size for time stepping. For non-uniform "
+                          "time stepping, this parameter determines the size of the first "
+                          "time step.");
+        prm.add_parameter("flow max n steps",
+                          flow.max_n_steps,
+                          "Sets the maximum number of flow steps");
+      }
+      prm.leave_subsection();
       /*
        *   paraview
        */
@@ -449,10 +533,12 @@ namespace MeltPoolDG
     LevelSetData<number>           ls;
     ReinitializationData<number>   reinit;
     AdvectionDiffusionData<number> advec_diff;
+    FlowData<number>               flow;
     NormalVectorData<number>       normal_vec;
     CurvatureData<number>          curv;
     ParaviewData<number>           paraview;
     OutputData<number>             output;
+    Flow::AdafloWrapperParameters  adaflo_params;
   };
 
 

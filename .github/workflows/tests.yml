@@ -15,8 +15,18 @@ jobs:
     - uses: actions/checkout@v2
     - name: setup
       run: |
-         docker pull dealii/dealii:master-focal
-         docker run -t dealii/dealii:master-focal /bin/sh -c "git clone https://github.com/${{ github.repository }} && cd MeltPoolDG && git fetch origin ${{ github.ref }} && git checkout FETCH_HEAD && git --no-pager  log | head -n50 && mkdir build && cd build && cmake .. && make -j2 && ctest -V";
+         command="git clone https://github.com/${{ github.repository }} && \ 
+                  cd MeltPoolDG                                         && \
+                  git fetch origin ${{ github.ref }}                    && \ 
+                  git checkout FETCH_HEAD                               && \
+                  mkdir build                                           && \ 
+                  cd build                                              && \ 
+                  cmake ..                                              && \ 
+                  make -j2                                              && \ 
+                  ctest -V";
+
+         echo $command
+         docker run -t dealii/dealii:master-focal /bin/sh -c "$command";
 
   build-adaflo:
 
@@ -26,6 +36,21 @@ jobs:
     - uses: actions/checkout@v2
     - name: setup
       run: |
-         docker pull dealii/dealii:master-focal
-         docker run -t dealii/dealii:master-focal /bin/sh -c "git clone https://github.com/kronbichler/adaflo.git && mkdir adaflo-build && cd adaflo-build && cmake ../adaflo && make -j2 adaflo && git clone https://github.com/${{ github.repository }} && cd MeltPoolDG && git fetch origin ${{ github.ref }} && git checkout FETCH_HEAD && git --no-pager  log | head -n50 && cd .. && mkdir MeltPoolDG-build && cd MeltPoolDG-build && cmake ../MeltPoolDG -D ADAFLO_LIB=/home/dealii/adaflo-build/ -D ADAFLO_INCLUDE=/home/dealii/adaflo/include/ && make -j2 && ctest -V";
+         command="git clone https://github.com/MeltPoolDG/adaflo.git    && \
+          mkdir adaflo-build                                    && \
+          cd adaflo-build                                       && \
+          cmake ../adaflo                                       && \
+          make -j2 adaflo                                       && \
+          git clone https://github.com/${{ github.repository }} && \
+          cd MeltPoolDG                                         && \
+          git fetch origin ${{ github.ref }}                    && \
+          git checkout FETCH_HEAD                               && \
+          cd ..                                                 && \
+          mkdir MeltPoolDG-build                                && \ 
+          cd MeltPoolDG-build                                   && \
+          cmake ../MeltPoolDG -D ADAFLO_LIB=/home/dealii/adaflo-build/ -D ADAFLO_INCLUDE=/home/dealii/adaflo/include/ && \
+          make -j2                                              && \
+          ctest -V";
 
+         echo $command
+         docker run -t dealii/dealii:master-focal /bin/sh -c "$command";
