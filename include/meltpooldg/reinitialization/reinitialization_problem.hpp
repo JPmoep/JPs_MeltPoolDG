@@ -165,9 +165,7 @@ namespace MeltPoolDG
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
             if (base_in->parameters.base.do_simplex)
               scratch_data->attach_quadrature(
-                Simplex::QGauss<1>(base_in->parameters.base.n_q_points_1d));
-            // dim == 2 ? (base_in->parameters.base.n_q_points_1d == 1 ? 3 : 7) :
-            //(base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
+                Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
             else
 #endif
               quad_idx =
