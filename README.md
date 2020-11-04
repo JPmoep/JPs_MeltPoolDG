@@ -26,6 +26,10 @@ make test
 
 ![alt text](doc/MeltPoolDG.png?raw=true)
 
+### Documentation
+
+The documentation can be found under https://meltpooldg.github.io/MeltPoolDG/.
+
 ### How to add, build and run a simulation
 
 In the `./include/meltpooldg/simulations` folder you find some example simulations. If you would like to create an additional simulation, e.g. "vortex_bubble", follow the subsequent steps:

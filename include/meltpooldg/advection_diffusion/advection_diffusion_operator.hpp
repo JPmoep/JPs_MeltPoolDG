@@ -18,7 +18,7 @@ namespace MeltPoolDG
   {
     using namespace dealii;
 
-    template <int dim, int comp = 0, typename number = double>
+    template <int dim, typename number = double>
     class AdvectionDiffusionOperator
       : public OperatorBase<number,
                             LinearAlgebra::distributed::Vector<number>,
@@ -36,11 +36,14 @@ namespace MeltPoolDG
       // clang-format off
     AdvectionDiffusionOperator( const ScratchData<dim>               &scratch_data_in, 
                                 const BlockVectorType                &advection_velocity_in,
-                                const AdvectionDiffusionData<number> &data_in )
+                                const AdvectionDiffusionData<number> &data_in,
+                                const unsigned int                   dof_idx_in,
+                                const unsigned int                   quad_idx_in )
     : scratch_data        ( scratch_data_in       )
     , advection_velocity  ( advection_velocity_in )
     , data                ( data_in               )
     {
+      this->reset_indices(dof_idx_in, quad_idx_in);
     }
       // clang-format on
 
@@ -61,8 +64,8 @@ namespace MeltPoolDG
 
 
         FEValues<dim> fe_values(scratch_data.get_mapping(),
-                                scratch_data.get_dof_handler(comp).get_fe(),
-                                scratch_data.get_quadrature(comp),
+                                scratch_data.get_dof_handler(this->dof_idx).get_fe(),
+                                scratch_data.get_quadrature(this->quad_idx),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
 
@@ -83,7 +86,7 @@ namespace MeltPoolDG
 
         std::vector<Tensor<1, dim>> a(n_q_points, Tensor<1, dim>());
 
-        for (const auto &cell : scratch_data.get_dof_handler(comp).active_cell_iterators())
+        for (const auto &cell : scratch_data.get_dof_handler(this->dof_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               cell_matrix = 0;
@@ -142,8 +145,8 @@ namespace MeltPoolDG
               // assembly
               cell->get_dof_indices(local_dof_indices);
 
-              scratch_data.get_constraint(comp).distribute_local_to_global(
-                cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
+              scratch_data.get_constraint(this->dof_idx)
+                .distribute_local_to_global(cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
             }
 
         matrix.compress(VectorOperation::add);
@@ -163,11 +166,9 @@ namespace MeltPoolDG
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &matrix_free, auto &dst, const auto &src, auto cell_range) {
             FECellIntegrator<dim, 1, number>   advected_field(matrix_free,
-                                                            comp /*dof_idx*/,
-                                                            comp /*quad_idx*/);
-            FECellIntegrator<dim, dim, number> velocity(matrix_free,
-                                                        comp /*dof_idx*/,
-                                                        comp /*quad_idx*/);
+                                                            this->dof_idx,
+                                                            this->quad_idx);
+            FECellIntegrator<dim, dim, number> velocity(matrix_free, this->dof_idx, this->quad_idx);
 
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
@@ -214,11 +215,9 @@ namespace MeltPoolDG
         scratch_data.get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &matrix_free, auto &dst, const auto &src, auto macro_cells) {
             FECellIntegrator<dim, 1, number, VectorizedArrayType> advected_field(matrix_free,
-                                                                                 comp /*dof_idx*/,
-                                                                                 comp /*quad_idx*/);
-            FECellIntegrator<dim, dim, number>                    velocity(matrix_free,
-                                                        comp /*dof_idx*/,
-                                                        comp /*quad_idx*/);
+                                                                                 this->dof_idx,
+                                                                                 this->quad_idx);
+            FECellIntegrator<dim, dim, number> velocity(matrix_free, this->dof_idx, this->quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {

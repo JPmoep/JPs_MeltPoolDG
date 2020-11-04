@@ -20,7 +20,7 @@ namespace MeltPoolDG
 {
   namespace NormalVector
   {
-    template <int dim, unsigned int comp, typename number = double>
+    template <int dim, typename number = double>
     class NormalVectorOperator
       : public OperatorBase<number,
                             LinearAlgebra::distributed::BlockVector<number>,
@@ -32,10 +32,15 @@ namespace MeltPoolDG
       using VectorizedArrayType = VectorizedArray<number>;
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;
 
-      NormalVectorOperator(const ScratchData<dim> &scratch_data_in, const double damping_in)
+      NormalVectorOperator(const ScratchData<dim> &scratch_data_in,
+                           const double            damping_in,
+                           const unsigned int      dof_idx_in,
+                           const unsigned int      quad_idx_in)
         : scratch_data(scratch_data_in)
         , damping(damping_in)
-      {}
+      {
+        this->reset_indices(dof_idx_in, quad_idx_in);
+      }
 
       void
       assemble_matrixbased(const VectorType &level_set_in,
@@ -46,12 +51,12 @@ namespace MeltPoolDG
         const auto &mapping = scratch_data.get_mapping();
 
         FEValues<dim> fe_values(mapping,
-                                scratch_data.get_dof_handler(comp).get_fe(),
-                                scratch_data.get_quadrature(comp),
+                                scratch_data.get_dof_handler(this->dof_idx).get_fe(),
+                                scratch_data.get_quadrature(this->quad_idx),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
 
-        const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell(comp);
+        const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell(this->dof_idx);
 
         FullMatrix<double>                   normal_cell_matrix(dofs_per_cell, dofs_per_cell);
         std::vector<Vector<double>>          normal_cell_rhs(dim, Vector<double>(dofs_per_cell));
@@ -64,7 +69,7 @@ namespace MeltPoolDG
         matrix = 0.0;
         rhs    = 0.0;
 
-        for (const auto &cell : scratch_data.get_dof_handler(comp).active_cell_iterators())
+        for (const auto &cell : scratch_data.get_dof_handler(this->dof_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               fe_values.reinit(cell);
@@ -108,13 +113,11 @@ namespace MeltPoolDG
               // assembly
               cell->get_dof_indices(local_dof_indices);
 
-              scratch_data.get_constraint(comp).distribute_local_to_global(normal_cell_matrix,
-                                                                           local_dof_indices,
-                                                                           matrix);
+              scratch_data.get_constraint(this->dof_idx)
+                .distribute_local_to_global(normal_cell_matrix, local_dof_indices, matrix);
               for (unsigned int d = 0; d < dim; ++d)
-                scratch_data.get_constraint(comp).distribute_local_to_global(normal_cell_rhs[d],
-                                                                             local_dof_indices,
-                                                                             rhs.block(d));
+                scratch_data.get_constraint(this->dof_idx)
+                  .distribute_local_to_global(normal_cell_rhs[d], local_dof_indices, rhs.block(d));
 
             } // end of cell loop
         matrix.compress(VectorOperation::add);
@@ -130,7 +133,9 @@ namespace MeltPoolDG
       {
         scratch_data.get_matrix_free().template cell_loop<BlockVectorType, BlockVectorType>(
           [&](const auto &, auto &dst, const auto &src, auto cell_range) {
-            FECellIntegrator<dim, dim, number> normal(scratch_data.get_matrix_free(), comp, comp);
+            FECellIntegrator<dim, dim, number> normal(scratch_data.get_matrix_free(),
+                                                      this->dof_idx,
+                                                      this->quad_idx);
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
                 normal.reinit(cell);
@@ -153,15 +158,12 @@ namespace MeltPoolDG
       void
       create_rhs(BlockVectorType &dst, const VectorType &src) const override
       {
-        const int                          n_comp_fe_system = 0;
         FECellIntegrator<dim, dim, number> normal_vector(scratch_data.get_matrix_free(),
-                                                         comp,
-                                                         comp,
-                                                         n_comp_fe_system);
+                                                         this->dof_idx,
+                                                         this->quad_idx);
         FECellIntegrator<dim, 1, number>   level_set(scratch_data.get_matrix_free(),
-                                                   comp,
-                                                   comp,
-                                                   n_comp_fe_system);
+                                                   this->dof_idx,
+                                                   this->quad_idx);
 
         scratch_data.get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
           [&](const auto &, auto &dst, const auto &src, auto macro_cells) {

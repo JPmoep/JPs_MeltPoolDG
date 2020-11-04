@@ -59,19 +59,26 @@ namespace MeltPoolDG
       d_tau = dt;
     }
 
-    template <unsigned int dim, unsigned int comp>
+    void
+    reset_indices(const unsigned int dof_idx_in, const unsigned int quad_idx_in)
+    {
+      this->dof_idx  = dof_idx_in;
+      this->quad_idx = quad_idx_in;
+    }
+
+    template <int dim>
     void
     initialize_matrix_based(const ScratchData<dim> &scratch_data)
     {
-      const MPI_Comm mpi_communicator = scratch_data.get_mpi_comm(comp);
-      dsp.reinit(scratch_data.get_locally_owned_dofs(),
-                 scratch_data.get_locally_owned_dofs(),
-                 scratch_data.get_locally_relevant_dofs(),
+      const MPI_Comm mpi_communicator = scratch_data.get_mpi_comm(this->dof_idx);
+      dsp.reinit(scratch_data.get_locally_owned_dofs(this->dof_idx),
+                 scratch_data.get_locally_owned_dofs(this->dof_idx),
+                 scratch_data.get_locally_relevant_dofs(this->dof_idx),
                  mpi_communicator);
 
-      DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(comp),
+      DoFTools::make_sparsity_pattern(scratch_data.get_dof_handler(this->dof_idx),
                                       this->dsp,
-                                      scratch_data.get_constraint(comp),
+                                      scratch_data.get_constraint(this->dof_idx),
                                       true,
                                       Utilities::MPI::this_mpi_process(mpi_communicator));
       this->dsp.compress();
@@ -84,8 +91,10 @@ namespace MeltPoolDG
     create_rhs_and_apply_dirichlet_mf(DoFVectorType &         rhs,
                                       const SrcRhsVectorType &src,
                                       const ScratchData<dim> &scratch_data,
-                                      const int               dof_idx = 0)
+                                      const unsigned int      dof_idx,
+                                      const unsigned int      dof_no_bc_idx)
     {
+      this->reset_indices(dof_no_bc_idx, this->quad_idx);
       DoFVectorType bc_values;
       scratch_data.initialize_bc_vector(bc_values, dof_idx);
       /*
@@ -100,8 +109,11 @@ namespace MeltPoolDG
       rhs *= -1.0;
       this->create_rhs(rhs, src);
 
-      // clear constrainted values
+      /*
+       * Clear constrained values
+       */
       scratch_data.get_constraint(dof_idx).set_zero(rhs);
+      this->reset_indices(dof_idx, this->quad_idx);
     }
 
     const SparseMatrixType &
@@ -113,5 +125,13 @@ namespace MeltPoolDG
     double              d_tau = 0.0;
     SparseMatrixType    system_matrix;
     SparsityPatternType dsp;
+
+  protected:
+    /*
+     * dof_idx/quad_idx can be overwritten from the derived operator class by calling the
+     * reset_indices function
+     * */
+    unsigned int dof_idx  = 0;
+    unsigned int quad_idx = 0;
   };
 } // namespace MeltPoolDG

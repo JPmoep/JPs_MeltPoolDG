@@ -152,10 +152,6 @@ namespace MeltPoolDG
           DoFTools::extract_locally_relevant_dofs(*dof, locally_relevant_dofs_temp);
           this->locally_relevant_dofs.push_back(locally_relevant_dofs_temp);
 
-          // const auto partitioner_ =
-          // std::make_shared<Utilities::MPI::Partitioner>(this->get_locally_owned_dofs(dof_idx),
-          // this->get_locally_relevant_dofs(dof_idx),
-          // this->get_mpi_comm(dof_idx));
           this->partitioner.push_back(
             std::make_shared<Utilities::MPI::Partitioner>(this->get_locally_owned_dofs(dof_idx),
                                                           this->get_locally_relevant_dofs(dof_idx),
@@ -342,25 +338,6 @@ namespace MeltPoolDG
       return ConditionalOStream(std::cout,
                                 Utilities::MPI::this_mpi_process(this->get_mpi_comm(dof_idx)) == 0);
     }
-    /*
-     *
-     * @todo: WIP
-
-    static
-    auto
-    get_derived_triangulation(const Triangulation<dim,spacedim>* &tria_in)
-    {
-      auto n = tria_in->n_active_cells();
-      if (dim==1)
-      {
-        return dynamic_cast<Triangulation<dim>&>(tria_in);
-      }
-      else
-      {
-        return dynamic_cast<parallel::distributed::Triangulation<dim>&>(*tria_in);
-      }
-    }
-      */
 
   private:
     bool do_matrix_free;
