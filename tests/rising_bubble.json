@@ -8,9 +8,7 @@
     "degree": "2"
   },
   "flow" : {
-    "flow density": "1",
     "flow density difference": "-0.9",
-    "flow viscosity": "0.01",
     "flow viscosity difference": "-0.009",
     "flow surface tension coefficient": "0.0245",
     "flow start time": "0.0",
@@ -39,22 +37,18 @@
   "paraview" : {
     "paraview do output": "false"
   },
-  "Time stepping" : {
-    "scheme"           : "bdf_2"
-  },
   "Navier-Stokes" : {
-    "physical type"      : "incompressible",
-    "dimension"         : "2",
-    "global refinements" : "0",
-    "velocity degree"    : "2",
-    "viscosity"          : "0.01",
     "adaflo" : {
-      "Output options" : {"output verbosity" : "1"},
+      "Time stepping" : {
+        "scheme"           : "bdf_2"
+      },
       "Navier-Stokes" : {
-        "dimension"         : "2",
+        "physical type"      : "incompressible",
+        "dimension"          : "2",
         "global refinements" : "0",
         "velocity degree"    : "2",
         "viscosity"          : "0.01",
+        "density  "          : "1.0",
         "Solver" : {
           "linearization scheme"         : "coupled implicit Newton",
           "NL max iterations"            : "10",
@@ -66,6 +60,11 @@
           "lin pressure mass preconditioner" : "ilu",
           "lin its before inner solvers" : "30"
         }
+      },
+      "Output options" : 
+      {
+        "output verbosity" : "1",
+        "output wall times" : "0"
       }
     }
   }

@@ -23,7 +23,7 @@ namespace MeltPoolDG
     int          n_q_points_1d       = -1;
     bool         do_print_parameters = true;
     bool         do_simplex          = false;
-    number       gravity             = 0.981;
+    number       gravity             = 0.0;
   };
 
   template <typename number = double>
@@ -180,8 +180,11 @@ namespace MeltPoolDG
           //   differently.
           adaflo_params.params.density_diff         = 1.0;
           adaflo_params.params.viscosity_diff       = 1.0;
-          adaflo_params.params.density              = flow.density;
-          adaflo_params.params.viscosity            = flow.viscosity;
+
+          flow.density = (adaflo_params.params.density > 0.0 ) ? adaflo_params.params.density : flow.density;
+          flow.viscosity = (adaflo_params.params.viscosity> 0.0 ) ? adaflo_params.params.viscosity: flow.viscosity;
+
+          /// synchronize time stepping schemes
           adaflo_params.params.start_time           = flow.start_time;
           adaflo_params.params.end_time             = flow.end_time;
           adaflo_params.params.time_step_size_start = flow.time_step_size;

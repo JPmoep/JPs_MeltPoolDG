@@ -66,6 +66,11 @@
           "lin its before inner solvers" : "30"
         }
       }
+      "Output options" : 
+      {
+          "output verbosity" : "2",
+        "output walltimes" : "0"
+      }
     }
   }
 }

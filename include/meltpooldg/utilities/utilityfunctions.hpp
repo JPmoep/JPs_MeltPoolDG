@@ -42,7 +42,7 @@ namespace MeltPoolDG
     VectorizedArray<number>
     heaviside(const VectorizedArray<number> &in, const number limit = 0.0)
     {
-      return compare_and_apply_mask<SIMDComparison::greater_than>  (v, VectorizedArray<double>(limit), 1.0, 0.0);
+      return compare_and_apply_mask<SIMDComparison::greater_than>  (in, VectorizedArray<double>(limit), 1.0, 0.0);
     }
 
     namespace CharacteristicFunctions

@@ -70,7 +70,7 @@ namespace MeltPoolDG
             level_set_operation.compute_surface_tension(
               force_rhs,
               base_in->parameters.flow.surface_tension_coefficient,
-              true /*add to force vector*/);
+              false /*add to force vector*/);
 
             //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_force_rhs(force_rhs);
@@ -252,7 +252,7 @@ namespace MeltPoolDG
       void
       compute_gravity_force(BlockVectorType &vec,
                             const double     gravity,
-                            const bool       add = false) const
+                            const bool       zero_out = true) const
       {
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
           [&](const auto &matrix_free, auto &vec, const auto &, auto macro_cells) {
@@ -274,7 +274,7 @@ namespace MeltPoolDG
           },
           vec,
           nullptr,
-          !add);
+          zero_out);
       }
 
       void
