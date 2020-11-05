@@ -87,6 +87,14 @@ namespace MeltPoolDG
       }
 
       void
+      get_pressure(LinearAlgebra::distributed::Vector<double> &vec) const override
+      {
+        navier_stokes.solution.block(1).update_ghost_values();
+        vec.copy_locally_owned_data_from(navier_stokes.solution.block(1));
+        navier_stokes.solution.block(1).zero_out_ghosts();
+      }
+
+      void
       set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> &vec) override
       {
         VectorTools::convert_block_vector_to_fe_sytem_vector(vec,
@@ -164,6 +172,12 @@ namespace MeltPoolDG
 
       void
       get_velocity(LinearAlgebra::distributed::BlockVector<double> &) const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      void
+      get_pressure(LinearAlgebra::distributed::Vector<double> &) const override
       {
         AssertThrow(false, ExcNotImplemented());
       }

@@ -12,7 +12,9 @@
 
 #include <deal.II/dofs/dof_handler.h>
 
+#include <deal.II/fe/fe_dgq.h>
 #include <deal.II/fe/fe_q.h>
+#include <deal.II/fe/fe_tools.h>
 #include <deal.II/fe/mapping.h>
 
 #include <deal.II/grid/grid_out.h>
@@ -277,27 +279,6 @@ namespace MeltPoolDG
           zero_out);
       }
 
-      void
-      create_density_dof_vector(VectorType &vec) const
-      {
-        (void)vec;
-        //@todo: does not compile
-        // dealii::VectorTools::project(std::make_shared<MatrixFree<dim,double,VectorizedArray<double>>(scratch_data->get_matrix_free()),
-        // scratch_data->get_constraint(dof_no_bc_idx),
-        // 1,
-        //[&] (const unsigned int cell,
-        // const unsigned int q) -> VectorizedArray<double>
-        //{
-        // return  flow_operation->get_density(cell, q);
-        //},
-        // vec);
-      }
-
-      void
-      create_viscosity_dof_vector(VectorType &vec) const
-      {
-        (void)vec;
-      }
 
       /*
        *  This function is to create paraview output
@@ -307,8 +288,14 @@ namespace MeltPoolDG
       {
         if (parameters.paraview.do_output)
           {
-            create_density_dof_vector(density);
-            create_viscosity_dof_vector(viscosity);
+            fill_dof_vector_from_cell_operation(density,
+                                                parameters.base.degree,
+                                                parameters.base.n_q_points_1d,
+                                                "density");
+            fill_dof_vector_from_cell_operation(viscosity,
+                                                parameters.base.degree,
+                                                parameters.base.n_q_points_1d,
+                                                "viscosity");
             // update ghost values
             VectorTools::update_ghost_values(advection_velocity,
                                              force_rhs,
@@ -381,6 +368,72 @@ namespace MeltPoolDG
       }
 
     private:
+      //@todo this function might be designed more generic and shifted to vector tools
+      void
+      fill_dof_vector_from_cell_operation(VectorType & vec,
+                                          unsigned int fe_degree,
+                                          unsigned int n_q_points_1D,
+                                          std::string  cell_operation = "density") const
+      {
+        FE_DGQArbitraryNodes<1> fe_coarse(QGauss<1>(n_q_points_1D).get_points());
+        FE_Q<1>                 fe_fine(fe_degree);
+
+        /// create 1D projection matrix for sum factorization
+        FullMatrix<double> matrix(fe_fine.dofs_per_cell, fe_coarse.dofs_per_cell);
+        FETools::get_projection_matrix(fe_coarse, fe_fine, matrix);
+
+        AlignedVector<VectorizedArray<double>> prolongation_matrix_1d(fe_fine.dofs_per_cell *
+                                                                      fe_coarse.dofs_per_cell);
+
+        for (unsigned int i = 0, k = 0; i < fe_coarse.dofs_per_cell; ++i)
+          for (unsigned int j = 0; j < fe_fine.dofs_per_cell; ++j, ++k)
+            prolongation_matrix_1d[k] = matrix(j, i);
+
+
+        FECellIntegrator<dim, 1, double> fe_eval(scratch_data->get_matrix_free(),
+                                                 dof_no_bc_idx,
+                                                 quad_idx);
+
+        for (unsigned int cell = 0; cell < scratch_data->get_matrix_free().n_macro_cells(); ++cell)
+          {
+            fe_eval.reinit(cell);
+
+            for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
+              {
+                if (cell_operation == "density") //@todo: replace by functor argument
+                  fe_eval.begin_values()[q] = flow_operation->get_density(cell, q);
+                else if (cell_operation == "viscosity")
+                  fe_eval.begin_values()[q] = flow_operation->get_viscosity(cell, q);
+                else
+                  AssertThrow(
+                    false,
+                    ExcMessage(
+                      "The requested variable for fill_dof_vector_from_cell_operation is not supported."));
+              }
+            // perform basis change from quadrature points to support points
+            internal::FEEvaluationImplBasisChange<
+              internal::evaluate_general,
+              internal::EvaluatorQuantity::value,
+              dim,
+              0,
+              0,
+              VectorizedArray<double>,
+              VectorizedArray<double>>::do_forward(1 /*n_components*/,
+                                                   prolongation_matrix_1d,
+                                                   fe_eval.begin_values(),
+                                                   fe_eval.begin_dof_values(),
+                                                   n_q_points_1D, // number of quadrature points
+                                                   fe_degree + 1  // number of support points
+            );
+
+            // write values back into global vector
+            fe_eval.set_dof_values(vec);
+          }
+
+        vec.compress(VectorOperation::max);
+      }
+
+
       TimeIterator<double> time_iterator;
       DoFHandler<dim>      dof_handler;
 

@@ -246,6 +246,7 @@ namespace MeltPoolDG
         if (parameters.paraview.do_output)
           {
             MeltPoolDG::VectorTools::update_ghost_values(level_set_operation.solution_level_set,
+                                                         level_set_operation.solution_curvature,
                                                          level_set_operation.solution_normal_vector,
                                                          advection_velocity);
 
@@ -265,6 +266,11 @@ namespace MeltPoolDG
                 data_out.add_data_vector(level_set_operation.solution_normal_vector.block(d),
                                          "normal_" + std::to_string(d));
 
+            /*
+             *  output curvature
+             */
+            if (parameters.paraview.print_curvature)
+              data_out.add_data_vector(level_set_operation.solution_curvature, "curvature");
             /*
              *  output advection velocity
              */
@@ -312,6 +318,7 @@ namespace MeltPoolDG
               }
 
             MeltPoolDG::VectorTools::zero_out_ghosts(level_set_operation.solution_level_set,
+                                                     level_set_operation.solution_curvature,
                                                      level_set_operation.solution_normal_vector,
                                                      advection_velocity);
           }
