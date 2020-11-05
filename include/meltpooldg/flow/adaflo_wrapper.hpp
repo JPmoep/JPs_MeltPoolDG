@@ -85,7 +85,7 @@ namespace MeltPoolDG
                                                              vec,
                                                              dof_handler_meltpool);
       }
-      
+
       void
       get_pressure(LinearAlgebra::distributed::Vector<double> &vec) const override
       {

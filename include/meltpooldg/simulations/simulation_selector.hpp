@@ -9,8 +9,8 @@
 #include <meltpooldg/simulations/rising_bubble/rising_bubble.hpp>
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
 #include <meltpooldg/simulations/rotating_rectangle/rotating_rectangle.hpp>
-#include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
 #include <meltpooldg/simulations/slotted_disc/slotted_disc.hpp>
+#include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
 
 namespace MeltPoolDG
 {
@@ -35,8 +35,8 @@ namespace MeltPoolDG
           return std::make_shared<RotatingBubble::SimulationRotatingBubble<dim>>(parameter_file,
                                                                                  mpi_communicator);
         else if (simulation_name == "rotating_rectangle")
-          return std::make_shared<RotatingRectangle::SimulationRotatingRectangle<dim>>(parameter_file,
-                                                                                 mpi_communicator);
+          return std::make_shared<RotatingRectangle::SimulationRotatingRectangle<dim>>(
+            parameter_file, mpi_communicator);
         else if (simulation_name == "flow_past_cylinder")
           return std::make_shared<FlowPastCylinder::SimulationFlowPastCylinder<dim>>(
             parameter_file, mpi_communicator);
@@ -47,8 +47,8 @@ namespace MeltPoolDG
           return std::make_shared<RisingBubble::SimulationRisingBubble<dim>>(parameter_file,
                                                                              mpi_communicator);
         else if (simulation_name == "slotted_disc")
-            return std::make_shared<SlottedDisc::SimulationSlottedDisc<dim>>(parameter_file,
-                                                                             mpi_communicator);
+          return std::make_shared<SlottedDisc::SimulationSlottedDisc<dim>>(parameter_file,
+                                                                           mpi_communicator);
         /* add your simulation here*/
         else
           AssertThrow(false,

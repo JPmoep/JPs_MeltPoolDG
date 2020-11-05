@@ -51,7 +51,7 @@ namespace MeltPoolDG
       run(std::shared_ptr<SimulationBase<dim>> base_in) final
       {
         initialize(base_in);
-        
+
         while (!time_iterator.is_finished())
           {
             const double dt = time_iterator.get_next_time_increment();
