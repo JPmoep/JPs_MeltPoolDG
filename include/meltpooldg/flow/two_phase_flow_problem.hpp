@@ -366,7 +366,7 @@ namespace MeltPoolDG
       fill_dof_vector_from_cell_operation(VectorType &vec, unsigned int fe_degree, unsigned int n_q_points_1D, std::string cell_operation = "density") const
       {
         FE_DGQArbitraryNodes<1> fe_coarse(QGauss<1>(n_q_points_1D).get_points());
-        FE_DGQ<1>               fe_fine(fe_degree);   
+        FE_Q<1>               fe_fine(fe_degree);   
 
         /// create 1D projection matrix for sum factorization
         FullMatrix<double> matrix(fe_fine.dofs_per_cell, fe_coarse.dofs_per_cell);
@@ -379,47 +379,43 @@ namespace MeltPoolDG
           for (unsigned int j = 0; j < fe_fine.dofs_per_cell; ++j, ++k)
             prolongation_matrix_1d[k] = matrix(j, i);
 
-        scratch_data->get_matrix_free().template cell_loop<VectorType, std::nullptr_t>(
-          [&](const auto &matrix_free, auto &vec, const auto &, auto macro_cells) {
 
-            FECellIntegrator<dim, 1, double> fe_eval(matrix_free, dof_no_bc_idx, quad_idx);
+        FECellIntegrator<dim, 1, double> fe_eval(scratch_data->get_matrix_free(), dof_no_bc_idx, quad_idx);
 
-            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
-            {
-              fe_eval.reinit(cell);
-              
-              for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
-              {
-                if ( cell_operation == "density" )   //@todo: replace by functor argument
-                  fe_eval.begin_values()[q] = flow_operation->get_density(cell,q);
-                else if ( cell_operation == "viscosity") 
-                  fe_eval.begin_values()[q] = flow_operation->get_viscosity(cell,q);
-                else
-                  AssertThrow(false, ExcMessage("The requested variable for fill_dof_vector_from_cell_operation is not supported."));
-              }
-              // perform basis change from quadrature points to support points
-              internal::FEEvaluationImplBasisChange<internal::evaluate_general,
-                                                    internal::EvaluatorQuantity::value,
-                                                    dim,
-                                                    0,
-                                                    0,
-                                                    VectorizedArray<double>,
-                                                    VectorizedArray<double>>::
-                do_forward(1/*n_components*/,
-                           prolongation_matrix_1d,
-                           fe_eval.begin_values(),
-                           fe_eval.begin_dof_values(),
-                           n_q_points_1D, // number of quadrature points
-                           fe_degree + 1  // number of support points
-                          );
+        for (unsigned int cell = 0; cell < scratch_data->get_matrix_free().n_macro_cells(); ++cell)
+        {
+          fe_eval.reinit(cell);
+          
+          for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
+          {
+            if ( cell_operation == "density" )   //@todo: replace by functor argument
+              fe_eval.begin_values()[q] = flow_operation->get_density(cell,q);
+            else if ( cell_operation == "viscosity") 
+              fe_eval.begin_values()[q] = flow_operation->get_viscosity(cell,q);
+            else
+              AssertThrow(false, ExcMessage("The requested variable for fill_dof_vector_from_cell_operation is not supported."));
+          }
+          // perform basis change from quadrature points to support points
+          internal::FEEvaluationImplBasisChange<internal::evaluate_general,
+                                                internal::EvaluatorQuantity::value,
+                                                dim,
+                                                0,
+                                                0,
+                                                VectorizedArray<double>,
+                                                VectorizedArray<double>>::
+            do_forward(1/*n_components*/,
+                       prolongation_matrix_1d,
+                       fe_eval.begin_values(),
+                       fe_eval.begin_dof_values(),
+                       n_q_points_1D, // number of quadrature points
+                       fe_degree + 1  // number of support points
+                      );
 
-              // write values back into global vector
-              fe_eval.set_dof_values(vec);
-            }
-          },
-          vec,
-          nullptr,
-          true /* zero out */);
+          // write values back into global vector
+          fe_eval.set_dof_values(vec);
+        }
+
+          vec.compress(VectorOperation::max);
       }
 
 

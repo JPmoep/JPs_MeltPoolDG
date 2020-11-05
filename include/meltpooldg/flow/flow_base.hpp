@@ -17,6 +17,9 @@ namespace MeltPoolDG
 
       virtual void
       get_velocity(LinearAlgebra::distributed::BlockVector<double> &vec) const = 0;
+      
+      virtual void
+      get_pressure(LinearAlgebra::distributed::Vector<double> &vec) const = 0;
 
       virtual void
       set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> &vec) = 0;
