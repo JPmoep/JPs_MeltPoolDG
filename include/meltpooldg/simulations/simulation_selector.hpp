@@ -33,9 +33,6 @@ namespace MeltPoolDG
         else if (simulation_name == "rotating_bubble")
           return std::make_shared<RotatingBubble::SimulationRotatingBubble<dim>>(parameter_file,
                                                                                  mpi_communicator);
-        else if (simulation_name == "rotating_rectangle")
-          return std::make_shared<RotatingRectangle::SimulationRotatingRectangle<dim>>(
-            parameter_file, mpi_communicator);
         else if (simulation_name == "flow_past_cylinder")
           return std::make_shared<FlowPastCylinder::SimulationFlowPastCylinder<dim>>(
             parameter_file, mpi_communicator);
