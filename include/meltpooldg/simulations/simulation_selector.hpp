@@ -8,7 +8,6 @@
 #include <meltpooldg/simulations/reinit_circle/reinit_circle.hpp>
 #include <meltpooldg/simulations/rising_bubble/rising_bubble.hpp>
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
-#include <meltpooldg/simulations/rotating_rectangle/rotating_rectangle.hpp>
 #include <meltpooldg/simulations/slotted_disc/slotted_disc.hpp>
 #include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
 
