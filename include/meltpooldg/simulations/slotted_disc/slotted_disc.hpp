@@ -90,7 +90,7 @@ namespace MeltPoolDG
                 }
               else if (p[0] > pB[0] && p[0] < pC[0])
                 { // region 2
-                  d_BC = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pB, pC);
+                  d_BC = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pB, pC);
                   d_manifold =
                     UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius);
                   d_min = std::min(d_BC, d_manifold);
@@ -100,16 +100,16 @@ namespace MeltPoolDG
             {
               if (p[0] > pB[0] && p[0] < pC[0]) // region 5-7
                 {
-                  d_AB  = -UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pA, pB);
-                  d_BC  = -UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pB, pC);
-                  d_CD  = -UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pC, pD);
+                  d_AB  = -UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pA, pB);
+                  d_BC  = -UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pB, pC);
+                  d_CD  = -UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pC, pD);
                   d_min = std::max(d_AB, d_BC);
                   d_min = std::max(d_CD, d_min);
                 }
               else
                 {
-                  d_AB = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pA, pB);
-                  d_CD = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pC, pD);
+                  d_AB = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pA, pB);
+                  d_CD = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pC, pD);
                   d_manifold =
                     UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius);
                   d_min = std::min(d_AB, d_CD);
@@ -191,7 +191,7 @@ namespace MeltPoolDG
                 }
               else if (p[0] > pB[0] && p[0] < pC[0])
                 { // region 2
-                  d_BC = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pB, pC);
+                  d_BC = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pB, pC);
                   d_manifold =
                     UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius);
                   d_min = std::min(d_BC, d_manifold);
@@ -201,16 +201,16 @@ namespace MeltPoolDG
             {
               if (p[0] > pB[0] && p[0] < pC[0]) // region 5-7
                 {
-                  d_AB  = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pA, pB);
-                  d_BC  = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pB, pC);
-                  d_CD  = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pC, pD);
+                  d_AB  = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pA, pB);
+                  d_BC  = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pB, pC);
+                  d_CD  = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pC, pD);
                   d_min = std::min(d_AB, d_BC);
                   d_min = std::min(d_CD, d_min);
                 }
               else
                 {
-                  d_AB = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pA, pB);
-                  d_CD = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pC, pD);
+                  d_AB = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pA, pB);
+                  d_CD = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pC, pD);
                   d_manifold =
                     UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius);
                   d_min = std::min(d_AB, d_CD);
