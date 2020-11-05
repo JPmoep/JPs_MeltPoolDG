@@ -100,12 +100,138 @@ namespace MeltPoolDG
           AssertThrow(false, ExcMessage("Spherical manifold: dim must be 1, 2 or 3."));
       }
 
+      
+
       //@todo: this function should be added to accept lines and planar surfaces
       template <int dim>
       inline double
       signed_distance_planar_manifold(const Point<dim> &p,
-                                      const Point<dim> &start,
-                                      const Point<dim> &end);
+                                      const Point<dim> &normal,
+                                      const Point<dim> &point_on_plane)
+      {
+        if ( (dim == 3) || (dim == 2) || (dim == 1) )
+        {
+          double num=0; 
+          double denom=0;
+          for (int d = 0; d<dim; ++d)
+          {
+            num += normal[d] * p[d] - normal[d] * point_on_plane[d];
+            denom += normal[d] * normal[d];
+          }
+          return num/std::sqrt(denom);
+        }
+        else
+          AssertThrow(false, ExcMessage("Rectangular manifold: dim must be 1, 2 or 3."));
+      }
+
+      template <int dim>
+      inline double
+      rectangular_manifold(const Point<dim> &p,const Point<dim> &lower_left_corner, const Point<dim> &upper_right_corner)
+      {
+        if (dim == 3)
+        {
+          std::vector<Point<dim>> n(dim*2);
+
+          for (auto& n_ : n)
+            for (int i=0; i<dim; ++i)
+              n_[i] = 0;
+
+          n[0][0] = -1.0;
+          n[1][1] = -1.0;
+          n[2][2] = -1.0;
+          n[3][0] = 1.0;
+          n[4][1] = 1.0;
+          n[5][2] = 1.0;
+
+          double d =1e10;
+          for (int i=0; i<dim; ++i)
+          {
+            double dtemp = signed_distance_planar_manifold<dim>(p, n[i], lower_left_corner );
+            d = std::min(d, dtemp);
+          }
+          for (int i=dim; i<2*dim; ++i)
+          {
+            double dtemp = signed_distance_planar_manifold<dim>(p, n[i], upper_right_corner );
+            d = std::min(d, dtemp);
+          }
+          return d;
+        }
+        else if (dim == 2)
+        {
+          std::vector<Point<dim>> n(dim*2);
+          
+          for (auto& n_ : n)
+            for (int i=0; i<dim; ++i)
+              n_[i] = 0;
+          
+          n[0][0] = -1.0;
+          n[1][1] = 1.0;
+          n[2][0] = 1.0;
+          n[3][1] = -1.0;
+
+          std::vector<Point<dim>> corner(dim*dim);
+          std::vector<std::tuple<Point<dim>, Point<dim>>> edges(4);
+
+          corner[0] = lower_left_corner;
+          corner[1] = lower_left_corner;
+          corner[1][1] = upper_right_corner[1];
+          corner[2] = upper_right_corner;
+          corner[3] = lower_left_corner;
+          corner[3][0] = upper_right_corner[1];
+          
+          /*
+                      
+             (1)  +---------------+ (2)
+                  |               |
+                  |               | 
+                  |_______________|
+                  |               |
+                  |               | 
+                  |               |
+                  +---------------+
+           *    (0)                (3)
+           */
+          
+          if ((p[0]<=corner[0][0]) && (p[1]<=corner[0][1]))
+            return p.distance(corner[0]);
+          else if ((p[0]<=corner[1][0]) && (p[1]>=corner[1][1]))
+            return p.distance(corner[1]);
+          else if ((p[0]>=corner[2][0]) && (p[1]>=corner[2][1]))
+            return p.distance(corner[2]);
+          else if ((p[0]>=corner[3]) && (p[1]<=corner[3][1]))
+            return p.distance(corner[3]);
+          else if (p[0]<=corner[0][0])
+            return = signed_distance_planar_manifold<dim>(p, n[0], lower_left_corner );
+          else if (p[1]>=corner[1][1])
+            return = signed_distance_planar_manifold<dim>(p, n[1], upper_right_corner );
+          else if (p[0]>=corner[2][0])
+            return = signed_distance_planar_manifold<dim>(p, n[2], upper_right_corner );
+          else if (p[1]<=corner[3][1])
+            return = signed_distance_planar_manifold<dim>(p, n[3], lower_left_corner);
+
+          
+          if (p[0]<lower_left_corner)
+
+          for (int i=0; i<dim; ++i)
+          {
+            double dtemp = signed_distance_planar_manifold<dim>(p, n[i], lower_left_corner );
+            d = std::min(d, dtemp);
+          }
+          for (int i=dim; i<2*dim; ++i)
+          {
+            double dtemp = signed_distance_planar_manifold<dim>(p, n[i], upper_right_corner );
+            d = std::min(d, dtemp);
+          }
+          if( d>0.0)
+            std::cout << "d" << d << std::endl;
+          return d;
+        }
+        else
+          AssertThrow(false, ExcMessage("Rectangular manifold: dim must be 1, 2 or 3."));
+      }
+
+
+
     } // namespace DistanceFunctions
 
   } // namespace UtilityFunctions

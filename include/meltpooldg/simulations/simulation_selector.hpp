@@ -8,6 +8,7 @@
 #include <meltpooldg/simulations/reinit_circle/reinit_circle.hpp>
 #include <meltpooldg/simulations/rising_bubble/rising_bubble.hpp>
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
+#include <meltpooldg/simulations/rotating_rectangle/rotating_rectangle.hpp>
 #include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
 
 namespace MeltPoolDG
@@ -31,6 +32,9 @@ namespace MeltPoolDG
                                                                             mpi_communicator);
         else if (simulation_name == "rotating_bubble")
           return std::make_shared<RotatingBubble::SimulationRotatingBubble<dim>>(parameter_file,
+                                                                                 mpi_communicator);
+        else if (simulation_name == "rotating_rectangle")
+          return std::make_shared<RotatingRectangle::SimulationRotatingRectangle<dim>>(parameter_file,
                                                                                  mpi_communicator);
         else if (simulation_name == "flow_past_cylinder")
           return std::make_shared<FlowPastCylinder::SimulationFlowPastCylinder<dim>>(
