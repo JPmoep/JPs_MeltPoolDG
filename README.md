@@ -8,6 +8,7 @@ This project depends on the following third-party libraries:
 - deal.II
 - p4est
 - Trilinos
+- adaflo (optional)
 
 Before installing deal.II, you have to install the two libraries p4est and Trilinos. More information for that you can find here for p4est (https://www.dealii.org/9.2.0/external-libs/p4est.html) and here for Trilinos (https://www.dealii.org/9.2.0/external-libs/trilinos.html).  
 To configure the deal.II library, you have to use now these arguments for cmake:
@@ -30,7 +31,7 @@ make test
 
 The documentation can be found under https://meltpooldg.github.io/MeltPoolDG/.
 
-### How to add, build and run a simulation
+### How to add and build a simulation
 
 In the `./include/meltpooldg/simulations` folder you find some example simulations. If you would like to create an additional simulation, e.g. "vortex_bubble", follow the subsequent steps:
 
@@ -43,13 +44,14 @@ touch vortex_bubble.json
 In the `.hpp` file a child class of the MeltPoolDG::SimulationBase<dim> class must be created. In the `.json`-file the parameters will be specified. Note that the `.json`-file is a command line argument and is only needed at run-time of the simulation. 
 The new simulation has to be added to the simulation factory `./include/meltpooldg/simulation_selector.hpp` 
 ```cpp
+ #include <include/meltpooldg/simulations/vortex_bubble/vortex_bubble.hpp>
 else if( simulation_name == "vortex_bubble" )
 {
     return std::make_shared<VortexBubble::Simulation<dim>>(parameterfile,
                                                  mpi_communicator);
 }
 ```
-You can build an run your simulation (with e.g. 4 processes) using the following commands:
+You can build your simulation using the following commands:
    
 ```bash  
 mkdir build
@@ -64,7 +66,9 @@ else call
 ```bash  
 make release
 ```
-Then build the code and run the simulation. As an example the simulation of the newly created "vortex_bubble" is demonstrated using 4 threads:
+### How to run a simulation
+
+As an example the simulation of the newly created "vortex_bubble" is demonstrated using 4 processes:
 ```bash  
 make -j 4 
 mpirun -np 4 ./run_simulation ../include/meltpooldg/simulations/vortex_bubble.json
