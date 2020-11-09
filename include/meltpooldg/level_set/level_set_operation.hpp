@@ -184,9 +184,58 @@ namespace MeltPoolDG
 
     private:
       void
-      transform_level_set_to_heaviside()
+      transform_level_set_to_smooth_heaviside()
       {
-        AssertThrow(false, ExcMessage("not yet implemented."))
+        FEValues<dim> fe_values(scratch_data.get_mapping(),
+                                scratch_data.get_dof_handler(this->dof_idx).get_fe(),
+                                scratch_data.get_quadrature(this->quad_idx),
+                                update_values | update_quadrature_points |
+                                  update_JxW_values);
+
+        //const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell();
+        //const unsigned int n_q_points = fe_values.get_quadrature().size();
+
+        //std::vector<double>         phi_at_q(n_q_points);
+
+        //std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
+        //const double cut_off_level_set = std::tanh(2);
+
+        //for (const auto &cell : scratch_data.get_dof_handler(this->dof_idx).active_cell_iterators())
+          //if (cell->is_locally_owned())
+            //{
+              //cell->get_dof_indices(local_dof_indices);
+              
+              //bool cell_is_in_interface_region;
+
+              //for (unsigned int i = 0; i < dofs_percell; ++i)
+              //{
+                //if (std::fabs(solution_level_set[local_dof_indices[i]]) < cut_off_level_set)
+                  //{
+                //const double c_val    = local_values(i);
+                //double       distance = 0;
+                //if (c_val < -cutoff)
+                  //distance = -3;
+                //else if (c_val > cutoff)
+                  //distance = 3;
+                //else
+                  //distance = std::log((1 + c_val) / (1 - c_val));
+
+                //// want to have force along width 2*h which is
+                //// what distance scaled by twice relative
+                //// epsilon but not mesh size is doing in
+                //// discrete_heaviside that is defined between
+                //// -2 and 2.
+                //distance *= this->parameters.epsilon * 2. /
+                            //this->parameters.concentration_subdivisions;
+                //this->heaviside(local_dof_indices[i]) = discrete_heaviside(distance);
+
+                    //break;
+                  //}
+                //else
+                  //heaviside[local_dof_indices[i]] = ( std::sign(solution_level_set[local_dof_indices[i]]) < 0 ) ? 0.0 : 1.0;
+              //}
+            //}
       }
 
       void
@@ -253,7 +302,7 @@ namespace MeltPoolDG
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update
        */
-      // BlockVectorType surface_tension_force;
+      VectorType level_set_as_heaviside;
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

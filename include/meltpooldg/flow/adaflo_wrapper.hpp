@@ -7,6 +7,8 @@
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
 
+#  include <deal.II/lac/generic_linear_algebra.h>
+
 #  include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 #  include <meltpooldg/flow/flow_base.hpp>
 #  include <meltpooldg/interface/scratch_data.hpp>
@@ -20,8 +22,11 @@ namespace MeltPoolDG
   namespace Flow
   {
     template <int dim>
-    class AdafloWrapper : public FlowBase
+    class AdafloWrapper : public FlowBase<dim>
     {
+    private:
+      using VectorType = LinearAlgebra::distributed::Vector<double>;
+
     public:
       /**
        * Constructor.
@@ -86,12 +91,16 @@ namespace MeltPoolDG
                                                              dof_handler_meltpool);
       }
 
-      void
-      get_pressure(LinearAlgebra::distributed::Vector<double> &vec) const override
+      const LinearAlgebra::distributed::Vector<double> &
+      get_pressure() const override
       {
-        navier_stokes.solution.block(1).update_ghost_values();
-        vec.copy_locally_owned_data_from(navier_stokes.solution.block(1));
-        navier_stokes.solution.block(1).zero_out_ghosts();
+        return navier_stokes.solution.block(1);
+      }
+
+      const DoFHandler<dim> &
+      get_dof_handler_pressure() const override
+      {
+        return navier_stokes.get_dof_handler_p();
       }
 
       void
@@ -151,7 +160,7 @@ namespace MeltPoolDG
      * and p4est.
      */
     template <>
-    class AdafloWrapper<1> : public FlowBase
+    class AdafloWrapper<1> : public FlowBase<1>
     {
     public:
       /**
@@ -176,8 +185,15 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
-      void
-      get_pressure(LinearAlgebra::distributed::Vector<double> &) const override
+      // void
+      const LinearAlgebra::distributed::Vector<double> &
+      get_pressure() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      const DoFHandler<1> &
+      get_dof_handler_pressure() const override
       {
         AssertThrow(false, ExcNotImplemented());
       }

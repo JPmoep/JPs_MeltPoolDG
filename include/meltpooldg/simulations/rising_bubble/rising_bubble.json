@@ -65,7 +65,7 @@
           "lin pressure mass preconditioner" : "ilu",
           "lin its before inner solvers" : "30"
         }
-      }
+      },
       "Output options" : 
       {
           "output verbosity" : "2",

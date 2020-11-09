@@ -79,9 +79,10 @@ namespace MeltPoolDG
             // solver Navier-Stokes problem
             flow_operation->solve();
 
-            // extract velocity form Navier-Stokes solver ...
+            // extract velocity ...
             flow_operation->get_velocity(advection_velocity);
 
+            // ... and output the results to vtk files.
             output_results(n, base_in->parameters);
           }
       }
@@ -201,7 +202,7 @@ namespace MeltPoolDG
          */
         scratch_data->initialize_dof_vector(force_rhs, dof_no_bc_idx);
         /*
-         *    initialize the density and viscosity vector (for postprocessing)
+         *    initialize the density and viscosity (for postprocessing)
          */
         scratch_data->initialize_dof_vector(density, dof_no_bc_idx);
         scratch_data->initialize_dof_vector(viscosity, dof_no_bc_idx);
@@ -296,11 +297,15 @@ namespace MeltPoolDG
                                                 parameters.base.degree,
                                                 parameters.base.n_q_points_1d,
                                                 "viscosity");
+
+            const VectorType &pressure = flow_operation->get_pressure();
+
             // update ghost values
             VectorTools::update_ghost_values(advection_velocity,
                                              force_rhs,
                                              density,
                                              viscosity,
+                                             pressure,
                                              level_set_operation.solution_level_set,
                                              level_set_operation.solution_curvature,
                                              level_set_operation.solution_normal_vector);
@@ -323,7 +328,6 @@ namespace MeltPoolDG
             /*
              * curvature
              */
-
             data_out.add_data_vector(level_set_operation.solution_curvature, "curvature");
             /*
              *  normal vector field
@@ -331,7 +335,6 @@ namespace MeltPoolDG
             for (unsigned int d = 0; d < dim; ++d)
               data_out.add_data_vector(level_set_operation.solution_normal_vector.block(d),
                                        "normal_" + std::to_string(d));
-
             /*
              * force vector (surface tension + gravity force)
              */
@@ -347,6 +350,12 @@ namespace MeltPoolDG
              * viscosity
              */
             data_out.add_data_vector(dof_handler, viscosity, "viscosity");
+            /*
+             * pressure
+             */
+            data_out.add_data_vector(flow_operation->get_dof_handler_pressure(),
+                                     pressure,
+                                     "pressure");
 
             data_out.build_patches(scratch_data->get_mapping());
             data_out.write_vtu_with_pvtu_record("./",
@@ -361,6 +370,7 @@ namespace MeltPoolDG
                                          force_rhs,
                                          density,
                                          viscosity,
+                                         pressure,
                                          level_set_operation.solution_level_set,
                                          level_set_operation.solution_curvature,
                                          level_set_operation.solution_normal_vector);
@@ -444,13 +454,14 @@ namespace MeltPoolDG
       BlockVectorType force_rhs;
       VectorType      density;
       VectorType      viscosity;
+      VectorType      pressure;
 
       unsigned int dof_idx;
       unsigned int dof_no_bc_idx;
       unsigned int quad_idx;
 
       std::shared_ptr<ScratchData<dim>> scratch_data;
-      std::shared_ptr<FlowBase>         flow_operation;
+      std::shared_ptr<FlowBase<dim>>    flow_operation;
       LevelSet::LevelSetOperation<dim>  level_set_operation;
     };
   } // namespace Flow
