@@ -4,6 +4,7 @@
  *
  * ---------------------------------------------------------------------*/
 #pragma once
+#include<numbers>
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
 // DoFTools
@@ -96,6 +97,10 @@ namespace MeltPoolDG
          *    compute the curvature of the initial level set field
          */
         curvature_operation.solve(advec_diff_operation.solution_advected_field);
+        /*
+         *    compute the smoothened function
+         */
+        transform_level_set_to_smooth_heaviside();
       }
 
       void
@@ -132,6 +137,10 @@ namespace MeltPoolDG
          *    compute the curvature
          */
         curvature_operation.solve(advec_diff_operation.solution_advected_field);
+        /*
+         *    compute the smoothened function
+         */
+        transform_level_set_to_smooth_heaviside();
       }
 
       void
@@ -139,6 +148,7 @@ namespace MeltPoolDG
                               const double     surface_tension_coefficient,
                               const bool       zero_out = true)
       {
+        level_set_as_heaviside.update_ghost_values();
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
           [&](const auto &matrix_free, auto &force_rhs, const auto &, auto macro_cells) {
             FECellIntegrator<dim, 1, double> level_set(matrix_free, dof_idx, quad_idx);
@@ -152,7 +162,7 @@ namespace MeltPoolDG
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 level_set.reinit(cell);
-                level_set.gather_evaluate(solution_level_set, true, true);
+                level_set.gather_evaluate(level_set_as_heaviside, true, true);
 
                 surface_tension.reinit(cell);
 
@@ -176,6 +186,7 @@ namespace MeltPoolDG
           force_rhs,
           nullptr,
           zero_out);
+          level_set_as_heaviside.zero_out_ghosts();
       }
       /*
        *  getter functions for solution vectors
@@ -183,59 +194,89 @@ namespace MeltPoolDG
       // @ todo
 
     private:
+
+      inline
+      double
+      distance_function_from_level_set_value(const double phi, const double eps, const double cutoff)
+      {
+        if ( std::abs(phi) < cutoff )
+          return eps * std::log( ( 1.+phi ) / (1.-phi) );
+        else if ( phi >= cutoff )
+          return eps * std::log( ( 1.+cutoff ) / (1.-cutoff) );
+        else /*( phi <= -cutoff )*/
+          return -eps * std::log( ( 1.+cutoff ) / (1.-cutoff) );
+      }
+
+      /**
+       * The given distance value is transformed to a smooth heaviside function \f$H_\epsilon\f$, which has
+       * the property of \f$\int \nabla H_\epsilon=1\f$. This function has its transition region between
+       * -2 and 2.
+       */
+      inline
+      double
+      smooth_heaviside_from_distance_value(const double x /*distance*/)
+      {
+        constexpr double pi = std::acos(-1); // @todo move to utility function
+        if (x > 0)
+            return 1.-smooth_heaviside_from_distance_value(-x);
+        else if (x < -2.)
+            return 0;
+        else if (x < -1.)
+        {
+          const double x2 = x * x;
+          return (0.125 * (5.*x+x2) + 0.03125 * (-3.-2.*x) *
+                    std::sqrt(-7.-12.*x-4.*x2) -
+                    0.0625 * std::asin(std::sqrt(2.)*(x+1.5)) +
+                    23. * 0.03125 - pi/64.);
+        }
+        else
+        {
+            const double x2 = x * x;
+            return (0.125 * (3.*x+x2) - 0.03125 * (-1.-2.*x) *
+                    std::sqrt(1.-4.*x-4.*x2) +
+                      0.0625 * std::asin(std::sqrt(2.)*(x+0.5)) +
+                      15. * 0.03125 - pi/64.);
+        }
+      }
+
       void
       transform_level_set_to_smooth_heaviside()
       {
-        FEValues<dim> fe_values(scratch_data.get_mapping(),
-                                scratch_data.get_dof_handler(this->dof_idx).get_fe(),
-                                scratch_data.get_quadrature(this->quad_idx),
+        scratch_data->initialize_dof_vector(level_set_as_heaviside, dof_no_bc_idx);
+        scratch_data->initialize_dof_vector(distance_to_level_set, dof_no_bc_idx);
+        FEValues<dim> fe_values(scratch_data->get_mapping(),
+                                scratch_data->get_dof_handler(this->dof_no_bc_idx).get_fe(),
+                                scratch_data->get_quadrature(this->quad_idx),
                                 update_values | update_quadrature_points |
                                   update_JxW_values);
 
-        //const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell();
-        //const unsigned int n_q_points = fe_values.get_quadrature().size();
+        const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell();
+        const unsigned int n_q_points = fe_values.get_quadrature().size();
 
-        //std::vector<double>         phi_at_q(n_q_points);
+        std::vector<double>         phi_at_q(n_q_points);
 
-        //std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+        std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
-        //const double cut_off_level_set = std::tanh(2);
+        const double cut_off_level_set = std::tanh(2);
 
-        //for (const auto &cell : scratch_data.get_dof_handler(this->dof_idx).active_cell_iterators())
-          //if (cell->is_locally_owned())
-            //{
-              //cell->get_dof_indices(local_dof_indices);
+        for (const auto &cell : scratch_data->get_dof_handler(this->dof_no_bc_idx).active_cell_iterators())
+          if (cell->is_locally_owned())
+            {
+              cell->get_dof_indices(local_dof_indices);
               
-              //bool cell_is_in_interface_region;
+              const double epsilon_cell =
+                reinit_operation.reinit_data.constant_epsilon > 0.0 ? 
+                  reinit_operation.reinit_data.constant_epsilon : 
+                  cell->diameter() / (std::sqrt(dim)) * reinit_operation.reinit_data.scale_factor_epsilon;
 
-              //for (unsigned int i = 0; i < dofs_percell; ++i)
-              //{
-                //if (std::fabs(solution_level_set[local_dof_indices[i]]) < cut_off_level_set)
-                  //{
-                //const double c_val    = local_values(i);
-                //double       distance = 0;
-                //if (c_val < -cutoff)
-                  //distance = -3;
-                //else if (c_val > cutoff)
-                  //distance = 3;
-                //else
-                  //distance = std::log((1 + c_val) / (1 - c_val));
-
-                //// want to have force along width 2*h which is
-                //// what distance scaled by twice relative
-                //// epsilon but not mesh size is doing in
-                //// discrete_heaviside that is defined between
-                //// -2 and 2.
-                //distance *= this->parameters.epsilon * 2. /
-                            //this->parameters.concentration_subdivisions;
-                //this->heaviside(local_dof_indices[i]) = discrete_heaviside(distance);
-
-                    //break;
-                  //}
-                //else
-                  //heaviside[local_dof_indices[i]] = ( std::sign(solution_level_set[local_dof_indices[i]]) < 0 ) ? 0.0 : 1.0;
-              //}
-            //}
+              for (unsigned int i = 0; i < dofs_per_cell; ++i)
+              {
+                const double & phi = solution_level_set[local_dof_indices[i]];
+                const double distance = distance_function_from_level_set_value(phi, epsilon_cell, cut_off_level_set);
+                distance_to_level_set(local_dof_indices[i]) = distance;
+                level_set_as_heaviside(local_dof_indices[i]) = smooth_heaviside_from_distance_value(2 * distance/(3*epsilon_cell));
+              }
+            }
       }
 
       void
@@ -303,6 +344,7 @@ namespace MeltPoolDG
        * update
        */
       VectorType level_set_as_heaviside;
+      VectorType distance_to_level_set;
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

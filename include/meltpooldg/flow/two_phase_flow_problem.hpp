@@ -308,7 +308,10 @@ namespace MeltPoolDG
                                              pressure,
                                              level_set_operation.solution_level_set,
                                              level_set_operation.solution_curvature,
-                                             level_set_operation.solution_normal_vector);
+                                             level_set_operation.solution_normal_vector,
+                                             level_set_operation.level_set_as_heaviside,
+                                             level_set_operation.distance_to_level_set
+                                             );
 
             /*
              *  output advected field
@@ -351,6 +354,14 @@ namespace MeltPoolDG
              */
             data_out.add_data_vector(dof_handler, viscosity, "viscosity");
             /*
+             * heaviside
+             */
+            data_out.add_data_vector(dof_handler, level_set_operation.level_set_as_heaviside, "heaviside");
+            /*
+             * distance to zero level set
+             */
+            data_out.add_data_vector(dof_handler, level_set_operation.distance_to_level_set, "distance");
+            /*
              * pressure
              */
             data_out.add_data_vector(flow_operation->get_dof_handler_pressure(),
@@ -373,7 +384,9 @@ namespace MeltPoolDG
                                          pressure,
                                          level_set_operation.solution_level_set,
                                          level_set_operation.solution_curvature,
-                                         level_set_operation.solution_normal_vector);
+                                         level_set_operation.solution_normal_vector,
+                                         level_set_operation.level_set_as_heaviside,
+                                         level_set_operation.distance_to_level_set);
           }
       }
 
