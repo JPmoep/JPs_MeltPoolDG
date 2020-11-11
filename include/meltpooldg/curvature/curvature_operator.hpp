@@ -41,6 +41,8 @@ namespace MeltPoolDG
       using BlockVectorType     = LinearAlgebra::distributed::BlockVector<number>;
       using VectorizedArrayType = VectorizedArray<number>;
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;
+      using vector              = Tensor<1, dim, VectorizedArray<number>>;
+      using scalar              = VectorizedArray<number>;
 
       // clang-format off
       CurvatureOperator( const ScratchData<dim>& scratch_data_in,
@@ -188,6 +190,25 @@ namespace MeltPoolDG
       }
 
     private:
+      // static auto
+      // map_1d_vector_to_scalar(const vector &in)
+      // {
+      //   // if (dim == 1)
+      //   // {
+      //   //   scalar s;
+      //   //   for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
+      //   //     s[v] = in[0][v];
+      //   //   return s;
+      //   // }
+      //   // else
+      //   //   return in;
+      // }
+      // static vector
+      // map_1d_vector_to_scalar(const vector &in)
+      // {
+      //   return in;
+      // }
+
       const ScratchData<dim> &scratch_data;
 
       double damping;

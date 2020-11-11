@@ -10,6 +10,7 @@
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
 #include <meltpooldg/simulations/slotted_disc/slotted_disc.hpp>
 #include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
+#include <meltpooldg/simulations/recoil_pressure/recoil_pressure.hpp>
 
 namespace MeltPoolDG
 {
@@ -45,6 +46,11 @@ namespace MeltPoolDG
         else if (simulation_name == "slotted_disc")
           return std::make_shared<SlottedDisc::SimulationSlottedDisc<dim>>(parameter_file,
                                                                            mpi_communicator);
+        else if (simulation_name == "recoil_pressure")
+        {
+          return std::make_shared<RecoilPressure::SimulationRecoilPressure<dim>>(parameter_file,
+                                                                                 mpi_communicator);        
+        }                                                                  
         /* add your simulation here*/
         else
           AssertThrow(false,

@@ -105,6 +105,32 @@ namespace MeltPoolDG
     bool   do_matrix_free       = false;
     bool   do_print_l2norm      = true;
   };
+  
+  template <typename number = double>
+  struct MeltPoolData
+  {
+    std::string temperature_formulation = "analytical"; 
+    number      laser_power = 0.0;
+    number      scan_speed = 0.0;
+    number      ambient_temperature = 0.0;
+    number      recoil_pressure_constant = 0.0;
+    number      recoil_pressure_temperature_constant = 0.0;
+    number      boiling_temperature = 0.0;
+    bool        do_print_l2norm      = true;
+    
+    struct Liquid
+    {
+      number absorptivity = 0.0;
+      number conductivity = 0.0;
+      number capacity     = 0.0;
+    } liquid;
+    struct Gas
+    {
+      number absorptivity = 0.0;
+      number conductivity = 0.0;
+      number capacity     = 0.0;
+    } gas;
+  };
 
   template <typename number = double>
   struct ParaviewData
@@ -456,6 +482,56 @@ namespace MeltPoolDG
       }
       prm.leave_subsection();
       /*
+       *   melt pool
+       */
+      prm.enter_subsection("melt pool");
+      {
+        prm.add_parameter("mp temperature formulation", 
+                           mp.temperature_formulation,
+                          "Definition type of the temperature field: "
+                          "(1) analytical expression (2) solve heat equation (not implemented yet)");
+        prm.add_parameter("mp laser power",
+                          mp.laser_power,    //@todo: add user input function
+                          "Intensity of the laser");
+        prm.add_parameter("mp scan speed", 
+                           mp.scan_speed, 
+                          "Scan speed of the laser (in case of an analytical temperature field).");
+        prm.add_parameter("mp ambient temperature",
+                          mp.ambient_temperature,
+                          "Ambient temperature in the inert gas.");
+        prm.add_parameter("mp recoil pressure constant",
+                          mp.recoil_pressure_constant,
+                          "Pressure constant for the recoil pressure model.");
+        prm.add_parameter("mp recoil pressure temperature constant",
+                          mp.recoil_pressure_temperature_constant,
+                          "Temperature constant for the recoil pressure model.");
+        prm.add_parameter("mp boiling temperature",
+                          mp.boiling_temperature,
+                          "Boiling temperature of the melt.");
+        prm.add_parameter("mp do print l2norm",
+                          mp.do_print_l2norm,
+                          "Defines if the l2norm of the melt pool results should be printed)");
+        prm.add_parameter("mp liquid absorptivity", 
+                          mp.liquid.absorptivity,
+                          "Absorptivity of the liquid part of domain");
+        prm.add_parameter("mp liquid conductivity", 
+                          mp.liquid.conductivity,
+                          "Conductivity of the liquid part of domain");
+        prm.add_parameter("mp liquid capacity", 
+                          mp.liquid.capacity,
+                          "Capacity of the liquid part of domain");
+        prm.add_parameter("mp gas absorptivity", 
+                          mp.gas.absorptivity,
+                          "Absorptivity of the gaseous part of domain");
+        prm.add_parameter("mp gas conductivity", 
+                          mp.gas.conductivity,
+                          "Conductivity of the gaseous part of domain");
+        prm.add_parameter("mp gas capacity", 
+                          mp.gas.capacity,
+                          "Capacity of the gaseous part of domain");
+      }
+      prm.leave_subsection();
+      /*
        *   paraview
        */
       prm.enter_subsection("paraview");
@@ -536,6 +612,7 @@ namespace MeltPoolDG
     FlowData<number>               flow;
     NormalVectorData<number>       normal_vec;
     CurvatureData<number>          curv;
+    MeltPoolData<number>           mp;
     ParaviewData<number>           paraview;
     OutputData<number>             output;
     Flow::AdafloWrapperParameters  adaflo_params;

@@ -1,11 +1,12 @@
 {
   "base" : {
     "problem name": "two_phase_flow",
-    "application name": "rising_bubble",
+    "application name": "recoil_pressure",
     "global refinements": "4",
     "dimension": "2",
     "degree": "2",
-    "gravity": "0.98"
+    "gravity": "0.0",
+    "do print parameters": "false"
   },
   "flow" : {
     "flow density": "1",
@@ -14,8 +15,22 @@
     "flow viscosity difference": "-0.009",
     "flow surface tension coefficient": "0.0245",
     "flow start time": "0.0",
-    "flow end time": "1.0",
-    "flow time step size": "0.02"
+    "flow end time": "0.02",
+    "flow time step size": "0.01"
+  },
+  "melt pool" : {
+    "mp laser power": "500",
+    "mp scan speed": "0.03",
+    "mp ambient temperature": "300",
+    "mp recoil pressure constant": "1e5",
+    "mp recoil pressure temperature_constant": "1e5",
+    "mp boiling temperature": "3000",
+    "mp liquid absorptivity": "0.5",
+    "mp liquid conductivity": "35.95",
+    "mp liquid capacity": "965",
+    "mp gas absorptivity": "0",
+    "mp gas conductivity": "10",
+    "mp gas capacity": "0"
   },
   "levelset" : {
     "ls do reinitialization": "true",
@@ -41,9 +56,6 @@
   "paraview" : {
     "paraview do output": "true"
   },
-  "Time stepping" : {
-    "scheme"           : "bdf_2"
-  },
   "Navier-Stokes" : {
     "adaflo" : {
       "Navier-Stokes" : {
@@ -64,6 +76,9 @@
           "lin pressure mass preconditioner" : "ilu",
           "lin its before inner solvers" : "50"
         }
+      },
+      "Time stepping" : {
+        "scheme"           : "bdf_2"
       },
       "Output options" : 
       {

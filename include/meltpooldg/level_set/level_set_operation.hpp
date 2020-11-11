@@ -90,6 +90,10 @@ namespace MeltPoolDG
             reinit_time_iterator.reset();
           }
         /*
+         *    compute the smoothened function
+         */
+        transform_level_set_to_smooth_heaviside();
+        /*
          *    initialize the curvature operation class
          */
         curvature_operation.initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
@@ -98,9 +102,9 @@ namespace MeltPoolDG
          */
         curvature_operation.solve(advec_diff_operation.solution_advected_field);
         /*
-         *    compute the smoothened function
+         *    correct the curvature value far away from the zero level set
          */
-        transform_level_set_to_smooth_heaviside();
+        // correct_curvature_values();
       }
 
       void
@@ -132,15 +136,21 @@ namespace MeltPoolDG
             advec_diff_operation.solution_advected_field =
               reinit_operation.solution_level_set; // @ could be defined by reference
             reinit_time_iterator.reset();
+            
           }
+        /*
+         *    compute the smoothened function
+         */
+        transform_level_set_to_smooth_heaviside();
         /*
          *    compute the curvature
          */
         curvature_operation.solve(advec_diff_operation.solution_advected_field);
         /*
-         *    compute the smoothened function
-         */
-        transform_level_set_to_smooth_heaviside();
+         *    correct the curvature value far away from the zero level set
+        //  */
+        // correct_curvature_values();
+
       }
 
       void
@@ -162,7 +172,7 @@ namespace MeltPoolDG
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 level_set.reinit(cell);
-                level_set.gather_evaluate(level_set_as_heaviside, true, true);
+                level_set.gather_evaluate(level_set_as_heaviside, false, true);
 
                 surface_tension.reinit(cell);
 
@@ -176,7 +186,6 @@ namespace MeltPoolDG
                       surface_tension_coefficient *
                         level_set.get_gradient(
                           q_index) * // must be adopted --> level set be between zero and 1
-                        0.5 *
                         curvature.get_value(q_index),
                       q_index);
                   }
@@ -251,9 +260,6 @@ namespace MeltPoolDG
                                   update_JxW_values);
 
         const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell();
-        const unsigned int n_q_points = fe_values.get_quadrature().size();
-
-        std::vector<double>         phi_at_q(n_q_points);
 
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
@@ -271,13 +277,23 @@ namespace MeltPoolDG
 
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
               {
-                const double & phi = solution_level_set[local_dof_indices[i]];
-                const double distance = distance_function_from_level_set_value(phi, epsilon_cell, cut_off_level_set);
+                const double distance = distance_function_from_level_set_value(solution_level_set[local_dof_indices[i]], epsilon_cell, cut_off_level_set);
                 distance_to_level_set(local_dof_indices[i]) = distance;
                 level_set_as_heaviside(local_dof_indices[i]) = smooth_heaviside_from_distance_value(2 * distance/(3*epsilon_cell));
               }
             }
       }
+
+      // void
+      // correct_curvature_values()
+      // {
+      //   for (unsigned int i=0; i<solution_curvature.local_size(); ++i)
+      //     if (std::abs(solution_curvature.local_element(i)) > 1e-4) 
+      //       {
+      //         if (1.-solution_level_set.local_element(i)*solution_level_set.local_element(i)>1e-2)
+      //         curvature_operation.solution_curvature.local_element(i) = 1./(1./curvature_operation.solution_curvature.local_element(i)+distance_to_level_set.local_element(i)/(dim-1));
+      //       }
+      // }
 
       void
       set_level_set_parameters(const Parameters<double> &data_in)
