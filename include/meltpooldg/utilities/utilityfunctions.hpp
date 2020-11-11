@@ -269,7 +269,7 @@ namespace MeltPoolDG
             corner[1][1] = upper_right_corner[1];
             corner[2]    = upper_right_corner;
             corner[3]    = lower_left_corner;
-            corner[3][0] = upper_right_corner[1];
+            corner[3][0] = upper_right_corner[0];
 
             /**
              *       y
@@ -290,6 +290,7 @@ namespace MeltPoolDG
              *
              */
 
+            // lower right corner
             if ((p[0] <= center[0]) && (p[1] <= center[1]))
               {
                 double d = std::min({-spherical_manifold(p, corner[0], 0.0),
@@ -300,7 +301,8 @@ namespace MeltPoolDG
                 else
                   return -d; /* point is outside of rectangle */
               }
-            else if ((p[0] <= center[0]) && (p[1] >= center[1]))
+            // upper left corner
+            else if ((p[0] <= center[0]) && (p[1] > center[1]))
               {
                 double d = std::min({-spherical_manifold(p, corner[1], 0.0),
                                      infinite_line<dim>(p, corner[0], corner[1]),
@@ -311,6 +313,7 @@ namespace MeltPoolDG
                 else
                   return -d;
               }
+            // upper right corner
             else if ((p[0] >= center[0]) && (p[1] >= center[1]))
               {
                 double d = std::min({-spherical_manifold(p, corner[2], 0.0),
@@ -322,7 +325,8 @@ namespace MeltPoolDG
                 else
                   return -d;
               }
-            else if ((p[0] >= center[0]) && (p[1] <= center[1]))
+            // lower right corner
+            else if ((p[0] >= center[0]) && (p[1] < center[1]))
               {
                 double d = std::min({-spherical_manifold(p, corner[3], 0.0),
                                      infinite_line<dim>(p, corner[2], corner[3]),
