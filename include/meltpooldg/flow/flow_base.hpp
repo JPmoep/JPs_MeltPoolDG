@@ -24,7 +24,7 @@ namespace MeltPoolDG
 
       virtual const DoFHandler<dim> &
       get_dof_handler_velocity() const = 0;
-      
+
       virtual const LinearAlgebra::distributed::Vector<double> &
       get_pressure() const = 0;
 

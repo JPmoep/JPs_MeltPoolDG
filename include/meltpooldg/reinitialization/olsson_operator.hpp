@@ -287,17 +287,17 @@ namespace MeltPoolDG
       }
 
       static vector
-      normalize(const vector &in, const double zero=1e-6)
+      normalize(const vector &in, const double zero = 1e-6)
       {
         vector vec;
-        
-        auto n_norm = in.norm(); 
+
+        auto n_norm = in.norm();
         for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
-          if (n_norm[v]>=zero)
-            for (unsigned int d=0; d<dim; ++d)
-              vec[d][v] = in[d][v]/n_norm[v];
+          if (n_norm[v] >= zero)
+            for (unsigned int d = 0; d < dim; ++d)
+              vec[d][v] = in[d][v] / n_norm[v];
           else
-            for (unsigned int d=0; d<dim; ++d)
+            for (unsigned int d = 0; d < dim; ++d)
               vec[d][v] = 0.0;
 
         return vec;

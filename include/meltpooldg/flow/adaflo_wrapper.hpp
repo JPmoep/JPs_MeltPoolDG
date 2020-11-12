@@ -190,7 +190,7 @@ namespace MeltPoolDG
       {
         AssertThrow(false, ExcNotImplemented());
       }
-      
+
       const DoFHandler<1> &
       get_dof_handler_velocity() const override
       {

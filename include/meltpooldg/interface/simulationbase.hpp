@@ -215,16 +215,14 @@ namespace MeltPoolDG
      */
     const auto &
     get_bc(const std::string operation_name)
-    { 
+    {
       return boundary_conditions_map[operation_name];
     }
     const auto &
     get_dirichlet_bc(const std::string operation_name)
-    { 
+    {
       if (!boundary_conditions_map[operation_name])
-        AssertThrow(false,
-                    ExcMessage(
-                      "dirichlet_bc: requested boundary condition not found"));
+        AssertThrow(false, ExcMessage("dirichlet_bc: requested boundary condition not found"));
       return boundary_conditions_map[operation_name]->dirichlet_bc;
     }
 

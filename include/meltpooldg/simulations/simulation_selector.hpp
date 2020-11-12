@@ -5,12 +5,12 @@
 // simulations
 #include <meltpooldg/simulations/advection_diffusion/advection_diffusion.hpp>
 #include <meltpooldg/simulations/flow_past_cylinder/flow_past_cylinder.hpp>
+#include <meltpooldg/simulations/recoil_pressure/recoil_pressure.hpp>
 #include <meltpooldg/simulations/reinit_circle/reinit_circle.hpp>
 #include <meltpooldg/simulations/rising_bubble/rising_bubble.hpp>
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
 #include <meltpooldg/simulations/slotted_disc/slotted_disc.hpp>
 #include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
-#include <meltpooldg/simulations/recoil_pressure/recoil_pressure.hpp>
 
 namespace MeltPoolDG
 {
@@ -47,10 +47,10 @@ namespace MeltPoolDG
           return std::make_shared<SlottedDisc::SimulationSlottedDisc<dim>>(parameter_file,
                                                                            mpi_communicator);
         else if (simulation_name == "recoil_pressure")
-        {
-          return std::make_shared<RecoilPressure::SimulationRecoilPressure<dim>>(parameter_file,
-                                                                                 mpi_communicator);        
-        }                                                                  
+          {
+            return std::make_shared<RecoilPressure::SimulationRecoilPressure<dim>>(
+              parameter_file, mpi_communicator);
+          }
         /* add your simulation here*/
         else
           AssertThrow(false,

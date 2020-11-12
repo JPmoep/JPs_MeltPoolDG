@@ -105,19 +105,19 @@ namespace MeltPoolDG
     bool   do_matrix_free       = false;
     bool   do_print_l2norm      = true;
   };
-  
+
   template <typename number = double>
   struct MeltPoolData
   {
-    std::string temperature_formulation = "analytical"; 
-    number      laser_power = 0.0;
-    number      scan_speed = 0.0;
-    number      ambient_temperature = 0.0;
-    number      recoil_pressure_constant = 0.0;
+    std::string temperature_formulation              = "analytical";
+    number      laser_power                          = 0.0;
+    number      scan_speed                           = 0.0;
+    number      ambient_temperature                  = 0.0;
+    number      recoil_pressure_constant             = 0.0;
     number      recoil_pressure_temperature_constant = 0.0;
-    number      boiling_temperature = 0.0;
-    bool        do_print_l2norm      = true;
-    
+    number      boiling_temperature                  = 0.0;
+    bool        do_print_l2norm                      = true;
+
     struct Liquid
     {
       number absorptivity = 0.0;
@@ -207,8 +207,7 @@ namespace MeltPoolDG
           adaflo_params.params.density_diff   = 1.0;
           adaflo_params.params.viscosity_diff = 1.0;
 
-          flow.density =
-            (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+          flow.density   = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
           flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
 
           /// synchronize time stepping schemes
@@ -485,15 +484,16 @@ namespace MeltPoolDG
        */
       prm.enter_subsection("melt pool");
       {
-        prm.add_parameter("mp temperature formulation", 
-                           mp.temperature_formulation,
-                          "Definition type of the temperature field: "
-                          "(1) analytical expression (2) solve heat equation (not implemented yet)");
+        prm.add_parameter(
+          "mp temperature formulation",
+          mp.temperature_formulation,
+          "Definition type of the temperature field: "
+          "(1) analytical expression (2) solve heat equation (not implemented yet)");
         prm.add_parameter("mp laser power",
-                          mp.laser_power,    //@todo: add user input function
+                          mp.laser_power, //@todo: add user input function
                           "Intensity of the laser");
-        prm.add_parameter("mp scan speed", 
-                           mp.scan_speed, 
+        prm.add_parameter("mp scan speed",
+                          mp.scan_speed,
                           "Scan speed of the laser (in case of an analytical temperature field).");
         prm.add_parameter("mp ambient temperature",
                           mp.ambient_temperature,
@@ -510,22 +510,22 @@ namespace MeltPoolDG
         prm.add_parameter("mp do print l2norm",
                           mp.do_print_l2norm,
                           "Defines if the l2norm of the melt pool results should be printed)");
-        prm.add_parameter("mp liquid absorptivity", 
+        prm.add_parameter("mp liquid absorptivity",
                           mp.liquid.absorptivity,
                           "Absorptivity of the liquid part of domain");
-        prm.add_parameter("mp liquid conductivity", 
+        prm.add_parameter("mp liquid conductivity",
                           mp.liquid.conductivity,
                           "Conductivity of the liquid part of domain");
-        prm.add_parameter("mp liquid capacity", 
+        prm.add_parameter("mp liquid capacity",
                           mp.liquid.capacity,
                           "Capacity of the liquid part of domain");
-        prm.add_parameter("mp gas absorptivity", 
+        prm.add_parameter("mp gas absorptivity",
                           mp.gas.absorptivity,
                           "Absorptivity of the gaseous part of domain");
-        prm.add_parameter("mp gas conductivity", 
+        prm.add_parameter("mp gas conductivity",
                           mp.gas.conductivity,
                           "Conductivity of the gaseous part of domain");
-        prm.add_parameter("mp gas capacity", 
+        prm.add_parameter("mp gas capacity",
                           mp.gas.capacity,
                           "Capacity of the gaseous part of domain");
       }

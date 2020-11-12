@@ -135,7 +135,6 @@ namespace MeltPoolDG
             advec_diff_operation.solution_advected_field =
               reinit_operation.solution_level_set; // @ could be defined by reference
             reinit_time_iterator.reset();
-            
           }
         /*
          *    compute the smoothened function
@@ -149,7 +148,6 @@ namespace MeltPoolDG
          *    correct the curvature value far away from the zero level set
          */
         correct_curvature_values();
-
       }
 
       void
@@ -194,7 +192,7 @@ namespace MeltPoolDG
           force_rhs,
           nullptr,
           zero_out);
-          level_set_as_heaviside.zero_out_ghosts();
+        level_set_as_heaviside.zero_out_ghosts();
       }
       /*
        *  getter functions for solution vectors
@@ -202,49 +200,46 @@ namespace MeltPoolDG
       // @ todo
 
     private:
-
-      inline
-      double
-      distance_function_from_level_set_value(const double phi, const double eps, const double cutoff)
+      inline double
+      distance_function_from_level_set_value(const double phi,
+                                             const double eps,
+                                             const double cutoff)
       {
-        if ( std::abs(phi) < cutoff )
-          return eps * std::log( ( 1.+phi ) / (1.-phi) );
-        else if ( phi >= cutoff )
-          return eps * std::log( ( 1.+cutoff ) / (1.-cutoff) );
+        if (std::abs(phi) < cutoff)
+          return eps * std::log((1. + phi) / (1. - phi));
+        else if (phi >= cutoff)
+          return eps * std::log((1. + cutoff) / (1. - cutoff));
         else /*( phi <= -cutoff )*/
-          return -eps * std::log( ( 1.+cutoff ) / (1.-cutoff) );
+          return -eps * std::log((1. + cutoff) / (1. - cutoff));
       }
 
       /**
-       * The given distance value is transformed to a smooth heaviside function \f$H_\epsilon\f$, which has
-       * the property of \f$\int \nabla H_\epsilon=1\f$. This function has its transition region between
-       * -2 and 2.
+       * The given distance value is transformed to a smooth heaviside function \f$H_\epsilon\f$,
+       * which has the property of \f$\int \nabla H_\epsilon=1\f$. This function has its transition
+       * region between -2 and 2.
        */
-      inline
-      double
+      inline double
       smooth_heaviside_from_distance_value(const double x /*distance*/)
       {
         constexpr double pi = std::acos(-1); // @todo move to utility function
         if (x > 0)
-            return 1.-smooth_heaviside_from_distance_value(-x);
+          return 1. - smooth_heaviside_from_distance_value(-x);
         else if (x < -2.)
-            return 0;
+          return 0;
         else if (x < -1.)
-        {
-          const double x2 = x * x;
-          return (0.125 * (5.*x+x2) + 0.03125 * (-3.-2.*x) *
-                    std::sqrt(-7.-12.*x-4.*x2) -
-                    0.0625 * std::asin(std::sqrt(2.)*(x+1.5)) +
-                    23. * 0.03125 - pi/64.);
-        }
-        else
-        {
+          {
             const double x2 = x * x;
-            return (0.125 * (3.*x+x2) - 0.03125 * (-1.-2.*x) *
-                    std::sqrt(1.-4.*x-4.*x2) +
-                      0.0625 * std::asin(std::sqrt(2.)*(x+0.5)) +
-                      15. * 0.03125 - pi/64.);
-        }
+            return (0.125 * (5. * x + x2) +
+                    0.03125 * (-3. - 2. * x) * std::sqrt(-7. - 12. * x - 4. * x2) -
+                    0.0625 * std::asin(std::sqrt(2.) * (x + 1.5)) + 23. * 0.03125 - pi / 64.);
+          }
+        else
+          {
+            const double x2 = x * x;
+            return (0.125 * (3. * x + x2) -
+                    0.03125 * (-1. - 2. * x) * std::sqrt(1. - 4. * x - 4. * x2) +
+                    0.0625 * std::asin(std::sqrt(2.) * (x + 0.5)) + 15. * 0.03125 - pi / 64.);
+          }
       }
 
       void
@@ -255,8 +250,7 @@ namespace MeltPoolDG
         FEValues<dim> fe_values(scratch_data->get_mapping(),
                                 scratch_data->get_dof_handler(this->dof_no_bc_idx).get_fe(),
                                 scratch_data->get_quadrature(this->quad_idx),
-                                update_values | update_quadrature_points |
-                                  update_JxW_values);
+                                update_values | update_quadrature_points | update_JxW_values);
 
         const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell();
 
@@ -264,28 +258,34 @@ namespace MeltPoolDG
 
         const double cut_off_level_set = std::tanh(2);
 
-        for (const auto &cell : scratch_data->get_dof_handler(this->dof_no_bc_idx).active_cell_iterators())
+        for (const auto &cell :
+             scratch_data->get_dof_handler(this->dof_no_bc_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               cell->get_dof_indices(local_dof_indices);
-              
-              const double epsilon_cell =
-                reinit_operation.reinit_data.constant_epsilon > 0.0 ? 
-                  reinit_operation.reinit_data.constant_epsilon : 
-                  cell->diameter() / (std::sqrt(dim)) * reinit_operation.reinit_data.scale_factor_epsilon;
+
+              const double epsilon_cell = reinit_operation.reinit_data.constant_epsilon > 0.0 ?
+                                            reinit_operation.reinit_data.constant_epsilon :
+                                            cell->diameter() / (std::sqrt(dim)) *
+                                              reinit_operation.reinit_data.scale_factor_epsilon;
 
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
-              {
-                const double distance = distance_function_from_level_set_value(solution_level_set[local_dof_indices[i]], epsilon_cell, cut_off_level_set);
-                distance_to_level_set(local_dof_indices[i]) = distance;
-                level_set_as_heaviside(local_dof_indices[i]) = smooth_heaviside_from_distance_value(2 * distance/(3*epsilon_cell));
-              }
+                {
+                  const double distance =
+                    distance_function_from_level_set_value(solution_level_set[local_dof_indices[i]],
+                                                           epsilon_cell,
+                                                           cut_off_level_set);
+                  distance_to_level_set(local_dof_indices[i]) = distance;
+                  level_set_as_heaviside(local_dof_indices[i]) =
+                    smooth_heaviside_from_distance_value(2 * distance / (3 * epsilon_cell));
+                }
             }
       }
 
-      /// To avoid high-frequency errors in the curvature (spurious currents) the curvature is corrected to represent 
-      /// the value of the interface (zero level set). The approach by Zahedi et al. (2012) is pursued. Considering e.g. a 
-      /// bubble, the absolute curvature of areas outside of the bubble (Φ=-) must increase and vice-versa for areas 
+      /// To avoid high-frequency errors in the curvature (spurious currents) the curvature is
+      /// corrected to represent the value of the interface (zero level set). The approach by Zahedi
+      /// et al. (2012) is pursued. Considering e.g. a bubble, the absolute curvature of areas
+      /// outside of the bubble (Φ=-) must increase and vice-versa for areas
       ///  inside the bubble.
       //
       //           ******
@@ -301,10 +301,12 @@ namespace MeltPoolDG
       void
       correct_curvature_values()
       {
-        for (unsigned int i=0; i<solution_curvature.local_size(); ++i)
-          //if (std::abs(solution_curvature.local_element(i)) > 1e-4) 
-          if (1.-solution_level_set.local_element(i)*solution_level_set.local_element(i)>1e-2)
-            curvature_operation.solution_curvature.local_element(i) = 1./(1./curvature_operation.solution_curvature.local_element(i)+distance_to_level_set.local_element(i)/(dim-1));
+        for (unsigned int i = 0; i < solution_curvature.local_size(); ++i)
+          // if (std::abs(solution_curvature.local_element(i)) > 1e-4)
+          if (1. - solution_level_set.local_element(i) * solution_level_set.local_element(i) > 1e-2)
+            curvature_operation.solution_curvature.local_element(i) =
+              1. / (1. / curvature_operation.solution_curvature.local_element(i) +
+                    distance_to_level_set.local_element(i) / (dim - 1));
       }
 
       void
