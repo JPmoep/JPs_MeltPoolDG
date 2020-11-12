@@ -1,6 +1,6 @@
 {
   "base" : {
-    "problem name": "two_phase_flow",
+    "problem name": "melt_pool",
     "application name": "recoil_pressure",
     "global refinements": "7",
     "dimension": "2",
