@@ -61,7 +61,7 @@ namespace MeltPoolDG
       {
         if (distance > eps)
           return 1;
-        else if (distance < -eps)
+        else if (distance <= -eps)
           return 0;
         else
           return (distance + eps) / (2. * eps) +

@@ -26,9 +26,9 @@
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/level_set/level_set_operation.hpp>
+#include <meltpooldg/melt_pool/melt_pool_operation.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
 #include <meltpooldg/utilities/vector_tools.hpp>
-#include <meltpooldg/melt_pool/melt_pool_operation.hpp>
 
 namespace MeltPoolDG
 {
@@ -74,9 +74,14 @@ namespace MeltPoolDG
             level_set_operation.compute_surface_tension(
               force_rhs,
               base_in->parameters.flow.surface_tension_coefficient,
-              false /*add to force vector*/);
+              false /*false means add to force vector*/);
 
-            melt_pool_operation.compute_recoil_pressure_force(force_rhs, level_set_operation.level_set_as_heaviside, false /*add to force vector*/);
+            // ... c) recoil pressure
+            melt_pool_operation.compute_recoil_pressure_force(
+              force_rhs,
+              level_set_operation.level_set_as_heaviside,
+              false /*false means add to force vector*/);
+
             //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_force_rhs(force_rhs);
             // solver Navier-Stokes problem
@@ -134,19 +139,19 @@ namespace MeltPoolDG
 
         constraints_dirichlet.clear();
         constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
-        if ( base_in->get_bc("level_set") && !base_in->get_dirichlet_bc("level_set").empty())
-        {          
-          for (const auto &bc : base_in->get_dirichlet_bc(
-                "level_set")) // @todo: add name of bc at a more central place
-            {
-              dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
-                                                              dof_handler,
-                                                              bc.first,
-                                                              *bc.second,
-                                                              constraints_dirichlet);
-            }
-        }
-        
+        if (base_in->get_bc("level_set") && !base_in->get_dirichlet_bc("level_set").empty())
+          {
+            for (const auto &bc : base_in->get_dirichlet_bc(
+                   "level_set")) // @todo: add name of bc at a more central place
+              {
+                dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
+                                                                 dof_handler,
+                                                                 bc.first,
+                                                                 *bc.second,
+                                                                 constraints_dirichlet);
+              }
+          }
+
         constraints_dirichlet.merge(hanging_node_constraints);
         constraints_dirichlet.close();
 
@@ -211,8 +216,7 @@ namespace MeltPoolDG
          *    initialize the melt pool operation class
          */
 
-        melt_pool_operation.initialize(
-           scratch_data, base_in->parameters, dof_no_bc_idx, quad_idx);
+        melt_pool_operation.initialize(scratch_data, base_in->parameters, dof_no_bc_idx, quad_idx);
         /*
          *    initialize the force vector for calculating surface tension
          */
@@ -303,7 +307,7 @@ namespace MeltPoolDG
       void
       output_results(const unsigned int time_step, const Parameters<double> &parameters)
       {
-        if (parameters.paraview.do_output)
+        if (parameters.paraview.do_output && !(time_step % parameters.paraview.write_frequency))
           {
             fill_dof_vector_from_cell_operation(density,
                                                 parameters.base.degree,
@@ -313,6 +317,9 @@ namespace MeltPoolDG
                                                 parameters.base.degree,
                                                 parameters.base.n_q_points_1d,
                                                 "viscosity");
+            if (time_step == 0)
+              melt_pool_operation.compute_temperature_vector(
+                level_set_operation.level_set_as_heaviside);
 
             const VectorType &pressure = flow_operation->get_pressure();
 
@@ -327,8 +334,7 @@ namespace MeltPoolDG
                                              level_set_operation.solution_normal_vector,
                                              level_set_operation.level_set_as_heaviside,
                                              level_set_operation.distance_to_level_set,
-                                             melt_pool_operation.temperature
-                                             );
+                                             melt_pool_operation.temperature);
 
             /*
              *  output advected field
@@ -373,11 +379,15 @@ namespace MeltPoolDG
             /*
              * heaviside
              */
-            data_out.add_data_vector(dof_handler, level_set_operation.level_set_as_heaviside, "heaviside");
+            data_out.add_data_vector(dof_handler,
+                                     level_set_operation.level_set_as_heaviside,
+                                     "heaviside");
             /*
              * distance to zero level set
              */
-            data_out.add_data_vector(dof_handler, level_set_operation.distance_to_level_set, "distance");
+            data_out.add_data_vector(dof_handler,
+                                     level_set_operation.distance_to_level_set,
+                                     "distance");
             /*
              * pressure
              */
@@ -387,13 +397,12 @@ namespace MeltPoolDG
             /*
              * temperature
              */
-             data_out.add_data_vector(dof_handler,
-                                      melt_pool_operation.temperature,
-                                      "temperature");
+            data_out.add_data_vector(dof_handler, melt_pool_operation.temperature, "temperature");
             data_out.build_patches(scratch_data->get_mapping());
+
             data_out.write_vtu_with_pvtu_record("./",
                                                 parameters.paraview.filename,
-                                                time_step,
+                                                time_step / parameters.paraview.write_frequency,
                                                 scratch_data->get_mpi_comm(),
                                                 parameters.paraview.n_digits_timestep,
                                                 parameters.paraview.n_groups);
@@ -409,8 +418,7 @@ namespace MeltPoolDG
                                          level_set_operation.solution_normal_vector,
                                          level_set_operation.level_set_as_heaviside,
                                          level_set_operation.distance_to_level_set,
-                                         melt_pool_operation.temperature
-                                         );
+                                         melt_pool_operation.temperature);
           }
       }
 

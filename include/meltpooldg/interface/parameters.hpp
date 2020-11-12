@@ -78,9 +78,9 @@ namespace MeltPoolDG
   template <typename number = double>
   struct FlowData
   {
-    number       density                     = 0.0;
+    number       density                     = -1.0;
     number       density_difference          = 0.0;
-    number       viscosity                   = 0.0;
+    number       viscosity                   = -1.0;
     number       viscosity_difference        = 0.0;
     number       surface_tension_coefficient = 0.0;
     std::string  solver_type                 = "incompressible";
@@ -208,9 +208,8 @@ namespace MeltPoolDG
           adaflo_params.params.viscosity_diff = 1.0;
 
           flow.density =
-            (adaflo_params.params.density > 0.0) ? adaflo_params.params.density : flow.density;
-          flow.viscosity = (adaflo_params.params.viscosity > 0.0) ? adaflo_params.params.viscosity :
-                                                                    flow.viscosity;
+            (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+          flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
 
           /// synchronize time stepping schemes
           adaflo_params.params.start_time           = flow.start_time;

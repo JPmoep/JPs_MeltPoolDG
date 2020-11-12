@@ -62,7 +62,6 @@ namespace MeltPoolDG
 
         advected_field_old.update_ghost_values();
 
-
         FEValues<dim> fe_values(scratch_data.get_mapping(),
                                 scratch_data.get_dof_handler(this->dof_idx).get_fe(),
                                 scratch_data.get_quadrature(this->quad_idx),

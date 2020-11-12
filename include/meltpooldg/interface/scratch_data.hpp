@@ -168,10 +168,14 @@ namespace MeltPoolDG
       // We are building MatrixFree only if 1D quadrature rules have been
       // provided
       if (this->quad_1D.size() > 0)
-        this->matrix_free.reinit(*this->mapping,
-                                 this->dof_handler,
-                                 this->constraint,
-                                 this->quad_1D);
+        {
+          typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData additional_data;
+          additional_data.mapping_update_flags =
+            update_values | update_gradients | dealii::update_quadrature_points;
+
+          this->matrix_free.reinit(
+            *this->mapping, this->dof_handler, this->constraint, this->quad_1D, additional_data);
+        }
     }
 
     /**

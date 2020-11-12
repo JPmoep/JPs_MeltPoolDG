@@ -48,9 +48,8 @@ namespace MeltPoolDG
                            BlockVectorType & rhs) const override
       {
         level_set_in.update_ghost_values();
-        const auto &mapping = scratch_data.get_mapping();
 
-        FEValues<dim> fe_values(mapping,
+        FEValues<dim> fe_values(scratch_data.get_mapping(),
                                 scratch_data.get_dof_handler(this->dof_idx).get_fe(),
                                 scratch_data.get_quadrature(this->quad_idx),
                                 update_values | update_gradients | update_quadrature_points |
