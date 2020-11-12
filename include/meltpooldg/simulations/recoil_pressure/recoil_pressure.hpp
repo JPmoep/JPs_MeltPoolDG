@@ -35,13 +35,16 @@ namespace MeltPoolDG
         {
           const double x_half_domain_size = 100e-6;
           const double y_half_domain_size = 60e-6;
-          Point<dim>   lower_left = dim == 2 ? Point<dim>(-x_half_domain_size, -y_half_domain_size)
-                                             : Point<dim>(-x_half_domain_size, -x_half_domain_size, -y_half_domain_size);
-          Point<dim>   upper_right = dim == 2 ? Point<dim>(x_half_domain_size, 0)
-                                             : Point<dim>(x_half_domain_size, x_half_domain_size, 0);
-          
+          Point<dim>   lower_left =
+            dim == 2 ? Point<dim>(-x_half_domain_size, -y_half_domain_size) :
+                       Point<dim>(-x_half_domain_size, -x_half_domain_size, -y_half_domain_size);
+          Point<dim> upper_right = dim == 2 ? Point<dim>(x_half_domain_size, 0) :
+                                              Point<dim>(x_half_domain_size, x_half_domain_size, 0);
+
           return UtilityFunctions::CharacteristicFunctions::sgn(
-            UtilityFunctions::DistanceFunctions::rectangular_manifold<dim>(p, lower_left, upper_right));
+            UtilityFunctions::DistanceFunctions::rectangular_manifold<dim>(p,
+                                                                           lower_left,
+                                                                           upper_right));
         }
       };
 
@@ -57,7 +60,7 @@ namespace MeltPoolDG
           : SimulationBase<dim>(parameter_file, mpi_communicator)
         {
           this->set_parameters();
-        } 
+        }
 
         void
         create_spatial_discretization() override
@@ -72,12 +75,10 @@ namespace MeltPoolDG
               const double x_half_domain_size = 100e-6;
               const double y_half_domain_size = 60e-6;
 
-              const Point<dim> bottom_left = Point<dim>(-x_half_domain_size,-y_half_domain_size);
-              const Point<dim> top_right = Point<dim>(x_half_domain_size, y_half_domain_size);
-              
-              GridGenerator::hyper_rectangle(*this->triangulation,
-                                                        bottom_left,
-                                                        top_right);
+              const Point<dim> bottom_left = Point<dim>(-x_half_domain_size, -y_half_domain_size);
+              const Point<dim> top_right   = Point<dim>(x_half_domain_size, y_half_domain_size);
+
+              GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
               this->triangulation->refine_global(this->parameters.base.global_refinements);
             }
           else
@@ -91,10 +92,10 @@ namespace MeltPoolDG
         {
           this->attach_no_slip_boundary_condition(0, "navier_stokes_u");
           this->attach_fix_pressure_constant_condition(0, "navier_stokes_p");
-          
+
           // auto dirichlet = std::make_shared<Functions::ConstantFunction<dim>>(-1.0);
           // this->attach_dirichlet_boundary_condition(0, dirichlet, "level_set");
-          //this->attach_dirichlet_boundary_condition(2, dirichlet, "level_set");
+          // this->attach_dirichlet_boundary_condition(2, dirichlet, "level_set");
         }
 
         void
