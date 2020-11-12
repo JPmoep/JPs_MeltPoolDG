@@ -60,7 +60,7 @@ namespace MeltPoolDG
 
             scratch_data->get_pcout()
               << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
-
+              
             // ... solve level-set problem with the given advection field
             level_set_operation.solve(dt, advection_velocity);
 
@@ -77,13 +77,15 @@ namespace MeltPoolDG
               false /*false means add to force vector*/);
 
             // ... c) recoil pressure
-            melt_pool_operation.compute_recoil_pressure_force(
-              force_rhs,
-              level_set_operation.level_set_as_heaviside,
-              false /*false means add to force vector*/);
+            if (base_in->parameters.base.problem_name=="melt_pool")
+              melt_pool_operation.compute_recoil_pressure_force(
+                force_rhs,
+                level_set_operation.level_set_as_heaviside,
+                false /*false means add to force vector*/);
 
             //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_force_rhs(force_rhs);
+
             // solver Navier-Stokes problem
             flow_operation->solve();
 
@@ -216,7 +218,8 @@ namespace MeltPoolDG
          *    initialize the melt pool operation class
          */
 
-        melt_pool_operation.initialize(scratch_data, base_in->parameters, dof_no_bc_idx, quad_idx);
+        if (base_in->parameters.base.problem_name=="melt_pool")
+          melt_pool_operation.initialize(scratch_data, base_in->parameters, dof_no_bc_idx, quad_idx);
         /*
          *    initialize the force vector for calculating surface tension
          */
@@ -300,7 +303,6 @@ namespace MeltPoolDG
           zero_out);
       }
 
-
       /*
        *  This function is to create paraview output
        */
@@ -317,9 +319,13 @@ namespace MeltPoolDG
                                                 parameters.base.degree,
                                                 parameters.base.n_q_points_1d,
                                                 "viscosity");
-            if (time_step == 0)
+
+            if (parameters.base.problem_name=="melt_pool" && (time_step == 0))
+            {
               melt_pool_operation.compute_temperature_vector(
                 level_set_operation.level_set_as_heaviside);
+              melt_pool_operation.temperature.update_ghost_values();
+            }
 
             const VectorType &pressure = flow_operation->get_pressure();
 
@@ -333,9 +339,8 @@ namespace MeltPoolDG
                                              level_set_operation.solution_curvature,
                                              level_set_operation.solution_normal_vector,
                                              level_set_operation.level_set_as_heaviside,
-                                             level_set_operation.distance_to_level_set,
-                                             melt_pool_operation.temperature);
-
+                                             level_set_operation.distance_to_level_set
+                                             );
             /*
              *  output advected field
              */
@@ -397,9 +402,12 @@ namespace MeltPoolDG
             /*
              * temperature
              */
-            data_out.add_data_vector(dof_handler, melt_pool_operation.temperature, "temperature");
-            data_out.build_patches(scratch_data->get_mapping());
+            if (parameters.base.problem_name=="melt_pool")
+            {
+              data_out.add_data_vector(dof_handler, melt_pool_operation.temperature, "temperature");
+            }
 
+            data_out.build_patches(scratch_data->get_mapping());
             data_out.write_vtu_with_pvtu_record("./",
                                                 parameters.paraview.filename,
                                                 time_step / parameters.paraview.write_frequency,
@@ -417,8 +425,11 @@ namespace MeltPoolDG
                                          level_set_operation.solution_curvature,
                                          level_set_operation.solution_normal_vector,
                                          level_set_operation.level_set_as_heaviside,
-                                         level_set_operation.distance_to_level_set,
-                                         melt_pool_operation.temperature);
+                                         level_set_operation.distance_to_level_set);
+            if (parameters.base.problem_name=="melt_pool" && (time_step == 0))
+            {
+              melt_pool_operation.temperature.zero_out_ghosts();
+            }
           }
       }
 

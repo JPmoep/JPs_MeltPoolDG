@@ -56,7 +56,7 @@ namespace MeltPoolDG
       for (const auto &cell_fe_system : dof_handler_fe_system.active_cell_iterators())
         if (cell_fe_system->is_locally_owned())
           {
-            auto cell = DoFCellAccessor<dim, dim, false>(&dof_handler.get_triangulation(),
+            auto cell = DoFCellAccessor<dim, dim, false>(&dof_handler_fe_system.get_triangulation(),
                                                          cell_fe_system->level(),
                                                          cell_fe_system->index(),
                                                          &dof_handler);

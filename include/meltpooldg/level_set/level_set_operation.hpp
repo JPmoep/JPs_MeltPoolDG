@@ -104,7 +104,7 @@ namespace MeltPoolDG
         /*
          *    correct the curvature value far away from the zero level set
          */
-        // correct_curvature_values();
+        correct_curvature_values();
       }
 
       void
@@ -148,8 +148,8 @@ namespace MeltPoolDG
         curvature_operation.solve(advec_diff_operation.solution_advected_field);
         /*
          *    correct the curvature value far away from the zero level set
-        //  */
-        // correct_curvature_values();
+         */
+        correct_curvature_values();
 
       }
 
@@ -284,16 +284,29 @@ namespace MeltPoolDG
             }
       }
 
-      // void
-      // correct_curvature_values()
-      // {
-      //   for (unsigned int i=0; i<solution_curvature.local_size(); ++i)
-      //     if (std::abs(solution_curvature.local_element(i)) > 1e-4) 
-      //       {
-      //         if (1.-solution_level_set.local_element(i)*solution_level_set.local_element(i)>1e-2)
-      //         curvature_operation.solution_curvature.local_element(i) = 1./(1./curvature_operation.solution_curvature.local_element(i)+distance_to_level_set.local_element(i)/(dim-1));
-      //       }
-      // }
+      /// To avoid high-frequency errors in the curvature (spurious currents) the curvature is corrected to represent 
+      /// the value of the interface (zero level set). The approach by Zahedi et al. (2012) is pursued. Considering e.g. a 
+      /// bubble, the absolute curvature of areas outside of the bubble (Φ=-) must increase and vice-versa for areas 
+      ///  inside the bubble.
+      //
+      //           ******
+      //       ****      ****
+      //     **              **
+      //    *      Φ=+         *  Φ=-
+      //    *    sgn(d)=+      *  sgn(d)=-
+      //    *                  *
+      //     **              **
+      //       ****      ****
+      //           ******
+      //
+      void
+      correct_curvature_values()
+      {
+        for (unsigned int i=0; i<solution_curvature.local_size(); ++i)
+          //if (std::abs(solution_curvature.local_element(i)) > 1e-4) 
+          if (1.-solution_level_set.local_element(i)*solution_level_set.local_element(i)>1e-2)
+            curvature_operation.solution_curvature.local_element(i) = 1./(1./curvature_operation.solution_curvature.local_element(i)+distance_to_level_set.local_element(i)/(dim-1));
+      }
 
       void
       set_level_set_parameters(const Parameters<double> &data_in)

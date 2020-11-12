@@ -145,7 +145,6 @@ namespace MeltPoolDG
                                   update_JxW_values);
 
         const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell(this->dof_idx);
-        const unsigned int n_q_points    = fe_values.get_quadrature().size();
 
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 

@@ -91,6 +91,12 @@ namespace MeltPoolDG
                                                              dof_handler_meltpool);
       }
 
+      const DoFHandler<dim> &
+      get_dof_handler_velocity() const override
+      {
+        return navier_stokes.get_dof_handler_u();
+      }
+
       const LinearAlgebra::distributed::Vector<double> &
       get_pressure() const override
       {
@@ -184,8 +190,13 @@ namespace MeltPoolDG
       {
         AssertThrow(false, ExcNotImplemented());
       }
+      
+      const DoFHandler<1> &
+      get_dof_handler_velocity() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
 
-      // void
       const LinearAlgebra::distributed::Vector<double> &
       get_pressure() const override
       {
