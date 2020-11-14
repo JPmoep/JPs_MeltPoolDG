@@ -208,7 +208,7 @@ namespace MeltPoolDG
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'advection_diffusion') "));
         advec_diff_operation.initialize(
-          scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
+          scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx, dof_no_bc_idx);
       }
 
       void

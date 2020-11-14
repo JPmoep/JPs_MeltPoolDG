@@ -48,12 +48,14 @@ namespace MeltPoolDG
                  const Parameters<double> &                     data_in,
                  const unsigned int                             dof_idx_in,
                  const unsigned int                             dof_no_bc_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             quad_idx_in,
+                 const unsigned int                             velocity_dof_idx_in)
       {
         scratch_data  = scratch_data_in;
         dof_idx       = dof_idx_in;
         quad_idx      = quad_idx_in;
         dof_no_bc_idx = dof_no_bc_idx_in;
+        velocity_dof_idx = velocity_dof_idx_in;
         /*
          *  set the advection diffusion data
          */
@@ -139,7 +141,7 @@ namespace MeltPoolDG
       create_operator(const BlockVectorType &advection_velocity)
       {
         advec_diff_operator = std::make_unique<AdvectionDiffusionOperator<dim, double>>(
-          *scratch_data, advection_velocity, advec_diff_data, dof_idx, quad_idx);
+          *scratch_data, advection_velocity, advec_diff_data, dof_idx, quad_idx, velocity_dof_idx);
         /*
          *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
          *  apply it to the system matrix. This functionality is part of the OperatorBase class.
@@ -162,6 +164,7 @@ namespace MeltPoolDG
       unsigned int dof_idx;
       unsigned int quad_idx;
       unsigned int dof_no_bc_idx;
+      unsigned int velocity_dof_idx;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

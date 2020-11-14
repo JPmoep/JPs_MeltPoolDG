@@ -78,6 +78,8 @@ namespace MeltPoolDG
   template <typename number = double>
   struct FlowData
   {
+    unsigned int velocity_degree             = 2;
+    int          velocity_n_q_points_1d      = -1;
     number       density                     = -1.0;
     number       density_difference          = 0.0;
     number       viscosity                   = -1.0;
@@ -180,8 +182,7 @@ namespace MeltPoolDG
       /*
        *  set the number of quadrature points in 1d
        */
-      if (base.n_q_points_1d == -1)
-        base.n_q_points_1d = base.degree + 1;
+      base.n_q_points_1d = (base.n_q_points_1d < 1 ) ? base.degree + 1 : base.n_q_points_1d;
       /*
        *  set the min grid refinement level if not user-specified
        */
@@ -194,7 +195,7 @@ namespace MeltPoolDG
 #ifdef MELT_POOL_DG_WITH_ADAFLO
       adaflo_params.parse_parameters(parameter_filename);
 
-      if (base.problem_name == "two_phase_flow")
+      if ( (base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool") )
         {
           // WARNING: by setting the differences to a non-zero value we force
           //   adaflo to assume that we are running a simulation with variable
@@ -207,8 +208,10 @@ namespace MeltPoolDG
           adaflo_params.params.density_diff   = 1.0;
           adaflo_params.params.viscosity_diff = 1.0;
 
-          flow.density   = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
-          flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
+          flow.density                = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+          flow.viscosity              = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
+          flow.velocity_degree        = (flow.velocity_degree > 0.0) ? flow.velocity_degree : adaflo_params.params.velocity_degree;
+          flow.velocity_n_q_points_1d = (flow.velocity_n_q_points_1d < 1) ? flow.velocity_degree + 1 : flow.velocity_n_q_points_1d;
 
           /// synchronize time stepping schemes
           adaflo_params.params.start_time           = flow.start_time;
@@ -450,6 +453,10 @@ namespace MeltPoolDG
        */
       prm.enter_subsection("flow");
       {
+        prm.add_parameter("flow velocity degree", flow.velocity_degree, "velocity degree of the flow field");
+        prm.add_parameter("flow n q points 1d", 
+                          flow.velocity_n_q_points_1d, 
+                          "number of 1d quadrature points for the velocity field of the flow");
         prm.add_parameter("flow density", flow.density, "density of the flow field");
         prm.add_parameter("flow density difference",
                           flow.density_difference,

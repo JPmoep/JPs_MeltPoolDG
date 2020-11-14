@@ -171,7 +171,7 @@ namespace MeltPoolDG
         {
           typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData additional_data;
           additional_data.mapping_update_flags =
-            update_values | update_gradients | dealii::update_quadrature_points;
+            update_values | update_gradients | update_JxW_values | dealii::update_quadrature_points;
 
           this->matrix_free.reinit(
             *this->mapping, this->dof_handler, this->constraint, this->quad_1D, additional_data);

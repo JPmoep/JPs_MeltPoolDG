@@ -64,7 +64,7 @@ namespace MeltPoolDG
         dealii::VectorTools::project(scratch_data->get_mapping(),
                                      scratch_data->get_dof_handler(dof_idx),
                                      scratch_data->get_constraint(dof_idx),
-                                     scratch_data->get_quadrature(),
+                                     scratch_data->get_quadrature(quad_idx),
                                      Functions::ConstantFunction<dim>(mp_data.ambient_temperature),
                                      temperature);
       }
@@ -81,12 +81,11 @@ namespace MeltPoolDG
                                     const VectorType &level_set_as_heaviside,
                                     bool              zero_out = true)
       {
-        level_set_as_heaviside.update_ghost_values();
 
         compute_temperature_vector(level_set_as_heaviside);
 
-        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
-          [&](const auto &matrix_free, auto &force_rhs, const auto &, auto macro_cells) {
+        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
+          [&](const auto &matrix_free, auto &force_rhs, const auto &level_set_as_heaviside, auto macro_cells) {
             FECellIntegrator<dim, 1, double>   level_set(matrix_free, dof_idx, quad_idx);
             FECellIntegrator<dim, dim, double> recoil_pressure(matrix_free, dof_idx, quad_idx);
 
@@ -120,10 +119,8 @@ namespace MeltPoolDG
               }
           },
           force_rhs,
-          nullptr,
+          level_set_as_heaviside,
           zero_out);
-
-        level_set_as_heaviside.zero_out_ghosts();
       }
 
       /**

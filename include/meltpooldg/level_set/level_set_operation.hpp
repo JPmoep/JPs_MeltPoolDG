@@ -46,7 +46,8 @@ namespace MeltPoolDG
                  const Parameters<double> &                     data_in,
                  const unsigned int                             dof_idx_in,
                  const unsigned int                             dof_no_bc_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             quad_idx_in,
+                 const unsigned int                             advection_dof_idx)
       {
         scratch_data  = scratch_data_in;
         dof_idx       = dof_idx_in;
@@ -60,7 +61,7 @@ namespace MeltPoolDG
          *  initialize the advection_diffusion problem
          */
         advec_diff_operation.initialize(
-          scratch_data, solution_level_set_in, data_in, dof_idx, dof_no_bc_idx_in, quad_idx_in);
+          scratch_data, solution_level_set_in, data_in, dof_idx, dof_no_bc_idx_in, quad_idx_in, advection_dof_idx);
         /*
          *  set the parameters for the levelset problem; already determined parameters
          *  from the initialize call of advec_diff_operation are overwritten.
@@ -153,18 +154,20 @@ namespace MeltPoolDG
       void
       compute_surface_tension(BlockVectorType &force_rhs,
                               const double     surface_tension_coefficient,
+                              const unsigned int flow_dof_idx,
+                              const unsigned int flow_quad_idx,
                               const bool       zero_out = true)
       {
         level_set_as_heaviside.update_ghost_values();
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
           [&](const auto &matrix_free, auto &force_rhs, const auto &, auto macro_cells) {
-            FECellIntegrator<dim, 1, double> level_set(matrix_free, dof_idx, quad_idx);
+            FECellIntegrator<dim, 1, double> level_set(matrix_free, dof_idx, flow_quad_idx);
 
-            FECellIntegrator<dim, 1, double> curvature(matrix_free, dof_no_bc_idx, quad_idx);
+            FECellIntegrator<dim, 1, double> curvature(matrix_free, dof_no_bc_idx, flow_quad_idx);
 
             FECellIntegrator<dim, dim, double> surface_tension(matrix_free,
-                                                               dof_no_bc_idx,
-                                                               quad_idx);
+                                                               flow_dof_idx,
+                                                               flow_quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
@@ -181,8 +184,7 @@ namespace MeltPoolDG
                   {
                     surface_tension.submit_value(
                       surface_tension_coefficient *
-                        level_set.get_gradient(
-                          q_index) * // must be adopted --> level set be between zero and 1
+                        level_set.get_gradient(q_index) * // must be adopted --> level set be between zero and 1
                         curvature.get_value(q_index),
                       q_index);
                   }
