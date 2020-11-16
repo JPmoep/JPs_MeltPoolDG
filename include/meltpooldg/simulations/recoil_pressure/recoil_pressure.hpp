@@ -81,6 +81,22 @@ namespace MeltPoolDG
               GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
               this->triangulation->refine_global(this->parameters.base.global_refinements);
             }
+          else if constexpr (dim == 3)
+            {
+              // create mesh
+
+              const double x_half_domain_size = 100e-6;
+              const double y_half_domain_size = 100e-6;
+              const double z_half_domain_size = 60e-6;
+
+              const Point<dim> bottom_left =
+                Point<dim>(-x_half_domain_size, -y_half_domain_size, -z_half_domain_size);
+              const Point<dim> top_right =
+                Point<dim>(x_half_domain_size, y_half_domain_size, z_half_domain_size);
+
+              GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
+              this->triangulation->refine_global(this->parameters.base.global_refinements);
+            }
           else
             {
               AssertThrow(false, ExcNotImplemented());

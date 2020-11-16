@@ -209,14 +209,15 @@ namespace MeltPoolDG
             const double density = flow_data.density + flow_data.density_difference * indicator;
 
             const double thermal_diffusivity = conductivity / (density * capacity);
-            const double R                   = point.distance(laser_center);
+            double       R                   = point.distance(laser_center);
 
             if (R == 0.0)
-              return T0;
-            else
-              return P * absorptivity / (4 * numbers::PI * R) *
-                       std::exp(-v * (R - point[dim - 1]) / (2. * thermal_diffusivity)) +
-                     T0;
+              R = 1e-16;
+            double T = P * absorptivity / (4 * numbers::PI * R * conductivity) *
+                         std::exp(-v * (R - point[dim - 1]) / (2. * thermal_diffusivity)) +
+                       T0;
+            return (T > mp_data.boiling_temperature + 1000) ? mp_data.boiling_temperature + 1000. :
+                                                              T;
           }
         else
           AssertThrow(false, ExcNotImplemented());

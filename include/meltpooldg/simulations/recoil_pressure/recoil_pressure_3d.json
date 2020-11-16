@@ -2,8 +2,8 @@
   "base" : {
     "problem name": "melt_pool",
     "application name": "recoil_pressure",
-    "global refinements": "7",
-    "dimension": "2",
+    "global refinements": "4",
+    "dimension": "3",
     "degree": "1",
     "gravity": "0.0",
     "do print parameters": "true"
@@ -15,7 +15,7 @@
     "flow viscosity difference": "0.0054",
     "flow surface tension coefficient": "1.8",
     "flow start time": "0.0",
-    "flow end time": "0.0006",
+    "flow end time": "0.0",
     "flow time step size": "0.000001"
   },
   "melt pool" : {
