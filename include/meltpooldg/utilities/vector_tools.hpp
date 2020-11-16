@@ -92,5 +92,36 @@ namespace MeltPoolDG
     {
       ((args.zero_out_ghosts()), ...);
     }
+
+    template<int dim, typename number>
+    static Tensor<1, dim, VectorizedArray<number>>
+    normalize(const VectorizedArray<number> &in, const double zero = 1e-16)
+    {
+      Tensor<1, dim, VectorizedArray<number>> vec;
+
+      for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
+        vec[0][v] = in[v] >= zero ? 1.0 : -1.0;
+
+      return vec;
+    }
+
+    template<int dim, typename number>
+    static Tensor<1, dim, VectorizedArray<number>>
+    normalize(const Tensor<1, dim, VectorizedArray<number>> &in, const double zero = 1e-16)
+    {
+      Tensor<1, dim, VectorizedArray<number>> vec;
+
+      auto n_norm = in.norm();
+      for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
+        if (n_norm[v] >= zero)
+          for (unsigned int d = 0; d < dim; ++d)
+            vec[d][v] = in[d][v] / n_norm[v];
+        else
+          for (unsigned int d = 0; d < dim; ++d)
+            vec[d][v] = 0.0;
+
+      return vec;
+    }
+
   } // namespace VectorTools
 } // namespace MeltPoolDG

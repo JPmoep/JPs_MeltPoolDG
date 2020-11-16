@@ -187,7 +187,7 @@ namespace MeltPoolDG
 
                     const vector grad_phi = levelset.get_gradient(q_index);
 
-                    const auto n_phi = normalize(normal_vector.get_value(q_index));
+                    const auto n_phi = MeltPoolDG::VectorTools::normalize<dim>(normal_vector.get_value(q_index));
 
                     levelset.submit_value(phi, q_index);
                     levelset.submit_gradient(this->d_tau * eps_ * scalar_product(grad_phi, n_phi) *
@@ -246,7 +246,7 @@ namespace MeltPoolDG
                 for (unsigned int q_index = 0; q_index < psi.n_q_points; ++q_index)
                   {
                     const scalar val   = psi.get_value(q_index);
-                    const auto   n_phi = normalize(normal_vector.get_value(q_index));
+                    const auto   n_phi = MeltPoolDG::VectorTools::normalize<dim>(normal_vector.get_value(q_index));
 
                     psi.submit_gradient(this->d_tau * compressive_flux(val) * n_phi -
                                           this->d_tau * eps_ *
@@ -273,34 +273,6 @@ namespace MeltPoolDG
             this->normal_vec.block(d).copy_locally_owned_data_from(normal_vector.block(d));
           }
         this->normal_vec.update_ghost_values();
-      }
-
-      static vector
-      normalize(const scalar &in)
-      {
-        vector vec;
-
-        for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
-          vec[0][v] = in[v] >= 0.0 ? 1.0 : -1.0;
-
-        return vec;
-      }
-
-      static vector
-      normalize(const vector &in, const double zero = 1e-6)
-      {
-        vector vec;
-
-        auto n_norm = in.norm();
-        for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
-          if (n_norm[v] >= zero)
-            for (unsigned int d = 0; d < dim; ++d)
-              vec[d][v] = in[d][v] / n_norm[v];
-          else
-            for (unsigned int d = 0; d < dim; ++d)
-              vec[d][v] = 0.0;
-
-        return vec;
       }
 
     private:

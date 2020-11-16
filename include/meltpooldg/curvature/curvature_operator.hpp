@@ -63,8 +63,7 @@ namespace MeltPoolDG
       {
         solution_normal_vector_in.update_ghost_values();
 
-        const auto &  mapping = scratch_data.get_mapping();
-        FEValues<dim> fe_values(mapping,
+        FEValues<dim> fe_values(scratch_data.get_mapping(),
                                 scratch_data.get_dof_handler(this->dof_idx).get_fe(),
                                 scratch_data.get_quadrature(this->quad_idx),
                                 update_values | update_gradients | update_quadrature_points |
@@ -176,7 +175,7 @@ namespace MeltPoolDG
 
                 for (unsigned int q_index = 0; q_index < curvature.n_q_points; ++q_index)
                   {
-                    const auto n_phi = Reinitialization::OlssonOperator<dim>::normalize(
+                    const auto n_phi = MeltPoolDG::VectorTools::normalize<dim>(
                       normal_vector.get_value(q_index));
                     curvature.submit_gradient(n_phi, q_index);
                   }
@@ -190,25 +189,6 @@ namespace MeltPoolDG
       }
 
     private:
-      // static auto
-      // map_1d_vector_to_scalar(const vector &in)
-      // {
-      //   // if (dim == 1)
-      //   // {
-      //   //   scalar s;
-      //   //   for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
-      //   //     s[v] = in[0][v];
-      //   //   return s;
-      //   // }
-      //   // else
-      //   //   return in;
-      // }
-      // static vector
-      // map_1d_vector_to_scalar(const vector &in)
-      // {
-      //   return in;
-      // }
-
       const ScratchData<dim> &scratch_data;
 
       double damping;

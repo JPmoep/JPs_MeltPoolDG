@@ -32,7 +32,7 @@
     "normal vec damping scale factor": "0.025",
     "normal vec do matrix free": "true"},
   "curvature" : {
-    "curv do matrix free": "false"
+    "curv do matrix free": "true"
   },
   "paraview" : {
     "paraview do output": "false"
