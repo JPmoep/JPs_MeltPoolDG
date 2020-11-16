@@ -25,18 +25,18 @@
     "ls do matrix free": "true"
   },
   "reinitialization" : {
-    "reinit max n steps": "10",
+    "reinit max n steps": "5",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
     "reinit scale factor epsilon": "0.7107"
   },
   "normal vector": { 
-    "normal vec damping scale factor": "4",
-    "normal vec do matrix free": "true"},
+    "normal vec damping scale factor": "0.025",
+    "normal vec do matrix free": "true" 
+  },
   "curvature" : {
-    "curv do matrix free": "true",
-    "curv damping scale factor": "16"
+    "curv do matrix free": "true"
   },
   "paraview" : {
     "paraview do output": "true"
@@ -67,7 +67,7 @@
       },
       "Output options" : 
       {
-          "output verbosity" : "2",
+        "output verbosity" : "2",
         "output walltimes" : "0"
       }
     }

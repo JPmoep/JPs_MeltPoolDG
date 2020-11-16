@@ -5,8 +5,8 @@
     "do print parameters": "false",
     "global refinements": "3",
     "dimension": "2",
-    "degree": "2",
-    "gravity": "0.98"
+    "degree": "1",
+    "gravity":" 0.98"  
   },
   "flow" : {
     "flow density difference": "-0.9",
@@ -31,7 +31,8 @@
   },
   "normal vector": { 
     "normal vec damping scale factor": "0.025",
-    "normal vec do matrix free": "true"},
+    "normal vec do matrix free": "true"
+  },
   "curvature" : {
     "curv do matrix free": "true"
   },

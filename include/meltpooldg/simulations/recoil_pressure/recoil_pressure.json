@@ -2,7 +2,7 @@
   "base" : {
     "problem name": "melt_pool",
     "application name": "recoil_pressure",
-    "global refinements": "7",
+    "global refinements": "4",
     "dimension": "2",
     "degree": "2",
     "gravity": "0.0",
@@ -15,8 +15,8 @@
     "flow viscosity difference": "0.0054",
     "flow surface tension coefficient": "1.8",
     "flow start time": "0.0",
-    "flow end time": "0.0002",
-    "flow time step size": "0.00000001"
+    "flow end time": "0.05",
+    "flow time step size": "0.01"
   },
   "melt pool" : {
     "mp laser power": "100.",
@@ -55,7 +55,8 @@
   },
   "paraview" : {
     "paraview do output": "true",
-    "paraview write frequency": "1"
+    "paraview write frequency": "1",
+    "paraview filename":  "solution_recoil_pressure"
   },
   "Navier-Stokes" : {
     "adaflo" : {
