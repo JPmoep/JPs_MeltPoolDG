@@ -48,6 +48,7 @@ namespace MeltPoolDG
     bool   enable_CFL_condition   = false;
     bool   do_print_l2norm        = false;
     bool   do_matrix_free         = false;
+    bool   do_curvature_correction = false;
   };
 
   template <typename number = double>
@@ -373,6 +374,12 @@ namespace MeltPoolDG
           "ls do matrix free",
           ls.do_matrix_free,
           "Set this parameter if a matrix free solution procedure should be performed");
+        prm.add_parameter(
+          "ls do curvature correction",
+          ls.do_curvature_correction,
+          "Set this parameter to true if in areas outside the interface region a correction "
+          "of the curvature values should be applied. This parameter can be helpful to avoid "
+          "numerical instabilities.");
       }
       prm.leave_subsection();
 

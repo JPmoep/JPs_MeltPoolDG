@@ -104,7 +104,8 @@ namespace MeltPoolDG
         /*
          *    correct the curvature value far away from the zero level set
          */
-        correct_curvature_values();
+        if (level_set_data.do_curvature_correction)
+          correct_curvature_values();
       }
 
       void
@@ -148,7 +149,8 @@ namespace MeltPoolDG
         /*
          *    correct the curvature value far away from the zero level set
          */
-        correct_curvature_values();
+        if (level_set_data.do_curvature_correction)
+          correct_curvature_values();
       }
 
       void
@@ -203,9 +205,9 @@ namespace MeltPoolDG
 
     private:
       inline double
-      distance_function_from_level_set_value(const double phi,
-                                             const double eps,
-                                             const double cutoff)
+      approximate_distance_from_level_set(const double phi,
+                                          const double eps,
+                                          const double cutoff)
       {
         if (std::abs(phi) < cutoff)
           return eps * std::log((1. + phi) / (1. - phi));
@@ -223,7 +225,6 @@ namespace MeltPoolDG
       inline double
       smooth_heaviside_from_distance_value(const double x /*distance*/)
       {
-        constexpr double pi = std::acos(-1); // @todo move to utility function
         if (x > 0)
           return 1. - smooth_heaviside_from_distance_value(-x);
         else if (x < -2.)
@@ -233,14 +234,14 @@ namespace MeltPoolDG
             const double x2 = x * x;
             return (0.125 * (5. * x + x2) +
                     0.03125 * (-3. - 2. * x) * std::sqrt(-7. - 12. * x - 4. * x2) -
-                    0.0625 * std::asin(std::sqrt(2.) * (x + 1.5)) + 23. * 0.03125 - pi / 64.);
+                    0.0625 * std::asin(std::sqrt(2.) * (x + 1.5)) + 23. * 0.03125 - numbers::PI / 64.);
           }
         else
           {
             const double x2 = x * x;
             return (0.125 * (3. * x + x2) -
                     0.03125 * (-1. - 2. * x) * std::sqrt(1. - 4. * x - 4. * x2) +
-                    0.0625 * std::asin(std::sqrt(2.) * (x + 0.5)) + 15. * 0.03125 - pi / 64.);
+                    0.0625 * std::asin(std::sqrt(2.) * (x + 0.5)) + 15. * 0.03125 - numbers::PI / 64.);
           }
       }
 
@@ -274,7 +275,7 @@ namespace MeltPoolDG
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
                 {
                   const double distance =
-                    distance_function_from_level_set_value(solution_level_set[local_dof_indices[i]],
+                    approximate_distance_from_level_set(solution_level_set[local_dof_indices[i]],
                                                            epsilon_cell,
                                                            cut_off_level_set);
                   distance_to_level_set(local_dof_indices[i]) = distance;
