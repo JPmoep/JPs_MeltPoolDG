@@ -209,8 +209,13 @@ namespace MeltPoolDG
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'level_set') "));
 
-        level_set_operation.initialize(
-          scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
+        level_set_operation.initialize(scratch_data,
+                                       initial_solution,
+                                       base_in->parameters,
+                                       dof_idx,
+                                       dof_no_bc_idx,
+                                       quad_idx,
+                                       dof_idx);
       }
 
       void

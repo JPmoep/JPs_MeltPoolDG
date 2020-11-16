@@ -1,21 +1,36 @@
 {
   "base" : {
-    "problem name": "two_phase_flow",
-    "application name": "rising_bubble",
+    "problem name": "melt_pool",
+    "application name": "recoil_pressure",
     "global refinements": "4",
     "dimension": "2",
     "degree": "2",
-    "gravity": "0.98"
+    "gravity": "0.0",
+    "do print parameters": "true"
   },
   "flow" : {
-    "flow density": "1",
-    "flow density difference": "-0.9",
-    "flow viscosity": "0.01",
-    "flow viscosity difference": "-0.009",
-    "flow surface tension coefficient": "0.0245",
+    "flow density": "74.30",
+    "flow viscosity": "0.0006",
+    "flow density difference": "7000.",
+    "flow viscosity difference": "0.0054",
+    "flow surface tension coefficient": "1.8",
     "flow start time": "0.0",
-    "flow end time": "1.0",
-    "flow time step size": "0.02"
+    "flow end time": "0.05",
+    "flow time step size": "0.01"
+  },
+  "melt pool" : {
+    "mp laser power": "100.",
+    "mp scan speed": "0.001",
+    "mp ambient temperature": "300.",
+    "mp recoil pressure constant": "10000.",
+    "mp recoil pressure temperature constant": "10000.",
+    "mp boiling temperature": "3000.",
+    "mp liquid absorptivity": "0.5",
+    "mp liquid conductivity": "35.95",
+    "mp liquid capacity": "965",
+    "mp gas absorptivity": "0",
+    "mp gas conductivity": "10",
+    "mp gas capacity": "0"
   },
   "levelset" : {
     "ls do reinitialization": "true",
@@ -25,24 +40,23 @@
     "ls do matrix free": "true"
   },
   "reinitialization" : {
-    "reinit max n steps": "5",
+    "reinit max n steps": "10",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
     "reinit scale factor epsilon": "0.7107"
   },
   "normal vector": { 
-    "normal vec damping scale factor": "0.025",
-    "normal vec do matrix free": "true" 
-  },
+    "normal vec damping scale factor": "4",
+    "normal vec do matrix free": "true"},
   "curvature" : {
-    "curv do matrix free": "true"
+    "curv do matrix free": "true",
+    "curv damping scale factor": "16"
   },
   "paraview" : {
-    "paraview do output": "true"
-  },
-  "Time stepping" : {
-    "scheme"           : "bdf_2"
+    "paraview do output": "true",
+    "paraview write frequency": "1",
+    "paraview filename":  "solution_recoil_pressure"
   },
   "Navier-Stokes" : {
     "adaflo" : {
@@ -51,8 +65,6 @@
         "dimension"         : "2",
         "global refinements" : "0",
         "velocity degree"    : "2",
-        "viscosity"          : "0.01",
-        "density"          : "1",
         "Solver" : {
           "linearization scheme"         : "coupled implicit Newton",
           "NL max iterations"            : "10",
@@ -65,9 +77,12 @@
           "lin its before inner solvers" : "50"
         }
       },
+      "Time stepping" : {
+        "scheme"           : "bdf_2"
+      },
       "Output options" : 
       {
-        "output verbosity" : "2",
+          "output verbosity" : "2",
         "output walltimes" : "0"
       }
     }

@@ -11,8 +11,9 @@
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
-#include "meltpooldg/interface/operator_base.hpp"
-#include "meltpooldg/reinitialization/olsson_operator.hpp"
+#include <meltpooldg/interface/operator_base.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operator.hpp>
+#include <meltpooldg/utilities/vector_tools.hpp>
 
 using namespace dealii;
 
@@ -41,6 +42,8 @@ namespace MeltPoolDG
       using BlockVectorType     = LinearAlgebra::distributed::BlockVector<number>;
       using VectorizedArrayType = VectorizedArray<number>;
       using SparseMatrixType    = TrilinosWrappers::SparseMatrix;
+      using vector              = Tensor<1, dim, VectorizedArray<number>>;
+      using scalar              = VectorizedArray<number>;
 
       // clang-format off
       CurvatureOperator( const ScratchData<dim>& scratch_data_in,
@@ -61,8 +64,7 @@ namespace MeltPoolDG
       {
         solution_normal_vector_in.update_ghost_values();
 
-        const auto &  mapping = scratch_data.get_mapping();
-        FEValues<dim> fe_values(mapping,
+        FEValues<dim> fe_values(scratch_data.get_mapping(),
                                 scratch_data.get_dof_handler(this->dof_idx).get_fe(),
                                 scratch_data.get_quadrature(this->quad_idx),
                                 update_values | update_gradients | update_quadrature_points |
@@ -174,8 +176,8 @@ namespace MeltPoolDG
 
                 for (unsigned int q_index = 0; q_index < curvature.n_q_points; ++q_index)
                   {
-                    const auto n_phi = Reinitialization::OlssonOperator<dim>::normalize(
-                      normal_vector.get_value(q_index));
+                    const auto n_phi =
+                      MeltPoolDG::VectorTools::normalize<dim>(normal_vector.get_value(q_index));
                     curvature.submit_gradient(n_phi, q_index);
                   }
 

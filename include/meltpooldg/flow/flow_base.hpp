@@ -4,11 +4,15 @@
  *
  * ---------------------------------------------------------------------*/
 #pragma once
+#include <deal.II/dofs/dof_handler.h>
 
 namespace MeltPoolDG
 {
   namespace Flow
   {
+    using namespace dealii;
+
+    template <int dim>
     class FlowBase
     {
     public:
@@ -18,8 +22,14 @@ namespace MeltPoolDG
       virtual void
       get_velocity(LinearAlgebra::distributed::BlockVector<double> &vec) const = 0;
 
-      virtual void
-      get_pressure(LinearAlgebra::distributed::Vector<double> &vec) const = 0;
+      virtual const DoFHandler<dim> &
+      get_dof_handler_velocity() const = 0;
+
+      virtual const LinearAlgebra::distributed::Vector<double> &
+      get_pressure() const = 0;
+
+      virtual const DoFHandler<dim> &
+      get_dof_handler_pressure() const = 0;
 
       virtual void
       set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> &vec) = 0;
