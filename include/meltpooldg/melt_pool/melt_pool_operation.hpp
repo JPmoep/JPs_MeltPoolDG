@@ -50,7 +50,7 @@ namespace MeltPoolDG
                  const unsigned int                             temp_quad_idx_in)
       {
         scratch_data  = scratch_data_in;
-        ls_dof_idx  = ls_dof_idx_in;
+        ls_dof_idx    = ls_dof_idx_in;
         flow_dof_idx  = flow_dof_idx_in;
         flow_quad_idx = flow_quad_idx_in;
         temp_dof_idx  = temp_dof_idx_in;
@@ -87,15 +87,21 @@ namespace MeltPoolDG
                                     const VectorType &level_set_as_heaviside,
                                     bool              zero_out = true)
       {
-
         compute_temperature_vector(level_set_as_heaviside);
 
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
-          [&](const auto &matrix_free, auto &force_rhs, const auto &level_set_as_heaviside, auto macro_cells) {
+          [&](const auto &matrix_free,
+              auto &      force_rhs,
+              const auto &level_set_as_heaviside,
+              auto        macro_cells) {
             FECellIntegrator<dim, 1, double>   level_set(matrix_free, ls_dof_idx, flow_quad_idx);
-            FECellIntegrator<dim, dim, double> recoil_pressure(matrix_free, flow_dof_idx, flow_quad_idx);
+            FECellIntegrator<dim, dim, double> recoil_pressure(matrix_free,
+                                                               flow_dof_idx,
+                                                               flow_quad_idx);
 
-            FECellIntegrator<dim, 1, double> temperature_val(matrix_free, temp_dof_idx, flow_quad_idx);
+            FECellIntegrator<dim, 1, double> temperature_val(matrix_free,
+                                                             temp_dof_idx,
+                                                             flow_quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
@@ -156,8 +162,7 @@ namespace MeltPoolDG
                                              scratch_data->get_dof_handler(temp_dof_idx),
                                              support_points);
 
-        for (const auto &cell :
-             scratch_data->get_dof_handler(temp_dof_idx).active_cell_iterators())
+        for (const auto &cell : scratch_data->get_dof_handler(temp_dof_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               cell->get_dof_indices(local_dof_indices);
@@ -203,8 +208,8 @@ namespace MeltPoolDG
               (indicator == 1) ? mp_data.liquid.capacity : mp_data.gas.capacity;
             const double density = flow_data.density + flow_data.density_difference * indicator;
 
-            const double     thermal_diffusivity = conductivity / (density * capacity);
-            const double     R                   = point.distance(laser_center);
+            const double thermal_diffusivity = conductivity / (density * capacity);
+            const double R                   = point.distance(laser_center);
 
             if (R == 0.0)
               return T0;

@@ -51,10 +51,10 @@ namespace MeltPoolDG
                  const unsigned int                             quad_idx_in,
                  const unsigned int                             velocity_dof_idx_in)
       {
-        scratch_data  = scratch_data_in;
-        dof_idx       = dof_idx_in;
-        quad_idx      = quad_idx_in;
-        dof_no_bc_idx = dof_no_bc_idx_in;
+        scratch_data     = scratch_data_in;
+        dof_idx          = dof_idx_in;
+        quad_idx         = quad_idx_in;
+        dof_no_bc_idx    = dof_no_bc_idx_in;
         velocity_dof_idx = velocity_dof_idx_in;
         /*
          *  set the advection diffusion data

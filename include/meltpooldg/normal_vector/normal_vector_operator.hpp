@@ -189,7 +189,7 @@ namespace MeltPoolDG
       get_unit_normals_at_quadrature(const FEValues<dim> &        fe_values,
                                      const BlockVectorType &      normal_vector_field_in,
                                      std::vector<Tensor<1, dim>> &unit_normal_at_quadrature,
-                                     const double zero = 1e-16)
+                                     const double                 zero = 1e-16)
       {
         for (unsigned int d = 0; d < dim; ++d)
           {
@@ -200,13 +200,13 @@ namespace MeltPoolDG
               unit_normal_at_quadrature[q_index][d] = temp[q_index];
           }
         for (auto &n : unit_normal_at_quadrature)
-        {
-          const double n_norm = n.norm() ;
-          if ( n_norm > zero )
-            n /= n_norm;//@todo: add exception if norm is zero
-          else
-            n = 0.0;
-        } 
+          {
+            const double n_norm = n.norm();
+            if (n_norm > zero)
+              n /= n_norm; //@todo: add exception if norm is zero
+            else
+              n = 0.0;
+          }
       }
 
     private:

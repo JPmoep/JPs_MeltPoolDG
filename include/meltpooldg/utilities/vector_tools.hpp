@@ -93,7 +93,7 @@ namespace MeltPoolDG
       ((args.zero_out_ghosts()), ...);
     }
 
-    template<int dim, typename number>
+    template <int dim, typename number>
     static Tensor<1, dim, VectorizedArray<number>>
     normalize(const VectorizedArray<number> &in, const double zero = 1e-16)
     {
@@ -105,7 +105,7 @@ namespace MeltPoolDG
       return vec;
     }
 
-    template<int dim, typename number>
+    template <int dim, typename number>
     static Tensor<1, dim, VectorizedArray<number>>
     normalize(const Tensor<1, dim, VectorizedArray<number>> &in, const double zero = 1e-16)
     {

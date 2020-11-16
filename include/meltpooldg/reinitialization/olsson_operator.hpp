@@ -187,7 +187,8 @@ namespace MeltPoolDG
 
                     const vector grad_phi = levelset.get_gradient(q_index);
 
-                    const auto n_phi = MeltPoolDG::VectorTools::normalize<dim>(normal_vector.get_value(q_index));
+                    const auto n_phi =
+                      MeltPoolDG::VectorTools::normalize<dim>(normal_vector.get_value(q_index));
 
                     levelset.submit_value(phi, q_index);
                     levelset.submit_gradient(this->d_tau * eps_ * scalar_product(grad_phi, n_phi) *
@@ -245,8 +246,9 @@ namespace MeltPoolDG
 
                 for (unsigned int q_index = 0; q_index < psi.n_q_points; ++q_index)
                   {
-                    const scalar val   = psi.get_value(q_index);
-                    const auto   n_phi = MeltPoolDG::VectorTools::normalize<dim>(normal_vector.get_value(q_index));
+                    const scalar val = psi.get_value(q_index);
+                    const auto   n_phi =
+                      MeltPoolDG::VectorTools::normalize<dim>(normal_vector.get_value(q_index));
 
                     psi.submit_gradient(this->d_tau * compressive_flux(val) * n_phi -
                                           this->d_tau * eps_ *

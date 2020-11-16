@@ -175,8 +175,8 @@ namespace MeltPoolDG
 
                 for (unsigned int q_index = 0; q_index < curvature.n_q_points; ++q_index)
                   {
-                    const auto n_phi = MeltPoolDG::VectorTools::normalize<dim>(
-                      normal_vector.get_value(q_index));
+                    const auto n_phi =
+                      MeltPoolDG::VectorTools::normalize<dim>(normal_vector.get_value(q_index));
                     curvature.submit_gradient(n_phi, q_index);
                   }
 

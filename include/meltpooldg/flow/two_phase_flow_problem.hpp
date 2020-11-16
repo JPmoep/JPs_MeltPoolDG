@@ -63,7 +63,7 @@ namespace MeltPoolDG
 
             // ... solve level-set problem with the given advection field
             level_set_operation.solve(dt, advection_velocity);
-  
+
             // ... compute the temperature from the melt pool problem
             // update
             update_phases(level_set_operation.solution_level_set, base_in->parameters);
@@ -126,7 +126,8 @@ namespace MeltPoolDG
          *  setup DoFHandler
          */
         dof_handler.initialize(*base_in->triangulation, FE_Q<dim>(base_in->parameters.base.degree));
-        flow_dof_handler.initialize(*base_in->triangulation, FE_Q<dim>(base_in->parameters.flow.velocity_degree));
+        flow_dof_handler.initialize(*base_in->triangulation,
+                                    FE_Q<dim>(base_in->parameters.flow.velocity_degree));
 
         scratch_data->attach_dof_handler(dof_handler);
         scratch_data->attach_dof_handler(dof_handler);
@@ -163,7 +164,7 @@ namespace MeltPoolDG
         ls_constraints_dirichlet.close();
 
         dof_no_bc_idx = scratch_data->attach_constraint_matrix(ls_hanging_node_constraints);
-        ls_dof_idx       = scratch_data->attach_constraint_matrix(ls_constraints_dirichlet);
+        ls_dof_idx    = scratch_data->attach_constraint_matrix(ls_constraints_dirichlet);
         flow_dof_idx  = scratch_data->attach_constraint_matrix(flow_dummy_constraint);
         /*
          *  create quadrature rule
@@ -171,7 +172,7 @@ namespace MeltPoolDG
         ls_quad_idx =
           scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
         flow_quad_idx =
-          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.flow.velocity_degree+1));
+          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
         /*
          *  create the matrix-free object
          */
@@ -212,8 +213,13 @@ namespace MeltPoolDG
         /*
          *    initialize the levelset operation class
          */
-        level_set_operation.initialize(
-          scratch_data, initial_solution, base_in->parameters, ls_dof_idx, dof_no_bc_idx, ls_quad_idx, flow_dof_idx);
+        level_set_operation.initialize(scratch_data,
+                                       initial_solution,
+                                       base_in->parameters,
+                                       ls_dof_idx,
+                                       dof_no_bc_idx,
+                                       ls_quad_idx,
+                                       flow_dof_idx);
         /*
          *    initialize the flow operation class
          */
@@ -226,14 +232,16 @@ namespace MeltPoolDG
          *    initialize the melt pool operation class
          */
         if (base_in->parameters.base.problem_name == "melt_pool")
-          melt_pool_operation.initialize(scratch_data,
-                                         base_in->parameters,
-                                         ls_dof_idx, 
-                                         flow_dof_idx,
-                                         flow_quad_idx,
-                                         dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as soon as heat problem is introduced*/
-                                         ls_quad_idx   /*temp_quad_idx@todo: may be changed as soon as heat problem is introduced*/
-                                         );
+          melt_pool_operation.initialize(
+            scratch_data,
+            base_in->parameters,
+            ls_dof_idx,
+            flow_dof_idx,
+            flow_quad_idx,
+            dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as soon as heat problem is
+                              introduced*/
+            ls_quad_idx /*temp_quad_idx@todo: may be changed as soon as heat problem is introduced*/
+          );
         /*
          *    initialize the force vector for calculating surface tension
          */
@@ -296,7 +304,9 @@ namespace MeltPoolDG
       {
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
           [&](const auto &matrix_free, auto &vec, const auto &, auto macro_cells) {
-            FECellIntegrator<dim, dim, double> force_values(matrix_free, flow_dof_idx, flow_quad_idx);
+            FECellIntegrator<dim, dim, double> force_values(matrix_free,
+                                                            flow_dof_idx,
+                                                            flow_quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
@@ -347,8 +357,7 @@ namespace MeltPoolDG
                                              level_set_operation.solution_normal_vector,
                                              level_set_operation.level_set_as_heaviside,
                                              level_set_operation.distance_to_level_set,
-                                             melt_pool_operation.temperature
-                                             );
+                                             melt_pool_operation.temperature);
             /*
              *  output advected field
              */
@@ -438,11 +447,10 @@ namespace MeltPoolDG
                                          level_set_operation.solution_normal_vector,
                                          level_set_operation.level_set_as_heaviside,
                                          level_set_operation.distance_to_level_set,
-                                         melt_pool_operation.temperature
-                                         );
+                                         melt_pool_operation.temperature);
             if (parameters.base.problem_name == "melt_pool" && (time_step == 0))
               {
-                //melt_pool_operation.temperature.zero_out_ghosts();
+                // melt_pool_operation.temperature.zero_out_ghosts();
               }
           }
       }

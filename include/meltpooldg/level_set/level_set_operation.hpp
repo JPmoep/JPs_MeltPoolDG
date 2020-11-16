@@ -60,8 +60,13 @@ namespace MeltPoolDG
         /*
          *  initialize the advection_diffusion problem
          */
-        advec_diff_operation.initialize(
-          scratch_data, solution_level_set_in, data_in, dof_idx, dof_no_bc_idx_in, quad_idx_in, advection_dof_idx);
+        advec_diff_operation.initialize(scratch_data,
+                                        solution_level_set_in,
+                                        data_in,
+                                        dof_idx,
+                                        dof_no_bc_idx_in,
+                                        quad_idx_in,
+                                        advection_dof_idx);
         /*
          *  set the parameters for the levelset problem; already determined parameters
          *  from the initialize call of advec_diff_operation are overwritten.
@@ -154,11 +159,11 @@ namespace MeltPoolDG
       }
 
       void
-      compute_surface_tension(BlockVectorType &force_rhs,
-                              const double     surface_tension_coefficient,
+      compute_surface_tension(BlockVectorType &  force_rhs,
+                              const double       surface_tension_coefficient,
                               const unsigned int flow_dof_idx,
                               const unsigned int flow_quad_idx,
-                              const bool       zero_out = true)
+                              const bool         zero_out = true)
       {
         level_set_as_heaviside.update_ghost_values();
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
@@ -186,7 +191,8 @@ namespace MeltPoolDG
                   {
                     surface_tension.submit_value(
                       surface_tension_coefficient *
-                        level_set.get_gradient(q_index) * // must be adopted --> level set be between zero and 1
+                        level_set.get_gradient(
+                          q_index) * // must be adopted --> level set be between zero and 1
                         curvature.get_value(q_index),
                       q_index);
                   }
@@ -205,9 +211,7 @@ namespace MeltPoolDG
 
     private:
       inline double
-      approximate_distance_from_level_set(const double phi,
-                                          const double eps,
-                                          const double cutoff)
+      approximate_distance_from_level_set(const double phi, const double eps, const double cutoff)
       {
         if (std::abs(phi) < cutoff)
           return eps * std::log((1. + phi) / (1. - phi));
@@ -234,14 +238,15 @@ namespace MeltPoolDG
             const double x2 = x * x;
             return (0.125 * (5. * x + x2) +
                     0.03125 * (-3. - 2. * x) * std::sqrt(-7. - 12. * x - 4. * x2) -
-                    0.0625 * std::asin(std::sqrt(2.) * (x + 1.5)) + 23. * 0.03125 - numbers::PI / 64.);
+                    0.0625 * std::asin(std::sqrt(2.) * (x + 1.5)) + 23. * 0.03125 -
+                    numbers::PI / 64.);
           }
         else
           {
             const double x2 = x * x;
-            return (0.125 * (3. * x + x2) -
-                    0.03125 * (-1. - 2. * x) * std::sqrt(1. - 4. * x - 4. * x2) +
-                    0.0625 * std::asin(std::sqrt(2.) * (x + 0.5)) + 15. * 0.03125 - numbers::PI / 64.);
+            return (
+              0.125 * (3. * x + x2) - 0.03125 * (-1. - 2. * x) * std::sqrt(1. - 4. * x - 4. * x2) +
+              0.0625 * std::asin(std::sqrt(2.) * (x + 0.5)) + 15. * 0.03125 - numbers::PI / 64.);
           }
       }
 
@@ -276,8 +281,8 @@ namespace MeltPoolDG
                 {
                   const double distance =
                     approximate_distance_from_level_set(solution_level_set[local_dof_indices[i]],
-                                                           epsilon_cell,
-                                                           cut_off_level_set);
+                                                        epsilon_cell,
+                                                        cut_off_level_set);
                   distance_to_level_set(local_dof_indices[i]) = distance;
                   level_set_as_heaviside(local_dof_indices[i]) =
                     smooth_heaviside_from_distance_value(2 * distance / (3 * epsilon_cell));

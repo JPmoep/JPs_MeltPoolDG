@@ -207,8 +207,13 @@ namespace MeltPoolDG
                       "function, e.g., AdvectionFunc<dim> must be specified as follows: "
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'advection_diffusion') "));
-        advec_diff_operation.initialize(
-          scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx, dof_no_bc_idx);
+        advec_diff_operation.initialize(scratch_data,
+                                        initial_solution,
+                                        base_in->parameters,
+                                        dof_idx,
+                                        dof_no_bc_idx,
+                                        quad_idx,
+                                        dof_no_bc_idx);
       }
 
       void
