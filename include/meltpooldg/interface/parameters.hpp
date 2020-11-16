@@ -79,7 +79,7 @@ namespace MeltPoolDG
   template <typename number = double>
   struct FlowData
   {
-    unsigned int velocity_degree             = 2;
+    int          velocity_degree             = -1;
     int          velocity_n_q_points_1d      = -1;
     number       density                     = -1.0;
     number       density_difference          = 0.0;
