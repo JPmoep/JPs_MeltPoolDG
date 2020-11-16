@@ -16,7 +16,7 @@
              "advec diff do print l2norm": "true"
            },
                                    "paraview" : {
-                                     "paraview do output": "true",
+                                     "paraview do output": "false",
                                      "paraview print normal vector": "true",
                                      "paraview print curvature": "true",
                                      "paraview print advection": "true"

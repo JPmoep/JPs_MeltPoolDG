@@ -27,6 +27,7 @@ namespace MeltPoolDG
   {
     namespace ReinitCircle
     {
+      using namespace dealii;
       /*
        * this function specifies the initial field of the level set equation
        */
@@ -37,7 +38,6 @@ namespace MeltPoolDG
       public:
         InitializePhi()
           : Function<dim>()
-          , epsInterface(0.0313)
         {}
         virtual double
         value(const Point<dim> &p, const unsigned int component = 0) const
@@ -48,21 +48,6 @@ namespace MeltPoolDG
           return UtilityFunctions::CharacteristicFunctions::sgn(
             UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius));
         }
-
-        void
-        setEpsInterface(double eps)
-        {
-          this->epsInterface = eps;
-        }
-
-        double
-        getEpsInterface()
-        {
-          return this->epsInterface;
-        }
-
-      private:
-        double epsInterface;
       };
 
       template <int dim>
@@ -140,8 +125,8 @@ namespace MeltPoolDG
         void
         set_field_conditions()
         {
-          this->field_conditions.initial_field        = std::make_shared<InitializePhi<dim>>();
-          this->field_conditions.exact_solution_field = std::make_shared<ExactSolution<dim>>(0.01);
+          this->attach_initial_condition(std::make_shared<InitializePhi<dim>>(), "level_set");
+          this->attach_exact_solution(std::make_shared<ExactSolution<dim>>(0.01), "level_set");
         }
 
       private:

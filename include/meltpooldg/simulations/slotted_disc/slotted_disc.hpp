@@ -1,11 +1,14 @@
 // deal-specific libraries
 #include <deal.II/base/function.h>
-#include <deal.II/base/tensor_function.h>
 #include <deal.II/base/point.h>
+#include <deal.II/base/tensor_function.h>
+
+#include <deal.II/distributed/tria.h>
+
 #include <deal.II/lac/vector.h>
+
 #include <deal.II/numerics/error_estimator.h>
 #include <deal.II/numerics/vector_tools.h>
-#include <deal.II/distributed/tria.h>
 // c++
 #include <cmath>
 #include <iostream>
@@ -87,7 +90,7 @@ namespace MeltPoolDG
                 }
               else if (p[0] > pB[0] && p[0] < pC[0])
                 { // region 2
-                  d_BC = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pB, pC);
+                  d_BC = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pB, pC);
                   d_manifold =
                     UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius);
                   d_min = std::min(d_BC, d_manifold);
@@ -97,16 +100,16 @@ namespace MeltPoolDG
             {
               if (p[0] > pB[0] && p[0] < pC[0]) // region 5-7
                 {
-                  d_AB  = -UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pA, pB);
-                  d_BC  = -UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pB, pC);
-                  d_CD  = -UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pC, pD);
+                  d_AB  = -UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pA, pB);
+                  d_BC  = -UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pB, pC);
+                  d_CD  = -UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pC, pD);
                   d_min = std::max(d_AB, d_BC);
                   d_min = std::max(d_CD, d_min);
                 }
               else
                 {
-                  d_AB = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pA, pB);
-                  d_CD = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pC, pD);
+                  d_AB = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pA, pB);
+                  d_CD = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pC, pD);
                   d_manifold =
                     UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius);
                   d_min = std::min(d_AB, d_CD);
@@ -122,7 +125,6 @@ namespace MeltPoolDG
           // return the smallest distance
           return UtilityFunctions::CharacteristicFunctions::sgn(d_min);
         }
-
       };
 
       template <int dim>
@@ -189,7 +191,7 @@ namespace MeltPoolDG
                 }
               else if (p[0] > pB[0] && p[0] < pC[0])
                 { // region 2
-                  d_BC = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pB, pC);
+                  d_BC = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pB, pC);
                   d_manifold =
                     UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius);
                   d_min = std::min(d_BC, d_manifold);
@@ -199,16 +201,16 @@ namespace MeltPoolDG
             {
               if (p[0] > pB[0] && p[0] < pC[0]) // region 5-7
                 {
-                  d_AB  = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pA, pB);
-                  d_BC  = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pB, pC);
-                  d_CD  = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pC, pD);
+                  d_AB  = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pA, pB);
+                  d_BC  = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pB, pC);
+                  d_CD  = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pC, pD);
                   d_min = std::min(d_AB, d_BC);
                   d_min = std::min(d_CD, d_min);
                 }
               else
                 {
-                  d_AB = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pA, pB);
-                  d_CD = UtilityFunctions::DistanceFunctions::infinte_line<dim>(p, pC, pD);
+                  d_AB = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pA, pB);
+                  d_CD = UtilityFunctions::DistanceFunctions::infinite_line<dim>(p, pC, pD);
                   d_manifold =
                     UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, radius);
                   d_min = std::min(d_AB, d_CD);
@@ -246,11 +248,11 @@ namespace MeltPoolDG
 
           if constexpr (dim == 2)
             {
-              const double x  = p[0];
-              const double y  = p[1];
+              const double x = p[0];
+              const double y = p[1];
 
-              value_[0] = 4*y;
-              value_[1] = -4*x;
+              value_[0] = 4 * y;
+              value_[1] = -4 * x;
             }
           else
             AssertThrow(false, ExcMessage("Advection field for dim!=2 not implemented"));
@@ -262,23 +264,22 @@ namespace MeltPoolDG
       /* for constant Dirichlet conditions we could also use the ConstantFunction
        * utility from dealii
        */
-       template <int dim>
-       class DirichletCondition : public Function<dim>
-       {
-         public:
-         DirichletCondition()
-         : Function<dim>()
-         {
-         }
+      template <int dim>
+      class DirichletCondition : public Function<dim>
+      {
+      public:
+        DirichletCondition()
+          : Function<dim>()
+        {}
 
-         double value(const Point<dim> &p,
-                              const unsigned int component = 0) const
-         {
-         (void)p;
-         (void)component;
-           return -1.0;
-         }
-       };
+        double
+        value(const Point<dim> &p, const unsigned int component = 0) const
+        {
+          (void)p;
+          (void)component;
+          return -1.0;
+        }
+      };
 
       /*
        *      This class collects all relevant input data for the level set simulation
@@ -318,7 +319,9 @@ namespace MeltPoolDG
           constexpr types::boundary_id inflow_bc  = 42;
           constexpr types::boundary_id do_nothing = 0;
 
-          this->boundary_conditions.dirichlet_bc[inflow_bc] = std::make_shared<DirichletCondition<dim>>();
+          this->attach_dirichlet_boundary_condition(inflow_bc,
+                                                    std::make_shared<DirichletCondition<dim>>(),
+                                                    this->parameters.base.problem_name);
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
            *  due to the hyperbolic nature of the analyzed problem
@@ -356,15 +359,15 @@ namespace MeltPoolDG
           else
             {
               (void)do_nothing; // suppress unused variable for 1D
-            } 
+            }
         }
 
         void
         set_field_conditions()
         {
-          this->field_conditions.initial_field        = std::make_shared<InitializePhi<dim>>();
-          this->field_conditions.advection_field      = std::make_shared<AdvectionField<dim>>();
-          this->field_conditions.exact_solution_field = std::make_shared<ExactSolution<dim>>(0.01);
+          this->attach_initial_condition(std::make_shared<InitializePhi<dim>>(), "level_set");
+          this->attach_advection_field(std::make_shared<AdvectionField<dim>>(), "level_set");
+          this->attach_exact_solution(std::make_shared<ExactSolution<dim>>(0.01), "level_set");
         }
 
       private:
@@ -374,4 +377,3 @@ namespace MeltPoolDG
     } // namespace SlottedDisc
   }   // namespace Simulation
 } // namespace MeltPoolDG
-

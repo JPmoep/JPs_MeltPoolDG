@@ -13,7 +13,7 @@
     "ls do print l2norm"        : "true",
     "ls theta"                  : "0.5",
     "ls start time"             : "0.0",
-    "ls end time"               : 0.05,
+    "ls end time"               : "0.05",
     "ls time step size"         : "0.01",
     "ls do matrix free"         : "false"
   },
