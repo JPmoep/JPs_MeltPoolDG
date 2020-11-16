@@ -255,7 +255,7 @@ namespace MeltPoolDG
             //@todo: compute distance
             // atm only the sign (if the point is inside or outside the box) is returned
             /**
-             *       
+             *
              *           sign(d)=-
              *
              *          (4)               (5)
@@ -267,13 +267,13 @@ namespace MeltPoolDG
              *   (7) +---------------+ (6)|
              *       |    |          |    |
              *       | (0)+----------|----+ (1)
-             *       |   /sign(d)=+  |   / 
+             *       |   /sign(d)=+  |   /
              *       |  /            |  /  --> y
-             *       | /      /      | /   
+             *       | /      /      | /
              *       |/     x        |/
-             *       +---------------+       
+             *       +---------------+
              *    (3)                (2)
-             *  
+             *
              *
              *  (0) ... lower left
              *  (6) ... upper right
@@ -282,54 +282,75 @@ namespace MeltPoolDG
              */
             /// define corner points depending on the given lower_left_corner and upper_right_corner
             std::vector<Point<dim>> corner(dim * dim);
-            corner[0]    = lower_left_corner;
-            corner[1]    = Point<dim>(lower_left_corner[0], upper_right_corner[1], lower_left_corner[2]);
-            corner[2]    = Point<dim>(upper_right_corner[0], upper_right_corner[1], lower_left_corner[2]);
-            corner[3]    = Point<dim>(upper_right_corner[0], lower_left_corner[1], lower_left_corner[2]);
-            corner[4]    = Point<dim>(lower_left_corner[0], lower_left_corner[1], upper_right_corner[2]);
-            corner[5]    = Point<dim>(lower_left_corner[0], upper_right_corner[1], upper_right_corner[2]);
-            corner[6]    = upper_right_corner;
-            corner[7]    = Point<dim>(upper_right_corner[0], lower_left_corner[1], upper_right_corner[2]);
+            corner[0] = lower_left_corner;
+            corner[1] =
+              Point<dim>(lower_left_corner[0], upper_right_corner[1], lower_left_corner[2]);
+            corner[2] =
+              Point<dim>(upper_right_corner[0], upper_right_corner[1], lower_left_corner[2]);
+            corner[3] =
+              Point<dim>(upper_right_corner[0], lower_left_corner[1], lower_left_corner[2]);
+            corner[4] =
+              Point<dim>(lower_left_corner[0], lower_left_corner[1], upper_right_corner[2]);
+            corner[5] =
+              Point<dim>(lower_left_corner[0], upper_right_corner[1], upper_right_corner[2]);
+            corner[6] = upper_right_corner;
+            corner[7] =
+              Point<dim>(upper_right_corner[0], lower_left_corner[1], upper_right_corner[2]);
 
             Point<dim> center;
             for (int d = 0; d < dim; ++d)
               center[d] = 0.5 * (upper_right_corner[d] + lower_left_corner[d]);
-            
-            auto project = [&] (const Point<3>& p, const int plane) -> Point<2> {
-              if (plane==0)
-                return Point<2>(p[1],p[2]);
-              else if (plane==1)
-                return Point<2>(p[0],p[2]);
-              else 
-                return Point<2>(p[0],p[1]);
+
+            auto project = [&](const Point<3> &p, const int plane) -> Point<2> {
+              if (plane == 0)
+                return Point<2>(p[1], p[2]);
+              else if (plane == 1)
+                return Point<2>(p[0], p[2]);
+              else
+                return Point<2>(p[0], p[1]);
             };
 
             // test if point is on one of the 6 faces
             // plane x = const
-            if ((p[0] == corner[0][0]) && (rectangular_manifold<2>(project(p,0), project(corner[0], 0), project(corner[5],0)) > 0))
+            if ((p[0] == corner[0][0]) && (rectangular_manifold<2>(project(p, 0),
+                                                                   project(corner[0], 0),
+                                                                   project(corner[5], 0)) > 0))
               return 0.0;
             // plane y = const
-            else if ( (p[1] == corner[0][1] ) && (rectangular_manifold<2>(project(p,1), project(corner[0],1), project(corner[7],1)) > 0 ) )
+            else if ((p[1] == corner[0][1]) && (rectangular_manifold<2>(project(p, 1),
+                                                                        project(corner[0], 1),
+                                                                        project(corner[7], 1)) > 0))
               return 0.0;
             // plane z = const
-            else if ( (p[2] == corner[0][2] ) && (rectangular_manifold<2>(project(p,2), project(corner[0],2), project(corner[2],2)) > 0 ) )
+            else if ((p[2] == corner[0][2]) && (rectangular_manifold<2>(project(p, 2),
+                                                                        project(corner[0], 2),
+                                                                        project(corner[2], 2)) > 0))
               return 0.0;
-            if ((p[0] == upper_right_corner[0]) && (rectangular_manifold<2>(project(p,0), project(corner[3],0), project(corner[6],0)) > 0))
+            if ((p[0] == upper_right_corner[0]) &&
+                (rectangular_manifold<2>(project(p, 0),
+                                         project(corner[3], 0),
+                                         project(corner[6], 0)) > 0))
               return 0.0;
             // plane y = const
-            else if ( (p[1] == upper_right_corner[1] ) && ( rectangular_manifold<2>(project(p,1), project(corner[1],1), project(corner[6],1)) > 0 ) )
+            else if ((p[1] == upper_right_corner[1]) &&
+                     (rectangular_manifold<2>(project(p, 1),
+                                              project(corner[1], 1),
+                                              project(corner[6], 1)) > 0))
               return 0.0;
             // plane z = const
-            else if ((p[2] == lower_left_corner[2]) && (rectangular_manifold<2>(project(p,2), project(corner[4],2), project(corner[6],2))>0 ) )
+            else if ((p[2] == lower_left_corner[2]) &&
+                     (rectangular_manifold<2>(project(p, 2),
+                                              project(corner[4], 2),
+                                              project(corner[6], 2)) > 0))
               return 0.0;
-            
+
             // test if point is inside the rectangle
-            if ( ( p[0]>lower_left_corner[0] ) && ( p[0]<upper_right_corner[0] ) )
-              if ( ( p[1]>lower_left_corner[1] ) && ( p[1]<upper_right_corner[1] ) )
-                if ( ( p[2]>lower_left_corner[2] ) && ( p[2]<upper_right_corner[2] ) )
+            if ((p[0] > lower_left_corner[0]) && (p[0] < upper_right_corner[0]))
+              if ((p[1] > lower_left_corner[1]) && (p[1] < upper_right_corner[1]))
+                if ((p[2] > lower_left_corner[2]) && (p[2] < upper_right_corner[2]))
                   return +1.0;
-            
-            return -1.0; 
+
+            return -1.0;
           }
         else if constexpr (dim == 2)
           {

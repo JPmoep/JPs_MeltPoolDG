@@ -15,7 +15,7 @@
     "flow viscosity difference": "0.0054",
     "flow surface tension coefficient": "1.8",
     "flow start time": "0.0",
-    "flow end time": "0.0",
+    "flow end time": "0.0006",
     "flow time step size": "0.000001"
   },
   "melt pool" : {
@@ -62,7 +62,7 @@
     "adaflo" : {
       "Navier-Stokes" : {
         "physical type"      : "incompressible",
-        "dimension"         : "2",
+        "dimension"         : "3",
         "global refinements" : "0",
         "velocity degree"    : "2",
         "Solver" : {
