@@ -12,7 +12,7 @@
 #include <deal.II/matrix_free/matrix_free.h>
 // MeltPoolDG
 #include "meltpooldg/interface/operator_base.hpp"
-#include "meltpooldg/reinitialization/olsson_operator.hpp"
+#include <meltpooldg/utilities/vector_tools.hpp>
 
 using namespace dealii;
 
