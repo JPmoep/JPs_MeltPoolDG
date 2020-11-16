@@ -228,8 +228,12 @@ namespace MeltPoolDG
         if (base_in->parameters.base.problem_name == "melt_pool")
           melt_pool_operation.initialize(scratch_data,
                                          base_in->parameters,
-                                         dof_no_bc_idx,
-                                         ls_quad_idx);
+                                         ls_dof_idx, 
+                                         flow_dof_idx,
+                                         flow_quad_idx,
+                                         dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as soon as heat problem is introduced*/
+                                         ls_quad_idx   /*temp_quad_idx@todo: may be changed as soon as heat problem is introduced*/
+                                         );
         /*
          *    initialize the force vector for calculating surface tension
          */

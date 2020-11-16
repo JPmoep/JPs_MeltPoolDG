@@ -43,12 +43,18 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const Parameters<double> &                     data_in,
-                 const unsigned int                             dof_no_bc_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             ls_dof_idx_in,
+                 const unsigned int                             flow_dof_idx_in,
+                 const unsigned int                             flow_quad_idx_in,
+                 const unsigned int                             temp_dof_idx_in,
+                 const unsigned int                             temp_quad_idx_in)
       {
-        scratch_data = scratch_data_in;
-        dof_idx      = dof_no_bc_idx_in;
-        quad_idx     = quad_idx_in;
+        scratch_data  = scratch_data_in;
+        ls_dof_idx  = ls_dof_idx_in;
+        flow_dof_idx  = flow_dof_idx_in;
+        flow_quad_idx = flow_quad_idx_in;
+        temp_dof_idx  = temp_dof_idx_in;
+        temp_quad_idx = temp_quad_idx_in;
         /*
          *  set the advection diffusion data
          */
@@ -60,11 +66,11 @@ namespace MeltPoolDG
         /*
          *  Initialize the temperature field
          */
-        scratch_data->initialize_dof_vector(temperature, dof_idx);
+        scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
         dealii::VectorTools::project(scratch_data->get_mapping(),
-                                     scratch_data->get_dof_handler(dof_idx),
-                                     scratch_data->get_constraint(dof_idx),
-                                     scratch_data->get_quadrature(quad_idx),
+                                     scratch_data->get_dof_handler(temp_dof_idx),
+                                     scratch_data->get_constraint(temp_dof_idx),
+                                     scratch_data->get_quadrature(temp_quad_idx),
                                      Functions::ConstantFunction<dim>(mp_data.ambient_temperature),
                                      temperature);
       }
@@ -86,10 +92,10 @@ namespace MeltPoolDG
 
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
           [&](const auto &matrix_free, auto &force_rhs, const auto &level_set_as_heaviside, auto macro_cells) {
-            FECellIntegrator<dim, 1, double>   level_set(matrix_free, dof_idx, quad_idx);
-            FECellIntegrator<dim, dim, double> recoil_pressure(matrix_free, dof_idx, quad_idx);
+            FECellIntegrator<dim, 1, double>   level_set(matrix_free, ls_dof_idx, flow_quad_idx);
+            FECellIntegrator<dim, dim, double> recoil_pressure(matrix_free, flow_dof_idx, flow_quad_idx);
 
-            FECellIntegrator<dim, 1, double> temperature_val(matrix_free, dof_idx, quad_idx);
+            FECellIntegrator<dim, 1, double> temperature_val(matrix_free, temp_dof_idx, flow_quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
@@ -133,25 +139,25 @@ namespace MeltPoolDG
       {
         level_set_as_heaviside.update_ghost_values();
 
-        scratch_data->initialize_dof_vector(temperature, dof_idx);
+        scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
 
         FEValues<dim> fe_values(scratch_data->get_mapping(),
-                                scratch_data->get_dof_handler(dof_idx).get_fe(),
-                                scratch_data->get_quadrature(quad_idx),
+                                scratch_data->get_dof_handler(temp_dof_idx).get_fe(),
+                                scratch_data->get_quadrature(temp_quad_idx),
                                 update_values | update_gradients | update_quadrature_points |
                                   update_JxW_values);
 
-        const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell(this->dof_idx);
+        const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell(temp_dof_idx);
 
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
         std::map<types::global_dof_index, Point<dim>> support_points;
         DoFTools::map_dofs_to_support_points(scratch_data->get_mapping(),
-                                             scratch_data->get_dof_handler(dof_idx),
+                                             scratch_data->get_dof_handler(temp_dof_idx),
                                              support_points);
 
         for (const auto &cell :
-             scratch_data->get_dof_handler(this->dof_idx).active_cell_iterators())
+             scratch_data->get_dof_handler(temp_dof_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               cell->get_dof_indices(local_dof_indices);
@@ -198,13 +204,12 @@ namespace MeltPoolDG
             const double density = flow_data.density + flow_data.density_difference * indicator;
 
             const double     thermal_diffusivity = conductivity / (density * capacity);
-            constexpr double pi                  = std::acos(-1); // @todo move to utility function
             const double     R                   = point.distance(laser_center);
 
             if (R == 0.0)
               return T0;
             else
-              return P * absorptivity / (4 * pi * R) *
+              return P * absorptivity / (4 * numbers::PI * R) *
                        std::exp(-v * (R - point[dim - 1]) / (2. * thermal_diffusivity)) +
                      T0;
           }
@@ -228,8 +233,11 @@ namespace MeltPoolDG
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
        *  multiple DoFHandlers, quadrature rules, etc.
        */
-      unsigned int dof_idx;
-      unsigned int quad_idx;
+      unsigned int ls_dof_idx;
+      unsigned int flow_dof_idx;
+      unsigned int flow_quad_idx;
+      unsigned int temp_dof_idx;
+      unsigned int temp_quad_idx;
     };
   } // namespace MeltPool
 } // namespace MeltPoolDG
