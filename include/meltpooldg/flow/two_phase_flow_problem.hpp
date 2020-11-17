@@ -453,10 +453,6 @@ namespace MeltPoolDG
                                          level_set_operation.level_set_as_heaviside,
                                          level_set_operation.distance_to_level_set,
                                          melt_pool_operation.temperature);
-            if (parameters.base.problem_name == "melt_pool" && (time_step == 0))
-              {
-                // melt_pool_operation.temperature.zero_out_ghosts();
-              }
           }
       }
 

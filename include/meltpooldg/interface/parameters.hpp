@@ -11,6 +11,16 @@
 namespace MeltPoolDG
 {
   using namespace dealii;
+  
+  template <typename number = double>
+  struct SolverData
+  {
+    bool         do_matrix_free      = true;
+    std::string  preconditioner_type = "Identity";
+    std::string  solver_type         = "GMRES";
+    unsigned int max_iterations      = 10000;
+    number       rel_tolerance_rhs   = 1e-8;
+  };
 
   template <typename number = double>
   struct BaseData
@@ -59,8 +69,8 @@ namespace MeltPoolDG
     number       scale_factor_epsilon = 0.5;
     number       dtau                 = -1.0;
     std::string  modeltype            = "olsson2007";
-    bool         do_matrix_free       = false;
     bool         do_print_l2norm      = false;
+    SolverData<number>   solver;
   };
 
   template <typename number = double>
@@ -415,13 +425,36 @@ namespace MeltPoolDG
                           reinit.modeltype,
                           "Sets the type of reinitialization model that should be used.");
         prm.add_parameter(
-          "reinit do matrix free",
-          reinit.do_matrix_free,
-          "Set this parameter if a matrix free solution procedure should be performed");
-        prm.add_parameter(
           "reinit do print l2norm",
           reinit.do_print_l2norm,
           "Defines if the l2norm of the reinitialization result should be printed)");
+        prm.add_parameter(
+          "reinit do matrix free",
+          reinit.solver.do_matrix_free,
+          "Set this parameter if a matrix free solution procedure should be performed");
+        prm.add_parameter(
+          "reinit solver type",
+          reinit.solver.solver_type,
+          "Set this parameter for choosing a solver type. At the moment GMRES or CG solvers "
+          " are supported");
+        prm.add_parameter(
+          "reinit preconditioner type",
+          reinit.solver.preconditioner_type,
+          "Set this parameter for choosing a preconditioner type. At the moment Identity, AMG or ILU "
+          "preconditioners are supported");
+        prm.add_parameter(
+          "reinit preconditioner type",
+          reinit.solver.preconditioner_type,
+          "Set this parameter for choosing a preconditioner type. At the moment Identity, AMG or ILU "
+          "preconditioners are supported");
+        prm.add_parameter(
+          "reinit max iterations",
+          reinit.solver.max_iterations,
+          "Set the maximum number of iterations for solving the linear system of equations.");
+        prm.add_parameter(
+          "reinit rel tolerance rhs",
+          reinit.solver.rel_tolerance_rhs,
+          "Set the relative tolerance for a successful solution of the linear system of equations.");
       }
       prm.leave_subsection();
       /*

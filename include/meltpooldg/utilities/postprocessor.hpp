@@ -19,7 +19,7 @@ namespace MeltPoolDG
 {
   template <int dim>
   class Postprocessor
-  {
+  { 
   private:
     using VectorType = LinearAlgebra::distributed::Vector<double>;
     std::vector<std::vector<double>> volumes;

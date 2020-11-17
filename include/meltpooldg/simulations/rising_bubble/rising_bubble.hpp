@@ -29,7 +29,7 @@ namespace MeltPoolDG
         InitialValuesLS()
           : Function<dim>(1, 0)
         {}
-
+ 
         double
         value(const Point<dim> &p, const unsigned int /*component*/) const
         {
