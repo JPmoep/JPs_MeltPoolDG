@@ -84,6 +84,7 @@ namespace MeltPoolDG
               melt_pool_operation.compute_recoil_pressure_force(
                 force_rhs,
                 level_set_operation.level_set_as_heaviside,
+                dt,
                 false /*false means add to force vector*/);
 
             //  ... and set forces within the Navier-Stokes solver

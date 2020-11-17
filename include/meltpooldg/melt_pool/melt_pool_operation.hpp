@@ -73,6 +73,11 @@ namespace MeltPoolDG
                                      scratch_data->get_quadrature(temp_quad_idx),
                                      Functions::ConstantFunction<dim>(mp_data.ambient_temperature),
                                      temperature);
+        /*
+         *  Get the center point of the laser source
+         */
+        laser_center =
+          MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(mp_data.laser_center);
       }
 
       /**
@@ -85,8 +90,12 @@ namespace MeltPoolDG
       void
       compute_recoil_pressure_force(BlockVectorType & force_rhs,
                                     const VectorType &level_set_as_heaviside,
+                                    const double      dt,
                                     bool              zero_out = true)
       {
+        if (mp_data.do_move_laser)
+          laser_center[0] += mp_data.scan_speed * dt;
+
         compute_temperature_vector(level_set_as_heaviside);
 
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
@@ -193,9 +202,6 @@ namespace MeltPoolDG
           {
             // this is the temperature function according to Heat Source Modeling in Selective Laser
             // Melting, E. Mirkoohi, D. E. Seivers, H. Garmestani and S. Y. Liang
-            Point<dim> laser_center;
-            for (unsigned int d = 0; d < dim; ++d)
-              laser_center[d] = 0.0;
             const double indicator = UtilityFunctions::CharacteristicFunctions::heaviside(phi, 0.0);
             const double &P  = mp_data.laser_power; // @todo: make dependent from input parameters
             const double &v  = mp_data.scan_speed;
@@ -214,10 +220,9 @@ namespace MeltPoolDG
             if (R == 0.0)
               R = 1e-16;
             double T = P * absorptivity / (4 * numbers::PI * R * conductivity) *
-                         std::exp(-v * (R - point[dim - 1]) / (2. * thermal_diffusivity)) +
+                         std::exp(-v * (R) / (2. * thermal_diffusivity)) +
                        T0;
-            return (T > mp_data.boiling_temperature + 1000) ? mp_data.boiling_temperature + 1000. :
-                                                              T;
+            return (T > mp_data.boiling_temperature + 500) ? mp_data.boiling_temperature + 500. : T;
           }
         else
           AssertThrow(false, ExcNotImplemented());
@@ -234,6 +239,11 @@ namespace MeltPoolDG
 
     private:
       std::shared_ptr<const ScratchData<dim>> scratch_data;
+      /*
+       *  Center of the laser
+       */
+      Point<dim> laser_center;
+
       /*
        *  Based on the following indices the correct DoFHandler or quadrature rule from
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds

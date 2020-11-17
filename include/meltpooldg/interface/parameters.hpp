@@ -11,7 +11,7 @@
 namespace MeltPoolDG
 {
   using namespace dealii;
-  
+
   template <typename number = double>
   struct SolverData
   {
@@ -64,13 +64,13 @@ namespace MeltPoolDG
   template <typename number = double>
   struct ReinitializationData
   {
-    unsigned int max_n_steps          = 5;
-    number       constant_epsilon     = -1.0;
-    number       scale_factor_epsilon = 0.5;
-    number       dtau                 = -1.0;
-    std::string  modeltype            = "olsson2007";
-    bool         do_print_l2norm      = false;
-    SolverData<number>   solver;
+    unsigned int       max_n_steps          = 5;
+    number             constant_epsilon     = -1.0;
+    number             scale_factor_epsilon = 0.5;
+    number             dtau                 = -1.0;
+    std::string        modeltype            = "olsson2007";
+    bool               do_print_l2norm      = false;
+    SolverData<number> solver;
   };
 
   template <typename number = double>
@@ -124,7 +124,9 @@ namespace MeltPoolDG
   {
     std::string temperature_formulation              = "analytical";
     number      laser_power                          = 0.0;
+    std::string laser_center                         = "0,0,0";
     number      scan_speed                           = 0.0;
+    bool        do_move_laser                        = false;
     number      ambient_temperature                  = 0.0;
     number      recoil_pressure_constant             = 0.0;
     number      recoil_pressure_temperature_constant = 0.0;
@@ -545,9 +547,17 @@ namespace MeltPoolDG
         prm.add_parameter("mp laser power",
                           mp.laser_power, //@todo: add user input function
                           "Intensity of the laser");
+        prm.add_parameter("mp laser center",
+                          mp.laser_center,
+                          "Center coordinates of the laser beam on the interface melt/gas.");
         prm.add_parameter("mp scan speed",
                           mp.scan_speed,
                           "Scan speed of the laser (in case of an analytical temperature field).");
+        prm.add_parameter(
+          "mp do move laser",
+          mp.do_move_laser,
+          "Set this parameter to true to move the laser in x-direction with the given parameter scan speed "
+          "(in case of an analytical temperature field).");
         prm.add_parameter("mp ambient temperature",
                           mp.ambient_temperature,
                           "Ambient temperature in the inert gas.");

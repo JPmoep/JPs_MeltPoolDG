@@ -33,13 +33,14 @@ namespace MeltPoolDG
         double
         value(const Point<dim> &p, const unsigned int /*component*/) const
         {
-          const double x_half_domain_size = 100e-6;
-          const double y_half_domain_size = 60e-6;
+          const double x_half_domain_size = 200e-6;
+          const double y_min = -200e-6;
+          const double y_max = 40e-6;
           Point<dim>   lower_left =
-            dim == 2 ? Point<dim>(-x_half_domain_size, -y_half_domain_size) :
-                       Point<dim>(-x_half_domain_size, -x_half_domain_size, -y_half_domain_size);
-          Point<dim> upper_right = dim == 2 ? Point<dim>(x_half_domain_size, 0) :
-                                              Point<dim>(x_half_domain_size, x_half_domain_size, 0);
+            dim == 2 ? Point<dim>(-x_half_domain_size, y_min) :
+                       Point<dim>(-x_half_domain_size, x_half_domain_size, y_min);
+          Point<dim> upper_right = dim == 2 ? Point<dim>(x_half_domain_size, y_max) :
+                                              Point<dim>(x_half_domain_size, x_half_domain_size, y_max);
 
           return UtilityFunctions::CharacteristicFunctions::sgn(
             UtilityFunctions::DistanceFunctions::rectangular_manifold<dim>(p,
@@ -68,13 +69,12 @@ namespace MeltPoolDG
           this->triangulation =
             std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
 
+          const double x_half_domain_size = 200e-6;
+          const double y_half_domain_size = 200e-6;
+          
           if constexpr (dim == 2)
             {
               // create mesh
-
-              const double x_half_domain_size = 100e-6;
-              const double y_half_domain_size = 60e-6;
-
               const Point<dim> bottom_left = Point<dim>(-x_half_domain_size, -y_half_domain_size);
               const Point<dim> top_right   = Point<dim>(x_half_domain_size, y_half_domain_size);
 
@@ -84,10 +84,7 @@ namespace MeltPoolDG
           else if constexpr (dim == 3)
             {
               // create mesh
-
-              const double x_half_domain_size = 100e-6;
-              const double y_half_domain_size = 100e-6;
-              const double z_half_domain_size = 60e-6;
+              const double z_half_domain_size = 200e-6;
 
               const Point<dim> bottom_left =
                 Point<dim>(-x_half_domain_size, -y_half_domain_size, -z_half_domain_size);

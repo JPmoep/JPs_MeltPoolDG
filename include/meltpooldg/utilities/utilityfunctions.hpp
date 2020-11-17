@@ -33,6 +33,39 @@ namespace MeltPoolDG
       return tria_parallel != nullptr ? tria_parallel->get_communicator() : MPI_COMM_SELF;
     }
 
+    /*
+     * This function converts a string of coordinates given as e.g. "5,10,5" to a Point<dim>
+     * object.
+     */
+
+    template <int dim>
+    Point<dim>
+    convert_string_coords_to_point(const std::string s_in, const std::string delimiter = ",")
+    {
+      Point<dim>  p;
+      int         d   = 0;
+      size_t      pos = 0;
+      std::string coord;
+      std::string s = s_in;
+
+      // split parts between delimiters
+      while ((pos = s.find(delimiter)) != std::string::npos)
+        {
+          coord = s.substr(0, pos);
+
+          if (d < dim)
+            p[d] = std::stod(coord);
+          else
+            break;
+          s.erase(0, pos + delimiter.length());
+          d++;
+        }
+      // last part after delimiter
+      if (d < dim)
+        p[d] = std::stod(s);
+      return p;
+    }
+
     /**
      * This function returns heaviside values for a given VectorizedArray. The limit to
      * distinguish between 0 and 1 can be adjusted by the argument "limit". This function is
