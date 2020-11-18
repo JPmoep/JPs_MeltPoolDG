@@ -109,18 +109,9 @@ namespace MeltPoolDG
     unsigned int
     attach_quadrature(const Quadrature<dim_q> &quadrature)
     {
-      AssertDimension(this->quad_1D.size(), 0);
-
-      this->quad.emplace_back(quadrature);
-      return this->quad.size() - 1;
-    }
-
-    unsigned int
-    attach_quadrature(const Quadrature<1> &quadrature)
-    {
-      this->quad_1D.emplace_back(quadrature);
-      this->quad.emplace_back(QIterated<dim>(quadrature, 1));
-      this->face_quad.emplace_back(QIterated<dim - 1>(quadrature, 1));
+      this->quad.emplace_back(Quadrature<dim>(quadrature));
+      if constexpr (dim_q == 1) // find a better way to handle face quadrature
+        this->face_quad.emplace_back(Quadrature<dim - 1>(quadrature));
       return this->quad.size() - 1;
     }
 
@@ -163,18 +154,16 @@ namespace MeltPoolDG
     void
     build()
     {
-      this->matrix_free.clear();
-
-      // We are building MatrixFree only if 1D quadrature rules have been
-      // provided
-      if (this->quad_1D.size() > 0)
+      if (do_matrix_free)
         {
+          this->matrix_free.clear();
+
           typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData additional_data;
           additional_data.mapping_update_flags =
             update_values | update_gradients | update_JxW_values | dealii::update_quadrature_points;
 
           this->matrix_free.reinit(
-            *this->mapping, this->dof_handler, this->constraint, this->quad_1D, additional_data);
+            *this->mapping, this->dof_handler, this->constraint, this->quad, additional_data);
         }
     }
 
@@ -221,7 +210,6 @@ namespace MeltPoolDG
     clear()
     {
       this->matrix_free.clear();
-      this->quad_1D.clear();
       this->quad.clear();
       this->constraint.clear();
       this->dof_handler.clear();
@@ -356,7 +344,6 @@ namespace MeltPoolDG
     std::vector<const DoFHandler<dim, spacedim> *>            dof_handler;
     std::vector<const AffineConstraints<number> *>            constraint;
     std::vector<Quadrature<dim>>                              quad;
-    std::vector<Quadrature<1>>                                quad_1D;
     std::vector<Quadrature<dim - 1>>                          face_quad;
     std::vector<double>                                       min_cell_size;
     std::vector<IndexSet>                                     locally_owned_dofs;
