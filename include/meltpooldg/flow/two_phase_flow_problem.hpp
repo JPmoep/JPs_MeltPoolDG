@@ -153,11 +153,12 @@ namespace MeltPoolDG
             for (const auto &bc : base_in->get_dirichlet_bc(
                    "level_set")) // @todo: add name of bc at a more central place
               {
-                dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
-                                                                 dof_handler,
-                                                                 bc.first,
-                                                                 *bc.second,
-                                                                 ls_constraints_dirichlet);
+                dealii::VectorTools::interpolate_boundary_values(
+                  scratch_data->get_mapping(),
+                  dof_handler,
+                  bc.first, //@todo: function map can be provided as argument directly
+                  *bc.second,
+                  ls_constraints_dirichlet);
               }
           }
 
@@ -233,16 +234,16 @@ namespace MeltPoolDG
          *    initialize the melt pool operation class
          */
         if (base_in->parameters.base.problem_name == "melt_pool")
-          melt_pool_operation.initialize(
-            scratch_data,
-            base_in->parameters,
-            ls_dof_idx,
-            flow_dof_idx,
-            flow_quad_idx,
-            dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as soon as heat problem is
-                              introduced*/
-            ls_quad_idx /*temp_quad_idx@todo: may be changed as soon as heat problem is introduced*/
-          );
+          melt_pool_operation.initialize(scratch_data,
+                                         base_in->parameters,
+                                         ls_dof_idx,
+                                         flow_dof_idx,
+                                         flow_quad_idx,
+                                         dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as soon
+                                                           as heat problem is introduced*/
+                                         ls_quad_idx,   /*temp_quad_idx@todo: may be changed as soon
+                                                           as heat problem is introduced*/
+                                         level_set_operation.level_set_as_heaviside);
         /*
          *    initialize the force vector for calculating surface tension
          */
@@ -252,6 +253,13 @@ namespace MeltPoolDG
          */
         scratch_data->initialize_dof_vector(density, flow_dof_idx);
         scratch_data->initialize_dof_vector(viscosity, flow_dof_idx);
+        /*
+         *    set the fluid velocity and the pressure in solid regions to zero
+         */
+        melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+          flow_operation->get_dof_handler_velocity(), flow_operation->get_constraints_velocity());
+        melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+          flow_operation->get_dof_handler_pressure(), flow_operation->get_constraints_pressure());
       }
 
       /**
@@ -358,7 +366,8 @@ namespace MeltPoolDG
                                              level_set_operation.solution_normal_vector,
                                              level_set_operation.level_set_as_heaviside,
                                              level_set_operation.distance_to_level_set,
-                                             melt_pool_operation.temperature);
+                                             melt_pool_operation.temperature,
+                                             melt_pool_operation.solid);
             /*
              *  output advected field
              */
@@ -432,6 +441,10 @@ namespace MeltPoolDG
                 data_out.add_data_vector(dof_handler,
                                          melt_pool_operation.temperature,
                                          "temperature");
+                /*
+                 * solid
+                 */
+                data_out.add_data_vector(dof_handler, melt_pool_operation.solid, "solid");
               }
 
             data_out.build_patches(scratch_data->get_mapping());
@@ -453,7 +466,8 @@ namespace MeltPoolDG
                                          level_set_operation.solution_normal_vector,
                                          level_set_operation.level_set_as_heaviside,
                                          level_set_operation.distance_to_level_set,
-                                         melt_pool_operation.temperature);
+                                         melt_pool_operation.temperature,
+                                         melt_pool_operation.solid);
           }
       }
 
@@ -472,12 +486,12 @@ namespace MeltPoolDG
         FullMatrix<double> matrix(fe_fine.dofs_per_cell, fe_coarse.dofs_per_cell);
         FETools::get_projection_matrix(fe_coarse, fe_fine, matrix);
 
-        AlignedVector<VectorizedArray<double>> prolongation_matrix_1d(fe_fine.dofs_per_cell *
-                                                                      fe_coarse.dofs_per_cell);
+        AlignedVector<VectorizedArray<double>> projection_matrix_1d(fe_fine.dofs_per_cell *
+                                                                    fe_coarse.dofs_per_cell);
 
         for (unsigned int i = 0, k = 0; i < fe_coarse.dofs_per_cell; ++i)
           for (unsigned int j = 0; j < fe_fine.dofs_per_cell; ++j, ++k)
-            prolongation_matrix_1d[k] = matrix(j, i);
+            projection_matrix_1d[k] = matrix(j, i);
 
 
         FECellIntegrator<dim, 1, double> fe_eval(scratch_data->get_matrix_free(),
@@ -509,7 +523,7 @@ namespace MeltPoolDG
               0,
               VectorizedArray<double>,
               VectorizedArray<double>>::do_forward(1 /*n_components*/,
-                                                   prolongation_matrix_1d,
+                                                   projection_matrix_1d,
                                                    fe_eval.begin_values(),
                                                    fe_eval.begin_dof_values(),
                                                    n_q_points_1D, // number of quadrature points
