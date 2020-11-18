@@ -482,7 +482,7 @@ namespace MeltPoolDG
                                                  flow_dof_idx,
                                                  flow_quad_idx);
 
-        for (unsigned int cell = 0; cell < scratch_data->get_matrix_free().n_macro_cells(); ++cell)
+        for (unsigned int cell = 0; cell < scratch_data->get_matrix_free().n_cell_batches(); ++cell)
           {
             fe_eval.reinit(cell);
 
