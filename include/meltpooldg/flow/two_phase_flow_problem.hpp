@@ -79,13 +79,28 @@ namespace MeltPoolDG
               flow_quad_idx,
               false /*false means add to force vector*/);
 
-            // ... c) recoil pressure
             if (base_in->parameters.base.problem_name == "melt_pool")
-              melt_pool_operation.compute_recoil_pressure_force(
-                force_rhs,
-                level_set_operation.level_set_as_heaviside,
-                dt,
-                false /*false means add to force vector*/);
+              {
+                // ... c) recoil pressure (+ compute temperature from analytical field)
+                melt_pool_operation.compute_recoil_pressure_force(
+                  force_rhs,
+                  level_set_operation.level_set_as_heaviside,
+                  dt,
+                  false /*false means add to force vector*/);
+
+                // ... d) temperature-dependent part of surface tension
+                if (base_in->parameters.flow.temperature_dependent_surface_tension_coefficient >
+                    0.0)
+                  melt_pool_operation.compute_temperature_dependent_surface_tension(
+                    force_rhs,
+                    level_set_operation.level_set_as_heaviside,
+                    base_in->parameters.flow.temperature_dependent_surface_tension_coefficient,
+                    ls_dof_idx,
+                    flow_dof_idx,
+                    flow_quad_idx,
+                    dof_no_bc_idx, /*temp_dof_idx*/
+                    false /*false means add to force vector*/);
+              }
 
             //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_force_rhs(force_rhs);
@@ -234,16 +249,27 @@ namespace MeltPoolDG
          *    initialize the melt pool operation class
          */
         if (base_in->parameters.base.problem_name == "melt_pool")
-          melt_pool_operation.initialize(scratch_data,
-                                         base_in->parameters,
-                                         ls_dof_idx,
-                                         flow_dof_idx,
-                                         flow_quad_idx,
-                                         dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as soon
+          {
+            melt_pool_operation.initialize(scratch_data,
+                                           base_in->parameters,
+                                           ls_dof_idx,
+                                           flow_dof_idx,
+                                           flow_quad_idx,
+                                           dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as
+                                                             soon as heat problem is introduced*/
+                                           ls_quad_idx, /*temp_quad_idx@todo: may be changed as soon
                                                            as heat problem is introduced*/
-                                         ls_quad_idx,   /*temp_quad_idx@todo: may be changed as soon
-                                                           as heat problem is introduced*/
-                                         level_set_operation.level_set_as_heaviside);
+                                           level_set_operation.level_set_as_heaviside);
+            /*
+             *    set the fluid velocity and the pressure in solid regions to zero
+             */
+            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+              flow_operation->get_dof_handler_velocity(),
+              flow_operation->get_constraints_velocity());
+            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+              flow_operation->get_dof_handler_pressure(),
+              flow_operation->get_constraints_pressure());
+          }
         /*
          *    initialize the force vector for calculating surface tension
          */
@@ -253,13 +279,6 @@ namespace MeltPoolDG
          */
         scratch_data->initialize_dof_vector(density, flow_dof_idx);
         scratch_data->initialize_dof_vector(viscosity, flow_dof_idx);
-        /*
-         *    set the fluid velocity and the pressure in solid regions to zero
-         */
-        melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
-          flow_operation->get_dof_handler_velocity(), flow_operation->get_constraints_velocity());
-        melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
-          flow_operation->get_dof_handler_pressure(), flow_operation->get_constraints_pressure());
       }
 
       /**
@@ -365,9 +384,11 @@ namespace MeltPoolDG
                                              level_set_operation.solution_curvature,
                                              level_set_operation.solution_normal_vector,
                                              level_set_operation.level_set_as_heaviside,
-                                             level_set_operation.distance_to_level_set,
-                                             melt_pool_operation.temperature,
-                                             melt_pool_operation.solid);
+                                             level_set_operation.distance_to_level_set);
+
+            if (parameters.base.problem_name == "melt_pool")
+              VectorTools::update_ghost_values(melt_pool_operation.temperature,
+                                               melt_pool_operation.solid);
             /*
              *  output advected field
              */
@@ -378,7 +399,6 @@ namespace MeltPoolDG
             data_out.set_flags(flags);
 
             data_out.attach_dof_handler(dof_handler);
-
             /*
              * level set
              */
@@ -400,6 +420,7 @@ namespace MeltPoolDG
               data_out.add_data_vector(flow_dof_handler,
                                        advection_velocity.block(d),
                                        "advection_velocity_" + std::to_string(d));
+
             /*
              * force vector (surface tension + gravity force)
              */
@@ -465,9 +486,11 @@ namespace MeltPoolDG
                                          level_set_operation.solution_curvature,
                                          level_set_operation.solution_normal_vector,
                                          level_set_operation.level_set_as_heaviside,
-                                         level_set_operation.distance_to_level_set,
-                                         melt_pool_operation.temperature,
-                                         melt_pool_operation.solid);
+                                         level_set_operation.distance_to_level_set);
+
+            if (parameters.base.problem_name == "melt_pool")
+              VectorTools::zero_out_ghosts(melt_pool_operation.temperature,
+                                           melt_pool_operation.solid);
           }
       }
 

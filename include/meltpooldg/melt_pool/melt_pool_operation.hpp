@@ -66,14 +66,14 @@ namespace MeltPoolDG
          */
         set_melt_pool_parameters(data_in);
         /*
-         *  Initialize the temperature field
-         */
-        compute_temperature_vector(level_set_as_heaviside);
-        /*
          *  Get the center point of the laser source
          */
         laser_center =
           MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(mp_data.laser_center);
+        /*
+         *  Initialize the temperature field
+         */
+        compute_temperature_vector(level_set_as_heaviside);
       }
 
       /**
@@ -93,8 +93,6 @@ namespace MeltPoolDG
           laser_center[0] += mp_data.scan_speed * dt;
 
         compute_temperature_vector(level_set_as_heaviside);
-
-
 
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
           [&](const auto &matrix_free,
@@ -135,6 +133,73 @@ namespace MeltPoolDG
                                                  q_index);
                   }
                 recoil_pressure.integrate_scatter(true, false, force_rhs);
+              }
+          },
+          force_rhs,
+          level_set_as_heaviside,
+          zero_out);
+      }
+
+      /**
+       *  compute temperature dependent surface tension forces
+       */
+      void
+      compute_temperature_dependent_surface_tension(
+        BlockVectorType &  force_rhs,
+        const VectorType & level_set_as_heaviside,
+        const double       temperature_dependent_surface_tension_coefficient,
+        const unsigned int ls_dof_idx,
+        const unsigned int flow_dof_idx,
+        const unsigned int flow_quad_idx,
+        const unsigned int temp_dof_idx,
+        const bool         zero_out = true)
+      {
+        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
+          [&](const auto &matrix_free,
+              auto &      force_rhs,
+              const auto &level_set_as_heaviside,
+              auto        macro_cells) {
+            FECellIntegrator<dim, 1, double> level_set(matrix_free, ls_dof_idx, flow_quad_idx);
+
+            FECellIntegrator<dim, 1, double> temperature_val(matrix_free,
+                                                             temp_dof_idx,
+                                                             flow_quad_idx);
+
+            FECellIntegrator<dim, dim, double> surface_tension(matrix_free,
+                                                               flow_dof_idx,
+                                                               flow_quad_idx);
+
+            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
+              {
+                level_set.reinit(cell);
+                level_set.gather_evaluate(level_set_as_heaviside, false, true);
+
+                surface_tension.reinit(cell);
+
+                temperature_val.reinit(cell);
+                temperature_val.read_dof_values_plain(temperature);
+                temperature_val.evaluate(false, true);
+
+                for (unsigned int q_index = 0; q_index < surface_tension.n_q_points; ++q_index)
+                  {
+                    auto n      = level_set.get_gradient(q_index);
+                    auto grad_T = temperature_val.get_gradient(q_index);
+
+                    Tensor<1, dim, VectorizedArray<double>> tangent_grad_t;
+
+                    for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                      for (unsigned int i = 0; i < dim; ++i)
+                        for (unsigned int j = 0; j < dim; ++i)
+                          tangent_grad_t[i][v] =
+                            (i == j) ?
+                              -(1. - n[i][v] * n[j][v]) *
+                                temperature_dependent_surface_tension_coefficient * grad_T[j][v] :
+                              (n[i][v] * n[j][v]) *
+                                temperature_dependent_surface_tension_coefficient * grad_T[j][v];
+
+                    surface_tension.submit_value(tangent_grad_t, q_index);
+                  }
+                surface_tension.integrate_scatter(true, false, force_rhs);
               }
           },
           force_rhs,

@@ -89,18 +89,19 @@ namespace MeltPoolDG
   template <typename number = double>
   struct FlowData
   {
-    int          velocity_degree             = -1;
-    int          velocity_n_q_points_1d      = -1;
-    number       density                     = -1.0;
-    number       density_difference          = 0.0;
-    number       viscosity                   = -1.0;
-    number       viscosity_difference        = 0.0;
-    number       surface_tension_coefficient = 0.0;
-    std::string  solver_type                 = "incompressible";
-    number       start_time                  = 0.0;
-    number       end_time                    = 1.0;
-    number       time_step_size              = 0.05;
-    unsigned int max_n_steps                 = 1000000;
+    int          velocity_degree                                   = -1;
+    int          velocity_n_q_points_1d                            = -1;
+    number       density                                           = -1.0;
+    number       density_difference                                = 0.0;
+    number       viscosity                                         = -1.0;
+    number       viscosity_difference                              = 0.0;
+    number       surface_tension_coefficient                       = 0.0;
+    number       temperature_dependent_surface_tension_coefficient = 0.0;
+    std::string  solver_type                                       = "incompressible";
+    number       start_time                                        = 0.0;
+    number       end_time                                          = 1.0;
+    number       time_step_size                                    = 0.05;
+    unsigned int max_n_steps                                       = 1000000;
   };
 
   template <typename number = double>
@@ -226,9 +227,9 @@ namespace MeltPoolDG
 
           flow.density   = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
           flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
-          flow.velocity_degree = (flow.velocity_degree > 0.0) ?
-                                   flow.velocity_degree :
-                                   adaflo_params.params.velocity_degree;
+          flow.velocity_degree        = (flow.velocity_degree > 0.0) ?
+                                          flow.velocity_degree :
+                                          adaflo_params.params.velocity_degree;
           flow.velocity_n_q_points_1d = (flow.velocity_n_q_points_1d < 1) ?
                                           flow.velocity_degree + 1 :
                                           flow.velocity_n_q_points_1d;
@@ -520,6 +521,11 @@ namespace MeltPoolDG
         prm.add_parameter("flow surface tension coefficient",
                           flow.surface_tension_coefficient,
                           "constant coefficient for calculating surface tension");
+        prm.add_parameter(
+          "flow temperature dependent surface tension coefficient",
+          flow.temperature_dependent_surface_tension_coefficient,
+          "temperature dependent coefficient for calculating temperetaure-dependent "
+          "surface tension (Marangoni convection)");
         prm.add_parameter("flow solver type", flow.solver_type, "solver type of the flow problem");
         prm.add_parameter("flow start time",
                           flow.start_time,
