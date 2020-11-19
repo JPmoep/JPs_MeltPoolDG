@@ -147,19 +147,27 @@ namespace MeltPoolDG
       compute_temperature_dependent_surface_tension(
         BlockVectorType &  force_rhs,
         const VectorType & level_set_as_heaviside,
+        const VectorType & solution_curvature,
+        const double       surface_tension_coefficient,
         const double       temperature_dependent_surface_tension_coefficient,
+        const double       surface_tension_reference_temperature,
         const unsigned int ls_dof_idx,
         const unsigned int flow_dof_idx,
         const unsigned int flow_quad_idx,
         const unsigned int temp_dof_idx,
         const bool         zero_out = true)
       {
+        solution_curvature.update_ghost_values();
+
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
           [&](const auto &matrix_free,
               auto &      force_rhs,
               const auto &level_set_as_heaviside,
               auto        macro_cells) {
             FECellIntegrator<dim, 1, double> level_set(matrix_free, ls_dof_idx, flow_quad_idx);
+
+            FECellIntegrator<dim, 1, double> curvature(
+              matrix_free, temp_dof_idx, flow_quad_idx); /*@todo: own index for curvature*/
 
             FECellIntegrator<dim, 1, double> temperature_val(matrix_free,
                                                              temp_dof_idx,
@@ -169,6 +177,10 @@ namespace MeltPoolDG
                                                                flow_dof_idx,
                                                                flow_quad_idx);
 
+            const double &alpha0   = surface_tension_coefficient;
+            const double &d_alpha0 = temperature_dependent_surface_tension_coefficient;
+            const double &T0       = surface_tension_reference_temperature;
+
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 level_set.reinit(cell);
@@ -176,28 +188,44 @@ namespace MeltPoolDG
 
                 surface_tension.reinit(cell);
 
+                curvature.reinit(cell);
+                curvature.read_dof_values_plain(solution_curvature);
+                curvature.evaluate(true, false);
+
                 temperature_val.reinit(cell);
                 temperature_val.read_dof_values_plain(temperature);
-                temperature_val.evaluate(false, true);
-                  
+                temperature_val.evaluate(true, true);
+
                 for (unsigned int q_index = 0; q_index < surface_tension.n_q_points; ++q_index)
                   {
-                    auto n      = level_set.get_gradient(q_index);
-                    auto grad_T = temperature_val.get_gradient(q_index);
+                    const auto n      = level_set.get_gradient(q_index);
+                    const auto T      = temperature_val.get_value(q_index);
+                    const auto grad_T = temperature_val.get_gradient(q_index);
 
-                    Tensor<1, dim, VectorizedArray<double>> tangent_grad_t;
+                    Tensor<1, dim, VectorizedArray<double>> temp_surf_ten;
 
                     for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
                       for (unsigned int i = 0; i < dim; ++i)
                         for (unsigned int j = 0; j < dim; ++j)
-                          tangent_grad_t[i][v] =
-                            (i == j) ?
-                              -(1. - n[i][v] * n[j][v]) *
-                                temperature_dependent_surface_tension_coefficient * grad_T[j][v] :
-                              (n[i][v] * n[j][v]) *
-                                temperature_dependent_surface_tension_coefficient * grad_T[j][v];
+                          temp_surf_ten[i][v] =
+                            (i == j) ? -(1. - n[i][v] * n[j][v]) * d_alpha0 * grad_T[j][v] :
+                                       (n[i][v] * n[j][v]) * d_alpha0 * grad_T[j][v];
 
-                    surface_tension.submit_value(tangent_grad_t, q_index);
+                    VectorizedArray<double> alpha;
+                    for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                      {
+                        alpha[v] = T[v] < T0 ? alpha0 : alpha0 - d_alpha0 * (T[v] - T0);
+                        AssertThrow(
+                          alpha[v] >= 0.0,
+                          ExcMessage(
+                            "The surface tension coefficient tends to be negative in "
+                            "some regions. Check the value of the temperature dependent surface "
+                            "tension coefficient."));
+                      }
+
+                    surface_tension.submit_value(alpha * n * curvature.get_value(q_index) +
+                                                   temp_surf_ten,
+                                                 q_index);
                   }
                 surface_tension.integrate_scatter(true, false, force_rhs);
               }
@@ -205,6 +233,8 @@ namespace MeltPoolDG
           force_rhs,
           level_set_as_heaviside,
           zero_out);
+
+        solution_curvature.zero_out_ghosts();
       }
 
       /**

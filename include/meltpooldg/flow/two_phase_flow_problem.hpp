@@ -72,12 +72,13 @@ namespace MeltPoolDG
             compute_gravity_force(force_rhs, base_in->parameters.base.gravity);
 
             // ... b) surface tension
-            level_set_operation.compute_surface_tension(
-              force_rhs,
-              base_in->parameters.flow.surface_tension_coefficient,
-              flow_dof_idx,
-              flow_quad_idx,
-              false /*false means add to force vector*/);
+            if (base_in->parameters.flow.temperature_dependent_surface_tension_coefficient == 0)
+              level_set_operation.compute_surface_tension(
+                force_rhs,
+                base_in->parameters.flow.surface_tension_coefficient,
+                flow_dof_idx,
+                flow_quad_idx,
+                false /*false means add to force vector*/);
 
             if (base_in->parameters.base.problem_name == "melt_pool")
               {
@@ -88,13 +89,16 @@ namespace MeltPoolDG
                   dt,
                   false /*false means add to force vector*/);
 
-                // ... d) temperature-dependent part of surface tension
+                // ... d) temperature-dependent surface tension
                 if (base_in->parameters.flow.temperature_dependent_surface_tension_coefficient >
                     0.0)
                   melt_pool_operation.compute_temperature_dependent_surface_tension(
                     force_rhs,
                     level_set_operation.level_set_as_heaviside,
+                    level_set_operation.solution_curvature,
+                    base_in->parameters.flow.surface_tension_coefficient,
                     base_in->parameters.flow.temperature_dependent_surface_tension_coefficient,
+                    base_in->parameters.flow.surface_tension_reference_temperature,
                     ls_dof_idx,
                     flow_dof_idx,
                     flow_quad_idx,
