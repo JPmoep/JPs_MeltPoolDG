@@ -179,7 +179,7 @@ namespace MeltPoolDG
                 temperature_val.reinit(cell);
                 temperature_val.read_dof_values_plain(temperature);
                 temperature_val.evaluate(false, true);
-
+                  
                 for (unsigned int q_index = 0; q_index < surface_tension.n_q_points; ++q_index)
                   {
                     auto n      = level_set.get_gradient(q_index);
@@ -189,7 +189,7 @@ namespace MeltPoolDG
 
                     for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
                       for (unsigned int i = 0; i < dim; ++i)
-                        for (unsigned int j = 0; j < dim; ++i)
+                        for (unsigned int j = 0; j < dim; ++j)
                           tangent_grad_t[i][v] =
                             (i == j) ?
                               -(1. - n[i][v] * n[j][v]) *
