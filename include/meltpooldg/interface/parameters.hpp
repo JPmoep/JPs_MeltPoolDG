@@ -125,6 +125,7 @@ namespace MeltPoolDG
   struct MeltPoolData
   {
     std::string temperature_formulation              = "analytical";
+    number      temperature_x_to_y_ratio             = 1.0;
     number      laser_power                          = 0.0;
     std::string laser_center                         = "0,0,0";
     number      scan_speed                           = 0.0;
@@ -557,6 +558,9 @@ namespace MeltPoolDG
           mp.temperature_formulation,
           "Definition type of the temperature field: "
           "(1) analytical expression (2) solve heat equation (not implemented yet)");
+        prm.add_parameter("mp temperature x to y ratio",
+                          mp.temperature_x_to_y_ratio,
+                          "This factor scales the analytical temperature field to be anisotropic.");
         prm.add_parameter("mp laser power",
                           mp.laser_power, //@todo: add user input function
                           "Intensity of the laser");

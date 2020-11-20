@@ -335,7 +335,7 @@ namespace MeltPoolDG
 
 
       double
-      analytical_temperature_field(const Point<dim> point, const double phi)
+      analytical_temperature_field(Point<dim> point, const double phi)
       {
         if (mp_data.temperature_formulation == "analytical")
           {
@@ -354,7 +354,12 @@ namespace MeltPoolDG
             const double density = flow_data.density + flow_data.density_difference * indicator;
 
             const double thermal_diffusivity = conductivity / (density * capacity);
-            double       R                   = point.distance(laser_center);
+
+            // modify temperature profile to be anisotropic
+            for (int d = 0; d < dim - 1; d++)
+              point[d] *= mp_data.temperature_x_to_y_ratio;
+
+            double R = point.distance(laser_center);
 
             if (R == 0.0)
               R = 1e-16;
