@@ -133,6 +133,47 @@ namespace MeltPoolDG
           AssertThrow(false, ExcMessage("Spherical manifold: dim must be 1, 2 or 3."));
       }
 
+      /**
+       *  The following function describes the geometry of an ellipsoidal manifold implicitly
+       *  WARNING: This is not a real distance function.
+       *
+       *
+       *     sign=+         ------------
+       *              -------          -------
+       *         ------                      ------
+       *       ---                                ---
+       *      --                                    --
+       *      --            sign = -                --
+       *      --                                    --
+       *       ---                                ---
+       *         ------                      ------
+       *              -------          -------
+       *                    ------------
+       *
+       *
+       */
+      template <int dim>
+      inline double
+      ellipsoidal_manifold(const Point<dim> &p,
+                           const Point<dim> &center,
+                           const double      radius_x,
+                           const double      radius_y,
+                           const double      radius_z = 0)
+      {
+        if (dim == 3)
+          return -std::pow(p[0] - center[0], 2) / std::pow(radius_x, 2) -
+                 std::pow(p[1] - center[1], 2) / std::pow(radius_y, 2) -
+                 std::pow(p[2] - center[2], 2) / std::pow(radius_z, 2) + 1;
+        else if (dim == 2)
+          return -std::pow(p[0] - center[0], 2) / std::pow(radius_x, 2) -
+                 std::pow(p[1] - center[1], 2) / std::pow(radius_y, 2) + 1;
+        else if (dim == 1)
+          return -std::pow(p[0] - center[0], 2) / std::pow(radius_x, 2) + 1;
+        else
+          AssertThrow(false, ExcMessage("Ellipsoidal manifold: dim must be 1, 2 or 3."));
+      }
+
+
       template <int dim>
       inline double
       infinite_line(const Point<dim> &p, const Point<dim> &fix_p1, const Point<dim> &fix_p2)
