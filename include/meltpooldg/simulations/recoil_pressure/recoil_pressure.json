@@ -2,7 +2,7 @@
   "base" : {
     "problem name": "melt_pool",
     "application name": "recoil_pressure",
-    "global refinements": "7",
+    "global refinements": "5",
     "dimension": "2",
     "degree": "1",
     "gravity": "0.0",
