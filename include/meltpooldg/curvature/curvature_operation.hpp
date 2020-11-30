@@ -47,7 +47,8 @@ namespace MeltPoolDG
        *    This is the primary solution variable of this module, which will be also publically
        *    accessible for output_results.
        */
-      VectorType solution_curvature;
+      VectorType             solution_curvature;
+      const BlockVectorType &solution_normal_vector = normal_vector_operation.solution_normal_vector;
 
       CurvatureOperation() = default;
 
@@ -126,7 +127,7 @@ namespace MeltPoolDG
       create_operator()
       {
         const double damping_parameter =
-          scratch_data->get_min_cell_size(dof_idx) * curvature_data.damping_scale_factor;
+         scratch_data->get_min_cell_size(dof_idx) * curvature_data.damping_scale_factor;
         curvature_operator = std::make_unique<CurvatureOperator<dim>>(*scratch_data,
                                                                       damping_parameter,
                                                                       dof_idx,
