@@ -128,6 +128,8 @@ namespace MeltPoolDG
     number      temperature_x_to_y_ratio             = 1.0;
     number      laser_power                          = 0.0;
     std::string laser_center                         = "0,0,0";
+    std::string melt_pool_center                     = "not_initialized";
+    std::string melt_pool_shape                      = "ellipse";
     number      scan_speed                           = 0.0;
     bool        do_move_laser                        = false;
     number      ambient_temperature                  = 0.0;
@@ -143,6 +145,7 @@ namespace MeltPoolDG
       number capacity         = 0.0;
       number melt_pool_radius = 0.0;
       number melt_pool_depth  = 0.0;
+      number melting_point    = 0.0;
     } liquid;
 
     struct Gas
@@ -207,6 +210,11 @@ namespace MeltPoolDG
        */
       if (amr.min_grid_refinement_level == 1)
         amr.min_grid_refinement_level = base.global_refinements;
+      /*
+       *  set the melt pool center if not specified
+       */
+      if (mp.melt_pool_center == "not_initialized")
+        mp.melt_pool_center = mp.laser_center;
 
         /*
          *  parameters for adaflo
@@ -567,6 +575,13 @@ namespace MeltPoolDG
         prm.add_parameter("mp laser center",
                           mp.laser_center,
                           "Center coordinates of the laser beam on the interface melt/gas.");
+        prm.add_parameter("mp laser center",
+                          mp.melt_pool_center,
+                          "Center coordinates of the melt pool ellipse/parabola. If no value is "
+                          "provided it will be set equally to the laser center");
+        prm.add_parameter("mp melt pool shape",
+                          mp.melt_pool_shape,
+                          "Shape of the user defined melt pool: parabola, ellipse or temperature_dependent supported");
         prm.add_parameter("mp scan speed",
                           mp.scan_speed,
                           "Scan speed of the laser (in case of an analytical temperature field).");
@@ -601,10 +616,14 @@ namespace MeltPoolDG
                           "Capacity of the liquid part of domain");
         prm.add_parameter("mp liquid melt pool radius",
                           mp.liquid.melt_pool_radius,
-                          "Set the radius of the liquid parts of the melt pool ellipse");
+                          "Set the radius of the liquid parts of the melt pool ellipse "
+                          " or the width of the parabola");
         prm.add_parameter("mp liquid melt pool depth",
                           mp.liquid.melt_pool_depth,
                           "Set the depth of the liquid parts of the melt pool ellipse");
+        prm.add_parameter("mp liquid melting point",
+                          mp.liquid.melting_point,
+                          "Melting point of the liquid part of domain");
         prm.add_parameter("mp gas absorptivity",
                           mp.gas.absorptivity,
                           "Absorptivity of the gaseous part of domain");
