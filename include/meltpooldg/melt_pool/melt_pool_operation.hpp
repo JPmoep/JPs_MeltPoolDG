@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Author: Magdalena Schreter, TUM, September 2020
+ * Author: Magdalena Schreter, TUM, November 2020
  *
  * ---------------------------------------------------------------------*/
 #pragma once
@@ -317,7 +317,6 @@ namespace MeltPoolDG
                 if (is_solid_region(support_points[local_dof_indices[i]]))
                   {
                     solid_constraints.add_line(local_dof_indices[i]);
-                    // solid_constraints.add_entry(local_dof_indices[i], local_dof_indices[i], 0.0);
                   }
             }
         flow_constraints.merge(solid_constraints,
@@ -381,13 +380,29 @@ namespace MeltPoolDG
           return false;
         else
           {
-            Point<dim> shifted_center = laser_center;
-            shifted_center[dim - 1] +=
-              (mp_data.liquid.melt_pool_radius - mp_data.liquid.melt_pool_depth);
-            return UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(
-                     point, shifted_center, mp_data.liquid.melt_pool_radius) > 0 ?
+            Point<dim> shifted_center = MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(mp_data.melt_pool_center);
+            
+            if (mp_data.melt_pool_shape == "parabola")
+            {
+              if (dim==2)
+              {
+                const double sign = -2*mp_data.liquid.melt_pool_radius*(point[1]-shifted_center[1])+std::pow(point[0]-shifted_center[0],2);
+                return (sign>=0) ? true : false; 
+              }
+              else
+                AssertThrow(false, ExcMessage("not implemented"));
+            }
+            else if (mp_data.melt_pool_shape == "ellipse")
+               return UtilityFunctions::DistanceFunctions::ellipsoidal_manifold<dim>(
+                     point, shifted_center, mp_data.liquid.melt_pool_radius, mp_data.liquid.melt_pool_depth) > 0 ?
                      false :
                      true;
+            else if (mp_data.melt_pool_shape == "temperature_dependent")
+               return ( analytical_temperature_field(point, 1.0) >= mp_data.liquid.melting_point ) ?
+                     false :
+                     true;
+            else
+              AssertThrow(false, ExcMessage("not implemented"));
           }
       }
 
