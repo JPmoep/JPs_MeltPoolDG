@@ -377,7 +377,7 @@ namespace MeltPoolDG
        *    This is the normal vector field, which will be publically
        *    accessible for output_results.
        */
-      const BlockVectorType &solution_normal_vector = reinit_operation.solution_normal_vector;
+      const BlockVectorType &solution_normal_vector = curvature_operation.solution_normal_vector;
       /*
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update
