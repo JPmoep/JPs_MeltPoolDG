@@ -179,7 +179,7 @@ namespace MeltPoolDG
 
             const double &alpha0   = surface_tension_coefficient;
             const double &d_alpha0 = temperature_dependent_surface_tension_coefficient;
-            const double &T0       = surface_tension_reference_temperature;
+            const auto T0          = VectorizedArray<double>(surface_tension_reference_temperature);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
@@ -204,24 +204,31 @@ namespace MeltPoolDG
 
                     Tensor<1, dim, VectorizedArray<double>> temp_surf_ten;
 
-                    for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                    //for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
                       for (unsigned int i = 0; i < dim; ++i)
                         for (unsigned int j = 0; j < dim; ++j)
-                          temp_surf_ten[i][v] =
-                            (i == j) ? -(1. - n[i][v] * n[j][v]) * d_alpha0 * grad_T[j][v] :
-                                       (n[i][v] * n[j][v]) * d_alpha0 * grad_T[j][v];
+                          temp_surf_ten[i] =
+                            (i == j) ? -(make_vectorized_array<double>(1.) - n[i] * n[j]) * d_alpha0 * grad_T[j] :
+                                       (n[i] * n[j]) * d_alpha0 * grad_T[j];
+                          //temp_surf_ten[i] =
+                            //(i == j) ? -(1. - n[i][v] * n[j][v]) * d_alpha0 * grad_T[j][v] :
+                                       //(n[i][v] * n[j][v]) * d_alpha0 * grad_T[j][v];
 
-                    VectorizedArray<double> alpha;
-                    for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
-                      {
-                        alpha[v] = T[v] < T0 ? alpha0 : alpha0 - d_alpha0 * (T[v] - T0);
-                        AssertThrow(
-                          alpha[v] >= 0.0,
-                          ExcMessage(
-                            "The surface tension coefficient tends to be negative in "
-                            "some regions. Check the value of the temperature dependent surface "
-                            "tension coefficient."));
-                      }
+                    //VectorizedArray<double> alpha;
+                    //for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                      //{
+                        //alpha[v] = T[v] < T0 ? alpha0 : alpha0 - d_alpha0 * (T[v] - T0);
+                        //Assert(
+                          //alpha[v] >= 0.0,
+                          //ExcMessage(
+                            //"The surface tension coefficient tends to be negative in "
+                            //"some regions. Check the value of the temperature dependent surface "
+                            //"tension coefficient."));
+                      //}
+                     const auto alpha = compare_and_apply_mask<SIMDComparison::less_than>(T, 
+                          T0, 
+                          VectorizedArray<double>(alpha0), 
+                          VectorizedArray<double>(alpha0)-VectorizedArray<double>(d_alpha0) * (T-T0) );
 
                     surface_tension.submit_value(alpha * n * curvature.get_value(q_index) +
                                                    temp_surf_ten,
@@ -274,8 +281,7 @@ namespace MeltPoolDG
                   temperature[local_dof_indices[i]] =
                     analytical_temperature_field(support_points[local_dof_indices[i]],
                                                  level_set_as_heaviside[local_dof_indices[i]]);
-                  solid[local_dof_indices[i]] =
-                    is_solid_region(support_points[local_dof_indices[i]]) ? 1.0 : 0.0;
+                  solid[local_dof_indices[i]] = is_solid_region(support_points[local_dof_indices[i]]);
                 }
             }
 
@@ -298,7 +304,7 @@ namespace MeltPoolDG
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
         std::map<types::global_dof_index, Point<dim>> support_points;
-        DoFTools::map_dofs_to_support_points(MappingQGeneric<dim>(3),
+        DoFTools::map_dofs_to_support_points(MappingQGeneric<dim>(1),
                                              flow_dof_handler,
                                              support_points);
 
