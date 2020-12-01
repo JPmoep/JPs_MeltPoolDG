@@ -100,17 +100,16 @@ namespace MeltPoolDG
         else
 #endif
           scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
-          /*
-           *  setup DoFHandler
-           */
+        /*
+         *  setup DoFHandler
+         */
+        dof_handler.reinit(*base_in->triangulation);
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          dof_handler.initialize(*base_in->triangulation,
-                                 Simplex::FE_P<dim>(base_in->parameters.base.degree));
+          dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
         else
 #endif
-          dof_handler.initialize(*base_in->triangulation,
-                                 FE_Q<dim>(base_in->parameters.base.degree));
+          dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
 
         scratch_data->attach_dof_handler(dof_handler);
         scratch_data->attach_dof_handler(dof_handler);
