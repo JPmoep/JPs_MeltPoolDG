@@ -25,11 +25,23 @@ namespace MeltPoolDG
       virtual const DoFHandler<dim> &
       get_dof_handler_velocity() const = 0;
 
+      virtual const AffineConstraints<double> &
+      get_constraints_velocity() const = 0;
+
+      virtual AffineConstraints<double> &
+      get_constraints_velocity() = 0;
+
       virtual const LinearAlgebra::distributed::Vector<double> &
       get_pressure() const = 0;
 
       virtual const DoFHandler<dim> &
       get_dof_handler_pressure() const = 0;
+
+      virtual const AffineConstraints<double> &
+      get_constraints_pressure() const = 0;
+
+      virtual AffineConstraints<double> &
+      get_constraints_pressure() = 0;
 
       virtual void
       set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> &vec) = 0;

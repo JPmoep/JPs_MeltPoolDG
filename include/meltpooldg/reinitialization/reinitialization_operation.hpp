@@ -117,7 +117,7 @@ namespace MeltPoolDG
 
         int iter = 0;
 
-        if (reinit_data.do_matrix_free)
+        if (reinit_data.solver.do_matrix_free)
           {
             VectorType src_rhs;
             scratch_data->initialize_dof_vector(src_rhs, dof_idx);
@@ -130,24 +130,50 @@ namespace MeltPoolDG
         else
           {
             reinit_operator->system_matrix.reinit(reinit_operator->dsp);
-
-            TrilinosWrappers::PreconditionAMG                 preconditioner;
-            TrilinosWrappers::PreconditionAMG::AdditionalData data;
-
-            preconditioner.initialize(reinit_operator->system_matrix, data);
             reinit_operator->assemble_matrixbased(solution_level_set,
                                                   reinit_operator->system_matrix,
                                                   rhs);
-            iter =
-              LinearSolve<VectorType,
-                          SolverCG<VectorType>,
-                          SparseMatrixType,
-                          TrilinosWrappers::PreconditionAMG>::solve(reinit_operator->system_matrix,
-                                                                    src,
-                                                                    rhs,
-                                                                    preconditioner);
-            scratch_data->get_constraint(dof_idx).distribute(src);
+
+            if (reinit_data.solver.solver_type == "CG")
+              {
+                auto preconditioner = LinearSolve<VectorType,
+                                                  SolverCG<VectorType>,
+                                                  SparseMatrixType,
+                                                  TrilinosWrappers::PreconditionBase>::
+                  setup_preconditioner(reinit_operator->system_matrix,
+                                       reinit_data.solver.preconditioner_type);
+                iter = LinearSolve<
+                  VectorType,
+                  SolverCG<VectorType>,
+                  SparseMatrixType,
+                  TrilinosWrappers::PreconditionBase>::solve(reinit_operator->system_matrix,
+                                                             src,
+                                                             rhs,
+                                                             *preconditioner,
+                                                             reinit_data.solver.max_iterations,
+                                                             reinit_data.solver.rel_tolerance_rhs);
+              }
+            else if (reinit_data.solver.solver_type == "GMRES")
+              {
+                auto preconditioner = LinearSolve<VectorType,
+                                                  SolverGMRES<VectorType>,
+                                                  SparseMatrixType,
+                                                  TrilinosWrappers::PreconditionBase>::
+                  setup_preconditioner(reinit_operator->system_matrix,
+                                       reinit_data.solver.preconditioner_type);
+                iter = LinearSolve<
+                  VectorType,
+                  SolverGMRES<VectorType>,
+                  SparseMatrixType,
+                  TrilinosWrappers::PreconditionBase>::solve(reinit_operator->system_matrix,
+                                                             src,
+                                                             rhs,
+                                                             *preconditioner,
+                                                             reinit_data.solver.max_iterations,
+                                                             reinit_data.solver.rel_tolerance_rhs);
+              }
           }
+        scratch_data->get_constraint(dof_idx).distribute(src);
 
         solution_level_set += src;
 
@@ -197,13 +223,13 @@ namespace MeltPoolDG
              *  apply it to the system matrix. This functionality is part of the OperatorBase class.
              */
 
-            if (!reinit_data.do_matrix_free)
+            if (!reinit_data.solver.do_matrix_free)
               reinit_operator->initialize_matrix_based<dim>(*scratch_data);
       }
       void
       update_operator()
       {
-        if (!reinit_data.do_matrix_free)
+        if (!reinit_data.solver.do_matrix_free)
           reinit_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 

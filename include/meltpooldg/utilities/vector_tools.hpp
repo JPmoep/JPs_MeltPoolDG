@@ -81,14 +81,14 @@ namespace MeltPoolDG
 
     template <typename... T>
     void
-    update_ghost_values(const T &... args)
+    update_ghost_values(const T &...args)
     {
       ((args.update_ghost_values()), ...);
     }
 
     template <typename... T>
     void
-    zero_out_ghosts(const T &... args)
+    zero_out_ghosts(const T &...args)
     {
       ((args.zero_out_ghosts()), ...);
     }

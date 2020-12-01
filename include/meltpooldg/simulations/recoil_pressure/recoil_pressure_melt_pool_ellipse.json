@@ -30,6 +30,8 @@
     "mp liquid absorptivity": "0.5",
     "mp liquid conductivity": "35.95",
     "mp liquid capacity": "965",
+    "mp liquid melt pool radius": "0.0001",
+    "mp liquid melt pool depth": "0.00005",
     "mp gas absorptivity": "0",
     "mp gas conductivity": "10",
     "mp gas capacity": "0"
@@ -58,7 +60,7 @@
   "paraview" : {
     "paraview do output": "true",
     "paraview write frequency": "1",
-    "paraview filename":  "solution_recoil_pressure"
+    "paraview filename":  "solution_recoil_pressure_ellipse"
   },
   "Navier-Stokes" : {
     "adaflo" : {

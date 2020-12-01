@@ -60,9 +60,20 @@ namespace MeltPoolDG
               auto problem = ProblemSelector<2>::get_problem(parameters.base.problem_name);
               problem->run(sim);
             }
+          else if (dim == 3)
+            {
+              auto sim = SimulationSelector<3>::get_simulation(parameters.base.application_name,
+                                                               parameter_file,
+                                                               mpi_communicator);
+              sim->create();
+              if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
+                parameters.print_parameters(std::cout);
+              auto problem = ProblemSelector<3>::get_problem(parameters.base.problem_name);
+              problem->run(sim);
+            }
           else
             {
-              AssertThrow(false, ExcMessage("Dimension must be 1 or 2."));
+              AssertThrow(false, ExcMessage("Dimension must be 1, 2 or 3."));
             }
         }
       catch (std::exception &exc)
