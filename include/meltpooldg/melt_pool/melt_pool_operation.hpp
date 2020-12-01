@@ -82,18 +82,20 @@ namespace MeltPoolDG
        * is however possible. First, the temperature is updated and second, the recoil pressure is
        * computed.
        */
-
       void
       compute_recoil_pressure_force(BlockVectorType & force_rhs,
                                     const VectorType &level_set_as_heaviside,
                                     const double      dt,
                                     bool              zero_out = true)
       {
+        // 1) compute the current center of the laser beam
         if (mp_data.do_move_laser)
           laser_center[0] += mp_data.scan_speed * dt;
 
+        // 2) update the temperature field
         compute_temperature_vector(level_set_as_heaviside);
 
+        // 3) update the recoil pressure force
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
           [&](const auto &matrix_free,
               auto &      force_rhs,
@@ -141,7 +143,8 @@ namespace MeltPoolDG
       }
 
       /**
-       *  compute temperature dependent surface tension forces
+       *  This function introduces the basic framework for temperature-dependent surface tension
+       *  forces, i.e. Marangoni convection.
        */
       void
       compute_temperature_dependent_surface_tension(
@@ -338,16 +341,18 @@ namespace MeltPoolDG
         flow_data = data_in.flow;
       }
 
-
       double
       analytical_temperature_field(Point<dim> point, const double phi)
       {
         if (mp_data.temperature_formulation == "analytical")
           {
-            // this is the temperature function according to Heat Source Modeling in Selective Laser
-            // Melting, E. Mirkoohi, D. E. Seivers, H. Garmestani and S. Y. Liang
+            // The temperature function below is derived from the publication on
+            // "Heat Source Modeling in Selective Laser Melting" by E. Mirkoohi, D. E. Seivers,
+            //  H. Garmestani and S. Y. Liang
+            //
+            //  In order to capture anisotropic temperature fields, a modification is introduced.
             const double indicator = UtilityFunctions::CharacteristicFunctions::heaviside(phi, 0.0);
-            const double &P  = mp_data.laser_power; // @todo: make dependent from input parameters
+            const double &P  = mp_data.laser_power; 
             const double &v  = mp_data.scan_speed;
             const double &T0 = mp_data.ambient_temperature;
             const double &absorptivity =
@@ -371,12 +376,19 @@ namespace MeltPoolDG
             double T = P * absorptivity / (4 * numbers::PI * R * conductivity) *
                          std::exp(-v * (R) / (2. * thermal_diffusivity)) +
                        T0;
-            return (T > mp_data.boiling_temperature + 500) ? mp_data.boiling_temperature + 500. : T;
+            return (T > mp_data.max_temperature) ? mp_data.max_temperature : T;
           }
         else
           AssertThrow(false, ExcNotImplemented());
       }
-
+      
+      /**
+       *  This function determines for a given point, whether it belongs to the solid domain.
+       *  
+       *  WARNING: All points above (component dim-1) the center point of the laser source are automatically identified
+       *  as gaseous parts. Thus, this function has to be modified when the initial interface between the feedstock and 
+       *  the ambient gas is not planar.
+       */
       bool
       is_solid_region(const Point<dim> point)
       {
@@ -412,6 +424,10 @@ namespace MeltPoolDG
           }
       }
 
+      /**
+       *  This function computes the recoil pressure coefficient for a given temperature value
+       *  dependent on the input parameters.
+       */
       inline double
       compute_recoil_pressure_coefficient(const double T)
       {
