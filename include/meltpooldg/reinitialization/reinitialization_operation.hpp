@@ -133,44 +133,45 @@ namespace MeltPoolDG
             reinit_operator->assemble_matrixbased(solution_level_set,
                                                   reinit_operator->system_matrix,
                                                   rhs);
-            
+
             if (reinit_data.solver.solver_type == "CG")
-            {
-              auto preconditioner = LinearSolve<VectorType,
-                                                SolverCG<VectorType>,
-                                                SparseMatrixType,
-                                                TrilinosWrappers::PreconditionBase>::setup_preconditioner(reinit_operator->system_matrix,
-                                                                                                         reinit_data.solver.preconditioner_type);
-              iter =
-                LinearSolve<VectorType,
-                            SolverCG<VectorType>,
-                            SparseMatrixType,
-                            TrilinosWrappers::PreconditionBase>::solve(reinit_operator->system_matrix,
-                                                                      src,
-                                                                      rhs,
-                                                                      *preconditioner,
-                                                                      reinit_data.solver.max_iterations,
-                                                                      reinit_data.solver.rel_tolerance_rhs);
-            }
+              {
+                auto preconditioner = LinearSolve<VectorType,
+                                                  SolverCG<VectorType>,
+                                                  SparseMatrixType,
+                                                  TrilinosWrappers::PreconditionBase>::
+                  setup_preconditioner(reinit_operator->system_matrix,
+                                       reinit_data.solver.preconditioner_type);
+                iter = LinearSolve<
+                  VectorType,
+                  SolverCG<VectorType>,
+                  SparseMatrixType,
+                  TrilinosWrappers::PreconditionBase>::solve(reinit_operator->system_matrix,
+                                                             src,
+                                                             rhs,
+                                                             *preconditioner,
+                                                             reinit_data.solver.max_iterations,
+                                                             reinit_data.solver.rel_tolerance_rhs);
+              }
             else if (reinit_data.solver.solver_type == "GMRES")
-            {
-              auto preconditioner = LinearSolve<VectorType,
-                                                SolverGMRES<VectorType>,
-                                                SparseMatrixType,
-                                                TrilinosWrappers::PreconditionBase
-                                                >::setup_preconditioner(reinit_operator->system_matrix,
-                                                                        reinit_data.solver.preconditioner_type);
-              iter =
-                LinearSolve<VectorType,
-                            SolverGMRES<VectorType>,
-                            SparseMatrixType,
-                            TrilinosWrappers::PreconditionBase>::solve(reinit_operator->system_matrix,
-                                                                      src,
-                                                                      rhs,
-                                                                      *preconditioner,
-                                                                      reinit_data.solver.max_iterations,
-                                                                      reinit_data.solver.rel_tolerance_rhs);
-            }
+              {
+                auto preconditioner = LinearSolve<VectorType,
+                                                  SolverGMRES<VectorType>,
+                                                  SparseMatrixType,
+                                                  TrilinosWrappers::PreconditionBase>::
+                  setup_preconditioner(reinit_operator->system_matrix,
+                                       reinit_data.solver.preconditioner_type);
+                iter = LinearSolve<
+                  VectorType,
+                  SolverGMRES<VectorType>,
+                  SparseMatrixType,
+                  TrilinosWrappers::PreconditionBase>::solve(reinit_operator->system_matrix,
+                                                             src,
+                                                             rhs,
+                                                             *preconditioner,
+                                                             reinit_data.solver.max_iterations,
+                                                             reinit_data.solver.rel_tolerance_rhs);
+              }
           }
         scratch_data->get_constraint(dof_idx).distribute(src);
 
@@ -195,7 +196,7 @@ namespace MeltPoolDG
       {
         reinit_data = data_in.reinit;
       }
- 
+
       void
       create_operator()
       {

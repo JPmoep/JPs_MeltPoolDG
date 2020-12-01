@@ -136,7 +136,7 @@ namespace MeltPoolDG
     number      recoil_pressure_constant             = 0.0;
     number      recoil_pressure_temperature_constant = 0.0;
     number      boiling_temperature                  = 0.0;
-    number      max_temperature                       = 0.0;
+    number      max_temperature                      = 0.0;
     bool        do_print_l2norm                      = true;
 
     struct Liquid
@@ -221,9 +221,9 @@ namespace MeltPoolDG
        */
       if (mp.max_temperature < mp.boiling_temperature)
         mp.max_temperature = mp.boiling_temperature + 500;
-      /*
-       *  parameters for adaflo
-       */
+        /*
+         *  parameters for adaflo
+         */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
       adaflo_params.parse_parameters(parameter_filename);
 
@@ -584,9 +584,10 @@ namespace MeltPoolDG
                           mp.melt_pool_center,
                           "Center coordinates of the melt pool ellipse/parabola. If no value is "
                           "provided it will be set equally to the laser center");
-        prm.add_parameter("mp melt pool shape",
-                          mp.melt_pool_shape,
-                          "Shape of the user defined melt pool: parabola, ellipse or temperature_dependent supported");
+        prm.add_parameter(
+          "mp melt pool shape",
+          mp.melt_pool_shape,
+          "Shape of the user defined melt pool: parabola, ellipse or temperature_dependent supported");
         prm.add_parameter("mp scan speed",
                           mp.scan_speed,
                           "Scan speed of the laser (in case of an analytical temperature field).");
@@ -607,10 +608,11 @@ namespace MeltPoolDG
         prm.add_parameter("mp boiling temperature",
                           mp.boiling_temperature,
                           "Boiling temperature of the melt.");
-        prm.add_parameter("mp max temperature",
-                          mp.max_temperature,
-                          "Maximum temperature arising in the melt pool. If this temperature is lower than the boiling"
-                          " temperature, this value is corrected to correspond to the boiling temperature + 500 K.");
+        prm.add_parameter(
+          "mp max temperature",
+          mp.max_temperature,
+          "Maximum temperature arising in the melt pool. If this temperature is lower than the boiling"
+          " temperature, this value is corrected to correspond to the boiling temperature + 500 K.");
         prm.add_parameter("mp do print l2norm",
                           mp.do_print_l2norm,
                           "Defines if the l2norm of the melt pool results should be printed)");

@@ -34,12 +34,13 @@ namespace MeltPoolDG
         value(const Point<dim> &p, const unsigned int /*component*/) const
         {
           const double x_half_domain_size = 200e-6;
-          const double y_min = -100e-6;
-          const double y_max = 40e-6;
-          Point<dim>   lower_left =
-            dim == 2 ? Point<dim>(-x_half_domain_size, y_min) :
-                       Point<dim>(-x_half_domain_size, x_half_domain_size, y_min);
-          Point<dim> upper_right = dim == 2 ? Point<dim>(x_half_domain_size, y_max) :
+          const double y_min              = -100e-6;
+          const double y_max              = 40e-6;
+          Point<dim>   lower_left         = dim == 2 ?
+                                              Point<dim>(-x_half_domain_size, y_min) :
+                                              Point<dim>(-x_half_domain_size, x_half_domain_size, y_min);
+          Point<dim>   upper_right        = dim == 2 ?
+                                              Point<dim>(x_half_domain_size, y_max) :
                                               Point<dim>(x_half_domain_size, x_half_domain_size, y_max);
 
           return UtilityFunctions::CharacteristicFunctions::sgn(
@@ -71,12 +72,13 @@ namespace MeltPoolDG
 
           const double x_half_domain_size = 200e-6;
           const double y_half_domain_size = 200e-6;
-          
+
           if (dim == 2)
             {
               // create mesh
-              const Point<dim> bottom_left = Point<dim>(-x_half_domain_size, -y_half_domain_size/2);
-              const Point<dim> top_right   = Point<dim>(x_half_domain_size, y_half_domain_size);
+              const Point<dim> bottom_left =
+                Point<dim>(-x_half_domain_size, -y_half_domain_size / 2);
+              const Point<dim> top_right = Point<dim>(x_half_domain_size, y_half_domain_size);
 
               GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
               this->triangulation->refine_global(this->parameters.base.global_refinements);
@@ -87,7 +89,7 @@ namespace MeltPoolDG
               const double z_half_domain_size = 200e-6;
 
               const Point<dim> bottom_left =
-                Point<dim>(-x_half_domain_size, -y_half_domain_size/2, -z_half_domain_size);
+                Point<dim>(-x_half_domain_size, -y_half_domain_size / 2, -z_half_domain_size);
               const Point<dim> top_right =
                 Point<dim>(x_half_domain_size, y_half_domain_size, z_half_domain_size);
 

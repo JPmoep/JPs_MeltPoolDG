@@ -3,8 +3,8 @@
 #include <deal.II/lac/generic_linear_algebra.h>
 #include <deal.II/lac/la_parallel_block_vector.h>
 #include <deal.II/lac/la_parallel_vector.h>
-#include <deal.II/lac/trilinos_sparse_matrix.h>
 #include <deal.II/lac/trilinos_precondition.h>
+#include <deal.II/lac/trilinos_sparse_matrix.h>
 // solvers
 #include <deal.II/lac/solver_cg.h> // only for symmetric matrices
 #include <deal.II/lac/solver_gmres.h>
@@ -43,26 +43,27 @@ namespace MeltPoolDG
     }
 
     static std::shared_ptr<TrilinosWrappers::PreconditionBase>
-    setup_preconditioner(const TrilinosWrappers::SparseMatrix& matrix, std::string preconditioner_type="Identity")
+    setup_preconditioner(const TrilinosWrappers::SparseMatrix &matrix,
+                         std::string                           preconditioner_type = "Identity")
     {
-      if (preconditioner_type=="Identity")
-      {
-        return std::make_shared<TrilinosWrappers::PreconditionIdentity>();
-      }
-      else if (preconditioner_type=="AMG")
-      {
-        auto preconditioner = std::make_shared<TrilinosWrappers::PreconditionAMG>();
-        TrilinosWrappers::PreconditionAMG::AdditionalData data;
-        preconditioner->initialize(matrix,data);
-        return preconditioner;
-      }
-      else if (preconditioner_type=="ILU")
-      {
-        auto preconditioner = std::make_shared<TrilinosWrappers::PreconditionILU>();
-        TrilinosWrappers::PreconditionILU::AdditionalData data;
-        preconditioner->initialize(matrix,data);
-        return preconditioner;
-      }
+      if (preconditioner_type == "Identity")
+        {
+          return std::make_shared<TrilinosWrappers::PreconditionIdentity>();
+        }
+      else if (preconditioner_type == "AMG")
+        {
+          auto preconditioner = std::make_shared<TrilinosWrappers::PreconditionAMG>();
+          TrilinosWrappers::PreconditionAMG::AdditionalData data;
+          preconditioner->initialize(matrix, data);
+          return preconditioner;
+        }
+      else if (preconditioner_type == "ILU")
+        {
+          auto preconditioner = std::make_shared<TrilinosWrappers::PreconditionILU>();
+          TrilinosWrappers::PreconditionILU::AdditionalData data;
+          preconditioner->initialize(matrix, data);
+          return preconditioner;
+        }
       else
         AssertThrow(false, ExcMessage("The requested preconditioner type is not implemented."))
     }

@@ -182,7 +182,7 @@ namespace MeltPoolDG
 
             const double &alpha0   = surface_tension_coefficient;
             const double &d_alpha0 = temperature_dependent_surface_tension_coefficient;
-            const auto T0          = VectorizedArray<double>(surface_tension_reference_temperature);
+            const auto    T0       = VectorizedArray<double>(surface_tension_reference_temperature);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
@@ -207,24 +207,26 @@ namespace MeltPoolDG
 
                     Tensor<1, dim, VectorizedArray<double>> temp_surf_ten;
 
-                      for (unsigned int i = 0; i < dim; ++i)
-                        for (unsigned int j = 0; j < dim; ++j)
-                          temp_surf_ten[i] =
-                            (i == j) ? -(make_vectorized_array<double>(1.) - n[i] * n[j]) * d_alpha0 * grad_T[j] :
-                                       (n[i] * n[j]) * d_alpha0 * grad_T[j];
-                     
-                     const auto alpha = compare_and_apply_mask<SIMDComparison::less_than>(T, 
-                          T0, 
-                          VectorizedArray<double>(alpha0), 
-                          VectorizedArray<double>(alpha0)-VectorizedArray<double>(d_alpha0) * (T-T0) );
-                    
-                     for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
-                      Assert(
-                          alpha[v] >= 0.0,
-                          ExcMessage(
-                            "The surface tension coefficient tends to be negative in "
-                            "some regions. Check the value of the temperature dependent surface "
-                            "tension coefficient."));
+                    for (unsigned int i = 0; i < dim; ++i)
+                      for (unsigned int j = 0; j < dim; ++j)
+                        temp_surf_ten[i] = (i == j) ?
+                                             -(make_vectorized_array<double>(1.) - n[i] * n[j]) *
+                                               d_alpha0 * grad_T[j] :
+                                             (n[i] * n[j]) * d_alpha0 * grad_T[j];
+
+                    const auto alpha = compare_and_apply_mask<SIMDComparison::less_than>(
+                      T,
+                      T0,
+                      VectorizedArray<double>(alpha0),
+                      VectorizedArray<double>(alpha0) -
+                        VectorizedArray<double>(d_alpha0) * (T - T0));
+
+                    for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                      Assert(alpha[v] >= 0.0,
+                             ExcMessage(
+                               "The surface tension coefficient tends to be negative in "
+                               "some regions. Check the value of the temperature dependent surface "
+                               "tension coefficient."));
 
                     surface_tension.submit_value(alpha * n * curvature.get_value(q_index) +
                                                    temp_surf_ten,
@@ -277,7 +279,8 @@ namespace MeltPoolDG
                   temperature[local_dof_indices[i]] =
                     analytical_temperature_field(support_points[local_dof_indices[i]],
                                                  level_set_as_heaviside[local_dof_indices[i]]);
-                  solid[local_dof_indices[i]] = is_solid_region(support_points[local_dof_indices[i]]);
+                  solid[local_dof_indices[i]] =
+                    is_solid_region(support_points[local_dof_indices[i]]);
                 }
             }
 
@@ -345,9 +348,9 @@ namespace MeltPoolDG
             //
             //  In order to capture anisotropic temperature fields, a modification is introduced.
             const double indicator = UtilityFunctions::CharacteristicFunctions::heaviside(phi, 0.0);
-            const double &P  = mp_data.laser_power; 
-            const double &v  = mp_data.scan_speed;
-            const double &T0 = mp_data.ambient_temperature;
+            const double &P        = mp_data.laser_power;
+            const double &v        = mp_data.scan_speed;
+            const double &T0       = mp_data.ambient_temperature;
             const double &absorptivity =
               (indicator == 1) ? mp_data.liquid.absorptivity : mp_data.gas.absorptivity;
             const double &conductivity =
@@ -374,13 +377,13 @@ namespace MeltPoolDG
         else
           AssertThrow(false, ExcNotImplemented());
       }
-      
+
       /**
        *  This function determines for a given point, whether it belongs to the solid domain.
-       *  
-       *  WARNING: All points above (component dim-1) the center point of the laser source are automatically identified
-       *  as gaseous parts. Thus, this function has to be modified when the initial interface between the feedstock and 
-       *  the ambient gas is not planar.
+       *
+       *  WARNING: All points above (component dim-1) the center point of the laser source are
+       * automatically identified as gaseous parts. Thus, this function has to be modified when the
+       * initial interface between the feedstock and the ambient gas is not planar.
        */
       bool
       is_solid_region(const Point<dim> point)
@@ -391,27 +394,34 @@ namespace MeltPoolDG
           return false;
         else
           {
-            Point<dim> shifted_center = MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(mp_data.melt_pool_center);
-            
+            Point<dim> shifted_center =
+              MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(
+                mp_data.melt_pool_center);
+
             if (mp_data.melt_pool_shape == "parabola")
-            {
-              if (dim==2)
               {
-                const double sign = -2*mp_data.liquid.melt_pool_radius*(point[1]-shifted_center[1])+std::pow(point[0]-shifted_center[0],2);
-                return (sign>=0) ? true : false; 
+                if (dim == 2)
+                  {
+                    const double sign =
+                      -2 * mp_data.liquid.melt_pool_radius * (point[1] - shifted_center[1]) +
+                      std::pow(point[0] - shifted_center[0], 2);
+                    return (sign >= 0) ? true : false;
+                  }
+                else
+                  AssertThrow(false, ExcMessage("not implemented"));
               }
-              else
-                AssertThrow(false, ExcMessage("not implemented"));
-            }
             else if (mp_data.melt_pool_shape == "ellipse")
-               return UtilityFunctions::DistanceFunctions::ellipsoidal_manifold<dim>(
-                     point, shifted_center, mp_data.liquid.melt_pool_radius, mp_data.liquid.melt_pool_depth) > 0 ?
-                     false :
-                     true;
+              return UtilityFunctions::DistanceFunctions::ellipsoidal_manifold<dim>(
+                       point,
+                       shifted_center,
+                       mp_data.liquid.melt_pool_radius,
+                       mp_data.liquid.melt_pool_depth) > 0 ?
+                       false :
+                       true;
             else if (mp_data.melt_pool_shape == "temperature_dependent")
-               return ( analytical_temperature_field(point, 1.0) >= mp_data.liquid.melting_point ) ?
-                     false :
-                     true;
+              return (analytical_temperature_field(point, 1.0) >= mp_data.liquid.melting_point) ?
+                       false :
+                       true;
             else
               AssertThrow(false, ExcMessage("not implemented"));
           }
