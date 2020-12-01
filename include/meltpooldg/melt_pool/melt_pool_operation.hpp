@@ -207,31 +207,24 @@ namespace MeltPoolDG
 
                     Tensor<1, dim, VectorizedArray<double>> temp_surf_ten;
 
-                    //for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
                       for (unsigned int i = 0; i < dim; ++i)
                         for (unsigned int j = 0; j < dim; ++j)
                           temp_surf_ten[i] =
                             (i == j) ? -(make_vectorized_array<double>(1.) - n[i] * n[j]) * d_alpha0 * grad_T[j] :
                                        (n[i] * n[j]) * d_alpha0 * grad_T[j];
-                          //temp_surf_ten[i] =
-                            //(i == j) ? -(1. - n[i][v] * n[j][v]) * d_alpha0 * grad_T[j][v] :
-                                       //(n[i][v] * n[j][v]) * d_alpha0 * grad_T[j][v];
-
-                    //VectorizedArray<double> alpha;
-                    //for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
-                      //{
-                        //alpha[v] = T[v] < T0 ? alpha0 : alpha0 - d_alpha0 * (T[v] - T0);
-                        //Assert(
-                          //alpha[v] >= 0.0,
-                          //ExcMessage(
-                            //"The surface tension coefficient tends to be negative in "
-                            //"some regions. Check the value of the temperature dependent surface "
-                            //"tension coefficient."));
-                      //}
+                     
                      const auto alpha = compare_and_apply_mask<SIMDComparison::less_than>(T, 
                           T0, 
                           VectorizedArray<double>(alpha0), 
                           VectorizedArray<double>(alpha0)-VectorizedArray<double>(d_alpha0) * (T-T0) );
+                    
+                     for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                      Assert(
+                          alpha[v] >= 0.0,
+                          ExcMessage(
+                            "The surface tension coefficient tends to be negative in "
+                            "some regions. Check the value of the temperature dependent surface "
+                            "tension coefficient."));
 
                     surface_tension.submit_value(alpha * n * curvature.get_value(q_index) +
                                                    temp_surf_ten,
