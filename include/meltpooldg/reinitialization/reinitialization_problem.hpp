@@ -171,17 +171,16 @@ namespace MeltPoolDG
               quad_idx =
                 scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
           }
-          /*
-           *  setup DoFHandler
-           */
+        /*
+         *  setup DoFHandler
+         */
+        dof_handler.reinit(*base_in->triangulation);
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          dof_handler.initialize(*base_in->triangulation,
-                                 Simplex::FE_P<dim>(base_in->parameters.base.degree));
+          dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
         else
 #endif
-          dof_handler.initialize(*base_in->triangulation,
-                                 FE_Q<dim>(base_in->parameters.base.degree));
+          dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
 
         if (do_initial_setup)
           scratch_data->attach_dof_handler(dof_handler);

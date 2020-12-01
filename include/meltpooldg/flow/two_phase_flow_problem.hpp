@@ -145,9 +145,11 @@ namespace MeltPoolDG
         /*
          *  setup DoFHandler
          */
-        dof_handler.initialize(*base_in->triangulation, FE_Q<dim>(base_in->parameters.base.degree));
-        flow_dof_handler.initialize(*base_in->triangulation,
-                                    FE_Q<dim>(base_in->parameters.flow.velocity_degree));
+        dof_handler.reinit(*base_in->triangulation);
+        dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
+
+        flow_dof_handler.reinit(*base_in->triangulation);
+        flow_dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.flow.velocity_degree));
 
         scratch_data->attach_dof_handler(dof_handler);
         scratch_data->attach_dof_handler(dof_handler);
