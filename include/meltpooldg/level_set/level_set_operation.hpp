@@ -181,7 +181,8 @@ namespace MeltPoolDG
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 level_set.reinit(cell);
-                level_set.gather_evaluate(level_set_as_heaviside, false, true);
+                level_set.read_dof_values_plain(level_set_as_heaviside);
+                level_set.evaluate(false, true);
 
                 surface_tension.reinit(cell);
 
