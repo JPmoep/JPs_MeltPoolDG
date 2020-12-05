@@ -81,8 +81,8 @@ namespace MeltPoolDG
           if (dim == 2)
             {
               // create mesh
-              const Point<dim> bottom_left = Point<dim>(x_min, y_min);
-              const Point<dim> top_right   = Point<dim>(x_max, y_max);
+              const Point<dim> bottom_left(x_min, y_min);
+              const Point<dim> top_right(x_max, y_max);
 
               GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
               this->triangulation->refine_global(this->parameters.base.global_refinements);
@@ -90,8 +90,8 @@ namespace MeltPoolDG
           else if (dim == 3)
             {
               // create mesh
-              const Point<dim> bottom_left = Point<dim>(x_min, x_min, y_min);
-              const Point<dim> top_right   = Point<dim>(x_max, x_max, y_max);
+              const Point<dim> bottom_left(x_min, x_min, y_min);
+              const Point<dim> top_right(x_max, x_max, y_max);
 
               GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
               this->triangulation->refine_global(this->parameters.base.global_refinements);

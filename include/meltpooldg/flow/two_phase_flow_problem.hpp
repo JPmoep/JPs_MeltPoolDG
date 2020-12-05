@@ -323,13 +323,13 @@ namespace MeltPoolDG
                     for (auto dens : densities)
                       if (!((dens == parameters.flow.density) ||
                             (dens == parameters.flow.density_difference + parameters.flow.density)))
-                        scratch_data->get_pcout() << "density is wrong:" << dens << std::endl;
+                        std::cout << "density is wrong:" << dens << std::endl;
                     const auto viscosities = flow_operation->get_viscosity(cell, q);
                     for (auto visc : viscosities)
                       if (!((visc == parameters.flow.viscosity) ||
                             (visc ==
                              parameters.flow.viscosity_difference + parameters.flow.viscosity)))
-                        scratch_data->get_pcout() << "viscosity is wrong:" << visc << std::endl;
+                        std::cout << "viscosity is wrong:" << visc << std::endl;
                   }
               }
           },
