@@ -133,6 +133,10 @@ namespace MeltPoolDG
     number      scan_speed                           = 0.0;
     bool        do_move_laser                        = false;
     number      ambient_temperature                  = 0.0;
+    number      domain_x_min                         = 0.0;
+    number      domain_y_min                         = 0.0;
+    number      domain_x_max                         = 0.0;
+    number      domain_y_max                         = 0.0;
     number      recoil_pressure_constant             = 0.0;
     number      recoil_pressure_temperature_constant = 0.0;
     number      boiling_temperature                  = 0.0;
@@ -580,10 +584,22 @@ namespace MeltPoolDG
         prm.add_parameter("mp laser center",
                           mp.laser_center,
                           "Center coordinates of the laser beam on the interface melt/gas.");
-        prm.add_parameter("mp laser center",
+        prm.add_parameter("mp melt pool center",
                           mp.melt_pool_center,
                           "Center coordinates of the melt pool ellipse/parabola. If no value is "
                           "provided it will be set equally to the laser center");
+        prm.add_parameter("mp domain x min",
+                          mp.domain_x_min,
+                          "minimum x coordinate of simulation domain");
+        prm.add_parameter("mp domain y min",
+                          mp.domain_y_min,
+                          "minimum y coordinate of simulation domain");
+        prm.add_parameter("mp domain x max",
+                          mp.domain_x_max,
+                          "maximum x coordinate of simulation domain");
+        prm.add_parameter("mp domain y max",
+                          mp.domain_y_max,
+                          "maximum y coordinate of simulation domain");
         prm.add_parameter(
           "mp melt pool shape",
           mp.melt_pool_shape,

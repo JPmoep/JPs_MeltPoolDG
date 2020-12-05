@@ -21,6 +21,10 @@
   "melt pool" : {
     "mp laser power": "10.",
     "mp laser center": "0.0,0.00004",
+    "mp domain x min": "-0.0002",
+    "mp domain x max": "0.0002",
+    "mp domain y min": "-0.0001",
+    "mp domain y max": "0.0002",
     "mp scan speed": "0.003",
     "mp do move laser": "false",
     "mp ambient temperature": "300.",
