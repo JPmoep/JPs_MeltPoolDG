@@ -201,9 +201,7 @@ namespace MeltPoolDG
 
           auto dirichlet = std::make_shared<DirichletCondition<dim>>();
 
-          this->attach_dirichlet_boundary_condition(inflow_bc,
-                                                    dirichlet,
-                                                    this->parameters.base.problem_name);
+          this->attach_dirichlet_boundary_condition(inflow_bc, dirichlet, "advection_diffusion");
 
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed

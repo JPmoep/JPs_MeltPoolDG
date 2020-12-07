@@ -266,11 +266,11 @@ namespace MeltPoolDG
       if (base.problem_name == "advection_diffusion")
       {
         /// synchronize time stepping schemes
-        adaflo_params.params.start_time           = advec_diff.start_time;
-        adaflo_params.params.end_time             = advec_diff.end_time;
-        adaflo_params.params.time_step_size_start = advec_diff.time_step_size;
-        adaflo_params.params.time_step_size_min   = advec_diff.time_step_size;
-        adaflo_params.params.time_step_size_max   = advec_diff.time_step_size;
+        advec_diff_adaflo_params.params.start_time           = advec_diff.start_time;
+        advec_diff_adaflo_params.params.end_time             = advec_diff.end_time;
+        advec_diff_adaflo_params.params.time_step_size_start = advec_diff.time_step_size;
+        advec_diff_adaflo_params.params.time_step_size_min   = advec_diff.time_step_size;
+        advec_diff_adaflo_params.params.time_step_size_max   = advec_diff.time_step_size;
       }
 
 #endif

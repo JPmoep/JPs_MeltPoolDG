@@ -12,6 +12,7 @@
 
 #include <deal.II/dofs/dof_handler.h>
 
+#include <deal.II/fe/fe.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/mapping.h>
 #include <deal.II/fe/mapping_fe.h>
@@ -104,27 +105,46 @@ namespace MeltPoolDG
          *  setup DoFHandler
          */
         dof_handler.reinit(*base_in->triangulation);
+        dof_handler_velocity.reinit(*base_in->triangulation);
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
+          {
+            dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
+            dof_handler_velocity.distribute_dofs(
+              FESystem(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
+          }
         else
 #endif
-          dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
-
-        scratch_data->attach_dof_handler(dof_handler);
-        scratch_data->attach_dof_handler(dof_handler);
+          {
+            dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
+            dof_handler_velocity.distribute_dofs(
+              FESystem<dim>(FE_Q<dim>(QGaussLobatto<1>(base_in->parameters.base.degree + 1)), dim));
+          }
+        const int dof_idx       = scratch_data->attach_dof_handler(dof_handler);
+        const int dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
+        std::cout << "dof handler" << std::endl;
+        const int dof_idx_velocity = scratch_data->attach_dof_handler(dof_handler_velocity);
         /*
          *  create the partititioning
          */
+        std::cout << "create partitioning" << std::endl;
         scratch_data->create_partitioning();
         /*
          *  make hanging nodes and dirichlet constraints (Note: at the moment no time-dependent
          *  dirichlet constraints are supported)
          */
         hanging_node_constraints.clear();
-        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs());
+        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs(dof_idx));
         DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
         hanging_node_constraints.close();
+
+        std::cout << "hanging nodes velocity" << std::endl;
+        hanging_node_constraints_velocity.clear();
+        hanging_node_constraints_velocity.reinit(
+          scratch_data->get_locally_relevant_dofs(dof_idx_velocity));
+        DoFTools::make_hanging_node_constraints(dof_handler_velocity,
+                                                hanging_node_constraints_velocity);
+        hanging_node_constraints_velocity.close();
 
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
@@ -137,8 +157,9 @@ namespace MeltPoolDG
           }
         constraints.close();
 
-        const int dof_idx       = scratch_data->attach_constraint_matrix(constraints);
-        const int dof_no_bc_idx = scratch_data->attach_constraint_matrix(hanging_node_constraints);
+        scratch_data->attach_constraint_matrix(constraints);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
         /*
          *  create quadrature rule
          */
@@ -151,15 +172,6 @@ namespace MeltPoolDG
 #endif
           quad_idx =
             scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-
-          // @TODO: only do once!
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          scratch_data->attach_quadrature(
-            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
-        else
-#endif
-          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
         /*
          *  create the matrix-free object
          */
@@ -196,6 +208,7 @@ namespace MeltPoolDG
                                      initial_solution);
 
         initial_solution.update_ghost_values();
+        std::cout << "after initialize" << std::endl;
         /*
          *    initialize the advection-diffusion operation class
          */
@@ -207,11 +220,17 @@ namespace MeltPoolDG
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'advection_diffusion') "));
 #ifdef MELT_POOL_DG_WITH_ADAFLO
-        advec_diff_operation = std::make_shared<AdafloWrapper<dim>>(
-          *scratch_data, dof_no_bc_idx, quad_idx, initial_solution, advection_velocity, base_in);
+        advec_diff_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
+                                                                    dof_no_bc_idx,
+                                                                    quad_idx,
+                                                                    dof_idx_velocity,
+                                                                    initial_solution,
+                                                                    advection_velocity,
+                                                                    base_in);
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
+        std::cout << "EEEEasdddddddddddddEEEEEEEE" << std::endl;
       }
 
       void
@@ -244,8 +263,6 @@ namespace MeltPoolDG
       {
         if (parameters.paraview.do_output)
           {
-            const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
-
             /*
              *  output advected field
              */
@@ -303,8 +320,10 @@ namespace MeltPoolDG
 
     private:
       DoFHandler<dim>                     dof_handler;
+      DoFHandler<dim>                     dof_handler_velocity;
       AffineConstraints<double>           constraints;
       AffineConstraints<double>           hanging_node_constraints;
+      AffineConstraints<double>           hanging_node_constraints_velocity;
       std::shared_ptr<ScratchData<dim>>   scratch_data;
       BlockVectorType                     advection_velocity;
       TimeIterator<double>                time_iterator;

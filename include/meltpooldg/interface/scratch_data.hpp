@@ -141,7 +141,9 @@ namespace MeltPoolDG
           /*
            *  create vector of diameters
            */
-          this->diameter.push_back(GridTools::diameter(dof->get_triangulation()));
+          this->diameter.push_back(GridTools::minimal_cell_diameter(dof->get_triangulation()));
+          // this->diameter.push_back(GridTools::diameter(dof->get_triangulation())); @todo: does
+          // not work atm
           /*
            *  create partitioning
            */
@@ -297,9 +299,9 @@ namespace MeltPoolDG
     }
 
     const Triangulation<dim> &
-    get_triangulation() const
+    get_triangulation(const unsigned int dof_idx = 0) const
     {
-      return this->get_dof_handler().get_triangulation();
+      return this->get_dof_handler(dof_idx).get_triangulation();
     }
 
     unsigned int
@@ -321,25 +323,25 @@ namespace MeltPoolDG
     }
 
     const AlignedVector<VectorizedArray<double>> &
-    get_cell_diameters(const unsigned int dof_idx   = 0,
-                       const unsigned int quad_idx  = 0,
-                       bool               do_recompute = false) 
+    get_cell_diameters(const unsigned int dof_idx      = 0,
+                       const unsigned int quad_idx     = 0,
+                       bool               do_recompute = false)
     {
       if (do_recompute)
-      {
-        cell_diameters.resize(this->matrix_free.n_cell_batches());
+        {
+          cell_diameters.resize(this->matrix_free.n_cell_batches());
 
-        FullMatrix<double> mat(dim, dim);
+          FullMatrix<double> mat(dim, dim);
 
-        FECellIntegrator<dim, 1, double> cell_diameter(matrix_free, dof_idx, quad_idx);
-        for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
-          {
-            VectorizedArray<double> diameter = VectorizedArray<double>();
-            for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
-              diameter[v] = this->matrix_free.get_cell_iterator(cell, v, dof_idx)->diameter();
-            cell_diameters[cell] = diameter;
-          }
-      }
+          FECellIntegrator<dim, 1, double> cell_diameter(matrix_free, dof_idx, quad_idx);
+          for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
+            {
+              VectorizedArray<double> diameter = VectorizedArray<double>();
+              for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                diameter[v] = this->matrix_free.get_cell_iterator(cell, v, dof_idx)->diameter();
+              cell_diameters[cell] = diameter;
+            }
+        }
       return cell_diameters;
     }
 

@@ -35,21 +35,70 @@ namespace MeltPoolDG
       AdafloWrapper(ScratchData<dim> &                   scratch_data,
                     const int                            advec_diff_dof_idx,
                     const int                            advec_diff_quad_idx,
-                    const VectorType &                   solution_advected_field,
-                    BlockVectorType &                    velocity_vec_in,
+                    const int                            velocity_dof_idx,
+                    VectorType &                         solution_advected_field,
+                    BlockVectorType &                    velocity_vec_in, // @todo: make const ref
                     std::shared_ptr<SimulationBase<dim>> base_in)
         : scratch_data(scratch_data)
-        , advec_diff_dof_idx(advec_diff_dof_idx)
-        , advec_diff_quad_idx(advec_diff_quad_idx)
         , advected_field(solution_advected_field)
         , velocity_vec(velocity_vec_in)
       {
         scratch_data.initialize_dof_vector(rhs);
         scratch_data.initialize_dof_vector(increment);
+        scratch_data.initialize_dof_vector(advected_field_old);
+        scratch_data.initialize_dof_vector(advected_field_old_old);
+        scratch_data.initialize_dof_vector(velocity_vec_temp, velocity_dof_idx);
 
-        compute_velocity_quadrature();
+        set_velocity(velocity_vec);
+
         initialize_preconditioner();
 
+        /*
+         * set parameters of adaflo
+         * @todo
+         */
+        adaflo_params.dof_index_ls  = advec_diff_dof_idx;
+        adaflo_params.dof_index_vel = velocity_dof_idx; // @todo
+        adaflo_params.quad_index    = advec_diff_quad_idx;
+
+        adaflo_params.concentration_subdivisions =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().concentration_subdivisions;
+        adaflo_params.convection_stabilization = false;
+        adaflo_params.do_iteration             = false;
+        adaflo_params.tol_nl_iteration =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().tol_nl_iteration;
+
+        adaflo_params.time.time_step_scheme =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_scheme;
+        adaflo_params.time.start_time =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().start_time;
+        adaflo_params.time.end_time =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().end_time;
+        adaflo_params.time.time_step_size_start =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_size_start;
+        adaflo_params.time.time_stepping_cfl =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_stepping_cfl;
+        adaflo_params.time.time_stepping_coef2 =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_stepping_coef2;
+        adaflo_params.time.time_step_tolerance =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_tolerance;
+        adaflo_params.time.time_step_size_max =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_size_max;
+        adaflo_params.time.time_step_size_min =
+          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_size_min;
+
+
+        /*
+         * Boundary conditions for the advected field
+         */
+        // @todo
+        for (const auto &symmetry_id : base_in->get_symmetry_id("advection_diffusion"))
+          bcs.symmetry.insert(symmetry_id);
+        // for (const auto &dirichlet_bc : base_in->get_dirichlet_bc("advection_diffusion"))
+        // bcs.dirichlet[dirichlet_bc.first] = dirichlet_bc.second;
+        /*
+         * initialize adaflo operation
+         */
         advec_diff_operation = std::make_shared<LevelSetOKZSolverAdvanceConcentration<dim>>(
           advected_field,
           advected_field_old,
@@ -57,8 +106,8 @@ namespace MeltPoolDG
           increment,
           rhs,
           velocity_vec_temp, //@todo: convert block vector to fe_system vector
-          velocity_vec_temp, //@todo: convert block vector to fe_system vector
-          velocity_vec_temp, //@todo: convert block vector to fe_system vector
+          velocity_vec_temp, // only used if parameters.convection_stabilization = true
+          velocity_vec_temp, // only used if parameters.convection_stabilization = true
           scratch_data.get_diameter(advec_diff_dof_idx), /*global_omega_diameter*/
           scratch_data.get_cell_diameters(advec_diff_dof_idx,
                                           advec_diff_quad_idx,
@@ -72,10 +121,6 @@ namespace MeltPoolDG
           preconditioner,
           velocities);
 
-        /*
-         * Boundary conditions for the advected field
-         */
-        //@todo
         /*
          * Initial conditions for the advected field
          */
@@ -91,7 +136,11 @@ namespace MeltPoolDG
         advected_field_old     = advected_field;
         advected_field_old_old = advected_field_old;
 
-        compute_velocity_quadrature();
+        //@todo -- add
+        // if (step_size_old > 0)
+        // solution_update.sadd((step_size + step_size_old) / step_size_old,
+        //-step_size / step_size_old,
+        // solution_old);
         advec_diff_operation->advance_concentration(dt);
       }
 
@@ -103,20 +152,13 @@ namespace MeltPoolDG
 
     private:
       void
-      compute_velocity_quadrature()
+      set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
       {
-        FECellIntegrator<dim, 1, double> fe_eval(scratch_data.get_matrix_free(),
-                                                 advec_diff_dof_idx,
-                                                 advec_diff_quad_idx);
-
-        for (unsigned int cell = 0; cell < scratch_data.get_matrix_free().n_cell_batches(); ++cell)
-          {
-            fe_eval.reinit(cell);
-            fe_eval.read_dof_values_plain(velocity_vec);
-
-            for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
-              velocities[cell * fe_eval.n_q_points + q] = fe_eval.get_value(q);
-          }
+        VectorTools::convert_block_vector_to_fe_sytem_vector(
+          vec,
+          scratch_data.get_dof_handler(adaflo_params.dof_index_ls),
+          velocity_vec_temp,
+          scratch_data.get_dof_handler(adaflo_params.dof_index_vel));
       }
 
       void
@@ -128,22 +170,22 @@ namespace MeltPoolDG
         preconditioner.reinit(diagonal);
       }
 
+      const ScratchData<dim> &scratch_data;
+      VectorType &            advected_field;
+      BlockVectorType &       velocity_vec;
       /**
        * Boundary conditions for the advection diffusion operation
        * @todo
        */
       LevelSetOKZSolverAdvanceConcentrationBoundaryDescriptor<dim> bcs;
-      LevelSetOKZSolverAdvanceConcentrationParameter               adaflo_params;
+
+      LevelSetOKZSolverAdvanceConcentrationParameter adaflo_params;
 
       /**
        * Reference to the actual Navier-Stokes solver from adaflo
        */
       std::shared_ptr<LevelSetOKZSolverAdvanceConcentration<dim>> advec_diff_operation;
 
-      /**
-       * artificial_viscosities ->set b< adaflo
-       */
-      AlignedVector<VectorizedArray<double>> artificial_viscosities;
       /**
        *  maximum velocity --> set by adaflo
        */
@@ -156,21 +198,18 @@ namespace MeltPoolDG
        *  Diagonal preconditioner
        */
       DiagonalPreconditioner<double> preconditioner;
-      BlockVectorType &              velocity_vec;
       VectorType                     velocity_vec_temp;
       /**
        *  advected field
        */
-      VectorType &advected_field;
-      VectorType  advected_field_old;
-      VectorType  advected_field_old_old;
-      VectorType  increment;
-      VectorType  rhs;
 
-      const int advec_diff_dof_idx;
-      const int advec_diff_quad_idx;
+      VectorType advected_field_old;
+      VectorType advected_field_old_old;
+      VectorType increment;
+      VectorType rhs;
 
-      const ScratchData<dim> &scratch_data;
+      DoFHandler<dim>     dof_handler_adaflo;
+      const FESystem<dim> fe_adaflo;
     };
 
     /**
@@ -179,7 +218,62 @@ namespace MeltPoolDG
      * 1D - due to the dependcy to parallel::distributed::Triangulation
      * and p4est.
      */
-    // @todo
+    template <>
+    class AdafloWrapper<1>
+    {
+    private:
+      using VectorType      = LinearAlgebra::distributed::Vector<double>;
+      using BlockVectorType = LinearAlgebra::distributed::BlockVector<double>;
+
+    public:
+      /**
+       * Constructor.
+       */
+      AdafloWrapper(ScratchData<1> &                   scratch_data,
+                    const int                          advec_diff_dof_idx,
+                    const int                          advec_diff_quad_idx,
+                    const int                          velocity_dof_idx,
+                    VectorType &                       solution_advected_field,
+                    BlockVectorType &                  velocity_vec_in, // @todo: make const ref
+                    std::shared_ptr<SimulationBase<1>> base_in)
+      {
+        (void)scratch_data;
+        (void)advec_diff_dof_idx;
+        (void)advec_diff_quad_idx;
+        (void)velocity_dof_idx;
+        (void)solution_advected_field;
+        (void)velocity_vec_in;
+        (void)base_in;
+
+        AssertThrow(false, ExcNotImplemented());
+      }
+      void
+      solve(const double dt)
+      {
+        (void)dt;
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field() const
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+    private:
+      void
+      set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
+      {
+        (void)vec;
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      void
+      initialize_preconditioner()
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+    };
   } // namespace AdvectionDiffusionAdaflo
 } // namespace MeltPoolDG
 

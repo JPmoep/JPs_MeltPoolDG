@@ -28,7 +28,7 @@ namespace MeltPoolDG
 
         // declare parameters
         {
-          prm_adaflo.enter_subsection("level set");
+          prm_adaflo.enter_subsection("advection diffusion");
           prm_adaflo.enter_subsection("adaflo");
           params.declare_parameters(prm_adaflo);
           prm_adaflo.leave_subsection();
@@ -50,7 +50,7 @@ namespace MeltPoolDG
 
         // read parsed parameters
         {
-          prm_adaflo.enter_subsection("level set");
+          prm_adaflo.enter_subsection("advection diffusion");
           prm_adaflo.enter_subsection("adaflo");
           params.parse_parameters(parameter_filename, prm_adaflo);
           prm_adaflo.leave_subsection();
