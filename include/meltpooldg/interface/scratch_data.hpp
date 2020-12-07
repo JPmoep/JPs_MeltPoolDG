@@ -22,7 +22,10 @@
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 
+#include <meltpooldg/utilities/fe_integrator.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
+
+
 namespace MeltPoolDG
 {
   /**
@@ -122,6 +125,7 @@ namespace MeltPoolDG
        *  recreate DoF-dependent partitioning data
        */
       this->min_cell_size.clear();
+      this->diameter.clear();
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
       this->partitioner.clear();
@@ -134,6 +138,10 @@ namespace MeltPoolDG
            */
           this->min_cell_size.push_back(GridTools::minimal_cell_diameter(dof->get_triangulation()) /
                                         std::sqrt(dim));
+          /*
+           *  create vector of diameters
+           */
+          this->diameter.push_back(GridTools::diameter(dof->get_triangulation()));
           /*
            *  create partitioning
            */
@@ -306,6 +314,32 @@ namespace MeltPoolDG
       return this->min_cell_size[dof_idx];
     }
 
+    const double &
+    get_diameter(const unsigned int dof_idx = 0) const
+    {
+      return this->diameter[dof_idx];
+    }
+
+    const AlignedVector<VectorizedArray<double>> &
+    get_cell_diameters(bool               recompute = false,
+                       const unsigned int dof_idx   = 0,
+                       const unsigned int quad_idx  = 0)
+    {
+      cell_diameters.resize(this->matrix_free.n_cell_batches());
+
+      FullMatrix<double> mat(dim, dim);
+
+      FECellIntegrator<dim, 1, double> cell_diameter(matrix_free, dof_idx, quad_idx);
+      for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
+        {
+          cell_diameter.reinit(cell);
+          for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+            diameter[v] = matrix_free.get_cell_iterator(cell, v, dof_idx);
+          cell_diameters[cell] = diameter;
+        }
+      return cell_diameters;
+    }
+
     MPI_Comm
     get_mpi_comm(const unsigned int dof_idx = 0) const
     {
@@ -346,6 +380,8 @@ namespace MeltPoolDG
     std::vector<Quadrature<dim>>                              quad;
     std::vector<Quadrature<dim - 1>>                          face_quad;
     std::vector<double>                                       min_cell_size;
+    std::vector<double>                                       diameter;
+    AlignedVector<VectorizedArray<double>>                    cell_diameters;
     std::vector<IndexSet>                                     locally_owned_dofs;
     std::vector<IndexSet>                                     locally_relevant_dofs;
     std::vector<std::shared_ptr<Utilities::MPI::Partitioner>> partitioner;
