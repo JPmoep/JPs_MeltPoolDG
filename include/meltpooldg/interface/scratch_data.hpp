@@ -321,22 +321,25 @@ namespace MeltPoolDG
     }
 
     const AlignedVector<VectorizedArray<double>> &
-    get_cell_diameters(bool               recompute = false,
-                       const unsigned int dof_idx   = 0,
-                       const unsigned int quad_idx  = 0)
+    get_cell_diameters(const unsigned int dof_idx   = 0,
+                       const unsigned int quad_idx  = 0,
+                       bool               do_recompute = false) 
     {
-      cell_diameters.resize(this->matrix_free.n_cell_batches());
+      if (do_recompute)
+      {
+        cell_diameters.resize(this->matrix_free.n_cell_batches());
 
-      FullMatrix<double> mat(dim, dim);
+        FullMatrix<double> mat(dim, dim);
 
-      FECellIntegrator<dim, 1, double> cell_diameter(matrix_free, dof_idx, quad_idx);
-      for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
-        {
-          cell_diameter.reinit(cell);
-          for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
-            diameter[v] = matrix_free.get_cell_iterator(cell, v, dof_idx);
-          cell_diameters[cell] = diameter;
-        }
+        FECellIntegrator<dim, 1, double> cell_diameter(matrix_free, dof_idx, quad_idx);
+        for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
+          {
+            VectorizedArray<double> diameter = VectorizedArray<double>();
+            for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+              diameter[v] = this->matrix_free.get_cell_iterator(cell, v, dof_idx)->diameter();
+            cell_diameters[cell] = diameter;
+          }
+      }
       return cell_diameters;
     }
 

@@ -4,6 +4,7 @@
 #include <deal.II/base/parameter_handler.h>
 
 #include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
+#include <meltpooldg/advection_diffusion_adaflo/advection_diffusion_adaflo_wrapper_parameters.hpp>
 // c++
 #include <fstream>
 #include <iostream>
@@ -230,6 +231,7 @@ namespace MeltPoolDG
          */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
       adaflo_params.parse_parameters(parameter_filename);
+      advec_diff_adaflo_params.parse_parameters(parameter_filename);
 
       if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool"))
         {
@@ -260,6 +262,17 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_min   = flow.time_step_size;
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
         }
+
+      if (base.problem_name == "advection_diffusion")
+      {
+        /// synchronize time stepping schemes
+        adaflo_params.params.start_time           = advec_diff.start_time;
+        adaflo_params.params.end_time             = advec_diff.end_time;
+        adaflo_params.params.time_step_size_start = advec_diff.time_step_size;
+        adaflo_params.params.time_step_size_min   = advec_diff.time_step_size;
+        adaflo_params.params.time_step_size_max   = advec_diff.time_step_size;
+      }
+
 #endif
     }
 
@@ -747,6 +760,7 @@ namespace MeltPoolDG
     ParaviewData<number>           paraview;
     OutputData<number>             output;
     Flow::AdafloWrapperParameters  adaflo_params;
+    AdvectionDiffusionAdaflo::AdafloWrapperParameters  advec_diff_adaflo_params;
   };
 
 
