@@ -9,6 +9,7 @@
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
+#include <meltpooldg/advection_diffusion/advection_diffusion_operation_base.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operator.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/interface/parameters.hpp>
@@ -22,7 +23,7 @@ namespace MeltPoolDG
     using namespace dealii;
 
     template <int dim>
-    class AdvectionDiffusionOperation
+    class AdvectionDiffusionOperation : public AdvectionDiffusionOperationBase<dim>
     {
     private:
       using VectorType       = LinearAlgebra::distributed::Vector<double>;
@@ -49,7 +50,7 @@ namespace MeltPoolDG
                  const unsigned int                             dof_idx_in,
                  const unsigned int                             dof_no_bc_idx_in,
                  const unsigned int                             quad_idx_in,
-                 const unsigned int                             velocity_dof_idx_in)
+                 const unsigned int                             velocity_dof_idx_in) override
       {
         scratch_data     = scratch_data_in;
         dof_idx          = dof_idx_in;
@@ -74,7 +75,7 @@ namespace MeltPoolDG
 
 
       void
-      solve(const double dt, const BlockVectorType &advection_velocity)
+      solve(const double dt, const BlockVectorType &advection_velocity) override
       {
         advection_velocity.update_ghost_values();
 

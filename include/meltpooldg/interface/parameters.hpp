@@ -3,7 +3,6 @@
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/parameter_handler.h>
 
-#include <meltpooldg/advection_diffusion_adaflo/advection_diffusion_adaflo_wrapper_parameters.hpp>
 #include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
 // c++
 #include <fstream>
@@ -85,6 +84,7 @@ namespace MeltPoolDG
     unsigned int max_n_steps     = 1000000;
     bool         do_matrix_free  = false;
     bool         do_print_l2norm = true;
+    std::string  implementation  = "meltpooldg";
   };
 
   template <typename number = double>

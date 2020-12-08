@@ -63,7 +63,7 @@ namespace MeltPoolDG
              * compute the advection velocity for the current time
              */
             compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
-            advec_diff_operation.solve(dt, advection_velocity);
+            advec_diff_operation->solve(dt, advection_velocity);
             /*
              *  do paraview output if requested
              */
@@ -206,13 +206,18 @@ namespace MeltPoolDG
                       "function, e.g., AdvectionFunc<dim> must be specified as follows: "
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'advection_diffusion') "));
-        advec_diff_operation.initialize(scratch_data,
-                                        initial_solution,
-                                        base_in->parameters,
-                                        dof_idx,
-                                        dof_no_bc_idx,
-                                        quad_idx,
-                                        dof_no_bc_idx);
+        if (base_in->parameters.advec_diff.implementation == "meltpooldg")
+          {
+            advec_diff_operation = std::make_shared<AdvectionDiffusionOperation<dim>>();
+
+            advec_diff_operation->initialize(scratch_data,
+                                             initial_solution,
+                                             base_in->parameters,
+                                             dof_idx,
+                                             dof_no_bc_idx,
+                                             quad_idx,
+                                             dof_no_bc_idx);
+          }
       }
 
       void
@@ -245,15 +250,15 @@ namespace MeltPoolDG
           {
             const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
 
-            advec_diff_operation.solution_advected_field.update_ghost_values();
+            // advec_diff_operation.solution_advected_field.update_ghost_values();
             advection_velocity.update_ghost_values();
             /*
              *  output advected field
              */
             DataOut<dim> data_out;
             data_out.attach_dof_handler(dof_handler);
-            data_out.add_data_vector(advec_diff_operation.solution_advected_field,
-                                     "advected_field");
+            // data_out.add_data_vector(advec_diff_operation.solution_advected_field,
+            //"advected_field");
 
             /*
              *  output advection velocity
@@ -276,7 +281,7 @@ namespace MeltPoolDG
                                                 parameters.paraview.n_digits_timestep,
                                                 parameters.paraview.n_groups);
 
-            advec_diff_operation.solution_advected_field.zero_out_ghosts();
+            // advec_diff_operation.solution_advected_field.zero_out_ghosts();
             advection_velocity.zero_out_ghosts();
             /*
              * write data of boundary -- @todo: move to own utility function
@@ -306,13 +311,13 @@ namespace MeltPoolDG
       }
 
     private:
-      DoFHandler<dim>                   dof_handler;
-      AffineConstraints<double>         constraints;
-      AffineConstraints<double>         hanging_node_constraints;
-      std::shared_ptr<ScratchData<dim>> scratch_data;
-      BlockVectorType                   advection_velocity;
-      TimeIterator<double>              time_iterator;
-      AdvectionDiffusionOperation<dim>  advec_diff_operation;
+      DoFHandler<dim>                                       dof_handler;
+      AffineConstraints<double>                             constraints;
+      AffineConstraints<double>                             hanging_node_constraints;
+      std::shared_ptr<ScratchData<dim>>                     scratch_data;
+      BlockVectorType                                       advection_velocity;
+      TimeIterator<double>                                  time_iterator;
+      std::shared_ptr<AdvectionDiffusionOperationBase<dim>> advec_diff_operation;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG
