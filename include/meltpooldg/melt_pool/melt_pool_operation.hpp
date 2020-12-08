@@ -125,7 +125,7 @@ namespace MeltPoolDG
                   {
                     const auto &t = temperature_val.get_value(q_index);
 
-                    VectorizedArray<double> recoil_pressure_coefficient;
+                    VectorizedArray<double> recoil_pressure_coefficient = 0;
 
                     for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
                       recoil_pressure_coefficient[v] = compute_recoil_pressure_coefficient(t[v]);

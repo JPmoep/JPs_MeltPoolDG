@@ -262,21 +262,6 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
         }
 
-      if (base.problem_name == "advection_diffusion_adaflo")
-        {
-          advec_diff_adaflo_params.parse_parameters(parameter_filename);
-          /// synchronize time stepping schemes
-          advec_diff_adaflo_params.params.start_time           = advec_diff.start_time;
-          advec_diff_adaflo_params.params.end_time             = advec_diff.end_time;
-          advec_diff_adaflo_params.params.time_step_size_start = advec_diff.time_step_size;
-          advec_diff_adaflo_params.params.time_step_size_min   = advec_diff.time_step_size;
-          advec_diff_adaflo_params.params.time_step_size_max   = advec_diff.time_step_size;
-          /**
-           *  set number of concentration subdivisions equal to degree
-           */
-          advec_diff_adaflo_params.params.concentration_subdivisions = base.degree;
-        }
-
 #endif
     }
 
@@ -752,19 +737,18 @@ namespace MeltPoolDG
 
     ParameterHandler prm;
 
-    BaseData<number>                                  base;
-    AdaptiveMeshingData<number>                       amr;
-    LevelSetData<number>                              ls;
-    ReinitializationData<number>                      reinit;
-    AdvectionDiffusionData<number>                    advec_diff;
-    FlowData<number>                                  flow;
-    NormalVectorData<number>                          normal_vec;
-    CurvatureData<number>                             curv;
-    MeltPoolData<number>                              mp;
-    ParaviewData<number>                              paraview;
-    OutputData<number>                                output;
-    Flow::AdafloWrapperParameters                     adaflo_params;
-    AdvectionDiffusionAdaflo::AdafloWrapperParameters advec_diff_adaflo_params;
+    BaseData<number>               base;
+    AdaptiveMeshingData<number>    amr;
+    LevelSetData<number>           ls;
+    ReinitializationData<number>   reinit;
+    AdvectionDiffusionData<number> advec_diff;
+    FlowData<number>               flow;
+    NormalVectorData<number>       normal_vec;
+    CurvatureData<number>          curv;
+    MeltPoolData<number>           mp;
+    ParaviewData<number>           paraview;
+    OutputData<number>             output;
+    Flow::AdafloWrapperParameters  adaflo_params;
   };
 
 

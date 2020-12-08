@@ -156,6 +156,13 @@ namespace MeltPoolDG
         hanging_node_constraints.clear();
         hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs(dof_idx));
         DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
+        for (const auto &bc : base_in->get_dirichlet_bc(
+               "advection_diffusion")) // @todo: add name of bc at a more central place
+          {
+            dealii::DoFTools::make_zero_boundary_constraints(dof_handler,
+                                                             bc.first,
+                                                             hanging_node_constraints);
+          }
         hanging_node_constraints.close();
 
         hanging_node_constraints_velocity.clear();
@@ -167,13 +174,14 @@ namespace MeltPoolDG
 
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
+        constraints.merge(hanging_node_constraints,
+                          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
         for (const auto &bc : base_in->get_dirichlet_bc(
                "advection_diffusion")) // @todo: add name of bc at a more central place
           {
             dealii::VectorTools::interpolate_boundary_values(
               scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);
           }
-        constraints.merge(hanging_node_constraints);
         constraints.close();
 
         scratch_data->attach_constraint_matrix(constraints);
@@ -225,7 +233,6 @@ namespace MeltPoolDG
                       "function, e.g., AdvectionFunc<dim> must be specified as follows: "
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'advection_diffusion') "));
-        std::cout << "advection_velcoity" << std::endl;
         compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         advec_diff_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
@@ -238,7 +245,6 @@ namespace MeltPoolDG
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
-        std::cout << "after advection_velcoity" << std::endl;
       }
 
       void
