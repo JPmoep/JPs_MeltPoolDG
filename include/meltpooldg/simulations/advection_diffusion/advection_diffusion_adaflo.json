@@ -3,7 +3,7 @@
     "problem name": "advection_diffusion_adaflo",
     "application name": "advection_diffusion",
     "dimension": "2",
-    "global refinements": "2",
+    "global refinements": "5",
     "degree": "1",
     "do print parameters": "false"
   },

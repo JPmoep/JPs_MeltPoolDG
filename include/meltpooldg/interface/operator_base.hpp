@@ -108,7 +108,6 @@ namespace MeltPoolDG
        */
       rhs *= -1.0;
       this->create_rhs(rhs, src);
-
       /*
        * Clear constrained values
        */

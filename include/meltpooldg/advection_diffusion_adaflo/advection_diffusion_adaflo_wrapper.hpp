@@ -43,7 +43,7 @@ namespace MeltPoolDG
         /**
          * set parameters of adaflo
          */
-        set_adaflo_parameters(base_in->parameters.advec_diff_adaflo_params.get_parameters(),
+        set_adaflo_parameters(base_in->parameters,
                               advec_diff_dof_idx,
                               advec_diff_quad_idx,
                               velocity_dof_idx);
@@ -57,6 +57,7 @@ namespace MeltPoolDG
         advected_field.copy_locally_owned_data_from(initial_solution_advected_field);
         advected_field_old     = advected_field;
         advected_field_old_old = advected_field;
+        
         /**
          * initialize the preconditioner
          */
@@ -65,7 +66,6 @@ namespace MeltPoolDG
          *  set velocity
          */
         set_velocity(velocity_vec_in);
-
         /*
          * Boundary conditions for the advected field
          */
@@ -102,8 +102,12 @@ namespace MeltPoolDG
       void
       solve(const double dt, const BlockVectorType &current_velocity)
       {
-        advected_field_old_old = advected_field_old;
-        advected_field_old     = advected_field;
+        advected_field_old_old.copy_locally_owned_data_from(advected_field_old);
+        advected_field_old.copy_locally_owned_data_from(advected_field);
+        
+        advected_field.update_ghost_values();
+        advected_field_old.update_ghost_values();
+        advected_field_old_old.update_ghost_values();
 
         set_velocity(current_velocity);
 
@@ -112,7 +116,6 @@ namespace MeltPoolDG
         // solution_update.sadd((step_size + step_size_old) / step_size_old,
         //-step_size / step_size_old,
         // solution_old);
-
         advec_diff_operation->advance_concentration(dt);
       }
 
@@ -136,34 +139,45 @@ namespace MeltPoolDG
 
     private:
       void
-      set_adaflo_parameters(const FlowParameters &adaflo_params_in,
+      set_adaflo_parameters(const Parameters<double> & parameters,
                             const int             advec_diff_dof_idx,
                             const int             advec_diff_quad_idx,
                             const int             velocity_dof_idx)
       {
+        adaflo_params.time.start_time           = parameters.advec_diff.start_time;
+        adaflo_params.time.end_time             = parameters.advec_diff.end_time;
+        adaflo_params.time.time_step_size_start = parameters.advec_diff.time_step_size;
+        adaflo_params.time.time_step_size_min   = parameters.advec_diff.time_step_size;
+        adaflo_params.time.time_step_size_max   = parameters.advec_diff.time_step_size;
+        adaflo_params.time.time_step_scheme     = (parameters.advec_diff.theta==1.0) ? 
+          TimeSteppingParameters::Scheme::implicit_euler : (parameters.advec_diff.theta==0.0)? :
+          TimeSteppingParameters::Scheme::explicit_euler : (parameters.advec_diff.theta==0.5)? :
+          TimeSteppingParameters::Scheme::crank_nicolson : AsserThrow(false, ExcNotImplemented());
+      
+        /**
+           *  set number of concentration subdivisions equal to degree
+           */
+        adaflo_params.concentration_subdivisions = parameters.base.degree;
+
         adaflo_params.dof_index_ls  = advec_diff_dof_idx;
         adaflo_params.dof_index_vel = velocity_dof_idx; // @todo
         adaflo_params.quad_index    = advec_diff_quad_idx;
 
-        adaflo_params.concentration_subdivisions = adaflo_params_in.concentration_subdivisions;
-        adaflo_params.convection_stabilization   = false;
-        adaflo_params.do_iteration               = false;
-        adaflo_params.tol_nl_iteration           = adaflo_params_in.tol_nl_iteration;
+        adaflo_params.convection_stabilization   = false; // todo
+        adaflo_params.do_iteration               = false; // todo
+        adaflo_params.tol_nl_iteration           = false; // todo
 
-        adaflo_params.time.time_step_scheme     = adaflo_params_in.time_step_scheme;
-        adaflo_params.time.start_time           = adaflo_params_in.start_time;
-        adaflo_params.time.end_time             = adaflo_params_in.end_time;
-        adaflo_params.time.time_step_size_start = adaflo_params_in.time_step_size_start;
-        adaflo_params.time.time_stepping_cfl    = adaflo_params_in.time_stepping_cfl;
-        adaflo_params.time.time_stepping_coef2  = adaflo_params_in.time_stepping_coef2;
-        adaflo_params.time.time_step_tolerance  = adaflo_params_in.time_step_tolerance;
-        adaflo_params.time.time_step_size_max   = adaflo_params_in.time_step_size_max;
-        adaflo_params.time.time_step_size_min   = adaflo_params_in.time_step_size_min;
+        adaflo_params.time.time_stepping_cfl    = 0.8; // todo
+        adaflo_params.time.time_stepping_coef2  = 10.0; // todo capillary number
       }
 
       void
       set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
       {
+        velocity_vec_old_old.zero_out_ghosts();
+        velocity_vec_old.zero_out_ghosts();
+        velocity_vec.zero_out_ghosts();
+
         velocity_vec_old_old = velocity_vec_old;
         velocity_vec_old     = velocity_vec;
 
@@ -172,6 +186,10 @@ namespace MeltPoolDG
           scratch_data.get_dof_handler(adaflo_params.dof_index_ls),
           velocity_vec,
           scratch_data.get_dof_handler(adaflo_params.dof_index_vel));
+
+        velocity_vec_old_old.update_ghost_values();
+        velocity_vec_old.update_ghost_values();
+        velocity_vec.update_ghost_values();
       }
 
       void
