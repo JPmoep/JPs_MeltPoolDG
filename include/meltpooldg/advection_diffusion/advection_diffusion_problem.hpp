@@ -26,6 +26,7 @@
 #include <deal.II/simplex/quadrature_lib.h>
 
 // MeltPoolDG
+#include <meltpooldg/advection_diffusion/advection_diffusion_adaflo_wrapper.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
 #include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/interface/problembase.hpp>
@@ -101,45 +102,6 @@ namespace MeltPoolDG
 #endif
           scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
         /*
-         *  setup DoFHandler
-         */
-        dof_handler.reinit(*base_in->triangulation);
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
-        else
-#endif
-          dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
-
-        scratch_data->attach_dof_handler(dof_handler);
-        scratch_data->attach_dof_handler(dof_handler);
-        /*
-         *  create the partititioning
-         */
-        scratch_data->create_partitioning();
-        /*
-         *  make hanging nodes and dirichlet constraints (Note: at the moment no time-dependent
-         *  dirichlet constraints are supported)
-         */
-        hanging_node_constraints.clear();
-        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs());
-        DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
-        hanging_node_constraints.close();
-
-        constraints.clear();
-        constraints.reinit(scratch_data->get_locally_relevant_dofs());
-        constraints.merge(hanging_node_constraints);
-        for (const auto &bc : base_in->get_dirichlet_bc(
-               "advection_diffusion")) // @todo: add name of bc at a more central place
-          {
-            VectorTools::interpolate_boundary_values(
-              scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);
-          }
-        constraints.close();
-
-        const int dof_idx       = scratch_data->attach_constraint_matrix(constraints);
-        const int dof_no_bc_idx = scratch_data->attach_constraint_matrix(hanging_node_constraints);
-        /*
          *  create quadrature rule
          */
         unsigned int quad_idx = 0;
@@ -151,15 +113,82 @@ namespace MeltPoolDG
 #endif
           quad_idx =
             scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-
-          // @TODO: only do once!
+        /*
+         *  setup DoFHandler
+         */
+        dof_handler.reinit(*base_in->triangulation);
+        dof_handler_velocity.reinit(*base_in->triangulation);
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          scratch_data->attach_quadrature(
-            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
+          {
+            dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
+            dof_handler_velocity.distribute_dofs(
+              FESystem(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
+          }
         else
 #endif
-          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+          {
+            dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
+            dof_handler_velocity.distribute_dofs(
+              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
+          }
+
+        dof_idx         = scratch_data->attach_dof_handler(dof_handler);
+        dof_no_bc_idx   = scratch_data->attach_dof_handler(dof_handler);
+        dof_zero_bc_idx = scratch_data->attach_dof_handler(dof_handler);
+
+        const int dof_idx_velocity = scratch_data->attach_dof_handler(dof_handler_velocity);
+
+        /*
+         *  create the partititioning
+         */
+        scratch_data->create_partitioning();
+        /*
+         *  make hanging nodes and dirichlet constraints (Note: at the moment no time-dependent
+         *  dirichlet constraints are supported)
+         */
+        hanging_node_constraints.clear();
+        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs(dof_idx));
+        DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
+        hanging_node_constraints.close();
+
+        hanging_node_constraints_with_zero_dirichlet.clear();
+        hanging_node_constraints_with_zero_dirichlet.reinit(
+          scratch_data->get_locally_relevant_dofs(dof_idx));
+        DoFTools::make_hanging_node_constraints(dof_handler,
+                                                hanging_node_constraints_with_zero_dirichlet);
+        for (const auto &bc : base_in->get_dirichlet_bc(
+               "advection_diffusion")) // @todo: add name of bc at a more central place
+          {
+            dealii::DoFTools::make_zero_boundary_constraints(
+              dof_handler, bc.first, hanging_node_constraints_with_zero_dirichlet);
+          }
+        hanging_node_constraints_with_zero_dirichlet.close();
+
+
+        hanging_node_constraints_velocity.clear();
+        hanging_node_constraints_velocity.reinit(
+          scratch_data->get_locally_relevant_dofs(dof_idx_velocity));
+        DoFTools::make_hanging_node_constraints(dof_handler_velocity,
+                                                hanging_node_constraints_velocity);
+        hanging_node_constraints_velocity.close();
+
+        constraints.clear();
+        constraints.reinit(scratch_data->get_locally_relevant_dofs());
+        constraints.merge(hanging_node_constraints,
+                          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
+        for (const auto &bc : base_in->get_dirichlet_bc(
+               "advection_diffusion")) // @todo: add name of bc at a more central place
+          {
+            dealii::VectorTools::interpolate_boundary_values(
+              scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);
+          }
+        constraints.close();
+
+        scratch_data->attach_constraint_matrix(constraints);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
         /*
          *  create the matrix-free object
          */
@@ -188,12 +217,12 @@ namespace MeltPoolDG
         VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution);
 
-        VectorTools::project(scratch_data->get_mapping(),
-                             dof_handler,
-                             constraints,
-                             scratch_data->get_quadrature(),
-                             *base_in->get_initial_condition("advection_diffusion"),
-                             initial_solution);
+        dealii::VectorTools::project(scratch_data->get_mapping(),
+                                     dof_handler,
+                                     constraints,
+                                     scratch_data->get_quadrature(),
+                                     *base_in->get_initial_condition("advection_diffusion"),
+                                     initial_solution);
 
         initial_solution.update_ghost_values();
         /*
@@ -206,6 +235,7 @@ namespace MeltPoolDG
                       "function, e.g., AdvectionFunc<dim> must be specified as follows: "
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'advection_diffusion') "));
+        compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
         if (base_in->parameters.advec_diff.implementation == "meltpooldg")
           {
             advec_diff_operation = std::make_shared<AdvectionDiffusionOperation<dim>>();
@@ -218,6 +248,23 @@ namespace MeltPoolDG
                                              quad_idx,
                                              dof_no_bc_idx);
           }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if (base_in->parameters.advec_diff.implementation == "adaflo")
+          {
+            AssertThrow(base_in->parameters.advec_diff.do_matrix_free, ExcNotImplemented());
+            advec_diff_operation =
+              std::make_shared<MeltPoolDG::AdvectionDiffusionAdaflo::AdafloWrapper<dim>>(
+                *scratch_data,
+                dof_zero_bc_idx,
+                quad_idx,
+                dof_idx_velocity,
+                initial_solution,
+                advection_velocity,
+                base_in);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
       }
 
       void
@@ -234,11 +281,13 @@ namespace MeltPoolDG
          */
         for (auto d = 0; d < dim; ++d)
           {
-            VectorTools::interpolate(scratch_data->get_mapping(),
-                                     scratch_data->get_dof_handler(),
-                                     ScalarFunctionFromFunctionObject<dim>(
-                                       [&](const Point<dim> &p) { return advec_func.value(p)[d]; }),
-                                     advection_velocity.block(d));
+            dealii::VectorTools::interpolate(scratch_data->get_mapping(),
+                                             scratch_data->get_dof_handler(),
+                                             ScalarFunctionFromFunctionObject<dim>(
+                                               [&](const Point<dim> &p) {
+                                                 return advec_func.value(p)[d];
+                                               }),
+                                             advection_velocity.block(d));
           }
         advection_velocity.update_ghost_values();
       }
@@ -311,13 +360,20 @@ namespace MeltPoolDG
       }
 
     private:
-      DoFHandler<dim>                                       dof_handler;
-      AffineConstraints<double>                             constraints;
-      AffineConstraints<double>                             hanging_node_constraints;
-      std::shared_ptr<ScratchData<dim>>                     scratch_data;
-      BlockVectorType                                       advection_velocity;
-      TimeIterator<double>                                  time_iterator;
+      DoFHandler<dim>                   dof_handler;
+      AffineConstraints<double>         constraints;
+      AffineConstraints<double>         hanging_node_constraints;
+      AffineConstraints<double>         hanging_node_constraints_with_zero_dirichlet;
+      DoFHandler<dim>                   dof_handler_velocity;
+      AffineConstraints<double>         hanging_node_constraints_velocity;
+      std::shared_ptr<ScratchData<dim>> scratch_data;
+      BlockVectorType                   advection_velocity;
+      TimeIterator<double>              time_iterator;
       std::shared_ptr<AdvectionDiffusionOperationBase<dim>> advec_diff_operation;
+
+      int dof_idx;
+      int dof_no_bc_idx;
+      int dof_zero_bc_idx;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

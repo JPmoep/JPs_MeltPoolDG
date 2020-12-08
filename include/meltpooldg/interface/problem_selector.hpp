@@ -1,7 +1,6 @@
 #pragma once
 // MeltPoolDG
 #include <meltpooldg/advection_diffusion/advection_diffusion_problem.hpp>
-#include <meltpooldg/advection_diffusion_adaflo/advection_diffusion_adaflo_problem.hpp>
 #include <meltpooldg/flow/two_phase_flow_problem.hpp>
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
@@ -28,9 +27,6 @@ namespace MeltPoolDG
 
       else if (problem_name == "advection_diffusion")
         return std::make_shared<AdvectionDiffusion::AdvectionDiffusionProblem<dim>>();
-      
-      else if (problem_name == "advection_diffusion_adaflo")
-        return std::make_shared<AdvectionDiffusionAdaflo::AdvectionDiffusionProblem<dim>>();
 
       else if (problem_name == "two_phase_flow" || problem_name == "melt_pool")
         return std::make_shared<Flow::TwoPhaseFlowProblem<dim>>();
