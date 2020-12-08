@@ -245,6 +245,8 @@ namespace MeltPoolDG
           {
             const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
 
+            advec_diff_operation.solution_advected_field.update_ghost_values();
+            advection_velocity.update_ghost_values();
             /*
              *  output advected field
              */
@@ -274,6 +276,8 @@ namespace MeltPoolDG
                                                 parameters.paraview.n_digits_timestep,
                                                 parameters.paraview.n_groups);
 
+            advec_diff_operation.solution_advected_field.zero_out_ghosts();
+            advection_velocity.zero_out_ghosts();
             /*
              * write data of boundary -- @todo: move to own utility function
              */

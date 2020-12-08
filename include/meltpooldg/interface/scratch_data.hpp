@@ -51,6 +51,7 @@ namespace MeltPoolDG
 
     ScratchData(const ScratchData &scratch_data)
     {
+      //@todo: check if mapping is deleted
       this->do_matrix_free = scratch_data.do_matrix_free;
       this->reinit(scratch_data.get_mapping(),
                    scratch_data.get_dof_handlers(),
@@ -69,7 +70,6 @@ namespace MeltPoolDG
     {
       this->clear();
 
-      this->set_mapping(mapping);
 
       for (unsigned int i = 0; i < dof_handler.size(); ++i)
         this->attach_dof_handler(*dof_handler[i]);

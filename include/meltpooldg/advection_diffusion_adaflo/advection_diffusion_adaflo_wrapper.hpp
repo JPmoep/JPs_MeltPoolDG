@@ -72,6 +72,7 @@ namespace MeltPoolDG
 
         adaflo_params.concentration_subdivisions =
           base_in->parameters.advec_diff_adaflo_params.get_parameters().concentration_subdivisions;
+
         adaflo_params.convection_stabilization = false;
         adaflo_params.do_iteration             = false;
         adaflo_params.tol_nl_iteration =
@@ -100,14 +101,11 @@ namespace MeltPoolDG
         /**
          *  set velocity
          */
-        std::cout << "set velocity" << std::endl;
-        std::cout << "velocity_vec_in.norm" << velocity_vec_in.l2_norm() << std::endl;
         set_velocity(velocity_vec_in);
 
         /*
          * Boundary conditions for the advected field
          */
-        std::cout << "apply boundary" << std::endl;
         // @todo
         for (const auto &symmetry_id : base_in->get_symmetry_id("advection_diffusion"))
           bcs.symmetry.insert(symmetry_id);
@@ -116,7 +114,6 @@ namespace MeltPoolDG
         /*
          * initialize adaflo operation
          */
-        std::cout << "initialize adaflo" << std::endl;
         advec_diff_operation = std::make_shared<LevelSetOKZSolverAdvanceConcentration<dim>>(
           advected_field,
           advected_field_old,
@@ -135,11 +132,6 @@ namespace MeltPoolDG
           adaflo_params,
           global_max_velocity,
           preconditioner);
-
-        /*
-         * Initial conditions for the advected field
-         */
-        //@todo
       }
 
       /**
@@ -148,8 +140,8 @@ namespace MeltPoolDG
       void
       solve(const double dt, const BlockVectorType &velocity_vec)
       {
-        advected_field_old     = advected_field;
         advected_field_old_old = advected_field_old;
+        advected_field_old     = advected_field;
 
         set_velocity(velocity_vec);
 
@@ -158,20 +150,26 @@ namespace MeltPoolDG
         // solution_update.sadd((step_size + step_size_old) / step_size_old,
         //-step_size / step_size_old,
         // solution_old);
-        //
-        std::cout << "setup mapping from meltpool" << std::endl;
-        const auto &mapping2 = *scratch_data.get_matrix_free().get_mapping_info().mapping;
-        const auto &mapping =
-          scratch_data.get_matrix_free().get_mapping_info().mapping_collection->operator[](0);
-        std::cout << "after setup mapping from meltpool" << std::endl;
 
-        // advec_diff_operation->advance_concentration(dt);
+        advec_diff_operation->advance_concentration(dt);
       }
 
       const LinearAlgebra::distributed::Vector<double> &
       get_advected_field() const
       {
         return advected_field;
+      }
+
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old() const
+      {
+        return advected_field_old;
+      }
+
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old_old() const
+      {
+        return advected_field_old_old;
       }
 
     private:
@@ -276,6 +274,16 @@ namespace MeltPoolDG
 
       const LinearAlgebra::distributed::Vector<double> &
       get_advected_field() const
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old() const
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old_old() const
       {
         AssertThrow(false, ExcNotImplemented());
       }

@@ -65,10 +65,17 @@ namespace MeltPoolDG
              */
             compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
             advec_diff_operation->solve(dt, advection_velocity);
+            scratch_data->get_pcout()
+              << " |phi|= " << std::setw(10) << std::left
+              << advec_diff_operation->get_advected_field().l2_norm()
+              << " |phi_n-1|= " << std::setw(10) << std::left
+              << advec_diff_operation->get_advected_field_old().l2_norm()
+              << " |phi_n-2|= " << std::setw(10) << std::left
+              << advec_diff_operation->get_advected_field_old_old().l2_norm() << std::endl;
             /*
              *  do paraview output if requested
              */
-            // output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
+            output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
           }
       }
 
@@ -89,6 +96,8 @@ namespace MeltPoolDG
         /*
          *  setup scratch data
          */
+        AssertThrow(base_in->parameters.advec_diff.do_matrix_free, ExcNotImplemented());
+
         scratch_data =
           std::make_shared<ScratchData<dim>>(base_in->parameters.advec_diff.do_matrix_free);
         /*
@@ -96,18 +105,11 @@ namespace MeltPoolDG
          */
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          {
-            mapping_fe =
-              std::make_shared<MappingFE<dim>>(Simplex::FE_P<dim>(base_in->parameters.base.degree));
-            scratch_data->set_mapping(*mapping_fe);
-            // MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
-          }
+          scratch_data->set_mapping(
+            MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
         else
 #endif
-          {
-            mapping_q = std::make_shared<MappingQGeneric<dim>>(base_in->parameters.base.degree);
-            scratch_data->set_mapping(*mapping_q);
-          }
+          scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
         /*
          *  setup DoFHandler
          */
@@ -118,24 +120,22 @@ namespace MeltPoolDG
           {
             dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
             dof_handler_velocity.distribute_dofs(
-              FESystem(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
+              FESystem(Simplex::FE_P<dim>(base_in->parameters.base.degree + 1), dim));
           }
         else
 #endif
           {
             dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
             dof_handler_velocity.distribute_dofs(
-              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
+              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree + 1), dim));
           }
         dof_idx       = scratch_data->attach_dof_handler(dof_handler);
         dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
 
-        std::cout << "dof handler" << std::endl;
         const int dof_idx_velocity = scratch_data->attach_dof_handler(dof_handler_velocity);
         /*
          *  create the partititioning
          */
-        std::cout << "create partitioning" << std::endl;
         scratch_data->create_partitioning();
         /*
          *  make hanging nodes and dirichlet constraints (Note: at the moment no time-dependent
@@ -146,7 +146,6 @@ namespace MeltPoolDG
         DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
         hanging_node_constraints.close();
 
-        std::cout << "hanging nodes velocity" << std::endl;
         hanging_node_constraints_velocity.clear();
         hanging_node_constraints_velocity.reinit(
           scratch_data->get_locally_relevant_dofs(dof_idx_velocity));
@@ -154,7 +153,6 @@ namespace MeltPoolDG
                                                 hanging_node_constraints_velocity);
         hanging_node_constraints_velocity.close();
 
-        std::cout << "constraints" << std::endl;
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
         constraints.merge(hanging_node_constraints);
@@ -166,7 +164,6 @@ namespace MeltPoolDG
           }
         constraints.close();
 
-        std::cout << "attach constraints" << std::endl;
         scratch_data->attach_constraint_matrix(constraints);
         scratch_data->attach_constraint_matrix(hanging_node_constraints);
         scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
@@ -182,7 +179,6 @@ namespace MeltPoolDG
 #endif
           quad_idx =
             scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-        std::cout << "before build" << std::endl;
         /*
          *  create the matrix-free object
          */
@@ -219,7 +215,6 @@ namespace MeltPoolDG
                                      initial_solution);
 
         initial_solution.update_ghost_values();
-        std::cout << "after initialize" << std::endl;
         /*
          *    initialize the advection-diffusion operation class
          */
@@ -242,7 +237,6 @@ namespace MeltPoolDG
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
-        std::cout << "EEEEasdddddddddddddEEEEEEEE" << std::endl;
       }
 
       void
@@ -344,9 +338,6 @@ namespace MeltPoolDG
       BlockVectorType                     advection_velocity;
       TimeIterator<double>                time_iterator;
       std::shared_ptr<AdafloWrapper<dim>> advec_diff_operation;
-
-      std::shared_ptr<MappingQGeneric<dim>> mapping_q;
-      std::shared_ptr<MappingFE<dim>>       mapping_fe;
 
       int dof_idx;
       int dof_no_bc_idx;
