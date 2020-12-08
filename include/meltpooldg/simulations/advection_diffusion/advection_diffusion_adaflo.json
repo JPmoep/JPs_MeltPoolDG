@@ -1,5 +1,5 @@
 {
-  "base" : {
+  "base": {
     "problem name": "advection_diffusion_adaflo",
     "application name": "advection_diffusion",
     "dimension": "2",
@@ -7,22 +7,22 @@
     "degree": "1",
     "do print parameters": "false"
   },
-  "advection diffusion" : {
-    "advec diff diffusivity": "0.000001",
+  "advection diffusion": {
+    "advec diff diffusivity": "0.000000",
     "advec diff theta": "0.5",
     "advec diff start time": "0.0",
     "advec diff end time": "1.5707963267948966",
     "advec diff time step size": "0.01",
     "advec diff do matrix free": "true",
     "advec diff do print l2norm": "true"
-    }
-  },
-  "paraview" : {
-    "paraview do output": "true",
-    "paraview print normal vector": "true",
-    "paraview print curvature": "true",
-    "paraview print advection": "true"
   }
-
-
+},
+  "paraview":
+{
+  "paraview do output" : "true",
+                         "paraview print normal vector" : "true",
+                                                          "paraview print curvature"
+    : "true",
+      "paraview print advection" : "true"
+}
 }

@@ -372,6 +372,10 @@ namespace MeltPoolDG
         prm.add_parameter("advec diff do print l2norm",
                           advec_diff.do_print_l2norm,
                           "Defines if the l2norm of the advected field should be printed).");
+        prm.add_parameter(
+          "advec diff implementation",
+          advec_diff.implementation,
+          "Choose the corresponding implementation of the advection diffusion operation.");
       }
       prm.leave_subsection();
 

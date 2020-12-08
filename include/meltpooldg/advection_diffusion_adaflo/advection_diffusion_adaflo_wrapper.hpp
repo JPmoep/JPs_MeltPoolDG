@@ -9,8 +9,8 @@
 
 #  include <deal.II/lac/generic_linear_algebra.h>
 
-#  include <meltpooldg/advection_diffusion_adaflo/advection_diffusion_adaflo_wrapper_parameters.hpp>
 #  include <meltpooldg/interface/scratch_data.hpp>
+#  include <meltpooldg/interface/simulationbase.hpp>
 #  include <meltpooldg/utilities/vector_tools.hpp>
 
 #  include <adaflo/diagonal_preconditioner.h>
@@ -22,6 +22,7 @@ namespace MeltPoolDG
   {
     template <int dim>
     class AdafloWrapper
+      : public MeltPoolDG::AdvectionDiffusion::AdvectionDiffusionOperationBase<dim>
     {
     private:
       using VectorType      = LinearAlgebra::distributed::Vector<double>;
@@ -100,7 +101,7 @@ namespace MeltPoolDG
        * Solver time step
        */
       void
-      solve(const double dt, const BlockVectorType &current_velocity)
+      solve(const double dt, const BlockVectorType &current_velocity) override
       {
         advected_field_old_old.copy_locally_owned_data_from(advected_field_old);
         advected_field_old.copy_locally_owned_data_from(advected_field);
@@ -111,12 +112,20 @@ namespace MeltPoolDG
 
         set_velocity(current_velocity);
 
-        //@todo -- extrapolation
+        //@todo -- extrapolation (?)
         // if (step_size_old > 0)
         // solution_update.sadd((step_size + step_size_old) / step_size_old,
         //-step_size / step_size_old,
         // solution_old);
         advec_diff_operation->advance_concentration(dt);
+
+        scratch_data.get_pcout() << " |phi|= " << std::setw(15) << std::setprecision(10)
+                                 << std::left << get_advected_field().l2_norm()
+                                 << " |phi_n-1|= " << std::setw(15) << std::setprecision(10)
+                                 << std::left << get_advected_field_old().l2_norm()
+                                 << " |phi_n-2|= " << std::setw(15) << std::setprecision(10)
+                                 << std::left << get_advected_field_old_old().l2_norm()
+                                 << std::endl;
       }
 
       const LinearAlgebra::distributed::Vector<double> &
@@ -161,15 +170,15 @@ namespace MeltPoolDG
         adaflo_params.concentration_subdivisions = parameters.base.degree;
 
         adaflo_params.dof_index_ls  = advec_diff_dof_idx;
-        adaflo_params.dof_index_vel = velocity_dof_idx; // @todo
+        adaflo_params.dof_index_vel = velocity_dof_idx;
         adaflo_params.quad_index    = advec_diff_quad_idx;
 
-        adaflo_params.convection_stabilization = false; // todo
-        adaflo_params.do_iteration             = false; // todo
-        adaflo_params.tol_nl_iteration         = false; // todo
+        adaflo_params.convection_stabilization = false; //@ todo
+        adaflo_params.do_iteration             = false; //@ todo
+        adaflo_params.tol_nl_iteration         = false; //@ todo
 
-        adaflo_params.time.time_stepping_cfl   = 0.8;  // todo
-        adaflo_params.time.time_stepping_coef2 = 10.0; // todo capillary number
+        adaflo_params.time.time_stepping_cfl   = 0.8;  //@ todo
+        adaflo_params.time.time_stepping_coef2 = 10.0; //@ todo capillary number
       }
 
       void
@@ -276,6 +285,7 @@ namespace MeltPoolDG
      */
     template <>
     class AdafloWrapper<1>
+      : public MeltPoolDG::AdvectionDiffusion::AdvectionDiffusionOperationBase<1>
     {
     private:
       using VectorType      = LinearAlgebra::distributed::Vector<double>;
