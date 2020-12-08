@@ -64,11 +64,11 @@ namespace MeltPoolDG
              * compute the advection velocity for the current time
              */
             compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
-            advec_diff_operation->solve(dt);
+            advec_diff_operation->solve(dt, advection_velocity);
             /*
              *  do paraview output if requested
              */
-            output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
+            // output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
           }
       }
 
@@ -96,11 +96,18 @@ namespace MeltPoolDG
          */
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          scratch_data->set_mapping(
-            MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+          {
+            mapping_fe =
+              std::make_shared<MappingFE<dim>>(Simplex::FE_P<dim>(base_in->parameters.base.degree));
+            scratch_data->set_mapping(*mapping_fe);
+            // MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+          }
         else
 #endif
-          scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+          {
+            mapping_q = std::make_shared<MappingQGeneric<dim>>(base_in->parameters.base.degree);
+            scratch_data->set_mapping(*mapping_q);
+          }
         /*
          *  setup DoFHandler
          */
@@ -118,10 +125,11 @@ namespace MeltPoolDG
           {
             dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
             dof_handler_velocity.distribute_dofs(
-              FESystem<dim>(FE_Q<dim>(QGaussLobatto<1>(base_in->parameters.base.degree + 1)), dim));
+              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
           }
-        const int dof_idx       = scratch_data->attach_dof_handler(dof_handler);
-        const int dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
+        dof_idx       = scratch_data->attach_dof_handler(dof_handler);
+        dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
+
         std::cout << "dof handler" << std::endl;
         const int dof_idx_velocity = scratch_data->attach_dof_handler(dof_handler_velocity);
         /*
@@ -146,6 +154,7 @@ namespace MeltPoolDG
                                                 hanging_node_constraints_velocity);
         hanging_node_constraints_velocity.close();
 
+        std::cout << "constraints" << std::endl;
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
         constraints.merge(hanging_node_constraints);
@@ -157,6 +166,7 @@ namespace MeltPoolDG
           }
         constraints.close();
 
+        std::cout << "attach constraints" << std::endl;
         scratch_data->attach_constraint_matrix(constraints);
         scratch_data->attach_constraint_matrix(hanging_node_constraints);
         scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
@@ -172,6 +182,7 @@ namespace MeltPoolDG
 #endif
           quad_idx =
             scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+        std::cout << "before build" << std::endl;
         /*
          *  create the matrix-free object
          */
@@ -219,6 +230,7 @@ namespace MeltPoolDG
                       "function, e.g., AdvectionFunc<dim> must be specified as follows: "
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'advection_diffusion') "));
+        compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         advec_diff_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data,
                                                                     dof_no_bc_idx,
@@ -236,7 +248,7 @@ namespace MeltPoolDG
       void
       compute_advection_velocity(TensorFunction<1, dim> &advec_func)
       {
-        scratch_data->initialize_dof_vector(advection_velocity);
+        scratch_data->initialize_dof_vector(advection_velocity, dof_no_bc_idx);
         /*
          *  set the current time to the advection field function
          */
@@ -248,7 +260,7 @@ namespace MeltPoolDG
         for (auto d = 0; d < dim; ++d)
           {
             dealii::VectorTools::interpolate(scratch_data->get_mapping(),
-                                             scratch_data->get_dof_handler(),
+                                             scratch_data->get_dof_handler(dof_no_bc_idx),
                                              ScalarFunctionFromFunctionObject<dim>(
                                                [&](const Point<dim> &p) {
                                                  return advec_func.value(p)[d];
@@ -319,15 +331,25 @@ namespace MeltPoolDG
       }
 
     private:
-      DoFHandler<dim>                     dof_handler;
+      /**
+       *
+       */
+      DoFHandler<dim>           dof_handler;
+      AffineConstraints<double> constraints;
+      AffineConstraints<double> hanging_node_constraints;
+
       DoFHandler<dim>                     dof_handler_velocity;
-      AffineConstraints<double>           constraints;
-      AffineConstraints<double>           hanging_node_constraints;
       AffineConstraints<double>           hanging_node_constraints_velocity;
       std::shared_ptr<ScratchData<dim>>   scratch_data;
       BlockVectorType                     advection_velocity;
       TimeIterator<double>                time_iterator;
       std::shared_ptr<AdafloWrapper<dim>> advec_diff_operation;
+
+      std::shared_ptr<MappingQGeneric<dim>> mapping_q;
+      std::shared_ptr<MappingFE<dim>>       mapping_fe;
+
+      int dof_idx;
+      int dof_no_bc_idx;
     };
   } // namespace AdvectionDiffusionAdaflo
 } // namespace MeltPoolDG

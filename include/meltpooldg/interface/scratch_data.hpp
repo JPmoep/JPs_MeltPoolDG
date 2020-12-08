@@ -139,11 +139,11 @@ namespace MeltPoolDG
           this->min_cell_size.push_back(GridTools::minimal_cell_diameter(dof->get_triangulation()) /
                                         std::sqrt(dim));
           /*
-           *  create vector of diameters
+           *  create vector of minimal diameters for all dof handlers
            */
           this->diameter.push_back(GridTools::minimal_cell_diameter(dof->get_triangulation()));
-          // this->diameter.push_back(GridTools::diameter(dof->get_triangulation())); @todo: does
-          // not work atm
+          // this->diameter.push_back(GridTools::diameter(dof->get_triangulation()));
+          // @todo: does  not work atm
           /*
            *  create partitioning
            */
@@ -174,6 +174,31 @@ namespace MeltPoolDG
 
           this->matrix_free.reinit(
             *this->mapping, this->dof_handler, this->constraint, this->quad, additional_data);
+
+          this->cell_diameters.clear();
+
+          /*
+           *  create vector of cell diameters for matrix free
+           */
+          int dof_idx = 0;
+          for (const auto &dof : dof_handler)
+            {
+              (void)dof;
+              AlignedVector<VectorizedArray<double>> cell_diameters_temp;
+              cell_diameters_temp.resize(this->matrix_free.n_cell_batches());
+
+              FullMatrix<double> mat(dim, dim);
+
+              for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
+                {
+                  VectorizedArray<double> diameter = VectorizedArray<double>();
+                  for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                    diameter[v] = this->matrix_free.get_cell_iterator(cell, v, dof_idx)->diameter();
+                  cell_diameters_temp[cell] = make_vectorized_array<double>(0.0); // diameter;
+                }
+              this->cell_diameters.push_back(cell_diameters_temp);
+              dof_idx += 1;
+            }
         }
     }
 
@@ -225,6 +250,8 @@ namespace MeltPoolDG
       this->dof_handler.clear();
       this->mapping.reset();
       this->min_cell_size.clear();
+      this->diameter.clear();
+      this->cell_diameters.clear();
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
     }
@@ -323,26 +350,9 @@ namespace MeltPoolDG
     }
 
     const AlignedVector<VectorizedArray<double>> &
-    get_cell_diameters(const unsigned int dof_idx      = 0,
-                       const unsigned int quad_idx     = 0,
-                       bool               do_recompute = false)
+    get_cell_diameters(const unsigned int dof_idx = 0)
     {
-      if (do_recompute)
-        {
-          cell_diameters.resize(this->matrix_free.n_cell_batches());
-
-          FullMatrix<double> mat(dim, dim);
-
-          FECellIntegrator<dim, 1, double> cell_diameter(matrix_free, dof_idx, quad_idx);
-          for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
-            {
-              VectorizedArray<double> diameter = VectorizedArray<double>();
-              for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
-                diameter[v] = this->matrix_free.get_cell_iterator(cell, v, dof_idx)->diameter();
-              cell_diameters[cell] = diameter;
-            }
-        }
-      return cell_diameters;
+      return this->cell_diameters[dof_idx];
     }
 
     MPI_Comm
@@ -379,14 +389,15 @@ namespace MeltPoolDG
   private:
     bool do_matrix_free;
 
-    std::unique_ptr<Mapping<dim, spacedim>>                   mapping;
+    std::shared_ptr<Mapping<dim, spacedim>> mapping;
+    // std::unique_ptr<Mapping<dim, spacedim>>                   mapping;
     std::vector<const DoFHandler<dim, spacedim> *>            dof_handler;
     std::vector<const AffineConstraints<number> *>            constraint;
     std::vector<Quadrature<dim>>                              quad;
     std::vector<Quadrature<dim - 1>>                          face_quad;
     std::vector<double>                                       min_cell_size;
     std::vector<double>                                       diameter;
-    AlignedVector<VectorizedArray<double>>                    cell_diameters;
+    std::vector<AlignedVector<VectorizedArray<double>>>       cell_diameters;
     std::vector<IndexSet>                                     locally_owned_dofs;
     std::vector<IndexSet>                                     locally_relevant_dofs;
     std::vector<std::shared_ptr<Utilities::MPI::Partitioner>> partitioner;
