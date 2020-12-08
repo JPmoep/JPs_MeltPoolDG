@@ -156,6 +156,13 @@ namespace MeltPoolDG
         hanging_node_constraints.clear();
         hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs(dof_idx));
         DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
+        for (const auto &bc : base_in->get_dirichlet_bc(
+               "advection_diffusion")) // @todo: add name of bc at a more central place
+          {
+            dealii::DoFTools::make_zero_boundary_constraints(dof_handler,
+                                                             bc.first,
+                                                             hanging_node_constraints);
+          }
         hanging_node_constraints.close();
 
         hanging_node_constraints_velocity.clear();
@@ -167,7 +174,8 @@ namespace MeltPoolDG
 
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
-        constraints.merge(hanging_node_constraints);
+        constraints.merge(hanging_node_constraints,
+                          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
         for (const auto &bc : base_in->get_dirichlet_bc(
                "advection_diffusion")) // @todo: add name of bc at a more central place
           {
