@@ -66,11 +66,11 @@ namespace MeltPoolDG
             compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
             advec_diff_operation->solve(dt, advection_velocity);
             scratch_data->get_pcout()
-              << " |phi|= " << std::setw(10) << std::left
+              << " |phi|= " << std::setw(15) << std::setprecision(10) << std::left
               << advec_diff_operation->get_advected_field().l2_norm()
-              << " |phi_n-1|= " << std::setw(10) << std::left
+              << " |phi_n-1|= " << std::setw(15) << std::setprecision(10) << std::left
               << advec_diff_operation->get_advected_field_old().l2_norm()
-              << " |phi_n-2|= " << std::setw(10) << std::left
+              << " |phi_n-2|= " << std::setw(15) << std::setprecision(10) << std::left
               << advec_diff_operation->get_advected_field_old_old().l2_norm() << std::endl;
             /*
              *  do paraview output if requested
@@ -111,6 +111,18 @@ namespace MeltPoolDG
 #endif
           scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
         /*
+         *  create quadrature rule
+         */
+        unsigned int quad_idx = 0;
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          quad_idx = scratch_data->attach_quadrature(
+            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
+        else
+#endif
+          quad_idx =
+            scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+        /*
          *  setup DoFHandler
          */
         dof_handler.reinit(*base_in->triangulation);
@@ -120,14 +132,14 @@ namespace MeltPoolDG
           {
             dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
             dof_handler_velocity.distribute_dofs(
-              FESystem(Simplex::FE_P<dim>(base_in->parameters.base.degree + 1), dim));
+              FESystem(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
           }
         else
 #endif
           {
             dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
             dof_handler_velocity.distribute_dofs(
-              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree + 1), dim));
+              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
           }
         dof_idx       = scratch_data->attach_dof_handler(dof_handler);
         dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
@@ -167,18 +179,6 @@ namespace MeltPoolDG
         scratch_data->attach_constraint_matrix(constraints);
         scratch_data->attach_constraint_matrix(hanging_node_constraints);
         scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
-        /*
-         *  create quadrature rule
-         */
-        unsigned int quad_idx = 0;
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          quad_idx = scratch_data->attach_quadrature(
-            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
-        else
-#endif
-          quad_idx =
-            scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
         /*
          *  create the matrix-free object
          */
@@ -270,6 +270,7 @@ namespace MeltPoolDG
         if (parameters.paraview.do_output)
           {
             advection_velocity.update_ghost_values();
+            advec_diff_operation->get_advected_field().update_ghost_values();
             /*
              *  output advected field
              */
@@ -297,6 +298,7 @@ namespace MeltPoolDG
                                                 parameters.paraview.n_groups);
 
             advection_velocity.zero_out_ghosts();
+            advec_diff_operation->get_advected_field().zero_out_ghosts();
             /*
              * write data of boundary -- @todo: move to own utility function
              */

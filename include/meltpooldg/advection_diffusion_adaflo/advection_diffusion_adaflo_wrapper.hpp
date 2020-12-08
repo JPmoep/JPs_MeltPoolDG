@@ -55,6 +55,8 @@ namespace MeltPoolDG
          *  set initial solution of advected field
          */
         advected_field.copy_locally_owned_data_from(initial_solution_advected_field);
+        advected_field_old     = advected_field;
+        advected_field_old_old = advected_field;
         /**
          * initialize the preconditioner
          */
@@ -158,6 +160,7 @@ namespace MeltPoolDG
         adaflo_params.time.time_step_size_max   = adaflo_params_in.time_step_size_max;
         adaflo_params.time.time_step_size_min   = adaflo_params_in.time_step_size_min;
       }
+
       void
       set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
       {
