@@ -9,6 +9,7 @@
 
 #  include <deal.II/lac/generic_linear_algebra.h>
 
+#  include <meltpooldg/advection_diffusion/advection_diffusion_operation_base.hpp>
 #  include <meltpooldg/interface/scratch_data.hpp>
 #  include <meltpooldg/interface/simulationbase.hpp>
 #  include <meltpooldg/utilities/vector_tools.hpp>

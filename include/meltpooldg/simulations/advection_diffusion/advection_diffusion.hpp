@@ -35,7 +35,6 @@ namespace MeltPoolDG
       public:
         InitializePhi()
           : Function<dim>()
-          , epsInterface(0.0313)
         {}
         virtual double
         value(const Point<dim> &p, const unsigned int component = 0) const
@@ -55,47 +54,7 @@ namespace MeltPoolDG
           // this->epsInterface
           //);
         }
-
-        void
-        setEpsInterface(double eps)
-        {
-          this->epsInterface = eps;
-        }
-
-        double
-        getEpsInterface()
-        {
-          return this->epsInterface;
-        }
-
-      private:
-        double epsInterface;
       };
-
-      template <int dim>
-      class ExactSolution : public Function<dim>
-      {
-      public:
-        ExactSolution(const double eps)
-          : Function<dim>()
-          , eps_interface(eps)
-        {}
-
-        double
-        value(const Point<dim> &p, const unsigned int component = 0) const
-        {
-          (void)component;
-          Point<dim>   center = dim == 1 ? Point<dim>(0.0) : Point<dim>(0.0, 0.5);
-          const double radius = 0.25;
-          return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function(
-            UtilityFunctions::DistanceFunctions::spherical_manifold(p, center, radius),
-            eps_interface);
-        }
-
-      private:
-        double eps_interface;
-      };
-
 
       template <int dim>
       class AdvectionField : public TensorFunction<1, dim>
@@ -160,7 +119,7 @@ namespace MeltPoolDG
         }
 
         void
-        create_spatial_discretization() final
+        create_spatial_discretization()
         {
           if (dim == 1 || this->parameters.base.do_simplex)
             {
@@ -250,8 +209,6 @@ namespace MeltPoolDG
                                          "advection_diffusion");
           this->attach_advection_field(std::make_shared<AdvectionField<dim>>(),
                                        "advection_diffusion");
-          this->attach_exact_solution(std::make_shared<ExactSolution<dim>>(0.01),
-                                      "advection_diffusion");
         }
 
       private:
