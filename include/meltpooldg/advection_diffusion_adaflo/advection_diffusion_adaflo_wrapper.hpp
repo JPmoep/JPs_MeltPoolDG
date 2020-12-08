@@ -53,7 +53,9 @@ namespace MeltPoolDG
         /**
          *  initialize velocity vector for adaflo
          */
-        scratch_data.initialize_dof_vector(velocity_vec_temp, velocity_dof_idx);
+        scratch_data.initialize_dof_vector(velocity_vec, velocity_dof_idx);
+        scratch_data.initialize_dof_vector(velocity_vec_old, velocity_dof_idx);
+        scratch_data.initialize_dof_vector(velocity_vec_old_old, velocity_dof_idx);
 
         /**
          *  set initial solution of advected field
@@ -120,9 +122,9 @@ namespace MeltPoolDG
           advected_field_old_old,
           increment,
           rhs,
-          velocity_vec_temp, //@todo: convert block vector to fe_system vector
-          velocity_vec_temp, // only used if parameters.convection_stabilization = true
-          velocity_vec_temp, // only used if parameters.convection_stabilization = true
+          velocity_vec,         //@todo: convert block vector to fe_system vector
+          velocity_vec_old,     // only used if parameters.convection_stabilization = true
+          velocity_vec_old_old, // only used if parameters.convection_stabilization = true
           scratch_data.get_diameter(advec_diff_dof_idx),
           scratch_data.get_cell_diameters(advec_diff_dof_idx),
           scratch_data.get_constraint(advec_diff_dof_idx),
@@ -138,12 +140,12 @@ namespace MeltPoolDG
        * Solver time step
        */
       void
-      solve(const double dt, const BlockVectorType &velocity_vec)
+      solve(const double dt, const BlockVectorType &current_velocity)
       {
         advected_field_old_old = advected_field_old;
         advected_field_old     = advected_field;
 
-        set_velocity(velocity_vec);
+        set_velocity(current_velocity);
 
         //@todo -- extrapolation
         // if (step_size_old > 0)
@@ -176,10 +178,13 @@ namespace MeltPoolDG
       void
       set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
       {
+        velocity_vec_old_old = velocity_vec_old;
+        velocity_vec_old     = velocity_vec;
+
         VectorTools::convert_block_vector_to_fe_sytem_vector(
           vec,
           scratch_data.get_dof_handler(adaflo_params.dof_index_ls),
-          velocity_vec_temp,
+          velocity_vec,
           scratch_data.get_dof_handler(adaflo_params.dof_index_vel));
       }
 
@@ -205,7 +210,9 @@ namespace MeltPoolDG
       VectorType increment;
       VectorType rhs;
 
-      VectorType velocity_vec_temp;
+      VectorType velocity_vec;
+      VectorType velocity_vec_old;
+      VectorType velocity_vec_old_old;
       /**
        * Boundary conditions for the advection diffusion operation
        * @todo
