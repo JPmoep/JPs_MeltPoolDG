@@ -1,6 +1,6 @@
 {
   "base": {
-    "problem name": "advection_diffusion_adaflo",
+    "problem name": "advection_diffusion",
     "application name": "advection_diffusion",
     "dimension": "2",
     "global refinements": "5",
@@ -8,6 +8,7 @@
     "do print parameters": "false"
   },
   "advection diffusion": {
+    "advec diff implementation": "adaflo",
     "advec diff diffusivity": "0.000000",
     "advec diff theta": "0.5",
     "advec diff start time": "0.0",
@@ -15,7 +16,6 @@
     "advec diff time step size": "0.01",
     "advec diff do matrix free": "true",
     "advec diff do print l2norm": "true"
-  }
 },
   "paraview":
 {
