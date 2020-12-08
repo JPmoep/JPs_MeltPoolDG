@@ -279,13 +279,11 @@ namespace MeltPoolDG
             /*
              *  output advection velocity
              */
-            // if (parameters.paraview.print_advection)
-            //{
-            // for (auto d = 0; d < dim; ++d)
-            // data_out.add_data_vector(dof_handler,
-            // advection_velocity.block(d),
-            //"advection_velocity_" + std::to_string(d));
-            //}
+            for (auto d = 0; d < dim; ++d)
+              data_out.add_data_vector(dof_handler,
+                                       advection_velocity.block(d),
+                                       "advection_velocity_" + std::to_string(d));
+
             /*
              * write data to vtu file
              */

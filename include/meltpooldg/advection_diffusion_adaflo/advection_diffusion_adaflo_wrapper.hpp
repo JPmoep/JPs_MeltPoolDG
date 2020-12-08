@@ -68,38 +68,10 @@ namespace MeltPoolDG
          * set parameters of adaflo
          * @todo
          */
-        adaflo_params.dof_index_ls  = advec_diff_dof_idx;
-        adaflo_params.dof_index_vel = velocity_dof_idx; // @todo
-        adaflo_params.quad_index    = advec_diff_quad_idx;
-
-        adaflo_params.concentration_subdivisions =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().concentration_subdivisions;
-
-        adaflo_params.convection_stabilization = false;
-        adaflo_params.do_iteration             = false;
-        adaflo_params.tol_nl_iteration =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().tol_nl_iteration;
-
-        adaflo_params.time.time_step_scheme =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_scheme;
-        adaflo_params.time.start_time =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().start_time;
-        adaflo_params.time.end_time =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().end_time;
-        adaflo_params.time.time_step_size_start =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_size_start;
-        adaflo_params.time.time_stepping_cfl =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_stepping_cfl;
-        adaflo_params.time.time_stepping_coef2 =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_stepping_coef2;
-        adaflo_params.time.time_step_tolerance =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_tolerance;
-        adaflo_params.time.time_step_size_max =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_size_max;
-        adaflo_params.time.time_step_size_min =
-          base_in->parameters.advec_diff_adaflo_params.get_parameters().time_step_size_min;
-
-
+        set_adaflo_parameters(base_in->parameters.adaflo_params.get_parameters(),
+                              advec_diff_dof_idx,
+                              advec_diff_quad_idx,
+                              velocity_dof_idx);
         /**
          *  set velocity
          */
@@ -175,6 +147,32 @@ namespace MeltPoolDG
       }
 
     private:
+      void
+      set_adaflo_parameters(const FlowParameters &adaflo_params_in,
+                            const int             advec_diff_dof_idx,
+                            const int             advec_diff_quad_idx,
+                            const int             velocity_dof_idx)
+      {
+        adaflo_params.dof_index_ls  = advec_diff_dof_idx;
+        adaflo_params.dof_index_vel = velocity_dof_idx; // @todo
+        adaflo_params.quad_index    = advec_diff_quad_idx;
+
+        adaflo_params.concentration_subdivisions = adaflo_params_in.concentration_subdivisions;
+
+        adaflo_params.convection_stabilization = false;
+        adaflo_params.do_iteration             = false;
+        adaflo_params.tol_nl_iteration         = adaflo_params_in.tol_nl_iteration;
+
+        adaflo_params.time.time_step_scheme     = adaflo_params_in.time_step_scheme;
+        adaflo_params.time.start_time           = adaflo_params_in.start_time;
+        adaflo_params.time.end_time             = adaflo_params_in.end_time;
+        adaflo_params.time.time_step_size_start = adaflo_params_in.time_step_size_start;
+        adaflo_params.time.time_stepping_cfl    = adaflo_params_in.time_stepping_cfl;
+        adaflo_params.time.time_stepping_coef2  = adaflo_params_in.time_stepping_coef2;
+        adaflo_params.time.time_step_tolerance  = adaflo_params_in.time_step_tolerance;
+        adaflo_params.time.time_step_size_max   = adaflo_params_in.time_step_size_max;
+        adaflo_params.time.time_step_size_min   = adaflo_params_in.time_step_size_min;
+      }
       void
       set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
       {
