@@ -269,6 +269,7 @@ namespace MeltPoolDG
       {
         if (parameters.paraview.do_output)
           {
+            advection_velocity.update_ghost_values();
             /*
              *  output advected field
              */
@@ -295,6 +296,7 @@ namespace MeltPoolDG
                                                 parameters.paraview.n_digits_timestep,
                                                 parameters.paraview.n_groups);
 
+            advection_velocity.zero_out_ghosts();
             /*
              * write data of boundary -- @todo: move to own utility function
              */

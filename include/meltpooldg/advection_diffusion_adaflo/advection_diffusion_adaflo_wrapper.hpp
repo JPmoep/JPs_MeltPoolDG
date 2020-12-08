@@ -9,8 +9,7 @@
 
 #  include <deal.II/lac/generic_linear_algebra.h>
 
-#  include <meltpooldg/flow/adaflo_wrapper_parameters.hpp>
-#  include <meltpooldg/flow/flow_base.hpp>
+#  include <meltpooldg/advection_diffusion_adaflo/advection_diffusion_adaflo_wrapper_parameters.hpp>
 #  include <meltpooldg/interface/scratch_data.hpp>
 #  include <meltpooldg/utilities/vector_tools.hpp>
 
@@ -42,36 +41,24 @@ namespace MeltPoolDG
         : scratch_data(scratch_data)
       {
         /**
-         * initialize dof vectors
+         * set parameters of adaflo
          */
-        scratch_data.initialize_dof_vector(rhs, advec_diff_dof_idx);
-        scratch_data.initialize_dof_vector(increment, advec_diff_dof_idx);
-        scratch_data.initialize_dof_vector(advected_field, advec_diff_dof_idx);
-        scratch_data.initialize_dof_vector(advected_field_old, advec_diff_dof_idx);
-        scratch_data.initialize_dof_vector(advected_field_old_old, advec_diff_dof_idx);
-
+        set_adaflo_parameters(base_in->parameters.advec_diff_adaflo_params.get_parameters(),
+                              advec_diff_dof_idx,
+                              advec_diff_quad_idx,
+                              velocity_dof_idx);
         /**
-         *  initialize velocity vector for adaflo
+         *  initialize the dof vectors
          */
-        scratch_data.initialize_dof_vector(velocity_vec, velocity_dof_idx);
-        scratch_data.initialize_dof_vector(velocity_vec_old, velocity_dof_idx);
-        scratch_data.initialize_dof_vector(velocity_vec_old_old, velocity_dof_idx);
-
+        initialize_vectors();
         /**
          *  set initial solution of advected field
          */
         advected_field.copy_locally_owned_data_from(initial_solution_advected_field);
-
-        initialize_preconditioner();
-
-        /*
-         * set parameters of adaflo
-         * @todo
+        /**
+         * initialize the preconditioner
          */
-        set_adaflo_parameters(base_in->parameters.adaflo_params.get_parameters(),
-                              advec_diff_dof_idx,
-                              advec_diff_quad_idx,
-                              velocity_dof_idx);
+        initialize_preconditioner();
         /**
          *  set velocity
          */
@@ -80,7 +67,6 @@ namespace MeltPoolDG
         /*
          * Boundary conditions for the advected field
          */
-        // @todo
         for (const auto &symmetry_id : base_in->get_symmetry_id("advection_diffusion"))
           bcs.symmetry.insert(symmetry_id);
         for (const auto &dirichlet_bc : base_in->get_dirichlet_bc("advection_diffusion"))
@@ -94,9 +80,9 @@ namespace MeltPoolDG
           advected_field_old_old,
           increment,
           rhs,
-          velocity_vec,         //@todo: convert block vector to fe_system vector
-          velocity_vec_old,     // only used if parameters.convection_stabilization = true
-          velocity_vec_old_old, // only used if parameters.convection_stabilization = true
+          velocity_vec,
+          velocity_vec_old,
+          velocity_vec_old_old,
           scratch_data.get_diameter(advec_diff_dof_idx),
           scratch_data.get_cell_diameters(advec_diff_dof_idx),
           scratch_data.get_constraint(advec_diff_dof_idx),
@@ -158,10 +144,9 @@ namespace MeltPoolDG
         adaflo_params.quad_index    = advec_diff_quad_idx;
 
         adaflo_params.concentration_subdivisions = adaflo_params_in.concentration_subdivisions;
-
-        adaflo_params.convection_stabilization = false;
-        adaflo_params.do_iteration             = false;
-        adaflo_params.tol_nl_iteration         = adaflo_params_in.tol_nl_iteration;
+        adaflo_params.convection_stabilization   = false;
+        adaflo_params.do_iteration               = false;
+        adaflo_params.tol_nl_iteration           = adaflo_params_in.tol_nl_iteration;
 
         adaflo_params.time.time_step_scheme     = adaflo_params_in.time_step_scheme;
         adaflo_params.time.start_time           = adaflo_params_in.start_time;
@@ -187,6 +172,28 @@ namespace MeltPoolDG
       }
 
       void
+      initialize_vectors()
+      {
+        /**
+         * initialize advected field dof vectors
+         */
+        scratch_data.initialize_dof_vector(advected_field, adaflo_params.dof_index_ls);
+        scratch_data.initialize_dof_vector(advected_field_old, adaflo_params.dof_index_ls);
+        scratch_data.initialize_dof_vector(advected_field_old_old, adaflo_params.dof_index_ls);
+        /**
+         * initialize vectors for the solution of the linear system
+         */
+        scratch_data.initialize_dof_vector(rhs, adaflo_params.dof_index_ls);
+        scratch_data.initialize_dof_vector(increment, adaflo_params.dof_index_ls);
+        /**
+         *  initialize the velocity vector for adaflo
+         */
+        scratch_data.initialize_dof_vector(velocity_vec, adaflo_params.dof_index_vel);
+        scratch_data.initialize_dof_vector(velocity_vec_old, adaflo_params.dof_index_vel);
+        scratch_data.initialize_dof_vector(velocity_vec_old_old, adaflo_params.dof_index_vel);
+      }
+
+      void
       initialize_preconditioner()
       {
         // create diagonal preconditioner vector by assembly of mass matrix diagonal
@@ -200,27 +207,32 @@ namespace MeltPoolDG
       /**
        *  advected field
        */
-
       VectorType advected_field;
       VectorType advected_field_old;
       VectorType advected_field_old_old;
-
+      /**
+       *  vectors for the solution of the linear system
+       */
       VectorType increment;
       VectorType rhs;
 
+      /**
+       *  velocity
+       */
       VectorType velocity_vec;
       VectorType velocity_vec_old;
       VectorType velocity_vec_old_old;
       /**
        * Boundary conditions for the advection diffusion operation
-       * @todo
        */
       LevelSetOKZSolverAdvanceConcentrationBoundaryDescriptor<dim> bcs;
-
+      /**
+       * Adaflo parameters for the level set problem
+       */
       LevelSetOKZSolverAdvanceConcentrationParameter adaflo_params;
 
       /**
-       * Reference to the actual Navier-Stokes solver from adaflo
+       * Reference to the actual advection diffusion solver from adaflo
        */
       std::shared_ptr<LevelSetOKZSolverAdvanceConcentration<dim>> advec_diff_operation;
 
@@ -229,7 +241,7 @@ namespace MeltPoolDG
        */
       double global_max_velocity;
       /**
-       *  Diagonal preconditioner
+       *  Diagonal preconditioner @todo
        */
       DiagonalPreconditioner<double> preconditioner;
     };
