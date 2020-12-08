@@ -15,11 +15,7 @@
     "advec diff end time": "1.5707963267948966",
     "advec diff time step size": "0.01",
     "advec diff do matrix free": "true",
-    "advec diff do print l2norm": "true",
-    "adaflo" : {
-      "Time stepping" : {
-        "scheme"           : "implicit_euler"
-      }
+    "advec diff do print l2norm": "true"
     }
   },
   "paraview" : {
