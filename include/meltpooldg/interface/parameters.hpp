@@ -27,7 +27,7 @@ namespace MeltPoolDG
   struct BaseData
   {
     std::string  application_name    = "none";
-    std::string  problem_name        = "none";
+    std::string  problem_name        = "advection_diffusion";
     unsigned int dimension           = 2;
     unsigned int global_refinements  = 1;
     unsigned int degree              = 1;
@@ -302,9 +302,12 @@ namespace MeltPoolDG
           "application name",
           base.application_name,
           "Sets the base name for the application that will be fed to the problem type.");
-        prm.add_parameter("problem name",
-                          base.problem_name,
-                          "Sets the base name for the problem that should be solved.");
+        prm.add_parameter(
+          "problem name",
+          base.problem_name,
+          "Sets the base name for the problem that should be solved.",
+          Patterns::Selection(
+            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool"));
         prm.add_parameter("dimension", base.dimension, "Defines the dimension of the problem");
         prm.add_parameter("global refinements",
                           base.global_refinements,
@@ -377,7 +380,8 @@ namespace MeltPoolDG
         prm.add_parameter(
           "advec diff implementation",
           advec_diff.implementation,
-          "Choose the corresponding implementation of the advection diffusion operation.");
+          "Choose the corresponding implementation of the advection diffusion operation.",
+          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
 
@@ -396,8 +400,8 @@ namespace MeltPoolDG
                           "Defines if reinitialization of level set function is activated");
         prm.add_parameter("ls time integration scheme",
                           ls.time_integration_scheme,
-                          "Determines the time integration scheme: explicit_euler; "
-                          "implicit_euler; crank_nicolson.");
+                          "Determines the time integration scheme.",
+                          Patterns::Selection("explicit_euler|implicit_euler|crank_nicolson"));
         prm.add_parameter("ls start time",
                           ls.start_time,
                           "Defines the start time for the solution of the levelset problem");
@@ -469,16 +473,10 @@ namespace MeltPoolDG
           reinit.solver.solver_type,
           "Set this parameter for choosing a solver type. At the moment GMRES or CG solvers "
           " are supported");
-        prm.add_parameter(
-          "reinit preconditioner type",
-          reinit.solver.preconditioner_type,
-          "Set this parameter for choosing a preconditioner type. At the moment Identity, AMG or ILU "
-          "preconditioners are supported");
-        prm.add_parameter(
-          "reinit preconditioner type",
-          reinit.solver.preconditioner_type,
-          "Set this parameter for choosing a preconditioner type. At the moment Identity, AMG or ILU "
-          "preconditioners are supported");
+        prm.add_parameter("reinit preconditioner type",
+                          reinit.solver.preconditioner_type,
+                          "Set this parameter for choosing a preconditioner type",
+                          Patterns::Selection("AMG|Identity|ILU"));
         prm.add_parameter(
           "reinit max iterations",
           reinit.solver.max_iterations,
@@ -607,10 +605,10 @@ namespace MeltPoolDG
         prm.add_parameter("mp domain y max",
                           mp.domain_y_max,
                           "maximum y coordinate of simulation domain");
-        prm.add_parameter(
-          "mp melt pool shape",
-          mp.melt_pool_shape,
-          "Shape of the user defined melt pool: parabola, ellipse or temperature_dependent supported");
+        prm.add_parameter("mp melt pool shape",
+                          mp.melt_pool_shape,
+                          "Shape of the user defined melt pool",
+                          Patterns::Selection("parabola|ellipse|temperature_dependent"));
         prm.add_parameter("mp scan speed",
                           mp.scan_speed,
                           "Scan speed of the laser (in case of an analytical temperature field).");
