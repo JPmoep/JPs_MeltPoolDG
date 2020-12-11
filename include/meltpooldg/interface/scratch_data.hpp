@@ -142,8 +142,9 @@ namespace MeltPoolDG
            *  create diameter of the object
            */
           if (dof_idx == 0)
-            this->diameter = GridTools::diameter(dof->get_triangulation());
-          // @todo: does  not work atm
+            // @todo: this should actually mean GridTools::diameter; however dealii does not
+            // support diameter for parallel triangulations atm
+            this->diameter = GridTools::minimal_cell_diameter(dof->get_triangulation());
           /*
            *  create partitioning
            */

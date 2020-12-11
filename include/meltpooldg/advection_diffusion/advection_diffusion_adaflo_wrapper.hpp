@@ -165,11 +165,17 @@ namespace MeltPoolDG
         adaflo_params.time.time_step_size_start = parameters.advec_diff.time_step_size;
         adaflo_params.time.time_step_size_min   = parameters.advec_diff.time_step_size;
         adaflo_params.time.time_step_size_max   = parameters.advec_diff.time_step_size;
-        adaflo_params.time.time_step_scheme =
-          (parameters.advec_diff.theta == 1.0) ? TimeSteppingParameters::Scheme::implicit_euler :
-          (parameters.advec_diff.theta == 0.0) ? TimeSteppingParameters::Scheme::explicit_euler :
-          (parameters.advec_diff.theta == 0.5) ? TimeSteppingParameters::Scheme::crank_nicolson :
-                                                 TimeSteppingParameters::Scheme::bdf_2;
+        if (parameters.advec_diff.time_integration_scheme == "implicit_euler")
+          adaflo_params.time.time_step_scheme = TimeSteppingParameters::Scheme::implicit_euler;
+        else if (parameters.advec_diff.time_integration_scheme == "explicit_euler")
+          adaflo_params.time.time_step_scheme = TimeSteppingParameters::Scheme::explicit_euler;
+        else if (parameters.advec_diff.time_integration_scheme == "crank_nicolson")
+          adaflo_params.time.time_step_scheme = TimeSteppingParameters::Scheme::crank_nicolson;
+        else if (parameters.advec_diff.time_integration_scheme == "bdf_2")
+          adaflo_params.time.time_step_scheme = TimeSteppingParameters::Scheme::bdf_2;
+        else
+          AssertThrow(false, ExcMessage("Requested time stepping scheme not supported."));
+
         adaflo_params.dof_index_ls  = advec_diff_dof_idx;
         adaflo_params.dof_index_vel = velocity_dof_idx;
         adaflo_params.quad_index    = advec_diff_quad_idx;

@@ -7,6 +7,7 @@
 // c++
 #include <fstream>
 #include <iostream>
+#include <string>
 
 namespace MeltPoolDG
 {
@@ -49,16 +50,16 @@ namespace MeltPoolDG
   template <typename number = double>
   struct LevelSetData
   {
-    bool   do_reinitialization     = false;
-    number artificial_diffusivity  = 0.0;
-    number theta                   = 0.5;
-    number start_time              = 0.0;
-    number end_time                = 1.0;
-    number time_step_size          = 0.01;
-    bool   enable_CFL_condition    = false;
-    bool   do_print_l2norm         = false;
-    bool   do_matrix_free          = false;
-    bool   do_curvature_correction = false;
+    bool        do_reinitialization     = false;
+    number      artificial_diffusivity  = 0.0;
+    std::string time_integration_scheme = "crank_nicolson";
+    number      start_time              = 0.0;
+    number      end_time                = 1.0;
+    number      time_step_size          = 0.01;
+    bool        enable_CFL_condition    = false;
+    bool        do_print_l2norm         = false;
+    bool        do_matrix_free          = false;
+    bool        do_curvature_correction = false;
   };
 
   template <typename number = double>
@@ -76,15 +77,15 @@ namespace MeltPoolDG
   template <typename number = double>
   struct AdvectionDiffusionData
   {
-    number       diffusivity     = 0.0;
-    number       theta           = 0.5;
-    number       start_time      = 0.0;
-    number       end_time        = 1.0;
-    number       time_step_size  = 0.01;
-    unsigned int max_n_steps     = 1000000;
-    bool         do_matrix_free  = false;
-    bool         do_print_l2norm = true;
-    std::string  implementation  = "meltpooldg";
+    number       diffusivity             = 0.0;
+    std::string  time_integration_scheme = "crank_nicolson";
+    number       start_time              = 0.0;
+    number       end_time                = 1.0;
+    number       time_step_size          = 0.01;
+    unsigned int max_n_steps             = 1000000;
+    bool         do_matrix_free          = false;
+    bool         do_print_l2norm         = true;
+    std::string  implementation          = "meltpooldg";
   };
 
   template <typename number = double>
@@ -347,10 +348,11 @@ namespace MeltPoolDG
         prm.add_parameter("advec diff diffusivity",
                           advec_diff.diffusivity,
                           "Defines the diffusivity for the advection diffusion equation ");
-        prm.add_parameter("advec diff theta",
-                          advec_diff.theta,
-                          "Sets the theta value for the time stepping scheme: 0=explicit euler; "
-                          "1=implicit euler; 0.5=Crank-Nicholson;");
+        prm.add_parameter("advec diff time integration scheme",
+                          advec_diff.time_integration_scheme,
+                          "Determines the time integration scheme.",
+                          Patterns::Selection(
+                            "explicit_euler|implicit_euler|crank_nicolson|bdf_2"));
         prm.add_parameter("advec diff start time",
                           advec_diff.start_time,
                           "Defines the start time for the solution of the levelset problem");
@@ -392,11 +394,10 @@ namespace MeltPoolDG
         prm.add_parameter("ls do reinitialization",
                           ls.do_reinitialization,
                           "Defines if reinitialization of level set function is activated");
-        prm.add_parameter("ls theta",
-                          ls.theta,
-                          "Sets the theta value for the time stepping scheme (0=explicit euler; "
-                          "1=implicit euler; 0.5=Crank-Nicholson");
-
+        prm.add_parameter("ls time integration scheme",
+                          ls.time_integration_scheme,
+                          "Determines the time integration scheme: explicit_euler; "
+                          "implicit_euler; crank_nicolson.");
         prm.add_parameter("ls start time",
                           ls.start_time,
                           "Defines the start time for the solution of the levelset problem");
@@ -411,7 +412,7 @@ namespace MeltPoolDG
         prm.add_parameter("ls enable CFL condition",
                           ls.enable_CFL_condition,
                           "Enables to dynamically adapt the time step to meet the CFL condition"
-                          " in case of explicit time integration (theta=0)");
+                          " in case of explicit time integration.");
         prm.add_parameter("ls do print l2norm",
                           ls.do_print_l2norm,
                           "Defines if the l2norm of the levelset result should be printed)");
@@ -754,6 +755,4 @@ namespace MeltPoolDG
     OutputData<number>             output;
     Flow::AdafloWrapperParameters  adaflo_params;
   };
-
-
 } // namespace MeltPoolDG

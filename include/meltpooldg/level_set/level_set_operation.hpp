@@ -322,9 +322,10 @@ namespace MeltPoolDG
       void
       set_level_set_parameters(const Parameters<double> &data_in)
       {
-        level_set_data.do_reinitialization                   = data_in.ls.do_reinitialization;
-        advec_diff_operation.advec_diff_data.diffusivity     = data_in.ls.artificial_diffusivity;
-        advec_diff_operation.advec_diff_data.theta           = data_in.ls.theta;
+        level_set_data.do_reinitialization               = data_in.ls.do_reinitialization;
+        advec_diff_operation.advec_diff_data.diffusivity = data_in.ls.artificial_diffusivity;
+        advec_diff_operation.advec_diff_data.time_integration_scheme =
+          data_in.ls.time_integration_scheme;
         advec_diff_operation.advec_diff_data.do_print_l2norm = data_in.ls.do_print_l2norm;
         advec_diff_operation.advec_diff_data.do_matrix_free  = data_in.ls.do_matrix_free;
         /*
