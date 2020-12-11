@@ -7,6 +7,7 @@
 // c++
 #include <fstream>
 #include <iostream>
+#include <string>
 
 namespace MeltPoolDG
 {
@@ -26,7 +27,7 @@ namespace MeltPoolDG
   struct BaseData
   {
     std::string  application_name    = "none";
-    std::string  problem_name        = "none";
+    std::string  problem_name        = "advection_diffusion";
     unsigned int dimension           = 2;
     unsigned int global_refinements  = 1;
     unsigned int degree              = 1;
@@ -49,16 +50,16 @@ namespace MeltPoolDG
   template <typename number = double>
   struct LevelSetData
   {
-    bool   do_reinitialization     = false;
-    number artificial_diffusivity  = 0.0;
-    number theta                   = 0.5;
-    number start_time              = 0.0;
-    number end_time                = 1.0;
-    number time_step_size          = 0.01;
-    bool   enable_CFL_condition    = false;
-    bool   do_print_l2norm         = false;
-    bool   do_matrix_free          = false;
-    bool   do_curvature_correction = false;
+    bool        do_reinitialization     = false;
+    number      artificial_diffusivity  = 0.0;
+    std::string time_integration_scheme = "crank_nicolson";
+    number      start_time              = 0.0;
+    number      end_time                = 1.0;
+    number      time_step_size          = 0.01;
+    bool        enable_CFL_condition    = false;
+    bool        do_print_l2norm         = false;
+    bool        do_matrix_free          = false;
+    bool        do_curvature_correction = false;
   };
 
   template <typename number = double>
@@ -76,14 +77,15 @@ namespace MeltPoolDG
   template <typename number = double>
   struct AdvectionDiffusionData
   {
-    number       diffusivity     = 0.0;
-    number       theta           = 0.5;
-    number       start_time      = 0.0;
-    number       end_time        = 1.0;
-    number       time_step_size  = 0.01;
-    unsigned int max_n_steps     = 1000000;
-    bool         do_matrix_free  = false;
-    bool         do_print_l2norm = true;
+    number       diffusivity             = 0.0;
+    std::string  time_integration_scheme = "crank_nicolson";
+    number       start_time              = 0.0;
+    number       end_time                = 1.0;
+    number       time_step_size          = 0.01;
+    unsigned int max_n_steps             = 1000000;
+    bool         do_matrix_free          = false;
+    bool         do_print_l2norm         = true;
+    std::string  implementation          = "meltpooldg";
   };
 
   template <typename number = double>
@@ -229,10 +231,10 @@ namespace MeltPoolDG
          *  parameters for adaflo
          */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
-      adaflo_params.parse_parameters(parameter_filename);
 
       if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool"))
         {
+          adaflo_params.parse_parameters(parameter_filename);
           // WARNING: by setting the differences to a non-zero value we force
           //   adaflo to assume that we are running a simulation with variable
           //   coefficients, i.e., it allocates memory for the data structures
@@ -260,6 +262,7 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_min   = flow.time_step_size;
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
         }
+
 #endif
     }
 
@@ -299,9 +302,12 @@ namespace MeltPoolDG
           "application name",
           base.application_name,
           "Sets the base name for the application that will be fed to the problem type.");
-        prm.add_parameter("problem name",
-                          base.problem_name,
-                          "Sets the base name for the problem that should be solved.");
+        prm.add_parameter(
+          "problem name",
+          base.problem_name,
+          "Sets the base name for the problem that should be solved.",
+          Patterns::Selection(
+            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool"));
         prm.add_parameter("dimension", base.dimension, "Defines the dimension of the problem");
         prm.add_parameter("global refinements",
                           base.global_refinements,
@@ -345,10 +351,11 @@ namespace MeltPoolDG
         prm.add_parameter("advec diff diffusivity",
                           advec_diff.diffusivity,
                           "Defines the diffusivity for the advection diffusion equation ");
-        prm.add_parameter("advec diff theta",
-                          advec_diff.theta,
-                          "Sets the theta value for the time stepping scheme: 0=explicit euler; "
-                          "1=implicit euler; 0.5=Crank-Nicholson;");
+        prm.add_parameter("advec diff time integration scheme",
+                          advec_diff.time_integration_scheme,
+                          "Determines the time integration scheme.",
+                          Patterns::Selection(
+                            "explicit_euler|implicit_euler|crank_nicolson|bdf_2"));
         prm.add_parameter("advec diff start time",
                           advec_diff.start_time,
                           "Defines the start time for the solution of the levelset problem");
@@ -370,6 +377,11 @@ namespace MeltPoolDG
         prm.add_parameter("advec diff do print l2norm",
                           advec_diff.do_print_l2norm,
                           "Defines if the l2norm of the advected field should be printed).");
+        prm.add_parameter(
+          "advec diff implementation",
+          advec_diff.implementation,
+          "Choose the corresponding implementation of the advection diffusion operation.",
+          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
 
@@ -386,11 +398,10 @@ namespace MeltPoolDG
         prm.add_parameter("ls do reinitialization",
                           ls.do_reinitialization,
                           "Defines if reinitialization of level set function is activated");
-        prm.add_parameter("ls theta",
-                          ls.theta,
-                          "Sets the theta value for the time stepping scheme (0=explicit euler; "
-                          "1=implicit euler; 0.5=Crank-Nicholson");
-
+        prm.add_parameter("ls time integration scheme",
+                          ls.time_integration_scheme,
+                          "Determines the time integration scheme.",
+                          Patterns::Selection("explicit_euler|implicit_euler|crank_nicolson"));
         prm.add_parameter("ls start time",
                           ls.start_time,
                           "Defines the start time for the solution of the levelset problem");
@@ -405,7 +416,7 @@ namespace MeltPoolDG
         prm.add_parameter("ls enable CFL condition",
                           ls.enable_CFL_condition,
                           "Enables to dynamically adapt the time step to meet the CFL condition"
-                          " in case of explicit time integration (theta=0)");
+                          " in case of explicit time integration.");
         prm.add_parameter("ls do print l2norm",
                           ls.do_print_l2norm,
                           "Defines if the l2norm of the levelset result should be printed)");
@@ -462,16 +473,10 @@ namespace MeltPoolDG
           reinit.solver.solver_type,
           "Set this parameter for choosing a solver type. At the moment GMRES or CG solvers "
           " are supported");
-        prm.add_parameter(
-          "reinit preconditioner type",
-          reinit.solver.preconditioner_type,
-          "Set this parameter for choosing a preconditioner type. At the moment Identity, AMG or ILU "
-          "preconditioners are supported");
-        prm.add_parameter(
-          "reinit preconditioner type",
-          reinit.solver.preconditioner_type,
-          "Set this parameter for choosing a preconditioner type. At the moment Identity, AMG or ILU "
-          "preconditioners are supported");
+        prm.add_parameter("reinit preconditioner type",
+                          reinit.solver.preconditioner_type,
+                          "Set this parameter for choosing a preconditioner type",
+                          Patterns::Selection("AMG|Identity|ILU"));
         prm.add_parameter(
           "reinit max iterations",
           reinit.solver.max_iterations,
@@ -600,10 +605,10 @@ namespace MeltPoolDG
         prm.add_parameter("mp domain y max",
                           mp.domain_y_max,
                           "maximum y coordinate of simulation domain");
-        prm.add_parameter(
-          "mp melt pool shape",
-          mp.melt_pool_shape,
-          "Shape of the user defined melt pool: parabola, ellipse or temperature_dependent supported");
+        prm.add_parameter("mp melt pool shape",
+                          mp.melt_pool_shape,
+                          "Shape of the user defined melt pool",
+                          Patterns::Selection("parabola|ellipse|temperature_dependent"));
         prm.add_parameter("mp scan speed",
                           mp.scan_speed,
                           "Scan speed of the laser (in case of an analytical temperature field).");
@@ -748,6 +753,4 @@ namespace MeltPoolDG
     OutputData<number>             output;
     Flow::AdafloWrapperParameters  adaflo_params;
   };
-
-
 } // namespace MeltPoolDG
