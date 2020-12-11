@@ -68,7 +68,7 @@ else call
 ```bash  
 make release
 ```
-### How to enable adaflo support
+### How to enable (optional) adaflo support
 
 If you would like to use the additional features of adaflo (e.g. used for multi-phase flow problems), you may configure as follows:
 
