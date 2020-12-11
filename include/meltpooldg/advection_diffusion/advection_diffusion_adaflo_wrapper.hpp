@@ -16,6 +16,7 @@
 
 #  include <adaflo/diagonal_preconditioner.h>
 #  include <adaflo/level_set_okz_advance_concentration.h>
+#  include <adaflo/level_set_okz_preconditioner.h>
 
 namespace MeltPoolDG
 {
@@ -61,10 +62,6 @@ namespace MeltPoolDG
         advected_field_old_old = advected_field;
 
         /**
-         * initialize the preconditioner
-         */
-        initialize_preconditioner();
-        /**
          *  set velocity
          */
         set_velocity(velocity_vec_in);
@@ -87,8 +84,8 @@ namespace MeltPoolDG
           velocity_vec,
           velocity_vec_old,
           velocity_vec_old_old,
-          scratch_data.get_diameter(advec_diff_dof_idx),
-          scratch_data.get_cell_diameters(advec_diff_dof_idx),
+          scratch_data.get_diameter(),
+          scratch_data.get_cell_diameters(),
           scratch_data.get_constraint(advec_diff_dof_idx),
           scratch_data.get_pcout(advec_diff_dof_idx),
           bcs,
@@ -96,6 +93,15 @@ namespace MeltPoolDG
           adaflo_params,
           global_max_velocity,
           preconditioner);
+        /**
+         * initialize the preconditioner
+         */
+        initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
+                                                     scratch_data.get_constraint(
+                                                       advec_diff_dof_idx),
+                                                     advec_diff_dof_idx,
+                                                     advec_diff_quad_idx,
+                                                     preconditioner);
       }
 
       /**
@@ -164,12 +170,6 @@ namespace MeltPoolDG
           (parameters.advec_diff.theta == 0.0) ? TimeSteppingParameters::Scheme::explicit_euler :
           (parameters.advec_diff.theta == 0.5) ? TimeSteppingParameters::Scheme::crank_nicolson :
                                                  TimeSteppingParameters::Scheme::bdf_2;
-
-        /**
-         *  set number of concentration subdivisions equal to degree
-         */
-        adaflo_params.concentration_subdivisions = parameters.base.degree;
-
         adaflo_params.dof_index_ls  = advec_diff_dof_idx;
         adaflo_params.dof_index_vel = velocity_dof_idx;
         adaflo_params.quad_index    = advec_diff_quad_idx;
@@ -223,15 +223,6 @@ namespace MeltPoolDG
         scratch_data.initialize_dof_vector(velocity_vec, adaflo_params.dof_index_vel);
         scratch_data.initialize_dof_vector(velocity_vec_old, adaflo_params.dof_index_vel);
         scratch_data.initialize_dof_vector(velocity_vec_old_old, adaflo_params.dof_index_vel);
-      }
-
-      void
-      initialize_preconditioner()
-      {
-        // create diagonal preconditioner vector by assembly of mass matrix diagonal
-        LinearAlgebra::distributed::Vector<double> diagonal(advected_field);
-        diagonal = 1.0;
-        preconditioner.reinit(diagonal);
       }
 
     private:
@@ -343,12 +334,6 @@ namespace MeltPoolDG
       set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
       {
         (void)vec;
-        AssertThrow(false, ExcNotImplemented());
-      }
-
-      void
-      initialize_preconditioner()
-      {
         AssertThrow(false, ExcNotImplemented());
       }
     };

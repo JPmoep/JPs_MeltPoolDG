@@ -125,7 +125,7 @@ namespace MeltPoolDG
        *  recreate DoF-dependent partitioning data
        */
       this->min_cell_size.clear();
-      this->diameter.clear();
+      this->diameter = 0.0;
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
       this->partitioner.clear();
@@ -139,10 +139,10 @@ namespace MeltPoolDG
           this->min_cell_size.push_back(GridTools::minimal_cell_diameter(dof->get_triangulation()) /
                                         std::sqrt(dim));
           /*
-           *  create vector of minimal diameters for all dof handlers
+           *  create diameter of the object
            */
-          this->diameter.push_back(GridTools::minimal_cell_diameter(dof->get_triangulation()));
-          // this->diameter.push_back(GridTools::diameter(dof->get_triangulation()));
+          if (dof_idx == 0)
+            this->diameter = GridTools::diameter(dof->get_triangulation());
           // @todo: does  not work atm
           /*
            *  create partitioning
@@ -250,7 +250,7 @@ namespace MeltPoolDG
       this->dof_handler.clear();
       this->mapping.reset();
       this->min_cell_size.clear();
-      this->diameter.clear();
+      this->diameter = 0.0;
       this->cell_diameters.clear();
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
@@ -344,9 +344,9 @@ namespace MeltPoolDG
     }
 
     const double &
-    get_diameter(const unsigned int dof_idx = 0) const
+    get_diameter() const
     {
-      return this->diameter[dof_idx];
+      return this->diameter;
     }
 
     const AlignedVector<VectorizedArray<double>> &
@@ -389,14 +389,13 @@ namespace MeltPoolDG
   private:
     bool do_matrix_free;
 
-    std::shared_ptr<Mapping<dim, spacedim>> mapping;
-    // std::unique_ptr<Mapping<dim, spacedim>>                   mapping;
+    std::shared_ptr<Mapping<dim, spacedim>>                   mapping;
     std::vector<const DoFHandler<dim, spacedim> *>            dof_handler;
     std::vector<const AffineConstraints<number> *>            constraint;
     std::vector<Quadrature<dim>>                              quad;
     std::vector<Quadrature<dim - 1>>                          face_quad;
     std::vector<double>                                       min_cell_size;
-    std::vector<double>                                       diameter;
+    double                                                    diameter;
     std::vector<AlignedVector<VectorizedArray<double>>>       cell_diameters;
     std::vector<IndexSet>                                     locally_owned_dofs;
     std::vector<IndexSet>                                     locally_relevant_dofs;
