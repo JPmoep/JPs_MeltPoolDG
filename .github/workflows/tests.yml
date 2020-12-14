@@ -36,7 +36,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: setup
       run: |
-         command="git clone https://github.com/MeltPoolDG/adaflo.git    && \
+         command="git clone https://github.com/kronbichler/adaflo.git    && \
           mkdir adaflo-build                                    && \
           cd adaflo-build                                       && \
           cmake ../adaflo                                       && \
