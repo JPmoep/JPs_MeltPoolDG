@@ -123,14 +123,14 @@ namespace MeltPoolDG
           {
             dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
             dof_handler_velocity.distribute_dofs(
-              FESystem<dim,dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
+              FESystem<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
           }
         else
 #endif
           {
             dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
             dof_handler_velocity.distribute_dofs(
-              FESystem<dim,dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
+              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
           }
 
         dof_idx         = scratch_data->attach_dof_handler(dof_handler);
