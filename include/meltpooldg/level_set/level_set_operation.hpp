@@ -181,7 +181,8 @@ namespace MeltPoolDG
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 level_set.reinit(cell);
-                level_set.gather_evaluate(level_set_as_heaviside, false, true);
+                level_set.read_dof_values_plain(level_set_as_heaviside);
+                level_set.evaluate(false, true);
 
                 surface_tension.reinit(cell);
 
@@ -321,9 +322,10 @@ namespace MeltPoolDG
       void
       set_level_set_parameters(const Parameters<double> &data_in)
       {
-        level_set_data.do_reinitialization                   = data_in.ls.do_reinitialization;
-        advec_diff_operation.advec_diff_data.diffusivity     = data_in.ls.artificial_diffusivity;
-        advec_diff_operation.advec_diff_data.theta           = data_in.ls.theta;
+        level_set_data.do_reinitialization               = data_in.ls.do_reinitialization;
+        advec_diff_operation.advec_diff_data.diffusivity = data_in.ls.artificial_diffusivity;
+        advec_diff_operation.advec_diff_data.time_integration_scheme =
+          data_in.ls.time_integration_scheme;
         advec_diff_operation.advec_diff_data.do_print_l2norm = data_in.ls.do_print_l2norm;
         advec_diff_operation.advec_diff_data.do_matrix_free  = data_in.ls.do_matrix_free;
         /*

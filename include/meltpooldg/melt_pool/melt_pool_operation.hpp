@@ -125,7 +125,7 @@ namespace MeltPoolDG
                   {
                     const auto &t = temperature_val.get_value(q_index);
 
-                    VectorizedArray<double> recoil_pressure_coefficient;
+                    VectorizedArray<double> recoil_pressure_coefficient = 0;
 
                     for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
                       recoil_pressure_coefficient[v] = compute_recoil_pressure_coefficient(t[v]);
@@ -283,9 +283,6 @@ namespace MeltPoolDG
                     is_solid_region(support_points[local_dof_indices[i]]);
                 }
             }
-
-        temperature.compress(VectorOperation::insert);
-
         level_set_as_heaviside.zero_out_ghosts();
       }
 
@@ -347,7 +344,7 @@ namespace MeltPoolDG
             //  H. Garmestani and S. Y. Liang
             //
             //  In order to capture anisotropic temperature fields, a modification is introduced.
-            const double indicator = UtilityFunctions::CharacteristicFunctions::heaviside(phi, 0.0);
+            const double indicator = UtilityFunctions::CharacteristicFunctions::heaviside(phi, 0.5);
             const double &P        = mp_data.laser_power;
             const double &v        = mp_data.scan_speed;
             const double &T0       = mp_data.ambient_temperature;
@@ -390,7 +387,7 @@ namespace MeltPoolDG
       {
         if (mp_data.liquid.melt_pool_radius == 0)
           return false;
-        else if (point[dim - 1] > laser_center[dim - 1])
+        else if (point[dim - 1] >= laser_center[dim - 1])
           return false;
         else
           {
@@ -419,7 +416,8 @@ namespace MeltPoolDG
                        false :
                        true;
             else if (mp_data.melt_pool_shape == "temperature_dependent")
-              return (analytical_temperature_field(point, 1.0) >= mp_data.liquid.melting_point) ?
+              return (analytical_temperature_field(point, 1.0 /* is_liquid */) >=
+                      mp_data.liquid.melting_point) ?
                        false :
                        true;
             else

@@ -4,11 +4,14 @@
     "application name": "advection_diffusion",
     "dimension": "2",
     "global refinements": "5",
-    "degree": "1"
+    "degree": "1",
+    "do print parameters": "false",
+    "do simplex" : "true"
   },
   "advection diffusion" : {
+    "advec diff implementation": "adaflo",
     "advec diff diffusivity": "0.000000",
-    "advec diff time integration scheme": "implicit_euler",
+    "advec diff time integration scheme": "crank_nicolson",
     "advec diff start time": "0.0",
     "advec diff end time": "1.5707963267948966",
     "advec diff time step size": "0.01",
@@ -17,15 +20,10 @@
   },
   "paraview" : {
     "paraview do output": "true",
-    "paraview filename": "solution_melt_pool",
     "paraview print normal vector": "true",
     "paraview print curvature": "true",
     "paraview print advection": "true"
-  },
-  "output":
-  {
-    "do compute error" : "true",
-    "compute volume output" : "true",
-    "filename volume output" : "myVolumes.txt"
   }
+
+
 }

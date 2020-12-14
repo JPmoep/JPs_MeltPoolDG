@@ -64,9 +64,8 @@ namespace MeltPoolDG
             // ... solve level-set problem with the given advection field
             level_set_operation.solve(dt, advection_velocity);
 
-            // ... compute the temperature from the melt pool problem
             // update
-            update_phases(level_set_operation.solution_level_set, base_in->parameters);
+            update_phases(level_set_operation.level_set_as_heaviside, base_in->parameters);
 
             // accumulate forces: a) gravity force
             compute_gravity_force(force_rhs, base_in->parameters.base.gravity);
@@ -310,8 +309,7 @@ namespace MeltPoolDG
                 for (unsigned int q = 0; q < ls_values.n_q_points; ++q)
                   {
                     // convert level-set value to heaviside function
-                    const auto indicator = UtilityFunctions::heaviside(ls_values.get_value(q), 0.0);
-
+                    const auto indicator = UtilityFunctions::heaviside(ls_values.get_value(q), 0.5);
                     // set density
                     flow_operation->get_density(cell, q) =
                       parameters.flow.density + parameters.flow.density_difference * indicator;
@@ -319,6 +317,19 @@ namespace MeltPoolDG
                     // set viscosity
                     flow_operation->get_viscosity(cell, q) =
                       parameters.flow.viscosity + parameters.flow.viscosity_difference * indicator;
+
+                    // check if no spurious densities or viscosities are computed
+                    const auto densities = flow_operation->get_density(cell, q);
+                    for (auto dens : densities)
+                      if (!((dens == parameters.flow.density) ||
+                            (dens == parameters.flow.density_difference + parameters.flow.density)))
+                        std::cout << "density is wrong:" << dens << std::endl;
+                    const auto viscosities = flow_operation->get_viscosity(cell, q);
+                    for (auto visc : viscosities)
+                      if (!((visc == parameters.flow.viscosity) ||
+                            (visc ==
+                             parameters.flow.viscosity_difference + parameters.flow.viscosity)))
+                        std::cout << "viscosity is wrong:" << visc << std::endl;
                   }
               }
           },
