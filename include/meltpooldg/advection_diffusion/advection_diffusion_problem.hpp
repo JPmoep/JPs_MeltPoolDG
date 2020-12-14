@@ -13,6 +13,7 @@
 #include <deal.II/dofs/dof_handler.h>
 
 #include <deal.II/fe/fe_q.h>
+#include <deal.II/fe/fe_system.h>
 #include <deal.II/fe/mapping.h>
 #include <deal.II/fe/mapping_fe.h>
 
@@ -123,7 +124,7 @@ namespace MeltPoolDG
           {
             dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
             dof_handler_velocity.distribute_dofs(
-              FESystem(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
+              FESystem<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
           }
         else
 #endif
