@@ -6,8 +6,8 @@
 #pragma once
 #include <deal.II/dofs/dof_handler.h>
 
-#include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/interface/parameters.hpp>
+#include <meltpooldg/interface/scratch_data.hpp>
 
 namespace MeltPoolDG
 {
@@ -20,16 +20,16 @@ namespace MeltPoolDG
     {
     public:
       virtual void
-      solve(const double dt, const LinearAlgebra::distributed::BlockVector<double>& velocity) = 0;
-    
+      solve(const double dt, const LinearAlgebra::distributed::BlockVector<double> &velocity) = 0;
+
       virtual void
-      initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-                 const LinearAlgebra::distributed::Vector<double>& solution_advected_field_in,
-                 const Parameters<double> &                     data_in,
-                 const unsigned int                             dof_idx_in,
-                 const unsigned int                             dof_no_bc_idx_in,
-                 const unsigned int                             quad_idx_in,
-                 const unsigned int                             velocity_dof_idx_in)
+      initialize(const std::shared_ptr<const ScratchData<dim>> &   scratch_data_in,
+                 const LinearAlgebra::distributed::Vector<double> &solution_advected_field_in,
+                 const Parameters<double> &                        data_in,
+                 const unsigned int                                dof_idx_in,
+                 const unsigned int                                dof_no_bc_idx_in,
+                 const unsigned int                                quad_idx_in,
+                 const unsigned int                                velocity_dof_idx_in)
       {
         (void)scratch_data_in;
         (void)solution_advected_field_in;
@@ -42,5 +42,5 @@ namespace MeltPoolDG
       }
     };
 
-  } // namespace Flow
+  } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG
