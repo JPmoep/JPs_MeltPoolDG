@@ -21,12 +21,12 @@
   "melt pool" : {
     "mp laser power": "10.",
     "mp laser center": "0.0,0.00004",
-    "mp scan speed": "0.003",
-    "mp do move laser": "false",
     "mp domain x min": "-0.0002",
     "mp domain x max": "0.0002",
     "mp domain y min": "-0.0001",
     "mp domain y max": "0.0002",
+    "mp scan speed": "0.003",
+    "mp do move laser": "false",
     "mp ambient temperature": "300.",
     "mp recoil pressure constant": "10000.",
     "mp recoil pressure temperature constant": "10000.",
@@ -34,6 +34,8 @@
     "mp liquid absorptivity": "0.5",
     "mp liquid conductivity": "35.95",
     "mp liquid capacity": "965",
+    "mp liquid melt pool radius": "0.0001",
+    "mp liquid melt pool depth": "0.00005",
     "mp gas absorptivity": "0",
     "mp gas conductivity": "10",
     "mp gas capacity": "0"
@@ -62,7 +64,7 @@
   "paraview" : {
     "paraview do output": "true",
     "paraview write frequency": "1",
-    "paraview filename":  "solution_recoil_pressure"
+    "paraview filename":  "solution_recoil_pressure_ellipse"
   },
   "Navier-Stokes" : {
     "adaflo" : {

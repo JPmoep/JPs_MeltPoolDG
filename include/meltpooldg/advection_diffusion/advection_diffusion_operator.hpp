@@ -16,6 +16,12 @@ namespace MeltPoolDG
 {
   namespace AdvectionDiffusion
   {
+    static std::map<std::string, double> get_generalized_theta = {
+      {"explicit_euler", 0.0},
+      {"implicit_euler", 1.0},
+      {"crank_nicolson", 0.5},
+    };
+
     using namespace dealii;
 
     template <int dim, typename number = double>
@@ -43,9 +49,16 @@ namespace MeltPoolDG
     : scratch_data        ( scratch_data_in       )
     , advection_velocity  ( advection_velocity_in )
     , data                ( data_in               )
-    , velocity_dof_idx   ( velocity_dof_idx_in)
+    , velocity_dof_idx    ( velocity_dof_idx_in   )
     {
       this->reset_indices(dof_idx_in, quad_idx_in);
+      /*
+       *  convert the user input to the generalized theta parameter
+       */
+      if (get_generalized_theta.find(data.time_integration_scheme) != get_generalized_theta.end()) 
+        theta = get_generalized_theta[data.time_integration_scheme];
+      else
+        AssertThrow(false, ExcMessage("Advection diffusion operator: Requested time integration scheme not supported."))
     }
       // clang-format on
 
@@ -123,7 +136,7 @@ namespace MeltPoolDG
                                  * 
                                  fe_values.shape_value( j, q_index) 
                                  +
-                                 data.theta * this->d_tau * ( data.diffusivity * 
+                                 theta * this->d_tau * ( data.diffusivity * 
                                                        fe_values.shape_grad( i, q_index) * 
                                                        fe_values.shape_grad( j, q_index) 
                                                        +
@@ -137,7 +150,7 @@ namespace MeltPoolDG
                 cell_rhs( i ) +=
                   (  fe_values.shape_value( i, q_index) * phi_at_q[q_index]
                       - 
-                     ( 1. - data.theta ) * this->d_tau * 
+                     ( 1. - theta ) * this->d_tau * 
                        (
                          data.diffusivity * fe_values.shape_grad( i, q_index) * grad_phi_at_q[q_index]
                          +
@@ -195,9 +208,9 @@ namespace MeltPoolDG
                     const scalar velocity_grad_phi =
                       scalar_product(map_to_vector(velocity.get_value(q_index)), grad_phi);
 
-                    advected_field.submit_value(phi + this->d_tau * data.theta * velocity_grad_phi,
+                    advected_field.submit_value(phi + this->d_tau * theta * velocity_grad_phi,
                                                 q_index);
-                    advected_field.submit_gradient(this->d_tau * data.theta * data.diffusivity *
+                    advected_field.submit_gradient(this->d_tau * theta * data.diffusivity *
                                                      grad_phi,
                                                    q_index);
                   }
@@ -245,12 +258,12 @@ namespace MeltPoolDG
 
                     const scalar velocity_grad_phi =
                       scalar_product(map_to_vector(velocity.get_value(q_index)), grad_phi);
-                    advected_field.submit_value(phi - this->d_tau * (1. - data.theta) *
-                                                        velocity_grad_phi,
+                    advected_field.submit_value(phi -
+                                                  this->d_tau * (1. - theta) * velocity_grad_phi,
                                                 q_index);
 
-                    advected_field.submit_gradient(-this->d_tau * (1. - data.theta) *
-                                                     data.diffusivity * grad_phi,
+                    advected_field.submit_gradient(-this->d_tau * (1. - theta) * data.diffusivity *
+                                                     grad_phi,
                                                    q_index);
                   }
 
@@ -286,6 +299,7 @@ namespace MeltPoolDG
       const BlockVectorType &               advection_velocity;
       const AdvectionDiffusionData<number> &data;
       const unsigned int                    velocity_dof_idx;
+      double                                theta;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

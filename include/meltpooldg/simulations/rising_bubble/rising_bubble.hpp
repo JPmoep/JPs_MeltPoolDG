@@ -61,7 +61,7 @@ namespace MeltPoolDG
             std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
 
 
-          if constexpr (dim == 2)
+          if constexpr ((dim == 2) || (dim == 3))
             {
               // create mesh
               std::vector<unsigned int> subdivisions(dim, 5);

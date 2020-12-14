@@ -165,9 +165,11 @@ namespace MeltPoolDG
                               const unsigned int flow_quad_idx,
                               const bool         zero_out = true)
       {
-        level_set_as_heaviside.update_ghost_values();
-        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
-          [&](const auto &matrix_free, auto &force_rhs, const auto &, auto macro_cells) {
+        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
+          [&](const auto &matrix_free,
+              auto &      force_rhs,
+              const auto &level_set_as_heaviside,
+              auto        macro_cells) {
             FECellIntegrator<dim, 1, double> level_set(matrix_free, dof_idx, flow_quad_idx);
 
             FECellIntegrator<dim, 1, double> curvature(matrix_free, dof_no_bc_idx, flow_quad_idx);
@@ -179,7 +181,8 @@ namespace MeltPoolDG
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 level_set.reinit(cell);
-                level_set.gather_evaluate(level_set_as_heaviside, false, true);
+                level_set.read_dof_values_plain(level_set_as_heaviside);
+                level_set.evaluate(false, true);
 
                 surface_tension.reinit(cell);
 
@@ -200,9 +203,8 @@ namespace MeltPoolDG
               }
           },
           force_rhs,
-          nullptr,
+          level_set_as_heaviside,
           zero_out);
-        level_set_as_heaviside.zero_out_ghosts();
       }
       /*
        *  getter functions for solution vectors
@@ -320,9 +322,10 @@ namespace MeltPoolDG
       void
       set_level_set_parameters(const Parameters<double> &data_in)
       {
-        level_set_data.do_reinitialization                   = data_in.ls.do_reinitialization;
-        advec_diff_operation.advec_diff_data.diffusivity     = data_in.ls.artificial_diffusivity;
-        advec_diff_operation.advec_diff_data.theta           = data_in.ls.theta;
+        level_set_data.do_reinitialization               = data_in.ls.do_reinitialization;
+        advec_diff_operation.advec_diff_data.diffusivity = data_in.ls.artificial_diffusivity;
+        advec_diff_operation.advec_diff_data.time_integration_scheme =
+          data_in.ls.time_integration_scheme;
         advec_diff_operation.advec_diff_data.do_print_l2norm = data_in.ls.do_print_l2norm;
         advec_diff_operation.advec_diff_data.do_matrix_free  = data_in.ls.do_matrix_free;
         /*
@@ -376,7 +379,7 @@ namespace MeltPoolDG
        *    This is the normal vector field, which will be publically
        *    accessible for output_results.
        */
-      const BlockVectorType &solution_normal_vector = reinit_operation.solution_normal_vector;
+      const BlockVectorType &solution_normal_vector = curvature_operation.solution_normal_vector;
       /*
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update

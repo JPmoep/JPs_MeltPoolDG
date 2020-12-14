@@ -97,6 +97,18 @@ namespace MeltPoolDG
         return navier_stokes.get_dof_handler_u();
       }
 
+      const AffineConstraints<double> &
+      get_constraints_velocity() const override
+      {
+        return navier_stokes.get_constraints_u();
+      }
+
+      AffineConstraints<double> &
+      get_constraints_velocity() override
+      {
+        return navier_stokes.modify_constraints_u();
+      }
+
       const LinearAlgebra::distributed::Vector<double> &
       get_pressure() const override
       {
@@ -107,6 +119,18 @@ namespace MeltPoolDG
       get_dof_handler_pressure() const override
       {
         return navier_stokes.get_dof_handler_p();
+      }
+
+      const AffineConstraints<double> &
+      get_constraints_pressure() const override
+      {
+        return navier_stokes.get_constraints_p();
+      }
+
+      AffineConstraints<double> &
+      get_constraints_pressure() override
+      {
+        return navier_stokes.modify_constraints_p();
       }
 
       void
@@ -197,6 +221,18 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
+      const AffineConstraints<double> &
+      get_constraints_velocity() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      AffineConstraints<double> &
+      get_constraints_velocity() override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
       const LinearAlgebra::distributed::Vector<double> &
       get_pressure() const override
       {
@@ -205,6 +241,18 @@ namespace MeltPoolDG
 
       const DoFHandler<1> &
       get_dof_handler_pressure() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      const AffineConstraints<double> &
+      get_constraints_pressure() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      AffineConstraints<double> &
+      get_constraints_pressure() override
       {
         AssertThrow(false, ExcNotImplemented());
       }

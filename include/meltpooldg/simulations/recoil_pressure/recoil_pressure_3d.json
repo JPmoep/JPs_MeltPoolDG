@@ -2,8 +2,8 @@
   "base" : {
     "problem name": "melt_pool",
     "application name": "recoil_pressure",
-    "global refinements": "5",
-    "dimension": "2",
+    "global refinements": "7",
+    "dimension": "3",
     "degree": "1",
     "gravity": "0.0",
     "do print parameters": "true"
@@ -22,12 +22,11 @@
     "mp laser power": "10.",
     "mp laser center": "0.0,0.00004",
     "mp scan speed": "0.003",
-    "mp do move laser": "false",
+    "mp ambient temperature": "500.",
     "mp domain x min": "-0.0002",
     "mp domain x max": "0.0002",
     "mp domain y min": "-0.0001",
     "mp domain y max": "0.0002",
-    "mp ambient temperature": "300.",
     "mp recoil pressure constant": "10000.",
     "mp recoil pressure temperature constant": "10000.",
     "mp boiling temperature": "3000.",
@@ -62,13 +61,13 @@
   "paraview" : {
     "paraview do output": "true",
     "paraview write frequency": "1",
-    "paraview filename":  "solution_recoil_pressure"
+    "paraview filename":  "solution_recoil_pressure_3d"
   },
   "Navier-Stokes" : {
     "adaflo" : {
       "Navier-Stokes" : {
         "physical type"      : "incompressible",
-        "dimension"         : "2",
+        "dimension"         : "3",
         "global refinements" : "0",
         "velocity degree"    : "2",
         "Solver" : {

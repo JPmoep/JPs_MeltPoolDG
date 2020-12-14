@@ -47,7 +47,9 @@ namespace MeltPoolDG
        *    This is the primary solution variable of this module, which will be also publically
        *    accessible for output_results.
        */
-      VectorType solution_curvature;
+      VectorType             solution_curvature;
+      const BlockVectorType &solution_normal_vector =
+        normal_vector_operation.solution_normal_vector;
 
       CurvatureOperation() = default;
 

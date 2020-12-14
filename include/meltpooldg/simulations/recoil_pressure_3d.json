@@ -2,7 +2,7 @@
   "base" : {
     "problem name": "melt_pool",
     "application name": "recoil_pressure",
-    "global refinements": "5",
+    "global refinements": "7",
     "dimension": "2",
     "degree": "1",
     "gravity": "0.0",
@@ -20,13 +20,7 @@
   },
   "melt pool" : {
     "mp laser power": "10.",
-    "mp laser center": "0.0,0.00004",
     "mp scan speed": "0.003",
-    "mp do move laser": "false",
-    "mp domain x min": "-0.0002",
-    "mp domain x max": "0.0002",
-    "mp domain y min": "-0.0001",
-    "mp domain y max": "0.0002",
     "mp ambient temperature": "300.",
     "mp recoil pressure constant": "10000.",
     "mp recoil pressure temperature constant": "10000.",

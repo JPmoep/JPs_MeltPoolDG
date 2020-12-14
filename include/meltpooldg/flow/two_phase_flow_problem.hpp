@@ -64,27 +64,46 @@ namespace MeltPoolDG
             // ... solve level-set problem with the given advection field
             level_set_operation.solve(dt, advection_velocity);
 
-            // ... compute the temperature from the melt pool problem
             // update
-            update_phases(level_set_operation.solution_level_set, base_in->parameters);
+            update_phases(level_set_operation.level_set_as_heaviside, base_in->parameters);
 
             // accumulate forces: a) gravity force
             compute_gravity_force(force_rhs, base_in->parameters.base.gravity);
 
             // ... b) surface tension
-            level_set_operation.compute_surface_tension(
-              force_rhs,
-              base_in->parameters.flow.surface_tension_coefficient,
-              flow_dof_idx,
-              flow_quad_idx,
-              false /*false means add to force vector*/);
-
-            // ... c) recoil pressure
-            if (base_in->parameters.base.problem_name == "melt_pool")
-              melt_pool_operation.compute_recoil_pressure_force(
+            if (base_in->parameters.flow.temperature_dependent_surface_tension_coefficient == 0)
+              level_set_operation.compute_surface_tension(
                 force_rhs,
-                level_set_operation.level_set_as_heaviside,
+                base_in->parameters.flow.surface_tension_coefficient,
+                flow_dof_idx,
+                flow_quad_idx,
                 false /*false means add to force vector*/);
+
+            if (base_in->parameters.base.problem_name == "melt_pool")
+              {
+                // ... c) recoil pressure (+ compute temperature from analytical field)
+                melt_pool_operation.compute_recoil_pressure_force(
+                  force_rhs,
+                  level_set_operation.level_set_as_heaviside,
+                  dt,
+                  false /*false means add to force vector*/);
+
+                // ... d) temperature-dependent surface tension
+                if (base_in->parameters.flow.temperature_dependent_surface_tension_coefficient >
+                    0.0)
+                  melt_pool_operation.compute_temperature_dependent_surface_tension(
+                    force_rhs,
+                    level_set_operation.level_set_as_heaviside,
+                    level_set_operation.solution_curvature,
+                    base_in->parameters.flow.surface_tension_coefficient,
+                    base_in->parameters.flow.temperature_dependent_surface_tension_coefficient,
+                    base_in->parameters.flow.surface_tension_reference_temperature,
+                    ls_dof_idx,
+                    flow_dof_idx,
+                    flow_quad_idx,
+                    dof_no_bc_idx, /*temp_dof_idx*/
+                    false /*false means add to force vector*/);
+              }
 
             //  ... and set forces within the Navier-Stokes solver
             flow_operation->set_force_rhs(force_rhs);
@@ -125,9 +144,11 @@ namespace MeltPoolDG
         /*
          *  setup DoFHandler
          */
-        dof_handler.initialize(*base_in->triangulation, FE_Q<dim>(base_in->parameters.base.degree));
-        flow_dof_handler.initialize(*base_in->triangulation,
-                                    FE_Q<dim>(base_in->parameters.flow.velocity_degree));
+        dof_handler.reinit(*base_in->triangulation);
+        dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
+
+        flow_dof_handler.reinit(*base_in->triangulation);
+        flow_dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.flow.velocity_degree));
 
         scratch_data->attach_dof_handler(dof_handler);
         scratch_data->attach_dof_handler(dof_handler);
@@ -152,11 +173,12 @@ namespace MeltPoolDG
             for (const auto &bc : base_in->get_dirichlet_bc(
                    "level_set")) // @todo: add name of bc at a more central place
               {
-                dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
-                                                                 dof_handler,
-                                                                 bc.first,
-                                                                 *bc.second,
-                                                                 ls_constraints_dirichlet);
+                dealii::VectorTools::interpolate_boundary_values(
+                  scratch_data->get_mapping(),
+                  dof_handler,
+                  bc.first, //@todo: function map can be provided as argument directly
+                  *bc.second,
+                  ls_constraints_dirichlet);
               }
           }
 
@@ -232,16 +254,27 @@ namespace MeltPoolDG
          *    initialize the melt pool operation class
          */
         if (base_in->parameters.base.problem_name == "melt_pool")
-          melt_pool_operation.initialize(
-            scratch_data,
-            base_in->parameters,
-            ls_dof_idx,
-            flow_dof_idx,
-            flow_quad_idx,
-            dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as soon as heat problem is
-                              introduced*/
-            ls_quad_idx /*temp_quad_idx@todo: may be changed as soon as heat problem is introduced*/
-          );
+          {
+            melt_pool_operation.initialize(scratch_data,
+                                           base_in->parameters,
+                                           ls_dof_idx,
+                                           flow_dof_idx,
+                                           flow_quad_idx,
+                                           dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as
+                                                             soon as heat problem is introduced*/
+                                           ls_quad_idx, /*temp_quad_idx@todo: may be changed as soon
+                                                           as heat problem is introduced*/
+                                           level_set_operation.level_set_as_heaviside);
+            /*
+             *    set the fluid velocity and the pressure in solid regions to zero
+             */
+            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+              flow_operation->get_dof_handler_velocity(),
+              flow_operation->get_constraints_velocity());
+            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+              flow_operation->get_dof_handler_pressure(),
+              flow_operation->get_constraints_pressure());
+          }
         /*
          *    initialize the force vector for calculating surface tension
          */
@@ -276,8 +309,7 @@ namespace MeltPoolDG
                 for (unsigned int q = 0; q < ls_values.n_q_points; ++q)
                   {
                     // convert level-set value to heaviside function
-                    const auto indicator = UtilityFunctions::heaviside(ls_values.get_value(q), 0.0);
-
+                    const auto indicator = UtilityFunctions::heaviside(ls_values.get_value(q), 0.5);
                     // set density
                     flow_operation->get_density(cell, q) =
                       parameters.flow.density + parameters.flow.density_difference * indicator;
@@ -285,6 +317,19 @@ namespace MeltPoolDG
                     // set viscosity
                     flow_operation->get_viscosity(cell, q) =
                       parameters.flow.viscosity + parameters.flow.viscosity_difference * indicator;
+
+                    // check if no spurious densities or viscosities are computed
+                    const auto densities = flow_operation->get_density(cell, q);
+                    for (auto dens : densities)
+                      if (!((dens == parameters.flow.density) ||
+                            (dens == parameters.flow.density_difference + parameters.flow.density)))
+                        std::cout << "density is wrong:" << dens << std::endl;
+                    const auto viscosities = flow_operation->get_viscosity(cell, q);
+                    for (auto visc : viscosities)
+                      if (!((visc == parameters.flow.viscosity) ||
+                            (visc ==
+                             parameters.flow.viscosity_difference + parameters.flow.viscosity)))
+                        std::cout << "viscosity is wrong:" << visc << std::endl;
                   }
               }
           },
@@ -356,14 +401,21 @@ namespace MeltPoolDG
                                              level_set_operation.solution_curvature,
                                              level_set_operation.solution_normal_vector,
                                              level_set_operation.level_set_as_heaviside,
-                                             level_set_operation.distance_to_level_set,
-                                             melt_pool_operation.temperature);
+                                             level_set_operation.distance_to_level_set);
+
+            if (parameters.base.problem_name == "melt_pool")
+              VectorTools::update_ghost_values(melt_pool_operation.temperature,
+                                               melt_pool_operation.solid);
             /*
              *  output advected field
              */
             DataOut<dim> data_out;
-            data_out.attach_dof_handler(dof_handler);
 
+            DataOutBase::VtkFlags flags;
+            flags.write_higher_order_cells = true;
+            data_out.set_flags(flags);
+
+            data_out.attach_dof_handler(dof_handler);
             /*
              * level set
              */
@@ -385,6 +437,7 @@ namespace MeltPoolDG
               data_out.add_data_vector(flow_dof_handler,
                                        advection_velocity.block(d),
                                        "advection_velocity_" + std::to_string(d));
+
             /*
              * force vector (surface tension + gravity force)
              */
@@ -426,6 +479,10 @@ namespace MeltPoolDG
                 data_out.add_data_vector(dof_handler,
                                          melt_pool_operation.temperature,
                                          "temperature");
+                /*
+                 * solid
+                 */
+                data_out.add_data_vector(dof_handler, melt_pool_operation.solid, "solid");
               }
 
             data_out.build_patches(scratch_data->get_mapping());
@@ -446,12 +503,11 @@ namespace MeltPoolDG
                                          level_set_operation.solution_curvature,
                                          level_set_operation.solution_normal_vector,
                                          level_set_operation.level_set_as_heaviside,
-                                         level_set_operation.distance_to_level_set,
-                                         melt_pool_operation.temperature);
-            if (parameters.base.problem_name == "melt_pool" && (time_step == 0))
-              {
-                // melt_pool_operation.temperature.zero_out_ghosts();
-              }
+                                         level_set_operation.distance_to_level_set);
+
+            if (parameters.base.problem_name == "melt_pool")
+              VectorTools::zero_out_ghosts(melt_pool_operation.temperature,
+                                           melt_pool_operation.solid);
           }
       }
 
@@ -470,12 +526,12 @@ namespace MeltPoolDG
         FullMatrix<double> matrix(fe_fine.dofs_per_cell, fe_coarse.dofs_per_cell);
         FETools::get_projection_matrix(fe_coarse, fe_fine, matrix);
 
-        AlignedVector<VectorizedArray<double>> prolongation_matrix_1d(fe_fine.dofs_per_cell *
-                                                                      fe_coarse.dofs_per_cell);
+        AlignedVector<VectorizedArray<double>> projection_matrix_1d(fe_fine.dofs_per_cell *
+                                                                    fe_coarse.dofs_per_cell);
 
         for (unsigned int i = 0, k = 0; i < fe_coarse.dofs_per_cell; ++i)
           for (unsigned int j = 0; j < fe_fine.dofs_per_cell; ++j, ++k)
-            prolongation_matrix_1d[k] = matrix(j, i);
+            projection_matrix_1d[k] = matrix(j, i);
 
 
         FECellIntegrator<dim, 1, double> fe_eval(scratch_data->get_matrix_free(),
@@ -507,7 +563,7 @@ namespace MeltPoolDG
               0,
               VectorizedArray<double>,
               VectorizedArray<double>>::do_forward(1 /*n_components*/,
-                                                   prolongation_matrix_1d,
+                                                   projection_matrix_1d,
                                                    fe_eval.begin_values(),
                                                    fe_eval.begin_dof_values(),
                                                    n_q_points_1D, // number of quadrature points

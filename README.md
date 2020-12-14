@@ -31,7 +31,7 @@ make test
 
 The documentation can be found under https://meltpooldg.github.io/MeltPoolDG/.
 
-### How to add and build a simulation
+### How to add a simulation
 
 In the `./include/meltpooldg/simulations` folder you find some example simulations. If you would like to create an additional simulation, e.g. "vortex_bubble", follow the subsequent steps:
 
@@ -51,7 +51,9 @@ else if( simulation_name == "vortex_bubble" )
                                                  mpi_communicator);
 }
 ```
-You can build your simulation using the following commands:
+### How to build a simulation
+ 
+You can build your simulation as follows:
    
 ```bash  
 mkdir build
@@ -66,6 +68,15 @@ else call
 ```bash  
 make release
 ```
+### How to enable (optional) adaflo support
+
+If you would like to use the additional features of adaflo (e.g. used for multi-phase flow problems), you may configure as follows:
+
+```bash  
+cmake -D DEAL_II_DIR=/dealii_build_dir -D ADAFLO_LIB=your-adaflo-build/ -D ADAFLO_INCLUDE=your-adaflo-include/ ../. 
+```
+If you prefer dynamic linking, make sure that you are compiling adaflo with `-D BUILD_SHARED_LIBS=ON`.
+
 ### How to run a simulation
 
 As an example the simulation of the newly created "vortex_bubble" is demonstrated using 4 processes:

@@ -7,16 +7,27 @@
 // c++
 #include <fstream>
 #include <iostream>
+#include <string>
 
 namespace MeltPoolDG
 {
   using namespace dealii;
 
   template <typename number = double>
+  struct SolverData
+  {
+    bool         do_matrix_free      = true;
+    std::string  preconditioner_type = "Identity";
+    std::string  solver_type         = "GMRES";
+    unsigned int max_iterations      = 10000;
+    number       rel_tolerance_rhs   = 1e-8;
+  };
+
+  template <typename number = double>
   struct BaseData
   {
     std::string  application_name    = "none";
-    std::string  problem_name        = "none";
+    std::string  problem_name        = "advection_diffusion";
     unsigned int dimension           = 2;
     unsigned int global_refinements  = 1;
     unsigned int degree              = 1;
@@ -39,58 +50,61 @@ namespace MeltPoolDG
   template <typename number = double>
   struct LevelSetData
   {
-    bool   do_reinitialization     = false;
-    number artificial_diffusivity  = 0.0;
-    number theta                   = 0.5;
-    number start_time              = 0.0;
-    number end_time                = 1.0;
-    number time_step_size          = 0.01;
-    bool   enable_CFL_condition    = false;
-    bool   do_print_l2norm         = false;
-    bool   do_matrix_free          = false;
-    bool   do_curvature_correction = false;
+    bool        do_reinitialization     = false;
+    number      artificial_diffusivity  = 0.0;
+    std::string time_integration_scheme = "crank_nicolson";
+    number      start_time              = 0.0;
+    number      end_time                = 1.0;
+    number      time_step_size          = 0.01;
+    bool        enable_CFL_condition    = false;
+    bool        do_print_l2norm         = false;
+    bool        do_matrix_free          = false;
+    bool        do_curvature_correction = false;
   };
 
   template <typename number = double>
   struct ReinitializationData
   {
-    unsigned int max_n_steps          = 5;
-    number       constant_epsilon     = -1.0;
-    number       scale_factor_epsilon = 0.5;
-    number       dtau                 = -1.0;
-    std::string  modeltype            = "olsson2007";
-    bool         do_matrix_free       = false;
-    bool         do_print_l2norm      = false;
+    unsigned int       max_n_steps          = 5;
+    number             constant_epsilon     = -1.0;
+    number             scale_factor_epsilon = 0.5;
+    number             dtau                 = -1.0;
+    std::string        modeltype            = "olsson2007";
+    bool               do_print_l2norm      = false;
+    SolverData<number> solver;
   };
 
   template <typename number = double>
   struct AdvectionDiffusionData
   {
-    number       diffusivity     = 0.0;
-    number       theta           = 0.5;
-    number       start_time      = 0.0;
-    number       end_time        = 1.0;
-    number       time_step_size  = 0.01;
-    unsigned int max_n_steps     = 1000000;
-    bool         do_matrix_free  = false;
-    bool         do_print_l2norm = true;
+    number       diffusivity             = 0.0;
+    std::string  time_integration_scheme = "crank_nicolson";
+    number       start_time              = 0.0;
+    number       end_time                = 1.0;
+    number       time_step_size          = 0.01;
+    unsigned int max_n_steps             = 1000000;
+    bool         do_matrix_free          = false;
+    bool         do_print_l2norm         = true;
+    std::string  implementation          = "meltpooldg";
   };
 
   template <typename number = double>
   struct FlowData
   {
-    int          velocity_degree             = -1;
-    int          velocity_n_q_points_1d      = -1;
-    number       density                     = -1.0;
-    number       density_difference          = 0.0;
-    number       viscosity                   = -1.0;
-    number       viscosity_difference        = 0.0;
-    number       surface_tension_coefficient = 0.0;
-    std::string  solver_type                 = "incompressible";
-    number       start_time                  = 0.0;
-    number       end_time                    = 1.0;
-    number       time_step_size              = 0.05;
-    unsigned int max_n_steps                 = 1000000;
+    int          velocity_degree                                   = -1;
+    int          velocity_n_q_points_1d                            = -1;
+    number       density                                           = -1.0;
+    number       density_difference                                = 0.0;
+    number       viscosity                                         = -1.0;
+    number       viscosity_difference                              = 0.0;
+    number       surface_tension_coefficient                       = 0.0;
+    number       temperature_dependent_surface_tension_coefficient = 0.0;
+    number       surface_tension_reference_temperature             = 0.0;
+    std::string  solver_type                                       = "incompressible";
+    number       start_time                                        = 0.0;
+    number       end_time                                          = 1.0;
+    number       time_step_size                                    = 0.05;
+    unsigned int max_n_steps                                       = 1000000;
   };
 
   template <typename number = double>
@@ -113,20 +127,34 @@ namespace MeltPoolDG
   struct MeltPoolData
   {
     std::string temperature_formulation              = "analytical";
+    number      temperature_x_to_y_ratio             = 1.0;
     number      laser_power                          = 0.0;
+    std::string laser_center                         = "0,0,0";
+    std::string melt_pool_center                     = "not_initialized";
+    std::string melt_pool_shape                      = "ellipse";
     number      scan_speed                           = 0.0;
+    bool        do_move_laser                        = false;
     number      ambient_temperature                  = 0.0;
+    number      domain_x_min                         = 0.0;
+    number      domain_y_min                         = 0.0;
+    number      domain_x_max                         = 0.0;
+    number      domain_y_max                         = 0.0;
     number      recoil_pressure_constant             = 0.0;
     number      recoil_pressure_temperature_constant = 0.0;
     number      boiling_temperature                  = 0.0;
+    number      max_temperature                      = 0.0;
     bool        do_print_l2norm                      = true;
 
     struct Liquid
     {
-      number absorptivity = 0.0;
-      number conductivity = 0.0;
-      number capacity     = 0.0;
+      number absorptivity     = 0.0;
+      number conductivity     = 0.0;
+      number capacity         = 0.0;
+      number melt_pool_radius = 0.0;
+      number melt_pool_depth  = 0.0;
+      number melting_point    = 0.0;
     } liquid;
+
     struct Gas
     {
       number absorptivity = 0.0;
@@ -189,15 +217,24 @@ namespace MeltPoolDG
        */
       if (amr.min_grid_refinement_level == 1)
         amr.min_grid_refinement_level = base.global_refinements;
-
+      /*
+       *  set the melt pool center if not specified
+       */
+      if (mp.melt_pool_center == "not_initialized")
+        mp.melt_pool_center = mp.laser_center;
+      /*
+       *  set the maximum temperature of the melt pool if not specified
+       */
+      if (mp.max_temperature < mp.boiling_temperature)
+        mp.max_temperature = mp.boiling_temperature + 500;
         /*
          *  parameters for adaflo
          */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
-      adaflo_params.parse_parameters(parameter_filename);
 
       if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool"))
         {
+          adaflo_params.parse_parameters(parameter_filename);
           // WARNING: by setting the differences to a non-zero value we force
           //   adaflo to assume that we are running a simulation with variable
           //   coefficients, i.e., it allocates memory for the data structures
@@ -211,9 +248,9 @@ namespace MeltPoolDG
 
           flow.density   = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
           flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
-          flow.velocity_degree = (flow.velocity_degree > 0.0) ?
-                                   flow.velocity_degree :
-                                   adaflo_params.params.velocity_degree;
+          flow.velocity_degree        = (flow.velocity_degree > 0.0) ?
+                                          flow.velocity_degree :
+                                          adaflo_params.params.velocity_degree;
           flow.velocity_n_q_points_1d = (flow.velocity_n_q_points_1d < 1) ?
                                           flow.velocity_degree + 1 :
                                           flow.velocity_n_q_points_1d;
@@ -225,6 +262,7 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_min   = flow.time_step_size;
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
         }
+
 #endif
     }
 
@@ -264,9 +302,12 @@ namespace MeltPoolDG
           "application name",
           base.application_name,
           "Sets the base name for the application that will be fed to the problem type.");
-        prm.add_parameter("problem name",
-                          base.problem_name,
-                          "Sets the base name for the problem that should be solved.");
+        prm.add_parameter(
+          "problem name",
+          base.problem_name,
+          "Sets the base name for the problem that should be solved.",
+          Patterns::Selection(
+            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool"));
         prm.add_parameter("dimension", base.dimension, "Defines the dimension of the problem");
         prm.add_parameter("global refinements",
                           base.global_refinements,
@@ -310,10 +351,11 @@ namespace MeltPoolDG
         prm.add_parameter("advec diff diffusivity",
                           advec_diff.diffusivity,
                           "Defines the diffusivity for the advection diffusion equation ");
-        prm.add_parameter("advec diff theta",
-                          advec_diff.theta,
-                          "Sets the theta value for the time stepping scheme: 0=explicit euler; "
-                          "1=implicit euler; 0.5=Crank-Nicholson;");
+        prm.add_parameter("advec diff time integration scheme",
+                          advec_diff.time_integration_scheme,
+                          "Determines the time integration scheme.",
+                          Patterns::Selection(
+                            "explicit_euler|implicit_euler|crank_nicolson|bdf_2"));
         prm.add_parameter("advec diff start time",
                           advec_diff.start_time,
                           "Defines the start time for the solution of the levelset problem");
@@ -335,6 +377,11 @@ namespace MeltPoolDG
         prm.add_parameter("advec diff do print l2norm",
                           advec_diff.do_print_l2norm,
                           "Defines if the l2norm of the advected field should be printed).");
+        prm.add_parameter(
+          "advec diff implementation",
+          advec_diff.implementation,
+          "Choose the corresponding implementation of the advection diffusion operation.",
+          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
 
@@ -351,11 +398,10 @@ namespace MeltPoolDG
         prm.add_parameter("ls do reinitialization",
                           ls.do_reinitialization,
                           "Defines if reinitialization of level set function is activated");
-        prm.add_parameter("ls theta",
-                          ls.theta,
-                          "Sets the theta value for the time stepping scheme (0=explicit euler; "
-                          "1=implicit euler; 0.5=Crank-Nicholson");
-
+        prm.add_parameter("ls time integration scheme",
+                          ls.time_integration_scheme,
+                          "Determines the time integration scheme.",
+                          Patterns::Selection("explicit_euler|implicit_euler|crank_nicolson"));
         prm.add_parameter("ls start time",
                           ls.start_time,
                           "Defines the start time for the solution of the levelset problem");
@@ -370,7 +416,7 @@ namespace MeltPoolDG
         prm.add_parameter("ls enable CFL condition",
                           ls.enable_CFL_condition,
                           "Enables to dynamically adapt the time step to meet the CFL condition"
-                          " in case of explicit time integration (theta=0)");
+                          " in case of explicit time integration.");
         prm.add_parameter("ls do print l2norm",
                           ls.do_print_l2norm,
                           "Defines if the l2norm of the levelset result should be printed)");
@@ -415,13 +461,30 @@ namespace MeltPoolDG
                           reinit.modeltype,
                           "Sets the type of reinitialization model that should be used.");
         prm.add_parameter(
-          "reinit do matrix free",
-          reinit.do_matrix_free,
-          "Set this parameter if a matrix free solution procedure should be performed");
-        prm.add_parameter(
           "reinit do print l2norm",
           reinit.do_print_l2norm,
           "Defines if the l2norm of the reinitialization result should be printed)");
+        prm.add_parameter(
+          "reinit do matrix free",
+          reinit.solver.do_matrix_free,
+          "Set this parameter if a matrix free solution procedure should be performed");
+        prm.add_parameter(
+          "reinit solver type",
+          reinit.solver.solver_type,
+          "Set this parameter for choosing a solver type. At the moment GMRES or CG solvers "
+          " are supported");
+        prm.add_parameter("reinit preconditioner type",
+                          reinit.solver.preconditioner_type,
+                          "Set this parameter for choosing a preconditioner type",
+                          Patterns::Selection("AMG|Identity|ILU"));
+        prm.add_parameter(
+          "reinit max iterations",
+          reinit.solver.max_iterations,
+          "Set the maximum number of iterations for solving the linear system of equations.");
+        prm.add_parameter(
+          "reinit rel tolerance rhs",
+          reinit.solver.rel_tolerance_rhs,
+          "Set the relative tolerance for a successful solution of the linear system of equations.");
       }
       prm.leave_subsection();
       /*
@@ -482,6 +545,14 @@ namespace MeltPoolDG
         prm.add_parameter("flow surface tension coefficient",
                           flow.surface_tension_coefficient,
                           "constant coefficient for calculating surface tension");
+        prm.add_parameter(
+          "flow temperature dependent surface tension coefficient",
+          flow.temperature_dependent_surface_tension_coefficient,
+          "temperature dependent coefficient for calculating temperetaure-dependent "
+          "surface tension (Marangoni convection)");
+        prm.add_parameter("flow surface tension reference temperature",
+                          flow.surface_tension_reference_temperature,
+                          "Reference temperature for calculating surface tension");
         prm.add_parameter("flow solver type", flow.solver_type, "solver type of the flow problem");
         prm.add_parameter("flow start time",
                           flow.start_time,
@@ -509,12 +580,43 @@ namespace MeltPoolDG
           mp.temperature_formulation,
           "Definition type of the temperature field: "
           "(1) analytical expression (2) solve heat equation (not implemented yet)");
+        prm.add_parameter("mp temperature x to y ratio",
+                          mp.temperature_x_to_y_ratio,
+                          "This factor scales the analytical temperature field to be anisotropic.");
         prm.add_parameter("mp laser power",
                           mp.laser_power, //@todo: add user input function
                           "Intensity of the laser");
+        prm.add_parameter("mp laser center",
+                          mp.laser_center,
+                          "Center coordinates of the laser beam on the interface melt/gas.");
+        prm.add_parameter("mp melt pool center",
+                          mp.melt_pool_center,
+                          "Center coordinates of the melt pool ellipse/parabola. If no value is "
+                          "provided it will be set equally to the laser center");
+        prm.add_parameter("mp domain x min",
+                          mp.domain_x_min,
+                          "minimum x coordinate of simulation domain");
+        prm.add_parameter("mp domain y min",
+                          mp.domain_y_min,
+                          "minimum y coordinate of simulation domain");
+        prm.add_parameter("mp domain x max",
+                          mp.domain_x_max,
+                          "maximum x coordinate of simulation domain");
+        prm.add_parameter("mp domain y max",
+                          mp.domain_y_max,
+                          "maximum y coordinate of simulation domain");
+        prm.add_parameter("mp melt pool shape",
+                          mp.melt_pool_shape,
+                          "Shape of the user defined melt pool",
+                          Patterns::Selection("parabola|ellipse|temperature_dependent"));
         prm.add_parameter("mp scan speed",
                           mp.scan_speed,
                           "Scan speed of the laser (in case of an analytical temperature field).");
+        prm.add_parameter(
+          "mp do move laser",
+          mp.do_move_laser,
+          "Set this parameter to true to move the laser in x-direction with the given parameter scan speed "
+          "(in case of an analytical temperature field).");
         prm.add_parameter("mp ambient temperature",
                           mp.ambient_temperature,
                           "Ambient temperature in the inert gas.");
@@ -527,6 +629,11 @@ namespace MeltPoolDG
         prm.add_parameter("mp boiling temperature",
                           mp.boiling_temperature,
                           "Boiling temperature of the melt.");
+        prm.add_parameter(
+          "mp max temperature",
+          mp.max_temperature,
+          "Maximum temperature arising in the melt pool. If this temperature is lower than the boiling"
+          " temperature, this value is corrected to correspond to the boiling temperature + 500 K.");
         prm.add_parameter("mp do print l2norm",
                           mp.do_print_l2norm,
                           "Defines if the l2norm of the melt pool results should be printed)");
@@ -539,6 +646,16 @@ namespace MeltPoolDG
         prm.add_parameter("mp liquid capacity",
                           mp.liquid.capacity,
                           "Capacity of the liquid part of domain");
+        prm.add_parameter("mp liquid melt pool radius",
+                          mp.liquid.melt_pool_radius,
+                          "Set the radius of the liquid parts of the melt pool ellipse "
+                          " or the width of the parabola");
+        prm.add_parameter("mp liquid melt pool depth",
+                          mp.liquid.melt_pool_depth,
+                          "Set the depth of the liquid parts of the melt pool ellipse");
+        prm.add_parameter("mp liquid melting point",
+                          mp.liquid.melting_point,
+                          "Melting point of the liquid part of domain");
         prm.add_parameter("mp gas absorptivity",
                           mp.gas.absorptivity,
                           "Absorptivity of the gaseous part of domain");
@@ -636,6 +753,4 @@ namespace MeltPoolDG
     OutputData<number>             output;
     Flow::AdafloWrapperParameters  adaflo_params;
   };
-
-
 } // namespace MeltPoolDG
