@@ -13,9 +13,9 @@
 #include <deal.II/dofs/dof_handler.h>
 
 #include <deal.II/fe/fe_q.h>
+#include <deal.II/fe/fe_system.h>
 #include <deal.II/fe/mapping.h>
 #include <deal.II/fe/mapping_fe.h>
-#include <deal.II/fe/fe_system.h>
 
 #include <deal.II/grid/grid_out.h>
 
