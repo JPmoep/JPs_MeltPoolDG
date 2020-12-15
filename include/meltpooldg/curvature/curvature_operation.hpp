@@ -134,7 +134,7 @@ namespace MeltPoolDG
         return solution_curvature;
       }
       
-      const LinearAlgebra::distributed::Vector<double>&
+      const LinearAlgebra::distributed::BlockVector<double>&
       get_normal_vector() const override
       {
         return normal_vector_operation.get_solution_normal_vector();
