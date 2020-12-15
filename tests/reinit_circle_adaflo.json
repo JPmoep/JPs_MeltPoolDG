@@ -1,0 +1,27 @@
+{
+  "base" : {
+    "application name":   "reinit_circle",
+    "problem name":       "reinitialization",
+    "dimension":          "2",
+    "global refinements": "6",
+    "degree":             "1"
+  },
+  "reinitialization" : {
+    "reinit max n steps":     "30",
+    "reinit modeltype":       "olsson2007",
+    "reinit dtau":            "0.005",
+    "reinit do matrix free":  "true",
+    "reinit do print l2norm": "true"
+  },
+  "normal vector": { 
+    "normal vec damping scale factor": "0.5",
+    "normal vec do matrix free": "true",
+    "normal vec implementation": "adaflo"
+
+  },
+  "paraview":
+  {
+    "paraview filename" :            "solution_reinitialization",
+    "paraview do output" :           "false",
+  }
+}
