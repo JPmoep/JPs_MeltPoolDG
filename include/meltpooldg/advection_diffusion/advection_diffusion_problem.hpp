@@ -428,64 +428,81 @@ namespace MeltPoolDG
           hanging_node_constraints.distribute(advec_diff_operation->get_advected_field());
         };
 
-        if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(
-              base_in->triangulation))
-          {
-            if (mark_cells_for_refinement(*tria) == false)
-              return;
+        const auto setup_dof_system = [&](std::shared_ptr<SimulationBase<dim>> base_in,
+                                          const bool                           do_initial_setup) {
+          this->setup_dof_system(base_in, do_initial_setup);
+        };
 
-            /*
-             *  Limit the maximum and minimum refinement levels of cells of the grid.
-             */
-            if (tria->n_levels() > base_in->parameters.amr.max_grid_refinement_level)
-              for (auto &cell : tria->active_cell_iterators_on_level(
-                     base_in->parameters.amr.max_grid_refinement_level))
-                cell->clear_refine_flag();
-            if (tria->n_levels() < base_in->parameters.amr.min_grid_refinement_level)
-              for (auto &cell : tria->active_cell_iterators_on_level(
-                     base_in->parameters.amr.min_grid_refinement_level))
-                cell->clear_coarsen_flag();
 
-            /*
-             *  Initialize the triangulation change from the old grid to the new grid
-             */
-            base_in->triangulation->prepare_coarsening_and_refinement();
-            /*
-             *  Initialize the solution transfer from the old grid to the new grid
-             */
-            parallel::distributed::SolutionTransfer<dim, VectorType> solution_transfer(dof_handler);
+        const auto refine_grid = [](const auto &mark_cells_for_refinement,
+                                    const auto &attach_vectors,
+                                    const auto &post,
+                                    const auto &setup_dof_system,
+                                    auto &      base_in,
+                                    const auto &dof_handler) {
+          if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(
+                base_in->triangulation))
+            {
+              if (mark_cells_for_refinement(*tria) == false)
+                return;
 
-            std::vector<VectorType *>       new_grid_solutions;
-            std::vector<const VectorType *> old_grid_solutions;
+              /*
+               *  Limit the maximum and minimum refinement levels of cells of the grid.
+               */
+              if (tria->n_levels() > base_in->parameters.amr.max_grid_refinement_level)
+                for (auto &cell : tria->active_cell_iterators_on_level(
+                       base_in->parameters.amr.max_grid_refinement_level))
+                  cell->clear_refine_flag();
+              if (tria->n_levels() < base_in->parameters.amr.min_grid_refinement_level)
+                for (auto &cell : tria->active_cell_iterators_on_level(
+                       base_in->parameters.amr.min_grid_refinement_level))
+                  cell->clear_coarsen_flag();
 
-            attach_vectors(new_grid_solutions);
+              /*
+               *  Initialize the triangulation change from the old grid to the new grid
+               */
+              base_in->triangulation->prepare_coarsening_and_refinement();
+              /*
+               *  Initialize the solution transfer from the old grid to the new grid
+               */
+              parallel::distributed::SolutionTransfer<dim, VectorType> solution_transfer(
+                dof_handler);
 
-            for (const auto &i : new_grid_solutions)
-              old_grid_solutions.push_back(i);
+              std::vector<VectorType *>       new_grid_solutions;
+              std::vector<const VectorType *> old_grid_solutions;
 
-            solution_transfer.prepare_for_coarsening_and_refinement(old_grid_solutions);
+              attach_vectors(new_grid_solutions);
 
-            /*
-             *  Execute the grid refinement
-             */
-            base_in->triangulation->execute_coarsening_and_refinement();
+              for (const auto &i : new_grid_solutions)
+                old_grid_solutions.push_back(i);
 
-            /*
-             *  update dof-related scratch data to match the current triangulation
-             */
-            setup_dof_system(base_in, false);
+              solution_transfer.prepare_for_coarsening_and_refinement(old_grid_solutions);
 
-            /*
-             *  interpolate the given solution to the new discretization
-             *
-             */
-            solution_transfer.interpolate(new_grid_solutions);
+              /*
+               *  Execute the grid refinement
+               */
+              base_in->triangulation->execute_coarsening_and_refinement();
 
-            post();
-          }
-        else
-          //@todo: WIP
-          AssertThrow(false, ExcMessage("Mesh refinement for dim=1 not yet supported"));
+              /*
+               *  update dof-related scratch data to match the current triangulation
+               */
+              setup_dof_system(base_in, false);
+
+              /*
+               *  interpolate the given solution to the new discretization
+               *
+               */
+              solution_transfer.interpolate(new_grid_solutions);
+
+              post();
+            }
+          else
+            //@todo: WIP
+            AssertThrow(false, ExcMessage("Mesh refinement for dim=1 not yet supported"));
+        };
+
+        refine_grid(
+          mark_cells_for_refinement, attach_vectors, post, setup_dof_system, base_in, dof_handler);
       }
 
     private:
