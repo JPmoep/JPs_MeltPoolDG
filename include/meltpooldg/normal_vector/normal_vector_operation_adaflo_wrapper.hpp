@@ -40,7 +40,7 @@ namespace MeltPoolDG
                     const int                            advec_diff_dof_idx,
                     const int                            normal_vec_dof_idx,
                     const int                            normal_vec_quad_idx,
-                    const VectorType                     advected_field,
+                    VectorType&                          advected_field, //@todo: make const
                     const Parameters<double>&            data_in)
         : scratch_data(scratch_data)
       {
@@ -61,10 +61,10 @@ namespace MeltPoolDG
         normal_vec_operation = std::make_shared<LevelSetOKZSolverComputeNormal<dim>>(
           normal_vector_field,
           rhs,
-          solution_temp,
+          advected_field,
           scratch_data.get_cell_diameters(),
           normal_vec_adaflo_params.epsilon, // @todo
-          0.0 /*minimal edge length*/,      // @todo
+          scratch_data.get_min_cell_size(), /*minimal edge length*/ // @todo
           scratch_data.get_constraint(normal_vec_dof_idx),
           normal_vec_adaflo_params,
           scratch_data.get_matrix_free(),
@@ -75,12 +75,12 @@ namespace MeltPoolDG
         /**
          * initialize the preconditioner
          */
-        //initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
-                                                     //scratch_data.get_constraint(
-                                                       //advec_diff_dof_idx),
-                                                     //advec_diff_dof_idx,
-                                                     //advec_diff_quad_idx,
-                                                     //preconditioner);
+        initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
+                                                     scratch_data.get_constraint(
+                                                       normal_vec_dof_idx),
+                                                     normal_vec_dof_idx,
+                                                     normal_vec_quad_idx,
+                                                     preconditioner);
       }
 
       /**
@@ -89,16 +89,16 @@ namespace MeltPoolDG
       void
       solve(const VectorType &advected_field) override
       {
+        scratch_data.get_pcout() << "norm of advec" << advected_field.l2_norm() << std::endl;
         (void)advected_field;
-        //advec_diff_operation->advance_concentration(dt);
+        initialize_vectors();
+        normal_vec_operation->compute_normal(true); 
 
-        //scratch_data.get_pcout() << " |phi|= " << std::setw(15) << std::setprecision(10)
-                                 //<< std::left << get_advected_field().l2_norm()
-                                 //<< " |phi_n-1|= " << std::setw(15) << std::setprecision(10)
-                                 //<< std::left << get_advected_field_old().l2_norm()
-                                 //<< " |phi_n-2|= " << std::setw(15) << std::setprecision(10)
-                                 //<< std::left << get_advected_field_old_old().l2_norm()
-                                 //<< std::endl;
+        for (unsigned int d=0; d<dim; ++d)
+          scratch_data.get_pcout() << " |n|_" << d << "=" << std::setw(15) << std::setprecision(10)
+                                   << std::left << get_solution_normal_vector().block(d).l2_norm();
+        
+        //scratch_data.get_pcout() << std::endl;
       }
 
       const LinearAlgebra::distributed::BlockVector<double> &
@@ -114,6 +114,7 @@ namespace MeltPoolDG
                             const int                 normal_vec_dof_idx,
                             const int                 normal_vec_quad_idx)
       {
+        (void)parameters;
         normal_vec_adaflo_params.dof_index_ls            = advec_diff_dof_idx;
         normal_vec_adaflo_params.dof_index_normal        = normal_vec_dof_idx;
         normal_vec_adaflo_params.quad_index              = normal_vec_quad_idx;
@@ -127,20 +128,11 @@ namespace MeltPoolDG
         /**
          * initialize advected field dof vectors
          */
-        //scratch_data.initialize_dof_vector(advected_field, adaflo_params.dof_index_ls);
-        //scratch_data.initialize_dof_vector(advected_field_old, adaflo_params.dof_index_ls);
-        //scratch_data.initialize_dof_vector(advected_field_old_old, adaflo_params.dof_index_ls);
+        scratch_data.initialize_dof_vector(normal_vector_field, normal_vec_adaflo_params.dof_index_normal);
         /**
          * initialize vectors for the solution of the linear system
          */
-        //scratch_data.initialize_dof_vector(rhs, adaflo_params.dof_index_ls);
-        //scratch_data.initialize_dof_vector(increment, adaflo_params.dof_index_ls);
-        /**
-         *  initialize the velocity vector for adaflo
-         */
-        //scratch_data.initialize_dof_vector(velocity_vec, adaflo_params.dof_index_vel);
-        //scratch_data.initialize_dof_vector(velocity_vec_old, adaflo_params.dof_index_vel);
-        //scratch_data.initialize_dof_vector(velocity_vec_old_old, adaflo_params.dof_index_vel);
+        scratch_data.initialize_dof_vector(rhs, normal_vec_adaflo_params.dof_index_normal);
       }
 
     private:
@@ -150,7 +142,6 @@ namespace MeltPoolDG
        */
       BlockVectorType normal_vector_field;
       BlockVectorType rhs;
-      VectorType solution_temp;
       /**
        * Adaflo parameters for the level set problem
        */
