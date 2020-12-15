@@ -49,8 +49,6 @@ namespace MeltPoolDG
        *    accessible for output_results.
        */
       VectorType             solution_curvature;
-      const BlockVectorType &solution_normal_vector =
-        normal_vector_operation.get_solution_normal_vector();
 
       CurvatureOperation() = default;
 
@@ -94,7 +92,7 @@ namespace MeltPoolDG
 
         if (curvature_data.do_matrix_free)
           {
-            curvature_operator->create_rhs(rhs, normal_vector_operation.solution_normal_vector);
+            curvature_operator->create_rhs(rhs, normal_vector_operation.get_solution_normal_vector());
             iter = LinearSolve<
               VectorType,
               SolverCG<VectorType>,
@@ -104,7 +102,7 @@ namespace MeltPoolDG
           }
         else
           {
-            curvature_operator->assemble_matrixbased(normal_vector_operation.solution_normal_vector,
+            curvature_operator->assemble_matrixbased(normal_vector_operation.get_solution_normal_vector(),
                                                      curvature_operator->system_matrix,
                                                      rhs);
 
@@ -128,6 +126,18 @@ namespace MeltPoolDG
       get_curvature() const override
       {
         return solution_curvature;
+      }
+      
+      LinearAlgebra::distributed::Vector<double>&
+      get_curvature() override
+      {
+        return solution_curvature;
+      }
+      
+      const LinearAlgebra::distributed::Vector<double>&
+      get_normal_vector() const override
+      {
+        return normal_vector_operation.get_solution_normal_vector();
       }
 
     private:

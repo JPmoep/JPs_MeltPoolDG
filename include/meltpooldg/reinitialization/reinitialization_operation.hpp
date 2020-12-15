@@ -80,8 +80,9 @@ namespace MeltPoolDG
 
             normal_vector_operation =
               std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(*scratch_data_in,
-                                                                               dof_idx_in, //@todo
-                                                                               dof_idx_in,
+                                                                               dof_idx_in, //ls @todo
+                                                                               dof_idx_in, //normal vec @todo
+                                                                               dof_idx_in, // curvature @todo
                                                                                quad_idx,
                                                                                solution_level_set,
                                                                                data_in);
