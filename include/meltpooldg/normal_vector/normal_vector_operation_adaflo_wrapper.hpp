@@ -123,10 +123,19 @@ namespace MeltPoolDG
         scratch_data.get_pcout() << std::endl;
       }
 
+      /**
+       *  getter
+       */
       const LinearAlgebra::distributed::BlockVector<double> &
       get_solution_normal_vector() const override
       {
         return normal_vector_field;
+      }
+      
+      LevelSetOKZSolverComputeNormal<dim> &
+      get_adaflo_obj() 
+      {
+        return *normal_vec_operation;
       }
 
     private:
