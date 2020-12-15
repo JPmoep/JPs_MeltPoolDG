@@ -75,7 +75,24 @@ namespace MeltPoolDG
 #  else
         navier_stokes.distribute_dofs();
         navier_stokes.initialize_data_structures();
-        navier_stokes.initialize_matrix_free();
+
+        const unsigned int dof_index_u =
+          scratch_data.attach_dof_handler(navier_stokes.get_dof_handler_u());
+        const unsigned int dof_index_p =
+          scratch_data.attach_dof_handler(navier_stokes.get_dof_handler_p());
+
+        scratch_data.attach_constraint_matrix(navier_stokes.get_constraints_u());
+        scratch_data.attach_constraint_matrix(navier_stokes.get_constraints_p());
+
+        const unsigned int quad_index_u = scratch_data.attach_quadrature(
+          QGauss<dim>(base_in->parameters.adaflo_params.get_parameters().velocity_degree + 1));
+        const unsigned int quad_index_p = scratch_data.attach_quadrature(
+          QGauss<dim>(base_in->parameters.adaflo_params.get_parameters().velocity_degree));
+
+        scratch_data.build();
+
+        navier_stokes.initialize_matrix_free(
+          &scratch_data.get_matrix_free(), dof_index_u, dof_index_p, quad_index_u, quad_index_p);
 
         dealii::VectorTools::interpolate(navier_stokes.mapping,
                                          navier_stokes.get_dof_handler_u(),

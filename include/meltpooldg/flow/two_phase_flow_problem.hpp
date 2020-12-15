@@ -195,10 +195,23 @@ namespace MeltPoolDG
           scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
         flow_quad_idx =
           scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
+
+        /*
+         *    initialize the flow operation class
+         */
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+
+        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, flow_dof_idx, base_in);
+#else
+        AssertThrow(false, ExcNotImplemented());
+#endif
+
         /*
          *  create the matrix-free object
          */
+#if false
         scratch_data->build();
+#endif
         /*
          *  initialize the time stepping scheme
          */
@@ -242,14 +255,6 @@ namespace MeltPoolDG
                                        dof_no_bc_idx,
                                        ls_quad_idx,
                                        flow_dof_idx);
-        /*
-         *    initialize the flow operation class
-         */
-#ifdef MELT_POOL_DG_WITH_ADAFLO
-        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, flow_dof_idx, base_in);
-#else
-        AssertThrow(false, ExcNotImplemented());
-#endif
         /*
          *    initialize the melt pool operation class
          */
