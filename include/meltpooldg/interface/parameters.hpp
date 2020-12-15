@@ -110,9 +110,10 @@ namespace MeltPoolDG
   template <typename number = double>
   struct NormalVectorData
   {
-    number damping_scale_factor = 0.5;
-    bool   do_matrix_free       = false;
-    bool   do_print_l2norm      = true;
+    number      damping_scale_factor = 0.5;
+    bool        do_matrix_free       = false;
+    bool        do_print_l2norm      = true;
+    std::string implementation       = "meltpooldg";
   };
 
   template <typename number = double>
@@ -503,6 +504,10 @@ namespace MeltPoolDG
         prm.add_parameter("normal vec do print l2norm",
                           normal_vec.do_print_l2norm,
                           "Defines if the l2norm of the normal vector result should be printed)");
+        prm.add_parameter("normal vec implementation",
+                          normal_vec.implementation,
+                          "Choose the corresponding implementation of the normal vector operation.",
+                          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
       /*
