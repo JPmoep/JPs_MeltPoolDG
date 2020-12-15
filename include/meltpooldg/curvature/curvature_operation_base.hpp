@@ -35,8 +35,19 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
+      /*
+       *  getter functions
+       */
       virtual const LinearAlgebra::distributed::Vector<double> &
       get_curvature() const = 0;
+
+      virtual const LinearAlgebra::distributed::BlockVector<double> &
+      get_normal_vector() const = 0;
+      /*
+       *  setter functions
+       */
+      virtual LinearAlgebra::distributed::Vector<double> &
+      get_curvature() = 0;
     };
 
   } // namespace NormalVector
