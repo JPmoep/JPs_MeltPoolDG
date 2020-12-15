@@ -70,7 +70,21 @@ namespace MeltPoolDG
             "a valid initial field function for the level set field. A shared_ptr to your initial field "
             "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
             "  this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), 'navier_stokes_u') "));
+#  if false
         navier_stokes.setup_problem(*base_in->get_initial_condition("navier_stokes_u"));
+#  else
+        navier_stokes.distribute_dofs();
+        navier_stokes.initialize_data_structures();
+        navier_stokes.initialize_matrix_free();
+
+        dealii::VectorTools::interpolate(navier_stokes.mapping,
+                                         navier_stokes.get_dof_handler_u(),
+                                         *base_in->get_initial_condition("navier_stokes_u"),
+                                         navier_stokes.solution.block(0));
+        // navier_stokes.hanging_node_constraints_u.distribute(solution.block(0)); // TODO needed?
+        navier_stokes.solution.update_ghost_values();
+        navier_stokes.solution_old.update_ghost_values();
+#  endif
       }
 
       /**
