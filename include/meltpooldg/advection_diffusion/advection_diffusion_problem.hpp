@@ -35,6 +35,7 @@
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
+#include <meltpooldg/utilities/amr.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
 
 namespace MeltPoolDG
@@ -395,32 +396,32 @@ namespace MeltPoolDG
       refine_mesh(std::shared_ptr<SimulationBase<dim>> base_in)
       {
         const auto mark_cells_for_refinement =
-          [&](parallel::distributed::Triangulation<dim> &tria) {
-            Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
+          [&](parallel::distributed::Triangulation<dim> &tria) -> bool {
+          Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
 
-            VectorType locally_relevant_solution;
-            locally_relevant_solution.reinit(scratch_data->get_partitioner());
-            locally_relevant_solution.copy_locally_owned_data_from(
-              advec_diff_operation->get_advected_field());
-            constraints.distribute(locally_relevant_solution);
-            locally_relevant_solution.update_ghost_values();
+          VectorType locally_relevant_solution;
+          locally_relevant_solution.reinit(scratch_data->get_partitioner());
+          locally_relevant_solution.copy_locally_owned_data_from(
+            advec_diff_operation->get_advected_field());
+          constraints.distribute(locally_relevant_solution);
+          locally_relevant_solution.update_ghost_values();
 
-            KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
-                                               scratch_data->get_face_quadrature(),
-                                               {},
-                                               locally_relevant_solution,
-                                               estimated_error_per_cell);
+          KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
+                                             scratch_data->get_face_quadrature(),
+                                             {},
+                                             locally_relevant_solution,
+                                             estimated_error_per_cell);
 
-            parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
-              tria,
-              estimated_error_per_cell,
-              base_in->parameters.amr.upper_perc_to_refine,
-              base_in->parameters.amr.lower_perc_to_coarsen);
+          parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
+            tria,
+            estimated_error_per_cell,
+            base_in->parameters.amr.upper_perc_to_refine,
+            base_in->parameters.amr.lower_perc_to_coarsen);
 
-            return true;
-          };
+          return true;
+        };
 
-        const auto attach_vectors = [&](auto &vectors) {
+        const auto attach_vectors = [&](std::vector<VectorType *> &vectors) {
           advec_diff_operation->attach_vectors(vectors);
         };
 
@@ -433,75 +434,7 @@ namespace MeltPoolDG
           this->setup_dof_system(base_in, do_initial_setup);
         };
 
-
-        const auto refine_grid = [](const auto &mark_cells_for_refinement,
-                                    const auto &attach_vectors,
-                                    const auto &post,
-                                    const auto &setup_dof_system,
-                                    auto &      base_in,
-                                    const auto &dof_handler) {
-          if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(
-                base_in->triangulation))
-            {
-              if (mark_cells_for_refinement(*tria) == false)
-                return;
-
-              /*
-               *  Limit the maximum and minimum refinement levels of cells of the grid.
-               */
-              if (tria->n_levels() > base_in->parameters.amr.max_grid_refinement_level)
-                for (auto &cell : tria->active_cell_iterators_on_level(
-                       base_in->parameters.amr.max_grid_refinement_level))
-                  cell->clear_refine_flag();
-              if (tria->n_levels() < base_in->parameters.amr.min_grid_refinement_level)
-                for (auto &cell : tria->active_cell_iterators_on_level(
-                       base_in->parameters.amr.min_grid_refinement_level))
-                  cell->clear_coarsen_flag();
-
-              /*
-               *  Initialize the triangulation change from the old grid to the new grid
-               */
-              base_in->triangulation->prepare_coarsening_and_refinement();
-              /*
-               *  Initialize the solution transfer from the old grid to the new grid
-               */
-              parallel::distributed::SolutionTransfer<dim, VectorType> solution_transfer(
-                dof_handler);
-
-              std::vector<VectorType *>       new_grid_solutions;
-              std::vector<const VectorType *> old_grid_solutions;
-
-              attach_vectors(new_grid_solutions);
-
-              for (const auto &i : new_grid_solutions)
-                old_grid_solutions.push_back(i);
-
-              solution_transfer.prepare_for_coarsening_and_refinement(old_grid_solutions);
-
-              /*
-               *  Execute the grid refinement
-               */
-              base_in->triangulation->execute_coarsening_and_refinement();
-
-              /*
-               *  update dof-related scratch data to match the current triangulation
-               */
-              setup_dof_system(base_in, false);
-
-              /*
-               *  interpolate the given solution to the new discretization
-               *
-               */
-              solution_transfer.interpolate(new_grid_solutions);
-
-              post();
-            }
-          else
-            //@todo: WIP
-            AssertThrow(false, ExcMessage("Mesh refinement for dim=1 not yet supported"));
-        };
-
-        refine_grid(
+        refine_grid<dim, VectorType>(
           mark_cells_for_refinement, attach_vectors, post, setup_dof_system, base_in, dof_handler);
       }
 
