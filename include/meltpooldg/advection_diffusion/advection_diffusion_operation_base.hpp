@@ -40,6 +40,9 @@ namespace MeltPoolDG
         (void)velocity_dof_idx_in;
         AssertThrow(false, ExcNotImplemented());
       }
+
+      virtual const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field() const = 0;
     };
 
   } // namespace AdvectionDiffusion

@@ -291,8 +291,7 @@ namespace MeltPoolDG
           AssertThrow(false, ExcNotImplemented());
       }
 
-      void
-      compute_advection_velocity(TensorFunction<1, dim> &advec_func)
+      void compute_advection_velocity(TensorFunction<1, dim> &advec_func)
       {
         scratch_data->initialize_dof_vector(advection_velocity);
         /*
@@ -389,21 +388,14 @@ namespace MeltPoolDG
       void
       refine_mesh(std::shared_ptr<SimulationBase<dim>> base_in)
       {
-        if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(
-              base_in->triangulation))
-          {
+        const auto mark_cells_for_refinement =
+          [&](parallel::distributed::Triangulation<dim> &tria) {
             Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
-
-            /*  @todo:
-             *  bug (?)
-             *  for the purpose of the KellyErrorEstimator initialize_dof_vector could not be used
-             *  scratch_data->initialize_dof_vector(locally_relevant_solution);
-             */
 
             VectorType locally_relevant_solution;
             locally_relevant_solution.reinit(scratch_data->get_partitioner());
-            // locally_relevant_solution.copy_locally_owned_data_from(
-            //  reinit_operation.solution_level_set); // TODO [PM]
+            locally_relevant_solution.copy_locally_owned_data_from(
+              advec_diff_operation->get_advected_field());
             constraints.distribute(locally_relevant_solution);
             locally_relevant_solution.update_ghost_values();
 
@@ -414,10 +406,31 @@ namespace MeltPoolDG
                                                estimated_error_per_cell);
 
             parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
-              *tria,
+              tria,
               estimated_error_per_cell,
               base_in->parameters.amr.upper_perc_to_refine,
               base_in->parameters.amr.lower_perc_to_coarsen);
+
+            return true;
+          };
+
+        const auto attach_old_vectors = [](const auto &) {};
+
+        const auto attach_new_vectors = [](const auto &) {};
+
+        const auto post = []() {
+          // constraints.distribute(interpolated_solution);
+          /*
+           * update the reinitialization operator with the new solution values
+           */
+          // reinit_operation.update_initial_solution(interpolated_solution);
+        };
+
+        if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(
+              base_in->triangulation))
+          {
+            if (mark_cells_for_refinement(*tria) == false)
+              return;
 
             /*
              *  Limit the maximum and minimum refinement levels of cells of the grid.
@@ -439,7 +452,12 @@ namespace MeltPoolDG
              *  Initialize the solution transfer from the old grid to the new grid
              */
             parallel::distributed::SolutionTransfer<dim, VectorType> solution_transfer(dof_handler);
-            solution_transfer.prepare_for_coarsening_and_refinement(locally_relevant_solution);
+
+
+            std::vector<const VectorType *> old_grid_solutions;
+            attach_old_vectors(old_grid_solutions);
+
+            solution_transfer.prepare_for_coarsening_and_refinement(old_grid_solutions);
 
             /*
              *  Execute the grid refinement
@@ -455,16 +473,12 @@ namespace MeltPoolDG
              *  interpolate the given solution to the new discretization
              *
              */
-            VectorType interpolated_solution;
-            scratch_data->initialize_dof_vector(interpolated_solution);
+            std::vector<VectorType *> new_grid_solutions;
+            attach_new_vectors(new_grid_solutions);
 
-            solution_transfer.interpolate(interpolated_solution);
+            solution_transfer.interpolate(new_grid_solutions);
 
-            constraints.distribute(interpolated_solution);
-            /*
-             * update the reinitialization operator with the new solution values
-             */
-            // reinit_operation.update_initial_solution(interpolated_solution);
+            post();
           }
         else
           //@todo: WIP

@@ -131,6 +131,12 @@ namespace MeltPoolDG
         advection_velocity.zero_out_ghosts();
       }
 
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field() const override
+      {
+        return solution_advected_field;
+      }
+
     private:
       void
       set_advection_diffusion_parameters(const Parameters<double> &data_in)
