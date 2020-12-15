@@ -39,12 +39,12 @@ namespace MeltPoolDG
        * Constructor.
        */
       CurvatureOperationAdaflo(const ScratchData<dim> &  scratch_data,
-                                  const int                 advec_diff_dof_idx,
-                                  const int                 normal_vec_dof_idx,
-                                  const int                 curv_dof_idx,
-                                  const int                 curv_quad_idx,
-                                  VectorType &              advected_field, //@todo: make const
-                                  const Parameters<double> &data_in)
+                               const int                 advec_diff_dof_idx,
+                               const int                 normal_vec_dof_idx,
+                               const int                 curv_dof_idx,
+                               const int                 curv_quad_idx,
+                               const VectorType &        advected_field, //@todo: make const
+                               const Parameters<double> &data_in)
         : scratch_data(scratch_data)
         , normal_vector_operation(  // @todo: this should be replaced by the melt pool normal vector operation (?)?
             scratch_data,
@@ -146,7 +146,7 @@ namespace MeltPoolDG
       const LinearAlgebra::distributed::BlockVector<double> &
       get_normal_vector() const override
       {
-        // @ todo
+        return normal_vector_operation.get_solution_normal_vector();
       }
 
     private:
@@ -156,6 +156,7 @@ namespace MeltPoolDG
                             const int                 curv_dof_idx,
                             const int                 curv_quad_idx)
       {
+        (void) parameters;
         curv_adaflo_params.dof_index_ls            = advec_diff_dof_idx;
         curv_adaflo_params.dof_index_curvature     = curv_dof_idx; //@ todo
         curv_adaflo_params.dof_index_normal        = curv_dof_idx;

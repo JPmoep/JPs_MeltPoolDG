@@ -41,7 +41,7 @@ namespace MeltPoolDG
                                   const int                 advec_diff_dof_idx,
                                   const int                 normal_vec_dof_idx,
                                   const int                 normal_vec_quad_idx,
-                                  VectorType &              advected_field, //@todo: make const
+                                  const VectorType &        advected_field, //@todo: make const
                                   const Parameters<double> &data_in)
         : scratch_data(scratch_data)
       {
