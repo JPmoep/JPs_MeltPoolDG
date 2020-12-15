@@ -15,8 +15,10 @@
 #include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
+#include <adaflo/level_set_okz_preconditioner.h>
 #include <adaflo/level_set_okz_compute_normal.h>
 #include <adaflo/block_matrix_extension.h>
+#include <adaflo/util.h>
 
 namespace MeltPoolDG
 {
@@ -55,6 +57,41 @@ namespace MeltPoolDG
          *  initialize the dof vectors
          */
         initialize_vectors();
+
+        compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
+                       advec_diff_dof_idx,
+                       cell_diameters,
+                       cell_diameter_min,
+                       cell_diameter_max);
+
+        /**
+         * initialize the preconditioner -->  @todo: currently not used in adaflo
+         */
+        initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
+                                                     scratch_data.get_constraint(
+                                                       normal_vec_dof_idx),
+                                                     normal_vec_dof_idx,
+                                                     normal_vec_quad_idx,
+                                                     preconditioner);
+
+
+        /**
+         * initialize the projection matrix 
+         */
+        projection_matrix = std::make_shared<BlockMatrixExtension>();
+        ilu_projection_matrix = std::make_shared<BlockILUExtension>();
+
+        initialize_projection_matrix<dim, double, VectorizedArray<double>>(scratch_data.get_matrix_free(),
+                                                 scratch_data.get_constraint(
+                                                 normal_vec_dof_idx),
+                                                 normal_vec_dof_idx,
+                                                 normal_vec_quad_idx,
+                                                 cell_diameter_max, // @todo
+                                                 cell_diameter_min,// @todo
+                                                 scratch_data.get_cell_diameters(),
+                                                 *projection_matrix,
+                                                 *ilu_projection_matrix
+                                                 );
         /*
          * initialize adaflo operation
          */
@@ -63,8 +100,8 @@ namespace MeltPoolDG
           rhs,
           advected_field,
           scratch_data.get_cell_diameters(),
-          normal_vec_adaflo_params.epsilon, // @todo
-          scratch_data.get_min_cell_size(), /*minimal edge length*/ // @todo
+          cell_diameter_max, // @todo
+          cell_diameter_min, 
           scratch_data.get_constraint(normal_vec_dof_idx),
           normal_vec_adaflo_params,
           scratch_data.get_matrix_free(),
@@ -72,15 +109,6 @@ namespace MeltPoolDG
           projection_matrix,
           ilu_projection_matrix
           );
-        /**
-         * initialize the preconditioner
-         */
-        initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
-                                                     scratch_data.get_constraint(
-                                                       normal_vec_dof_idx),
-                                                     normal_vec_dof_idx,
-                                                     normal_vec_quad_idx,
-                                                     preconditioner);
       }
 
       /**
@@ -89,7 +117,6 @@ namespace MeltPoolDG
       void
       solve(const VectorType &advected_field) override
       {
-        scratch_data.get_pcout() << "norm of advec" << advected_field.l2_norm() << std::endl;
         (void)advected_field;
         initialize_vectors();
         normal_vec_operation->compute_normal(true); 
@@ -98,7 +125,7 @@ namespace MeltPoolDG
           scratch_data.get_pcout() << " |n|_" << d << "=" << std::setw(15) << std::setprecision(10)
                                    << std::left << get_solution_normal_vector().block(d).l2_norm();
         
-        //scratch_data.get_pcout() << std::endl;
+        scratch_data.get_pcout() << std::endl;
       }
 
       const LinearAlgebra::distributed::BlockVector<double> &
@@ -114,11 +141,11 @@ namespace MeltPoolDG
                             const int                 normal_vec_dof_idx,
                             const int                 normal_vec_quad_idx)
       {
-        (void)parameters;
         normal_vec_adaflo_params.dof_index_ls            = advec_diff_dof_idx;
         normal_vec_adaflo_params.dof_index_normal        = normal_vec_dof_idx;
         normal_vec_adaflo_params.quad_index              = normal_vec_quad_idx;
-        normal_vec_adaflo_params.epsilon                 = 0.0; //@ todo
+        normal_vec_adaflo_params.damping_scale_factor    = parameters.normal_vec.damping_scale_factor;
+        normal_vec_adaflo_params.epsilon                 = 1.0; //@ todo
         normal_vec_adaflo_params.approximate_projections = false; //@ todo
       }
 
@@ -146,7 +173,6 @@ namespace MeltPoolDG
        * Adaflo parameters for the level set problem
        */
       LevelSetOKZSolverComputeNormalParameter normal_vec_adaflo_params;
-
       /**
        * Reference to the actual advection diffusion solver from adaflo
        */
@@ -155,9 +181,12 @@ namespace MeltPoolDG
       /**
        *  Diagonal preconditioner @todo
        */
-      DiagonalPreconditioner<double>        preconditioner;
-      std::shared_ptr<BlockMatrixExtension> projection_matrix;
-      std::shared_ptr<BlockILUExtension>    ilu_projection_matrix;
+      DiagonalPreconditioner<double>         preconditioner;
+      std::shared_ptr<BlockMatrixExtension>  projection_matrix;
+      std::shared_ptr<BlockILUExtension>     ilu_projection_matrix;
+      AlignedVector<VectorizedArray<double>> cell_diameters;
+      double cell_diameter_min;
+      double cell_diameter_max;
     };
   } // namespace NormalVector
 } // namespace MeltPoolDG
