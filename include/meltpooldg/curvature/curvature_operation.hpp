@@ -8,6 +8,7 @@
 #include <deal.II/lac/generic_linear_algebra.h>
 // MeltPoolDG
 #include <meltpooldg/curvature/curvature_operator.hpp>
+#include <meltpooldg/curvature/curvature_operation_base.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operation.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
@@ -20,7 +21,7 @@ namespace MeltPoolDG
     using namespace dealii;
 
     template <int dim>
-    class CurvatureOperation
+    class CurvatureOperation : public CurvatureOperationBase<dim>
     {
       /*
        *  This function calculates the curvature of the current level set function being
@@ -49,7 +50,7 @@ namespace MeltPoolDG
        */
       VectorType             solution_curvature;
       const BlockVectorType &solution_normal_vector =
-        normal_vector_operation.solution_normal_vector;
+        normal_vector_operation.get_solution_normal_vector();
 
       CurvatureOperation() = default;
 
@@ -57,7 +58,7 @@ namespace MeltPoolDG
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             dof_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             quad_idx_in) override
       {
         scratch_data = scratch_data_in;
         dof_idx      = dof_idx_in;
@@ -78,7 +79,7 @@ namespace MeltPoolDG
       }
 
       void
-      solve(const VectorType &solution_levelset)
+      solve(const VectorType &solution_levelset) override
       {
         /*
          *    compute and solve the normal vector field for the given level set
@@ -121,6 +122,12 @@ namespace MeltPoolDG
                   << solution_curvature.l2_norm();
             pcout << std::endl;
           }
+      }
+  
+      const LinearAlgebra::distributed::Vector<double>&
+      get_curvature() const override
+      {
+        return solution_curvature;
       }
 
     private:
