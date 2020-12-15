@@ -23,10 +23,10 @@ namespace MeltPoolDG
       solve(const LinearAlgebra::distributed::Vector<double> &advected_field) = 0;
 
       virtual void
-      initialize(const std::shared_ptr<const ScratchData<dim>> &   scratch_data_in,
-                 const Parameters<double> &                        data_in,
-                 const unsigned int                                dof_idx_in,
-                 const unsigned int                                quad_idx_in)
+      initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
+                 const Parameters<double> &                     data_in,
+                 const unsigned int                             dof_idx_in,
+                 const unsigned int                             quad_idx_in)
       {
         (void)scratch_data_in;
         (void)data_in;
@@ -35,10 +35,9 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
-      virtual
-      const LinearAlgebra::distributed::BlockVector<double> &
+      virtual const LinearAlgebra::distributed::BlockVector<double> &
       get_solution_normal_vector() const = 0;
     };
 
-  } // namespace AdvectionDiffusion
+  } // namespace NormalVector
 } // namespace MeltPoolDG

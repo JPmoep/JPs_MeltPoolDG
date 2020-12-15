@@ -44,7 +44,7 @@ namespace MeltPoolDG
        *    This is the primary solution variable of this module, which will be also publically
        *    accessible for output_results.
        */
-      VectorType             solution_level_set;
+      VectorType solution_level_set;
 
       ReinitializationOperation() = default;
 
@@ -71,10 +71,7 @@ namespace MeltPoolDG
           {
             normal_vector_operation = std::make_shared<NormalVector::NormalVectorOperation<dim>>();
 
-            normal_vector_operation->initialize(scratch_data_in, 
-                                                data_in, 
-                                                dof_idx_in, 
-                                                quad_idx_in);
+            normal_vector_operation->initialize(scratch_data_in, data_in, dof_idx_in, quad_idx_in);
           }
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         else if (data_in.normal_vec.implementation == "adaflo")
@@ -82,18 +79,16 @@ namespace MeltPoolDG
             AssertThrow(data_in.normal_vec.do_matrix_free, ExcNotImplemented());
 
             normal_vector_operation =
-              std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(
-                *scratch_data_in,
-                dof_idx_in, //@todo
-                dof_idx_in,
-                quad_idx,
-                solution_level_set,
-                data_in);
+              std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(*scratch_data_in,
+                                                                               dof_idx_in, //@todo
+                                                                               dof_idx_in,
+                                                                               quad_idx,
+                                                                               solution_level_set,
+                                                                               data_in);
           }
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
-
 
 
 
@@ -128,7 +123,7 @@ namespace MeltPoolDG
          *    level set; the normal vector field is called by reference within the
          *    operator class
          */
-        //normal_vector_operation->update();
+        // normal_vector_operation->update();
         normal_vector_operation->solve(solution_level_set);
       }
 
@@ -217,11 +212,10 @@ namespace MeltPoolDG
           }
       }
 
-      const BlockVectorType&
+      const BlockVectorType &
       get_solution_normal_vector() const
       {
         return normal_vector_operation->get_solution_normal_vector();
-
       }
 
     private:
@@ -277,7 +271,7 @@ namespace MeltPoolDG
        *   Computation of the normal vectors
        */
       std::shared_ptr<NormalVector::NormalVectorOperationBase<dim>> normal_vector_operation;
-      //NormalVector::NormalVectorOperation<dim> normal_vector_operation;
+      // NormalVector::NormalVectorOperation<dim> normal_vector_operation;
       /*
        *  Based on the following indices the correct DoFHandler or quadrature rule from
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds

@@ -11,8 +11,8 @@
 
 // MeltPoolDG
 #include <meltpooldg/interface/operator_base.hpp>
-#include <meltpooldg/normal_vector/normal_vector_operator.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operation_base.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operator.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
@@ -40,7 +40,7 @@ namespace MeltPoolDG
      */
 
     template <int dim>
-    class NormalVectorOperation: public NormalVectorOperationBase<dim>
+    class NormalVectorOperation : public NormalVectorOperationBase<dim>
     {
     private:
       using VectorType       = LinearAlgebra::distributed::Vector<double>;
@@ -128,8 +128,8 @@ namespace MeltPoolDG
             pcout << std::endl;
           }
       }
-  
-      const BlockVectorType&
+
+      const BlockVectorType &
       get_solution_normal_vector() const override
       {
         return solution_normal_vector;
