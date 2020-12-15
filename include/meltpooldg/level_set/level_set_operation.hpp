@@ -10,7 +10,9 @@
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
+#include <meltpooldg/curvature/curvature_operation_base.hpp>
 #include <meltpooldg/curvature/curvature_operation.hpp>
+#include <meltpooldg/curvature/curvature_operation_adaflo_wrapper.hpp>
 #include <meltpooldg/reinitialization/reinitialization_operation.hpp>
 
 namespace MeltPoolDG
@@ -101,16 +103,42 @@ namespace MeltPoolDG
         /*
          *    initialize the curvature operation class
          */
-        curvature_operation.initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
-        /*
-         *    compute the curvature of the initial level set field
-         */
-        curvature_operation.solve(advec_diff_operation.solution_advected_field);
-        /*
-         *    correct the curvature value far away from the zero level set
-         */
-        if (level_set_data.do_curvature_correction)
-          correct_curvature_values();
+        if (data_in.curv.implementation == "meltpooldg")
+        {
+          curvature_operation->initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
+          /*
+           *    compute the curvature of the initial level set field
+           */
+          curvature_operation->solve(advec_diff_operation.solution_advected_field);
+          /*
+           *    correct the curvature value far away from the zero level set
+           */
+          if (level_set_data.do_curvature_correction)
+            correct_curvature_values();
+        }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if (data_in.curv.implementation == "adaflo")
+          {
+            AssertThrow(data_in.normal_vec.do_matrix_free, ExcNotImplemented());
+
+            curvature_operation =
+              std::make_shared<Curvature::CurvatureOperationAdaflo<dim>>(*scratch_data_in,
+                                                                          dof_no_bc_idx_in, //@todo
+                                                                          dof_no_bc_idx_in, //@todo
+                                                                          dof_no_bc_idx_in,
+                                                                          quad_idx,
+                                                                          solution_level_set,
+                                                                          data_in);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
+
+
+
+
+
+
       }
 
       void
@@ -150,7 +178,7 @@ namespace MeltPoolDG
         /*
          *    compute the curvature
          */
-        curvature_operation.solve(advec_diff_operation.solution_advected_field);
+        curvature_operation->solve(advec_diff_operation.solution_advected_field);
         /*
          *    correct the curvature value far away from the zero level set
          */
@@ -314,8 +342,8 @@ namespace MeltPoolDG
         for (unsigned int i = 0; i < solution_curvature.local_size(); ++i)
           // if (std::abs(solution_curvature.local_element(i)) > 1e-4)
           if (1. - solution_level_set.local_element(i) * solution_level_set.local_element(i) > 1e-2)
-            curvature_operation.solution_curvature.local_element(i) =
-              1. / (1. / curvature_operation.solution_curvature.local_element(i) +
+            curvature_operation->get_curvature().local_element(i) =
+              1. / (1. / curvature_operation->get_curvature().local_element(i) +
                     distance_to_level_set.local_element(i) / (dim - 1));
       }
 
@@ -349,8 +377,7 @@ namespace MeltPoolDG
        */
       AdvectionDiffusionOperation<dim>   advec_diff_operation;
       ReinitializationOperation<dim>     reinit_operation;
-      Curvature::CurvatureOperation<dim> curvature_operation;
-
+      std::shared_ptr<Curvature::CurvatureOperationBase<dim>> curvature_operation;
       /*
        *  The reinitialization of the level set function is a "pseudo"-time-dependent
        *  equation, which is solved up to quasi-steady state. Thus a time iterator is
@@ -374,12 +401,12 @@ namespace MeltPoolDG
        *    This is the curvature solution variable, which will be publically
        *    accessible for output_results.
        */
-      const VectorType &solution_curvature = curvature_operation.solution_curvature;
+      const VectorType &solution_curvature = curvature_operation->get_curvature();
       /*
        *    This is the normal vector field, which will be publically
        *    accessible for output_results.
        */
-      const BlockVectorType &solution_normal_vector = curvature_operation.solution_normal_vector;
+      const BlockVectorType &solution_normal_vector = curvature_operation->get_normal_vector();
       /*
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update
