@@ -34,6 +34,10 @@ namespace MeltPoolDG
         (void)quad_idx_in;
         AssertThrow(false, ExcNotImplemented());
       }
+
+      virtual
+      const LinearAlgebra::distributed::BlockVector<double> &
+      get_solution_normal_vector() const = 0;
     };
 
   } // namespace AdvectionDiffusion

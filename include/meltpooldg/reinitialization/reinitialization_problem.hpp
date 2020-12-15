@@ -309,7 +309,7 @@ namespace MeltPoolDG
             if (parameters.paraview.print_normal_vector)
               {
                 for (unsigned int d = 0; d < dim; ++d)
-                  data_out.add_data_vector(reinit_operation.solution_normal_vector.block(d),
+                  data_out.add_data_vector(reinit_operation.get_solution_normal_vector().block(d),
                                            "normal_" + std::to_string(d));
               }
 

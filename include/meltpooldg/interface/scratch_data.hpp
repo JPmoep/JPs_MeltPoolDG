@@ -351,7 +351,7 @@ namespace MeltPoolDG
     }
 
     const AlignedVector<VectorizedArray<double>> &
-    get_cell_diameters(const unsigned int dof_idx = 0)
+    get_cell_diameters(const unsigned int dof_idx = 0) const
     {
       return this->cell_diameters[dof_idx];
     }
