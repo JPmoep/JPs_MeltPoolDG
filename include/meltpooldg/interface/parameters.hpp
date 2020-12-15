@@ -37,7 +37,6 @@ namespace MeltPoolDG
     number       gravity             = 0.0;
   };
 
-  template <typename number = double>
   struct AdaptiveMeshingData
   {
     bool         do_amr                    = false;
@@ -248,9 +247,9 @@ namespace MeltPoolDG
 
           flow.density   = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
           flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
-          flow.velocity_degree        = (flow.velocity_degree > 0.0) ?
-                                          flow.velocity_degree :
-                                          adaflo_params.params.velocity_degree;
+          flow.velocity_degree = (flow.velocity_degree > 0.0) ?
+                                   flow.velocity_degree :
+                                   adaflo_params.params.velocity_degree;
           flow.velocity_n_q_points_1d = (flow.velocity_n_q_points_1d < 1) ?
                                           flow.velocity_degree + 1 :
                                           flow.velocity_n_q_points_1d;
@@ -741,7 +740,7 @@ namespace MeltPoolDG
     ParameterHandler prm;
 
     BaseData<number>               base;
-    AdaptiveMeshingData<number>    amr;
+    AdaptiveMeshingData            amr;
     LevelSetData<number>           ls;
     ReinitializationData<number>   reinit;
     AdvectionDiffusionData<number> advec_diff;

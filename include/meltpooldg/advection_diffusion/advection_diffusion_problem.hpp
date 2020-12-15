@@ -429,13 +429,14 @@ namespace MeltPoolDG
           hanging_node_constraints.distribute(advec_diff_operation->get_advected_field());
         };
 
-        const auto setup_dof_system = [&](std::shared_ptr<SimulationBase<dim>> base_in,
-                                          const bool                           do_initial_setup) {
-          this->setup_dof_system(base_in, do_initial_setup);
-        };
+        const auto setup_dof_system = [&]() { this->setup_dof_system(base_in, false); };
 
-        refine_grid<dim, VectorType>(
-          mark_cells_for_refinement, attach_vectors, post, setup_dof_system, base_in, dof_handler);
+        refine_grid<dim, VectorType>(mark_cells_for_refinement,
+                                     attach_vectors,
+                                     post,
+                                     setup_dof_system,
+                                     base_in->parameters.amr,
+                                     dof_handler);
       }
 
     private:
