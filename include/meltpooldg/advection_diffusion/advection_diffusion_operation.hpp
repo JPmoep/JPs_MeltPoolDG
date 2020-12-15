@@ -137,6 +137,30 @@ namespace MeltPoolDG
         return solution_advected_field;
       }
 
+      LinearAlgebra::distributed::Vector<double> &
+      get_advected_field() override
+      {
+        return solution_advected_field;
+      }
+
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old() const override
+      {
+        return solution_advected_field;
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old() override
+      {
+        return solution_advected_field;
+      }
+
+      void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      {
+        vectors.push_back(&solution_advected_field);
+      }
+
     private:
       void
       set_advection_diffusion_parameters(const Parameters<double> &data_in)

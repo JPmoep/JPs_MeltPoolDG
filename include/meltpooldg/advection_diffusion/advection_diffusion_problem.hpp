@@ -209,6 +209,12 @@ namespace MeltPoolDG
          *  create the matrix-free object
          */
         scratch_data->build();
+
+        if (do_initial_setup == false)
+          {
+            scratch_data->initialize_dof_vector(advec_diff_operation->get_advected_field());
+            scratch_data->initialize_dof_vector(advec_diff_operation->get_advected_field_old());
+          }
       }
 
 
@@ -291,7 +297,8 @@ namespace MeltPoolDG
           AssertThrow(false, ExcNotImplemented());
       }
 
-      void compute_advection_velocity(TensorFunction<1, dim> &advec_func)
+      void
+      compute_advection_velocity(TensorFunction<1, dim> &advec_func)
       {
         scratch_data->initialize_dof_vector(advection_velocity);
         /*
@@ -329,8 +336,7 @@ namespace MeltPoolDG
              */
             DataOut<dim> data_out;
             data_out.attach_dof_handler(dof_handler);
-            // data_out.add_data_vector(advec_diff_operation.solution_advected_field,
-            //"advected_field");
+            data_out.add_data_vector(advec_diff_operation->get_advected_field(), "advected_field");
 
             /*
              *  output advection velocity
@@ -414,16 +420,12 @@ namespace MeltPoolDG
             return true;
           };
 
-        const auto attach_old_vectors = [](const auto &) {};
+        const auto attach_vectors = [&](auto &vectors) {
+          advec_diff_operation->attach_vectors(vectors);
+        };
 
-        const auto attach_new_vectors = [](const auto &) {};
-
-        const auto post = []() {
-          // constraints.distribute(interpolated_solution);
-          /*
-           * update the reinitialization operator with the new solution values
-           */
-          // reinit_operation.update_initial_solution(interpolated_solution);
+        const auto post = [&]() {
+          hanging_node_constraints.distribute(advec_diff_operation->get_advected_field());
         };
 
         if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(
@@ -453,9 +455,13 @@ namespace MeltPoolDG
              */
             parallel::distributed::SolutionTransfer<dim, VectorType> solution_transfer(dof_handler);
 
-
+            std::vector<VectorType *>       new_grid_solutions;
             std::vector<const VectorType *> old_grid_solutions;
-            attach_old_vectors(old_grid_solutions);
+
+            attach_vectors(new_grid_solutions);
+
+            for (const auto &i : new_grid_solutions)
+              old_grid_solutions.push_back(i);
 
             solution_transfer.prepare_for_coarsening_and_refinement(old_grid_solutions);
 
@@ -473,9 +479,6 @@ namespace MeltPoolDG
              *  interpolate the given solution to the new discretization
              *
              */
-            std::vector<VectorType *> new_grid_solutions;
-            attach_new_vectors(new_grid_solutions);
-
             solution_transfer.interpolate(new_grid_solutions);
 
             post();
