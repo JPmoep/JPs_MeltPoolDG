@@ -22,6 +22,6 @@
   "paraview":
   {
     "paraview filename" :            "solution_reinitialization",
-    "paraview do output" :           "false",
+    "paraview do output" :           "false"
   }
 }

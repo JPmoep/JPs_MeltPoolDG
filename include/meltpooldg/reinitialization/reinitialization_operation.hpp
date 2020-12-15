@@ -59,7 +59,6 @@ namespace MeltPoolDG
         dof_idx      = dof_idx_in;
         quad_idx     = quad_idx_in;
         scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
-        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
         /*
          *    initialize the (local) parameters of the reinitialization
          *    from the global user-defined parameters
@@ -112,7 +111,7 @@ namespace MeltPoolDG
       /*
        *  By calling the reinitialize function, (1) the solution_level_set field
        *  and (2) the normal vector field corresponding to the given solution_level_set_field
-       *  is updated. This is commonly the first stage before performing the pesude-time-dependent
+       *  is updated. This is commonly the first stage before performing the pseudo-time-dependent
        *  solution procedure.
        */
       void
