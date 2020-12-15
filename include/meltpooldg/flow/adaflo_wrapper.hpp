@@ -38,9 +38,7 @@ namespace MeltPoolDG
         : dof_handler_meltpool(scratch_data.get_dof_handler(idx))
         , timer(std::cout, TimerOutput::never, TimerOutput::wall_times)
         , navier_stokes(base_in->parameters.adaflo_params.get_parameters(),
-                        *const_cast<parallel::distributed::Triangulation<dim> *>(
-                          dynamic_cast<const parallel::distributed::Triangulation<dim> *>(
-                            &scratch_data.get_triangulation())),
+                        *const_cast<Triangulation<dim> *>(&scratch_data.get_triangulation()),
                         &timer)
       {
         /*
@@ -84,10 +82,17 @@ namespace MeltPoolDG
         scratch_data.attach_constraint_matrix(navier_stokes.get_constraints_u());
         scratch_data.attach_constraint_matrix(navier_stokes.get_constraints_p());
 
-        const unsigned int quad_index_u = scratch_data.attach_quadrature(
-          QGauss<dim>(base_in->parameters.adaflo_params.get_parameters().velocity_degree + 1));
-        const unsigned int quad_index_p = scratch_data.attach_quadrature(
-          QGauss<dim>(base_in->parameters.adaflo_params.get_parameters().velocity_degree));
+        const auto &adaflo_params = base_in->parameters.adaflo_params.get_parameters();
+
+        const unsigned int quad_index_u =
+          adaflo_params.use_simplex_mesh ?
+            scratch_data.attach_quadrature(
+              Simplex::QGauss<dim>(adaflo_params.velocity_degree + 1)) :
+            scratch_data.attach_quadrature(QGauss<dim>(adaflo_params.velocity_degree + 1));
+        const unsigned int quad_index_p =
+          adaflo_params.use_simplex_mesh ?
+            scratch_data.attach_quadrature(Simplex::QGauss<dim>(adaflo_params.velocity_degree)) :
+            scratch_data.attach_quadrature(QGauss<dim>(adaflo_params.velocity_degree));
 
         scratch_data.build();
 

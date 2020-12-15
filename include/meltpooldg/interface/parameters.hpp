@@ -262,6 +262,7 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_start = flow.time_step_size;
           adaflo_params.params.time_step_size_min   = flow.time_step_size;
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
+          adaflo_params.params.use_simplex_mesh     = base.do_simplex;
         }
 
 #endif

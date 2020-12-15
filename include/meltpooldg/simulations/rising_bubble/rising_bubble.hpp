@@ -5,6 +5,7 @@
 #include <deal.II/base/point.h>
 #include <deal.II/base/tensor_function.h>
 
+#include <deal.II/distributed/shared_tria.h>
 #include <deal.II/distributed/tria.h>
 
 #include <deal.II/grid/grid_generator.h>
@@ -57,36 +58,57 @@ namespace MeltPoolDG
         void
         create_spatial_discretization() override
         {
-          this->triangulation =
-            std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
-
+          if (this->parameters.base.do_simplex)
+            {
+              this->triangulation =
+                std::make_shared<parallel::shared::Triangulation<dim>>(this->mpi_communicator);
+            }
+          else
+            {
+              this->triangulation =
+                std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+            }
 
           if constexpr ((dim == 2) || (dim == 3))
             {
               // create mesh
-              std::vector<unsigned int> subdivisions(dim, 5);
-              subdivisions[dim - 1] = 10;
+              std::vector<unsigned int> subdivisions(
+                dim,
+                5 * (this->parameters.base.do_simplex ?
+                       Utilities::pow(2, this->parameters.base.global_refinements) :
+                       1));
+              subdivisions[dim - 1] *= 2;
 
               const Point<dim> bottom_left;
               const Point<dim> top_right = (dim == 2 ? Point<dim>(1, 2) : Point<dim>(1, 1, 2));
-              GridGenerator::subdivided_hyper_rectangle(*this->triangulation,
-                                                        subdivisions,
-                                                        bottom_left,
-                                                        top_right);
+
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+              if (this->parameters.base.do_simplex)
+                {
+                  GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
+                                                                           subdivisions,
+                                                                           bottom_left,
+                                                                           top_right);
+                }
+              else
+#endif
+                {
+                  GridGenerator::subdivided_hyper_rectangle(*this->triangulation,
+                                                            subdivisions,
+                                                            bottom_left,
+                                                            top_right);
+                }
 
               // set boundary indicator to 2 on left and right face -> symmetry boundary
-              typename parallel::distributed::Triangulation<dim>::active_cell_iterator
-                cell = this->triangulation->begin(),
-                endc = this->triangulation->end();
-
-              for (; cell != endc; ++cell)
-                for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+              for (const auto &cell : this->triangulation->active_cell_iterators())
+                for (unsigned int face = 0; face < cell->n_faces(); ++face)
                   if (cell->face(face)->at_boundary() &&
                       (std::fabs(cell->face(face)->center()[0] - 1) < 1e-14 ||
                        std::fabs(cell->face(face)->center()[0]) < 1e-14))
                     cell->face(face)->set_boundary_id(2);
 
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
+              if (this->parameters.base.do_simplex == false)
+                this->triangulation->refine_global(this->parameters.base.global_refinements);
             }
           else
             {
