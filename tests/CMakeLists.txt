@@ -1,3 +1,11 @@
 SET(TEST_LIBRARIES run_simulation)
 SET(TEST_TARGET run_simulation)
 DEAL_II_PICKUP_TESTS()
+
+SET(_n_tests "0")
+FILE(GLOB _tests ${_testexe}*.json)
+LIST (SORT _tests)
+FOREACH(_test ${_tests})
+  MATH(EXPR _n_tests "${_n_tests} + 1")
+ENDFOREACH()
+MESSAGE(STATUS "Added ${_n_tests} tests")
