@@ -84,14 +84,12 @@ namespace MeltPoolDG
           velocity_vec,
           velocity_vec_old,
           velocity_vec_old_old,
-          scratch_data.get_diameter(),
           scratch_data.get_cell_diameters(),
           scratch_data.get_constraint(advec_diff_dof_idx),
           scratch_data.get_pcout(advec_diff_dof_idx),
           bcs,
           scratch_data.get_matrix_free(),
           adaflo_params,
-          global_max_velocity,
           preconditioner);
         /**
          * initialize the preconditioner
