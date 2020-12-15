@@ -39,7 +39,7 @@ jobs:
          command="git clone https://github.com/kronbichler/adaflo.git    && \
           mkdir adaflo-build                                    && \
           cd adaflo-build                                       && \
-          cmake ../adaflo                                       && \
+          cmake -D BUILD_SHARED_LIBS=ON ../adaflo               && \
           make -j2 adaflo                                       && \
           git clone https://github.com/${{ github.repository }} && \
           cd MeltPoolDG                                         && \
