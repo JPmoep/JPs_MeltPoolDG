@@ -1,0 +1,23 @@
+{
+  "base" : {
+    "problem name": "advection_diffusion",
+    "application name": "advection_diffusion",
+    "dimension": "2",
+    "global refinements": "5",
+    "degree": "1",
+    "do print parameters": "false"
+  },
+  "advection diffusion" : {
+    "advec diff diffusivity": "0.000000",
+    "advec diff implementation": "meltpooldg",
+    "advec diff integration scheme" : "crank_nicolson",
+    "advec diff start time": "0.0",
+    "advec diff end time": "0.05",
+    "advec diff time step size": "0.01",
+    "advec diff do matrix free": "false",
+    "advec diff do print l2norm": "true"
+  },
+  "paraview" : {
+    "paraview do output": "false"
+  }
+}

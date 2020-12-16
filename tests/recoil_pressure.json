@@ -5,12 +5,10 @@
                 "Solver": {
                     "NL max iterations": "10",
                     "NL tolerance": "1.e-9",
-                    "lin its before inner solvers": "50",
+                    "lin its before inner solvers": "30",
                     "lin max iterations": "30",
-                    "lin pressure mass preconditioner": "ilu",
-                    "lin relative tolerance": "1",
-                    "lin tolerance": "1.e-4",
-                    "lin velocity preconditioner": "ilu scalar",
+                    "lin tolerance": "1.e-5",
+                    "lin velocity preconditioner": "ilu",
                     "linearization scheme": "coupled implicit Newton"
                 },
                 "dimension": "2",
