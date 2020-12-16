@@ -42,6 +42,8 @@ namespace MeltPoolDG
                                       const VectorType &        initial_solution_level_set,
                                       const Parameters<double> &parameters)
         : scratch_data(scratch_data)
+        , reinit_dof_idx(reinit_dof_idx)
+        , reinit_quad_idx(reinit_quad_idx)
       {
         /**
          * set parameters of adaflo
@@ -62,6 +64,7 @@ namespace MeltPoolDG
                                     cell_diameters,
                                     cell_diameter_min,
                                     cell_diameter_max);
+        set_adaflo_parameters(base_in->parameters, reinit_dof_idx, reinit_quad_idx, normal_dof_idx);
 
         /*
          * initialize normal_vector_operation from adaflo
@@ -95,6 +98,29 @@ namespace MeltPoolDG
           scratch_data.get_matrix_free());
 
         /**
+         *  initialize the dof vectors
+         */
+        reinit();
+
+        /**
+         *  set initial solution of level set
+         */
+
+        level_set.copy_locally_owned_data_from(initial_solution_level_set);
+      }
+
+      void
+      reinit() override
+      {
+        initialize_vectors();
+
+        compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
+                                    reinit_dof_idx,
+                                    cell_diameters,
+                                    cell_diameter_min,
+                                    cell_diameter_max);
+
+        /**
          * initialize the preconditioner
          */
         initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
@@ -102,6 +128,8 @@ namespace MeltPoolDG
                                                      reinit_dof_idx,
                                                      reinit_quad_idx,
                                                      preconditioner);
+
+        normal_vector_operation_adaflo->reinit();
       }
 
       /**
@@ -197,6 +225,9 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &scratch_data;
+
+      const unsigned int reinit_dof_idx;
+      const unsigned int reinit_quad_idx;
       /**
        *  advected field
        */

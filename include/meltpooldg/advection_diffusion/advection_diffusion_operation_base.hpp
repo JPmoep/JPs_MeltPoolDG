@@ -43,6 +43,22 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
+      virtual void
+      reinit()
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      virtual void
+      set_initial_condition(
+        const LinearAlgebra::distributed::Vector<double> &     initial_solution_advected_field,
+        const LinearAlgebra::distributed::BlockVector<double> &velocity_vec_in)
+      {
+        (void)initial_solution_advected_field;
+        (void)velocity_vec_in;
+        AssertThrow(false, ExcNotImplemented());
+      }
+
       virtual const LinearAlgebra::distributed::Vector<double> &
       get_advected_field() const = 0;
 

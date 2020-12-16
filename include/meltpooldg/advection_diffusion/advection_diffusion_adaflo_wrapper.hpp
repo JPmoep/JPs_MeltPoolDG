@@ -43,6 +43,8 @@ namespace MeltPoolDG
         std::shared_ptr<SimulationBase<dim>> base_in,
         std::string                          operation_name = "advection_diffusion")
         : scratch_data(scratch_data)
+        , advec_diff_dof_idx(advec_diff_dof_idx)
+        , advec_diff_quad_idx(advec_diff_quad_idx)
       {
         /**
          * set parameters of adaflo
@@ -51,21 +53,6 @@ namespace MeltPoolDG
                               advec_diff_dof_idx,
                               advec_diff_quad_idx,
                               velocity_dof_idx);
-        /**
-         *  initialize the dof vectors
-         */
-        initialize_vectors();
-        /**
-         *  set initial solution of advected field
-         */
-        advected_field.copy_locally_owned_data_from(initial_solution_advected_field);
-        advected_field_old     = advected_field;
-        advected_field_old_old = advected_field;
-
-        /**
-         *  set velocity
-         */
-        set_velocity(velocity_vec_in);
         /*
          * Boundary conditions for the advected field
          */
@@ -92,6 +79,16 @@ namespace MeltPoolDG
           scratch_data.get_matrix_free(),
           adaflo_params,
           preconditioner);
+      }
+
+      void
+      reinit() override
+      {
+        /**
+         *  initialize the dof vectors
+         */
+        initialize_vectors();
+
         /**
          * initialize the preconditioner
          */
@@ -101,6 +98,23 @@ namespace MeltPoolDG
                                                      advec_diff_dof_idx,
                                                      advec_diff_quad_idx,
                                                      preconditioner);
+      }
+
+      void
+      set_initial_condition(const VectorType &     initial_solution_advected_field,
+                            const BlockVectorType &velocity_vec_in) override
+      {
+        /**
+         *  set initial solution of advected field
+         */
+        advected_field.copy_locally_owned_data_from(initial_solution_advected_field);
+        advected_field_old     = advected_field;
+        advected_field_old_old = advected_field;
+
+        /**
+         *  set velocity
+         */
+        set_velocity(velocity_vec_in);
       }
 
       /**
@@ -209,20 +223,6 @@ namespace MeltPoolDG
       void
       set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
       {
-        // TODO!!!!!!!
-        scratch_data.initialize_dof_vector(velocity_vec, adaflo_params.dof_index_vel);
-        scratch_data.initialize_dof_vector(velocity_vec_old, adaflo_params.dof_index_vel);
-        scratch_data.initialize_dof_vector(velocity_vec_old_old, adaflo_params.dof_index_vel);
-        scratch_data.initialize_dof_vector(rhs, adaflo_params.dof_index_ls);
-        scratch_data.initialize_dof_vector(increment, adaflo_params.dof_index_ls);
-
-        initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
-                                                     scratch_data.get_constraint(
-                                                       adaflo_params.dof_index_ls),
-                                                     adaflo_params.dof_index_ls,
-                                                     adaflo_params.quad_index,
-                                                     preconditioner);
-
         velocity_vec_old_old.zero_out_ghosts();
         velocity_vec_old.zero_out_ghosts();
         velocity_vec.zero_out_ghosts();
@@ -264,6 +264,10 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &scratch_data;
+
+      const unsigned int advec_diff_dof_idx;
+      const unsigned int advec_diff_quad_idx;
+
       /**
        *  advected field
        */

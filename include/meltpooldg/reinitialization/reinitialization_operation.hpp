@@ -102,6 +102,12 @@ namespace MeltPoolDG
         create_operator();
       }
 
+      void
+      reinit() override
+      {
+        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
+      }
+
       /*
        *  By calling the reinitialize function, (1) the solution_level_set field
        *  and (2) the normal vector field corresponding to the given solution_level_set_field
