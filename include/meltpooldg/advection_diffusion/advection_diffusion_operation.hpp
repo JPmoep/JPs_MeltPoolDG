@@ -68,6 +68,12 @@ namespace MeltPoolDG
         set_advection_diffusion_parameters(data_in);
       }
 
+      void
+      reinit() override
+      {
+        scratch_data->initialize_dof_vector(solution_advected_field, dof_idx);
+      }
+
 
       void
       solve(const double dt, const BlockVectorType &advection_velocity) override
