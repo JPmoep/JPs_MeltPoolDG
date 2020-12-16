@@ -14,18 +14,21 @@
     "ls start time": "0.0",
     "ls end time": "0.05",
     "ls time step size": "0.01",
-    "ls do matrix free": "true"
+    "ls do matrix free": "true",
+    "ls implementation": "adaflo"
   },
   "reinitialization" : {
     "reinit max n steps": "5",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
-    "reinit eps scale factor": "0.5"
+    "reinit eps scale factor": "0.5",
+    "reinit implementation": "adaflo"
   },
   "normal vector": { 
     "normal vec damping scale factor": "0.5",
-    "normal vec do matrix free": "true"
+    "normal vec do matrix free": "true",
+    "normal vec implementation": "adaflo"
   },
   "paraview":
   {

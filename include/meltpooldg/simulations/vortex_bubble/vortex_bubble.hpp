@@ -175,37 +175,24 @@ namespace MeltPoolDG
                                                     this->parameters.base.problem_name);
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
-           *  due to the hyperbolic nature of the analyzed problem
+           *  due to the hyperbolic nature of the analyzed problem)
            *
-                      out    in
-          (-1,1)  +---------------+ (1,1)
+                      in    in
+          (0,1)  +---------------+ (1,1)
                   |       :       |
-            in    |       :       | out
+            in    |       :       | in
                   |_______________|
                   |       :       |
-            out   |       :       | in
+            in    |       :       | in
                   |       :       |
                   +---------------+
-           * (-1,-1)  in     out   (1,-1)
+           * (0,0)  in      in    (1,0)
            */
           if constexpr (dim == 2)
             {
               for (auto &face : this->triangulation->active_face_iterators())
                 if ((face->at_boundary()))
-                  {
-                    const double half_line = (right_domain + left_domain) / 2;
-
-                    if (face->center()[0] == left_domain && face->center()[1] > half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[0] == right_domain && face->center()[1] < half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[1] == right_domain && face->center()[0] > half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[1] == left_domain && face->center()[0] < half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else
-                      face->set_boundary_id(do_nothing);
-                  }
+                    face->set_boundary_id(inflow_bc);
             }
           else
             {
