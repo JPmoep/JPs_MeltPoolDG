@@ -4,7 +4,8 @@
     "application name": "vortex_bubble",
     "dimension": "2",
     "global refinements": "5",
-    "degree": "1"
+    "degree": "1",
+    "do print paramters": "false"
   },
   "levelset" : {
     "ls do reinitialization": "true",
