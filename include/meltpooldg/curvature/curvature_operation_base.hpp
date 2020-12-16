@@ -50,5 +50,5 @@ namespace MeltPoolDG
       get_curvature() = 0;
     };
 
-  } // namespace NormalVector
+  } // namespace Curvature
 } // namespace MeltPoolDG

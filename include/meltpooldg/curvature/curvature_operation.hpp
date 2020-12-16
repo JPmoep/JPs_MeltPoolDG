@@ -7,8 +7,8 @@
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
 // MeltPoolDG
-#include <meltpooldg/curvature/curvature_operator.hpp>
 #include <meltpooldg/curvature/curvature_operation_base.hpp>
+#include <meltpooldg/curvature/curvature_operator.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operation.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
@@ -44,11 +44,6 @@ namespace MeltPoolDG
        *  In this struct, the main parameters of the curvature class are stored.
        */
       CurvatureData<double> curvature_data;
-      /*
-       *    This is the primary solution variable of this module, which will be also publically
-       *    accessible for output_results.
-       */
-      VectorType             solution_curvature;
 
       CurvatureOperation() = default;
 
@@ -92,7 +87,8 @@ namespace MeltPoolDG
 
         if (curvature_data.do_matrix_free)
           {
-            curvature_operator->create_rhs(rhs, normal_vector_operation.get_solution_normal_vector());
+            curvature_operator->create_rhs(rhs,
+                                           normal_vector_operation.get_solution_normal_vector());
             iter = LinearSolve<
               VectorType,
               SolverCG<VectorType>,
@@ -102,9 +98,10 @@ namespace MeltPoolDG
           }
         else
           {
-            curvature_operator->assemble_matrixbased(normal_vector_operation.get_solution_normal_vector(),
-                                                     curvature_operator->system_matrix,
-                                                     rhs);
+            curvature_operator->assemble_matrixbased(
+              normal_vector_operation.get_solution_normal_vector(),
+              curvature_operator->system_matrix,
+              rhs);
 
             iter = LinearSolve<VectorType, SolverCG<VectorType>, SparseMatrixType>::solve(
               curvature_operator->system_matrix, solution_curvature, rhs);
@@ -121,20 +118,20 @@ namespace MeltPoolDG
             pcout << std::endl;
           }
       }
-  
-      const LinearAlgebra::distributed::Vector<double>&
+
+      const LinearAlgebra::distributed::Vector<double> &
       get_curvature() const override
       {
         return solution_curvature;
       }
-      
-      LinearAlgebra::distributed::Vector<double>&
+
+      LinearAlgebra::distributed::Vector<double> &
       get_curvature() override
       {
         return solution_curvature;
       }
-      
-      const LinearAlgebra::distributed::BlockVector<double>&
+
+      const LinearAlgebra::distributed::BlockVector<double> &
       get_normal_vector() const override
       {
         return normal_vector_operation.get_solution_normal_vector();
@@ -174,6 +171,11 @@ namespace MeltPoolDG
        */
       unsigned int dof_idx;
       unsigned int quad_idx;
+      /*
+       *    This is the primary solution variable of this module, which will be also publically
+       *    accessible for output_results.
+       */
+      VectorType solution_curvature;
     };
   } // namespace Curvature
 } // namespace MeltPoolDG
