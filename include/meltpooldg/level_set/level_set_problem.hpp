@@ -107,6 +107,11 @@ namespace MeltPoolDG
         ls_zero_bc_idx      = scratch_data->attach_dof_handler(dof_handler);
         vel_dof_idx         = scratch_data->attach_dof_handler(dof_handler_velocity);
 
+        scratch_data->attach_constraint_matrix(hanging_node_constraints);
+        scratch_data->attach_constraint_matrix(constraints_dirichlet);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
+
         /*
          *  create quadrature rule
          */
@@ -242,11 +247,6 @@ namespace MeltPoolDG
               dof_handler, bc.first, hanging_node_constraints_with_zero_dirichlet);
           }
         hanging_node_constraints_with_zero_dirichlet.close();
-
-        scratch_data->attach_constraint_matrix(hanging_node_constraints);
-        scratch_data->attach_constraint_matrix(constraints_dirichlet);
-        scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet);
-        scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
         /*
          *  create the matrix-free object
          */
