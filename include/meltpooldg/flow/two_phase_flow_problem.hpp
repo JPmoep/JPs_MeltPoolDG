@@ -134,25 +134,62 @@ namespace MeltPoolDG
       initialize(std::shared_ptr<SimulationBase<dim>> base_in)
       {
         /*
-         *  setup scratch data
-         */
-        scratch_data = std::make_shared<ScratchData<dim>>(/*do_matrix_free*/ true);
-        /*
-         *  setup mapping
-         */
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          scratch_data->set_mapping(
-            MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
-        else
-#endif
-          scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
-        /*
          *  setup DoFHandler
          */
         dof_handler.reinit(*base_in->triangulation);
         flow_dof_handler.reinit(*base_in->triangulation);
 
+        /*
+         *  setup scratch data
+         */
+        {
+          scratch_data = std::make_shared<ScratchData<dim>>(/*do_matrix_free*/ true);
+
+          /*
+           *  setup mapping
+           */
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (base_in->parameters.base.do_simplex)
+            scratch_data->set_mapping(
+              MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+          else
+#endif
+            scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+
+          scratch_data->attach_dof_handler(dof_handler);
+          scratch_data->attach_dof_handler(dof_handler);
+          scratch_data->attach_dof_handler(flow_dof_handler);
+
+          dof_no_bc_idx = scratch_data->attach_constraint_matrix(ls_hanging_node_constraints);
+          ls_dof_idx    = scratch_data->attach_constraint_matrix(ls_constraints_dirichlet);
+          flow_dof_idx  = scratch_data->attach_constraint_matrix(flow_dummy_constraint);
+
+          /*
+           *  create quadrature rule
+           */
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (base_in->parameters.base.do_simplex)
+            {
+              ls_quad_idx = scratch_data->attach_quadrature(
+                Simplex::QGauss<1>(base_in->parameters.base.n_q_points_1d));
+              flow_quad_idx = scratch_data->attach_quadrature(
+                Simplex::QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
+            }
+          else
+#endif
+            {
+              ls_quad_idx =
+                scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+              flow_quad_idx = scratch_data->attach_quadrature(
+                QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
+            }
+        }
+        setup_dof_system(base_in);
+      }
+
+      void
+      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in)
+      {
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
           {
@@ -166,10 +203,6 @@ namespace MeltPoolDG
             dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
             flow_dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.flow.velocity_degree));
           }
-
-        scratch_data->attach_dof_handler(dof_handler);
-        scratch_data->attach_dof_handler(dof_handler);
-        scratch_data->attach_dof_handler(flow_dof_handler);
         /*
          *  create partitioning
          */
@@ -202,32 +235,9 @@ namespace MeltPoolDG
         ls_constraints_dirichlet.merge(ls_hanging_node_constraints);
         ls_constraints_dirichlet.close();
 
-        dof_no_bc_idx = scratch_data->attach_constraint_matrix(ls_hanging_node_constraints);
-        ls_dof_idx    = scratch_data->attach_constraint_matrix(ls_constraints_dirichlet);
-        flow_dof_idx  = scratch_data->attach_constraint_matrix(flow_dummy_constraint);
         /*
-         *  create quadrature rule
+         *    initialize the flow operation class
          */
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          {
-            ls_quad_idx = scratch_data->attach_quadrature(
-              Simplex::QGauss<1>(base_in->parameters.base.n_q_points_1d));
-            flow_quad_idx = scratch_data->attach_quadrature(
-              Simplex::QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
-          }
-        else
-#endif
-          {
-            ls_quad_idx =
-              scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-            flow_quad_idx = scratch_data->attach_quadrature(
-              QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
-          }
-
-          /*
-           *    initialize the flow operation class
-           */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
 
         flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, flow_dof_idx, base_in);
