@@ -198,7 +198,8 @@ namespace MeltPoolDG
               for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
                 {
                   VectorizedArray<double> diameter = VectorizedArray<double>();
-                  for (unsigned int v = 0; v < VectorizedArray<double>::size(); ++v)
+                  for (unsigned int v = 0; v < matrix_free.n_active_entries_per_cell_batch(cell);
+                       ++v)
                     diameter[v] = this->matrix_free.get_cell_iterator(cell, v, dof_idx)->diameter();
                   cell_diameters_temp[cell] = make_vectorized_array<double>(0.0); // diameter;
                 }

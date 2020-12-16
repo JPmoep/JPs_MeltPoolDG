@@ -7,6 +7,12 @@
     "degree": "1",
     "do print parameters": "false"
   },
+  "adaptive meshing" : {
+    "do amr":                    "true",
+    "upper perc to refine": "     0.1",
+    "lower perc to coarsen": "    0.1",
+    "max grid refinement level": "7"
+  },
   "advection diffusion": {
     "advec diff implementation": "adaflo",
     "advec diff diffusivity": "0.000000",

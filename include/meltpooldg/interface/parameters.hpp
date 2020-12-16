@@ -37,7 +37,6 @@ namespace MeltPoolDG
     number       gravity             = 0.0;
   };
 
-  template <typename number = double>
   struct AdaptiveMeshingData
   {
     bool         do_amr                    = false;
@@ -758,7 +757,7 @@ namespace MeltPoolDG
     ParameterHandler prm;
 
     BaseData<number>               base;
-    AdaptiveMeshingData<number>    amr;
+    AdaptiveMeshingData            amr;
     LevelSetData<number>           ls;
     ReinitializationData<number>   reinit;
     AdvectionDiffusionData<number> advec_diff;

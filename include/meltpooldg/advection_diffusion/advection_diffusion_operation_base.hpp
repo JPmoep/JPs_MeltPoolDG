@@ -46,6 +46,15 @@ namespace MeltPoolDG
 
       virtual LinearAlgebra::distributed::Vector<double> &
       get_advected_field() = 0;
+
+      virtual const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old() const = 0;
+
+      virtual LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old() = 0;
+
+      virtual void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
     };
 
   } // namespace AdvectionDiffusion

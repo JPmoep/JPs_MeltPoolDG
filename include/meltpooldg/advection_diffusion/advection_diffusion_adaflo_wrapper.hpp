@@ -108,6 +108,7 @@ namespace MeltPoolDG
       void
       solve(const double dt, const BlockVectorType &current_velocity) override
       {
+        advected_field_old_old.reinit(advected_field_old);
         advected_field_old_old.copy_locally_owned_data_from(advected_field_old);
         advected_field_old.copy_locally_owned_data_from(advected_field);
 
@@ -145,8 +146,21 @@ namespace MeltPoolDG
         return advected_field;
       }
 
+      void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      {
+        vectors.push_back(&advected_field);
+        vectors.push_back(&advected_field_old);
+      }
+
       const LinearAlgebra::distributed::Vector<double> &
       get_advected_field_old() const
+      {
+        return advected_field_old;
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old()
       {
         return advected_field_old;
       }
@@ -194,6 +208,20 @@ namespace MeltPoolDG
       void
       set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
       {
+        // TODO!!!!!!!
+        scratch_data.initialize_dof_vector(velocity_vec, adaflo_params.dof_index_vel);
+        scratch_data.initialize_dof_vector(velocity_vec_old, adaflo_params.dof_index_vel);
+        scratch_data.initialize_dof_vector(velocity_vec_old_old, adaflo_params.dof_index_vel);
+        scratch_data.initialize_dof_vector(rhs, adaflo_params.dof_index_ls);
+        scratch_data.initialize_dof_vector(increment, adaflo_params.dof_index_ls);
+
+        initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
+                                                     scratch_data.get_constraint(
+                                                       adaflo_params.dof_index_ls),
+                                                     adaflo_params.dof_index_ls,
+                                                     adaflo_params.quad_index,
+                                                     preconditioner);
+
         velocity_vec_old_old.zero_out_ghosts();
         velocity_vec_old.zero_out_ghosts();
         velocity_vec.zero_out_ghosts();
