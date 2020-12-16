@@ -98,9 +98,45 @@ namespace MeltPoolDG
       initialize(std::shared_ptr<SimulationBase<dim>> base_in)
       {
         /*
-         *  initialize the dof system
+         *  setup scratch data
          */
-        setup_dof_system(base_in, true);
+        {
+          scratch_data =
+            std::make_shared<ScratchData<dim>>(base_in->parameters.reinit.solver.do_matrix_free);
+          /*
+           *  setup mapping
+           */
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (base_in->parameters.base.do_simplex)
+            scratch_data->set_mapping(
+              MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+          else
+#endif
+            scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+            /*
+             *  create quadrature rule
+             */
+
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (base_in->parameters.base.do_simplex)
+            scratch_data->attach_quadrature(
+              Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
+          else
+#endif
+            quad_idx =
+              scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+
+          scratch_data->attach_dof_handler(dof_handler);
+          dof_idx = scratch_data->attach_constraint_matrix(constraints);
+
+          /*
+           *  setup DoFHandler
+           */
+          dof_handler.reinit(*base_in->triangulation);
+        }
+
+        setup_dof_system(base_in);
+
         /*
          *  initialize the time iterator
          */
@@ -164,42 +200,11 @@ namespace MeltPoolDG
       }
 
       void
-      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in, const bool do_initial_setup)
+      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in)
       {
-        /*
-         *  setup scratch data
-         */
-        if (do_initial_setup)
-          {
-            scratch_data =
-              std::make_shared<ScratchData<dim>>(base_in->parameters.reinit.solver.do_matrix_free);
-            /*
-             *  setup mapping
-             */
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-            if (base_in->parameters.base.do_simplex)
-              scratch_data->set_mapping(
-                MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
-            else
-#endif
-              scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
-              /*
-               *  create quadrature rule
-               */
-
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-            if (base_in->parameters.base.do_simplex)
-              scratch_data->attach_quadrature(
-                Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
-            else
-#endif
-              quad_idx =
-                scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-          }
         /*
          *  setup DoFHandler
          */
-        dof_handler.reinit(*base_in->triangulation);
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
           dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
@@ -207,8 +212,6 @@ namespace MeltPoolDG
 #endif
           dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
 
-        if (do_initial_setup)
-          scratch_data->attach_dof_handler(dof_handler);
         /*
          *  re-create partitioning
          */
@@ -220,9 +223,6 @@ namespace MeltPoolDG
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
         DoFTools::make_hanging_node_constraints(dof_handler, constraints);
         constraints.close();
-
-        if (do_initial_setup)
-          dof_idx = scratch_data->attach_constraint_matrix(constraints);
 
         /*
          *  create the matrix-free object
@@ -276,7 +276,7 @@ namespace MeltPoolDG
           reinit_operation->update_initial_solution(temp);
         };
 
-        const auto setup_dof_system = [&]() { this->setup_dof_system(base_in, false); };
+        const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
 
         refine_grid<dim, VectorType>(mark_cells_for_refinement,
                                      attach_vectors,
