@@ -40,7 +40,8 @@ namespace MeltPoolDG
         const int                            velocity_dof_idx,
         const VectorType                     initial_solution_advected_field,
         const BlockVectorType &              velocity_vec_in, // @todo: make const ref
-        std::shared_ptr<SimulationBase<dim>> base_in)
+        std::shared_ptr<SimulationBase<dim>> base_in,
+        std::string operation_name="advection_diffusion")
         : scratch_data(scratch_data)
       {
         /**
@@ -68,9 +69,9 @@ namespace MeltPoolDG
         /*
          * Boundary conditions for the advected field
          */
-        for (const auto &symmetry_id : base_in->get_symmetry_id("advection_diffusion"))
+        for (const auto &symmetry_id : base_in->get_symmetry_id(operation_name))
           bcs.symmetry.insert(symmetry_id);
-        for (const auto &dirichlet_bc : base_in->get_dirichlet_bc("advection_diffusion"))
+        for (const auto &dirichlet_bc : base_in->get_dirichlet_bc(operation_name))
           bcs.dirichlet[dirichlet_bc.first] = dirichlet_bc.second;
         /*
          * initialize adaflo operation
@@ -228,7 +229,6 @@ namespace MeltPoolDG
 
         velocity_vec_old_old = velocity_vec_old;
         velocity_vec_old     = velocity_vec;
-
         VectorTools::convert_block_vector_to_fe_sytem_vector(
           vec,
           scratch_data.get_dof_handler(adaflo_params.dof_index_ls),

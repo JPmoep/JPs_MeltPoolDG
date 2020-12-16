@@ -13,8 +13,8 @@
     "ls do print l2norm"        : "true",
     "ls time integration scheme" : "crank_nicolson",
     "ls start time"             : "0.0",
-    "ls end time"               : "0.05",
-    "ls time step size"         : "0.01",
+    "ls end time"               : "0.1",
+    "ls time step size"         : "0.02",
     "ls do matrix free"         : "true"
   },
   "reinitialization" : {
@@ -26,6 +26,9 @@
     "reinit do print l2norm"      : "true",
     "reinit eps scale factor"     : "0.5" ,
     "reinit implementation"       : "adaflo"
+  },
+  "advection diffusion" : {
+    "advec diff implementation"       : "adaflo"
   },
   "normal vector" : {
     "normal vec damping scale factor" : "0.5",

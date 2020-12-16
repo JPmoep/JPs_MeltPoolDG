@@ -47,13 +47,16 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_level_set_in,
-                 const BlockVectorType                          advection_velocity,
+                 const BlockVectorType&                          advection_velocity,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             dof_idx_in,
                  const unsigned int                             dof_no_bc_idx_in,
                  const unsigned int                             quad_idx_in,
                  const unsigned int                             advection_dof_idx,
-                 std::shared_ptr<SimulationBase<dim>>           base_in)
+                 std::shared_ptr<SimulationBase<dim>>           base_in,
+                 const unsigned int                             vel_dof_idx = 0,
+                 const unsigned int                             ls_zero_bc_idx = 0
+                 )
       {
         // parameters = data_in;
         scratch_data  = scratch_data_in;
@@ -112,12 +115,13 @@ namespace MeltPoolDG
             advec_diff_operation =
               std::make_shared<AdvectionDiffusion::AdvectionDiffusionOperationAdaflo<dim>>(
                 *scratch_data,
-                dof_idx,
+                ls_zero_bc_idx,
                 quad_idx_in,
-                dof_no_bc_idx_in,
+                vel_dof_idx,
                 solution_level_set_in,
                 advection_velocity,
-                base_in);
+                base_in,
+                "level_set");
           }
 #endif
         else
@@ -444,6 +448,7 @@ namespace MeltPoolDG
       unsigned int dof_idx;
       unsigned int dof_no_bc_idx;
       unsigned int quad_idx;
+
 
       double reinit_constant_epsilon     = 0; //@todo: better solution
       double reinit_scale_factor_epsilon = 0; //@todo: better solution
