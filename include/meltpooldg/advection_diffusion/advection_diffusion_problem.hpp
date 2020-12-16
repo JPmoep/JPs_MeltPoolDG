@@ -281,10 +281,8 @@ namespace MeltPoolDG
         else if (base_in->parameters.advec_diff.implementation == "adaflo")
           {
             AssertThrow(base_in->parameters.advec_diff.do_matrix_free, ExcNotImplemented());
-            advec_diff_operation =
-              std::make_shared<MeltPoolDG::AdvectionDiffusionAdaflo::AdafloWrapper<dim>>(
-                *scratch_data, dof_zero_bc_idx, quad_idx, dof_idx_velocity, base_in);
-
+            advec_diff_operation = std::make_shared<AdvectionDiffusionOperationAdaflo<dim>>(
+              *scratch_data, dof_zero_bc_idx, quad_idx, dof_idx_velocity, base_in);
             advec_diff_operation->reinit();
 
             advec_diff_operation->set_initial_condition(initial_solution, advection_velocity);

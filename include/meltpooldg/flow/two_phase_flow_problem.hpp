@@ -289,11 +289,13 @@ namespace MeltPoolDG
          */
         level_set_operation.initialize(scratch_data,
                                        initial_solution,
+                                       advection_velocity,
                                        base_in->parameters,
                                        ls_dof_idx,
                                        dof_no_bc_idx,
                                        ls_quad_idx,
-                                       flow_dof_idx);
+                                       flow_dof_idx,
+                                       base_in);
         /*
          *    initialize the melt pool operation class
          */

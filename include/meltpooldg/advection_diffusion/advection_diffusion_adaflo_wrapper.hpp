@@ -20,11 +20,10 @@
 
 namespace MeltPoolDG
 {
-  namespace AdvectionDiffusionAdaflo
+  namespace AdvectionDiffusion
   {
     template <int dim>
-    class AdafloWrapper
-      : public MeltPoolDG::AdvectionDiffusion::AdvectionDiffusionOperationBase<dim>
+    class AdvectionDiffusionOperationAdaflo : public AdvectionDiffusionOperationBase<dim>
     {
     private:
       using VectorType      = LinearAlgebra::distributed::Vector<double>;
@@ -34,11 +33,12 @@ namespace MeltPoolDG
       /**
        * Constructor.
        */
-      AdafloWrapper(ScratchData<dim> &                   scratch_data,
-                    const int                            advec_diff_dof_idx,
-                    const int                            advec_diff_quad_idx,
-                    const int                            velocity_dof_idx,
-                    std::shared_ptr<SimulationBase<dim>> base_in)
+      AdvectionDiffusionOperationAdaflo(const ScratchData<dim> &             scratch_data,
+                                        const int                            advec_diff_dof_idx,
+                                        const int                            advec_diff_quad_idx,
+                                        const int                            velocity_dof_idx,
+                                        std::shared_ptr<SimulationBase<dim>> base_in,
+                                        std::string operation_name = "advection_diffusion")
         : scratch_data(scratch_data)
         , advec_diff_dof_idx(advec_diff_dof_idx)
         , advec_diff_quad_idx(advec_diff_quad_idx)
@@ -53,9 +53,9 @@ namespace MeltPoolDG
         /*
          * Boundary conditions for the advected field
          */
-        for (const auto &symmetry_id : base_in->get_symmetry_id("advection_diffusion"))
+        for (const auto &symmetry_id : base_in->get_symmetry_id(operation_name))
           bcs.symmetry.insert(symmetry_id);
-        for (const auto &dirichlet_bc : base_in->get_dirichlet_bc("advection_diffusion"))
+        for (const auto &dirichlet_bc : base_in->get_dirichlet_bc(operation_name))
           bcs.dirichlet[dirichlet_bc.first] = dirichlet_bc.second;
         /*
          * initialize adaflo operation
@@ -226,7 +226,6 @@ namespace MeltPoolDG
 
         velocity_vec_old_old = velocity_vec_old;
         velocity_vec_old     = velocity_vec;
-
         VectorTools::convert_block_vector_to_fe_sytem_vector(
           vec,
           scratch_data.get_dof_handler(adaflo_params.dof_index_ls),
@@ -307,7 +306,7 @@ namespace MeltPoolDG
        */
       DiagonalPreconditioner<double> preconditioner;
     };
-  } // namespace AdvectionDiffusionAdaflo
+  } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG
 
 #endif

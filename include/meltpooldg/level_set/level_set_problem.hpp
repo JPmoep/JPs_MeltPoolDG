@@ -96,15 +96,26 @@ namespace MeltPoolDG
          *  setup DoFHandler
          */
         dof_handler.reinit(*base_in->triangulation);
+        dof_handler_velocity.reinit(*base_in->triangulation);
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
+          {
+            dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
+            dof_handler_velocity.distribute_dofs(
+              FESystem<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
+          }
         else
 #endif
-          dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
+          {
+            dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
+            dof_handler_velocity.distribute_dofs(
+              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
+          }
 
-        scratch_data->attach_dof_handler(dof_handler);
-        scratch_data->attach_dof_handler(dof_handler);
+        const unsigned int dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
+        const unsigned int dof_idx       = scratch_data->attach_dof_handler(dof_handler);
+        ls_zero_bc_idx                   = scratch_data->attach_dof_handler(dof_handler);
+        vel_dof_idx                      = scratch_data->attach_dof_handler(dof_handler_velocity);
         /*
          *  create partitioning
          */
@@ -118,14 +129,24 @@ namespace MeltPoolDG
          *  dirichlet constraints are supported)
          */
         hanging_node_constraints.clear();
-        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs());
+        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs(dof_no_bc_idx));
         DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
         hanging_node_constraints.close();
 
+        hanging_node_constraints_velocity.clear();
+        hanging_node_constraints_velocity.reinit(
+          scratch_data->get_locally_relevant_dofs(vel_dof_idx));
+        DoFTools::make_hanging_node_constraints(dof_handler_velocity,
+                                                hanging_node_constraints_velocity);
+        hanging_node_constraints_velocity.close();
+
         constraints_dirichlet.clear();
-        constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
-        constraints_dirichlet.merge(hanging_node_constraints);
-        for (const auto &bc : base_in->get_dirichlet_bc("level_set"))
+        constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs(dof_idx));
+        constraints_dirichlet.merge(
+          hanging_node_constraints,
+          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
+        for (const auto &bc : base_in->get_dirichlet_bc(
+               "level_set")) // @todo: add name of bc at a more central place
           {
             dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
                                                              dof_handler,
@@ -135,9 +156,23 @@ namespace MeltPoolDG
           }
         constraints_dirichlet.close();
 
-        const unsigned int dof_no_bc_idx =
-          scratch_data->attach_constraint_matrix(hanging_node_constraints);
-        const unsigned int dof_idx = scratch_data->attach_constraint_matrix(constraints_dirichlet);
+        hanging_node_constraints_with_zero_dirichlet.clear();
+        hanging_node_constraints_with_zero_dirichlet.reinit(
+          scratch_data->get_locally_relevant_dofs(ls_zero_bc_idx));
+        DoFTools::make_hanging_node_constraints(dof_handler,
+                                                hanging_node_constraints_with_zero_dirichlet);
+        for (const auto &bc : base_in->get_dirichlet_bc(
+               "level_set")) // @todo: add name of bc at a more central place
+          {
+            dealii::DoFTools::make_zero_boundary_constraints(
+              dof_handler, bc.first, hanging_node_constraints_with_zero_dirichlet);
+          }
+        hanging_node_constraints_with_zero_dirichlet.close();
+
+        scratch_data->attach_constraint_matrix(hanging_node_constraints);
+        scratch_data->attach_constraint_matrix(constraints_dirichlet);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet);
+        scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
         /*
          *  create quadrature rule
          */
@@ -200,14 +235,19 @@ namespace MeltPoolDG
                       "function, e.g., AdvectionFunc<dim> must be specified as follows: "
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'level_set') "));
+        compute_advection_velocity(*base_in->get_advection_field("level_set"));
 
         level_set_operation.initialize(scratch_data,
                                        initial_solution,
+                                       advection_velocity,
                                        base_in->parameters,
                                        dof_idx,
                                        dof_no_bc_idx,
                                        quad_idx,
-                                       dof_idx);
+                                       dof_idx,
+                                       base_in,
+                                       vel_dof_idx,
+                                       ls_zero_bc_idx);
       }
 
       void
@@ -324,8 +364,11 @@ namespace MeltPoolDG
 
     private:
       DoFHandler<dim>           dof_handler;
+      DoFHandler<dim>           dof_handler_velocity;
       AffineConstraints<double> constraints_dirichlet;
       AffineConstraints<double> hanging_node_constraints;
+      AffineConstraints<double> hanging_node_constraints_velocity;
+      AffineConstraints<double> hanging_node_constraints_with_zero_dirichlet;
 
       std::shared_ptr<ScratchData<dim>> scratch_data;
       BlockVectorType                   advection_velocity;
@@ -333,6 +376,8 @@ namespace MeltPoolDG
       TimeIterator<double>   time_iterator;
       LevelSetOperation<dim> level_set_operation;
       VectorType             initial_solution;
+      unsigned int           vel_dof_idx;
+      unsigned int           ls_zero_bc_idx;
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

@@ -192,7 +192,7 @@ namespace MeltPoolDG
                                                                      quad_idx,
                                                                      dof_idx, // normal vec @todo
                                                                      solution_level_set,
-                                                                     base_in);
+                                                                     base_in->parameters);
           }
 #endif
         else

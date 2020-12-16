@@ -35,12 +35,12 @@ namespace MeltPoolDG
       /**
        * Constructor.
        */
-      ReinitializationOperationAdaflo(ScratchData<dim> &scratch_data,
-                                      const int         reinit_dof_idx,
-                                      const int         reinit_quad_idx,
-                                      const int         normal_dof_idx,
-                                      const VectorType &initial_solution_level_set,
-                                      std::shared_ptr<SimulationBase<dim>> base_in)
+      ReinitializationOperationAdaflo(const ScratchData<dim> &  scratch_data,
+                                      const int                 reinit_dof_idx,
+                                      const int                 reinit_quad_idx,
+                                      const int                 normal_dof_idx,
+                                      const VectorType &        initial_solution_level_set,
+                                      const Parameters<double> &parameters)
         : scratch_data(scratch_data)
         , reinit_dof_idx(reinit_dof_idx)
         , reinit_quad_idx(reinit_quad_idx)
@@ -48,18 +48,30 @@ namespace MeltPoolDG
         /**
          * set parameters of adaflo
          */
-        set_adaflo_parameters(base_in->parameters, reinit_dof_idx, reinit_quad_idx, normal_dof_idx);
+        set_adaflo_parameters(parameters, reinit_dof_idx, reinit_quad_idx, normal_dof_idx);
+        /**
+         *  initialize the dof vectors
+         */
+        initialize_vectors();
+        /**
+         *  set initial solution of level set
+         */
+
+        level_set.copy_locally_owned_data_from(initial_solution_level_set);
+
+        compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
+                                    reinit_dof_idx,
+                                    cell_diameters,
+                                    cell_diameter_min,
+                                    cell_diameter_max);
+        set_adaflo_parameters(parameters, reinit_dof_idx, reinit_quad_idx, normal_dof_idx);
 
         /*
          * initialize normal_vector_operation from adaflo
          */
         normal_vector_operation_adaflo =
-          std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(scratch_data,
-                                                                           reinit_dof_idx,
-                                                                           normal_dof_idx,
-                                                                           reinit_quad_idx,
-                                                                           level_set,
-                                                                           base_in->parameters);
+          std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(
+            scratch_data, reinit_dof_idx, normal_dof_idx, reinit_quad_idx, level_set, parameters);
 
         compute_normal = [&](bool do_compute_normal) {
           if (do_compute_normal && force_compute_normal)
@@ -166,6 +178,7 @@ namespace MeltPoolDG
       update_initial_solution(const VectorType &level_set_in) override
       {
         (void)level_set_in;
+        level_set.copy_locally_owned_data_from(level_set_in);
         force_compute_normal = true;
       }
 

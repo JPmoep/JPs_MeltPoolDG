@@ -34,7 +34,6 @@ namespace MeltPoolDG
       /*
        *  All the necessary parameters are stored in this struct.
        */
-      AdvectionDiffusionData<double> advec_diff_data;
 
       AdvectionDiffusionOperation() = default;
 
@@ -55,7 +54,7 @@ namespace MeltPoolDG
         /*
          *  set the advection diffusion data
          */
-        advec_diff_data = data_in.advec_diff;
+        this->advec_diff_data = data_in.advec_diff;
         /*
          *  set the initial solution of the advected field
          */
@@ -91,7 +90,7 @@ namespace MeltPoolDG
 
         int iter = 0;
 
-        if (advec_diff_data.do_matrix_free)
+        if (this->advec_diff_data.do_matrix_free)
           {
             /*
              * apply dirichlet boundary values
@@ -121,7 +120,7 @@ namespace MeltPoolDG
         solution_advected_field = src;
         solution_advected_field.update_ghost_values();
 
-        if (advec_diff_data.do_print_l2norm)
+        if (this->advec_diff_data.do_print_l2norm)
           {
             const ConditionalOStream &pcout = scratch_data->get_pcout();
             pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
@@ -143,7 +142,6 @@ namespace MeltPoolDG
       {
         return solution_advected_field;
       }
-
 
       const LinearAlgebra::distributed::Vector<double> &
       get_advected_field_old() const override
@@ -167,19 +165,24 @@ namespace MeltPoolDG
       void
       set_advection_diffusion_parameters(const Parameters<double> &data_in)
       {
-        advec_diff_data = data_in.advec_diff;
+        this->advec_diff_data = data_in.advec_diff; //@todo is this really needed?
       }
 
       void
       create_operator(const BlockVectorType &advection_velocity)
       {
-        advec_diff_operator = std::make_unique<AdvectionDiffusionOperator<dim, double>>(
-          *scratch_data, advection_velocity, advec_diff_data, dof_idx, quad_idx, velocity_dof_idx);
+        advec_diff_operator =
+          std::make_unique<AdvectionDiffusionOperator<dim, double>>(*scratch_data,
+                                                                    advection_velocity,
+                                                                    this->advec_diff_data,
+                                                                    dof_idx,
+                                                                    quad_idx,
+                                                                    velocity_dof_idx);
         /*
          *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
          *  apply it to the system matrix. This functionality is part of the OperatorBase class.
          */
-        if (!advec_diff_data.do_matrix_free)
+        if (!this->advec_diff_data.do_matrix_free)
           advec_diff_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 

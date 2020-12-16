@@ -43,8 +43,7 @@ namespace MeltPoolDG
                                const int                 normal_vec_dof_idx,
                                const int                 curv_dof_idx,
                                const int                 curv_quad_idx,
-                               const VectorType &        advected_field,         //@todo: make const
-                               const BlockVectorType &   solution_normal_vector, //@todo: make const
+                               const VectorType &        advected_field, //@todo: make const
                                const Parameters<double> &data_in)
         : scratch_data(scratch_data)
       {
@@ -72,11 +71,17 @@ namespace MeltPoolDG
         ilu_projection_matrix = std::make_shared<BlockILUExtension>();
 
         /*
+         * initialize normal_vector_operation from adaflo
+         */
+        normal_vector_operation_adaflo =
+          std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(
+            scratch_data, advec_diff_dof_idx, curv_dof_idx, curv_quad_idx, advected_field, data_in);
+        /*
          * initialize adaflo operation for computing curvature
          */
         curvature_operation = std::make_shared<LevelSetOKZSolverComputeCurvature<dim>>(
           scratch_data.get_cell_diameters(),
-          solution_normal_vector,
+          normal_vector_operation_adaflo->get_solution_normal_vector(),
           scratch_data.get_constraint(curv_dof_idx),
           scratch_data.get_constraint(
             curv_dof_idx),   // @todo -- check adaflo --> hanging node constraints??
@@ -89,6 +94,7 @@ namespace MeltPoolDG
           preconditioner,
           projection_matrix,
           ilu_projection_matrix);
+
         /**
          * initialize the preconditioner -->  @todo: currently not used in adaflo
          */
@@ -118,6 +124,8 @@ namespace MeltPoolDG
       {
         (void)advected_field;
         initialize_vectors();
+        normal_vector_operation_adaflo->solve(
+          advected_field); //@todo check how advected_field is processed
         curvature_operation->compute_curvature(
           true); // @todo: adaflo does not use the boolean function argument
 
@@ -142,8 +150,7 @@ namespace MeltPoolDG
       const LinearAlgebra::distributed::BlockVector<double> &
       get_normal_vector() const override
       {
-        return normal_vec_dummy;
-        // return normal_vector_operation.get_solution_normal_vector();
+        return normal_vector_operation_adaflo->get_solution_normal_vector();
       }
 
     private:
@@ -195,6 +202,8 @@ namespace MeltPoolDG
        * Reference to the actual curvature solver from adaflo
        */
       std::shared_ptr<LevelSetOKZSolverComputeCurvature<dim>> curvature_operation;
+      std::shared_ptr<NormalVector::NormalVectorOperationAdaflo<dim>>
+        normal_vector_operation_adaflo;
 
       /**
        *  Diagonal preconditioner
