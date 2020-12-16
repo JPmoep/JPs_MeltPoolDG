@@ -37,8 +37,18 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
+      virtual void
+      update_initial_solution(
+        const LinearAlgebra::distributed::Vector<double> &solution_level_set_in) = 0;
+
       virtual const LinearAlgebra::distributed::Vector<double> &
       get_level_set() const = 0;
+
+      virtual LinearAlgebra::distributed::Vector<double> &
+      get_level_set() = 0;
+
+      virtual const LinearAlgebra::distributed::BlockVector<double> &
+      get_normal_vector() const = 0;
 
       virtual void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
