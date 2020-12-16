@@ -15,6 +15,7 @@
 #  include <meltpooldg/utilities/vector_tools.hpp>
 
 #  include <adaflo/diagonal_preconditioner.h>
+#  include <adaflo/level_set_okz_compute_normal.h>
 #  include <adaflo/level_set_okz_preconditioner.h>
 #  include <adaflo/level_set_okz_reinitialization.h>
 
@@ -56,16 +57,32 @@ namespace MeltPoolDG
 
         level_set.copy_locally_owned_data_from(initial_solution_level_set);
 
-        /*
-         * initialize adaflo operation
-         */
         compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
                                     reinit_dof_idx,
                                     cell_diameters,
                                     cell_diameter_min,
                                     cell_diameter_max);
 
-        reinit_operation = std::make_shared<LevelSetOKZSolverReinitialization<dim>>(
+        /*
+         * initialize normal_vector_operation from adaflo
+         */
+        normal_vector_operation_adaflo =
+          std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(scratch_data,
+                                                                           reinit_dof_idx,
+                                                                           normal_dof_idx,
+                                                                           reinit_quad_idx,
+                                                                           level_set,
+                                                                           base_in->parameters);
+
+        compute_normal = [&](bool do_compute_normal) {
+          if (do_compute_normal)
+            normal_vector_operation_adaflo->solve(level_set);
+        };
+
+        /*
+         * initialize reinitialization operation from adaflo
+         */
+        reinit_operation_adaflo = std::make_shared<LevelSetOKZSolverReinitialization<dim>>(
           normal_vector_field,
           scratch_data.get_cell_diameters(),
           cell_diameter_max,
@@ -97,7 +114,10 @@ namespace MeltPoolDG
       void
       solve(const double dt) override
       {
-        // reinit_operation->reinitialize(true);
+        reinit_operation_adaflo->reinitialize(dt,
+                                              0 /*stab_steps @todo*/,
+                                              0 /*diff_steps @todo*/,
+                                              compute_normal);
 
         for (unsigned int d = 0; d < dim; ++d)
           scratch_data.get_pcout() << " |psi|=" << std::setw(15) << std::setprecision(10)
@@ -199,7 +219,9 @@ namespace MeltPoolDG
       /**
        * Reference to the actual advection diffusion solver from adaflo
        */
-      std::shared_ptr<LevelSetOKZSolverReinitialization<dim>> reinit_operation;
+      std::shared_ptr<NormalVector::NormalVectorOperationAdaflo<dim>>
+                                                              normal_vector_operation_adaflo;
+      std::shared_ptr<LevelSetOKZSolverReinitialization<dim>> reinit_operation_adaflo;
 
       /**
        *  Diagonal preconditioner @todo
@@ -211,6 +233,7 @@ namespace MeltPoolDG
       double                                 cell_diameter_min;
       double                                 cell_diameter_max;
       bool                                   first_reinit_step;
+      std::function<void(bool)>              compute_normal;
     };
   } // namespace Reinitialization
 } // namespace MeltPoolDG
