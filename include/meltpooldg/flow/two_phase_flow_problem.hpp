@@ -94,7 +94,7 @@ namespace MeltPoolDG
                   melt_pool_operation.compute_temperature_dependent_surface_tension(
                     force_rhs,
                     level_set_operation.level_set_as_heaviside,
-                    level_set_operation.solution_curvature,
+                    level_set_operation.get_curvature(),
                     base_in->parameters.flow.surface_tension_coefficient,
                     base_in->parameters.flow.temperature_dependent_surface_tension_coefficient,
                     base_in->parameters.flow.surface_tension_reference_temperature,
@@ -431,9 +431,9 @@ namespace MeltPoolDG
                                              density,
                                              viscosity,
                                              pressure,
-                                             level_set_operation.solution_level_set,
-                                             level_set_operation.solution_curvature,
-                                             level_set_operation.solution_normal_vector,
+                                             level_set_operation.get_level_set(),
+                                             level_set_operation.get_curvature(),
+                                             level_set_operation.get_normal_vector(),
                                              level_set_operation.level_set_as_heaviside,
                                              level_set_operation.distance_to_level_set);
 
@@ -454,16 +454,16 @@ namespace MeltPoolDG
             /*
              * level set
              */
-            data_out.add_data_vector(level_set_operation.solution_level_set, "level_set");
+            data_out.add_data_vector(level_set_operation.get_level_set(), "level_set");
             /*
              * curvature
              */
-            data_out.add_data_vector(level_set_operation.solution_curvature, "curvature");
+            data_out.add_data_vector(level_set_operation.get_curvature(), "curvature");
             /*
              *  normal vector field
              */
             for (unsigned int d = 0; d < dim; ++d)
-              data_out.add_data_vector(level_set_operation.solution_normal_vector.block(d),
+              data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
                                        "normal_" + std::to_string(d));
             /*
              *  flow velocity
@@ -534,9 +534,9 @@ namespace MeltPoolDG
                                          density,
                                          viscosity,
                                          pressure,
-                                         level_set_operation.solution_level_set,
-                                         level_set_operation.solution_curvature,
-                                         level_set_operation.solution_normal_vector,
+                                         level_set_operation.get_level_set(),
+                                         level_set_operation.get_curvature(),
+                                         level_set_operation.get_normal_vector(),
                                          level_set_operation.level_set_as_heaviside,
                                          level_set_operation.distance_to_level_set);
 

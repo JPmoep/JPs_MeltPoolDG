@@ -7,6 +7,7 @@
 // for parallelization
 #include <deal.II/lac/generic_linear_algebra.h>
 // MeltPoolDG
+#include <meltpooldg/curvature/curvature_operation_base.hpp>
 #include <meltpooldg/curvature/curvature_operator.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operation.hpp>
@@ -20,7 +21,7 @@ namespace MeltPoolDG
     using namespace dealii;
 
     template <int dim>
-    class CurvatureOperation
+    class CurvatureOperation : public CurvatureOperationBase<dim>
     {
       /*
        *  This function calculates the curvature of the current level set function being
@@ -43,13 +44,6 @@ namespace MeltPoolDG
        *  In this struct, the main parameters of the curvature class are stored.
        */
       CurvatureData<double> curvature_data;
-      /*
-       *    This is the primary solution variable of this module, which will be also publically
-       *    accessible for output_results.
-       */
-      VectorType             solution_curvature;
-      const BlockVectorType &solution_normal_vector =
-        normal_vector_operation.solution_normal_vector;
 
       CurvatureOperation() = default;
 
@@ -57,7 +51,7 @@ namespace MeltPoolDG
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             dof_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             quad_idx_in) override
       {
         scratch_data = scratch_data_in;
         dof_idx      = dof_idx_in;
@@ -78,7 +72,7 @@ namespace MeltPoolDG
       }
 
       void
-      solve(const VectorType &solution_levelset)
+      solve(const VectorType &solution_levelset) override
       {
         /*
          *    compute and solve the normal vector field for the given level set
@@ -93,7 +87,8 @@ namespace MeltPoolDG
 
         if (curvature_data.do_matrix_free)
           {
-            curvature_operator->create_rhs(rhs, normal_vector_operation.solution_normal_vector);
+            curvature_operator->create_rhs(rhs,
+                                           normal_vector_operation.get_solution_normal_vector());
             iter = LinearSolve<
               VectorType,
               SolverCG<VectorType>,
@@ -103,9 +98,10 @@ namespace MeltPoolDG
           }
         else
           {
-            curvature_operator->assemble_matrixbased(normal_vector_operation.solution_normal_vector,
-                                                     curvature_operator->system_matrix,
-                                                     rhs);
+            curvature_operator->assemble_matrixbased(
+              normal_vector_operation.get_solution_normal_vector(),
+              curvature_operator->system_matrix,
+              rhs);
 
             iter = LinearSolve<VectorType, SolverCG<VectorType>, SparseMatrixType>::solve(
               curvature_operator->system_matrix, solution_curvature, rhs);
@@ -121,6 +117,24 @@ namespace MeltPoolDG
                   << solution_curvature.l2_norm();
             pcout << std::endl;
           }
+      }
+
+      const LinearAlgebra::distributed::Vector<double> &
+      get_curvature() const override
+      {
+        return solution_curvature;
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_curvature() override
+      {
+        return solution_curvature;
+      }
+
+      const LinearAlgebra::distributed::BlockVector<double> &
+      get_normal_vector() const override
+      {
+        return normal_vector_operation.get_solution_normal_vector();
       }
 
     private:
@@ -157,6 +171,11 @@ namespace MeltPoolDG
        */
       unsigned int dof_idx;
       unsigned int quad_idx;
+      /*
+       *    This is the primary solution variable of this module, which will be also publically
+       *    accessible for output_results.
+       */
+      VectorType solution_curvature;
     };
   } // namespace Curvature
 } // namespace MeltPoolDG

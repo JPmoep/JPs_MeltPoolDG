@@ -79,12 +79,13 @@ namespace MeltPoolDG
             AssertThrow(data_in.normal_vec.do_matrix_free, ExcNotImplemented());
 
             normal_vector_operation =
-              std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(*scratch_data_in,
-                                                                               dof_idx_in, //@todo
-                                                                               dof_idx_in,
-                                                                               quad_idx,
-                                                                               solution_level_set,
-                                                                               data_in);
+              std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(
+                *scratch_data_in,
+                dof_idx_in, // ls @todo
+                dof_idx_in, // normal vec @todo
+                quad_idx,
+                solution_level_set,
+                data_in);
           }
 #endif
         else
@@ -213,9 +214,15 @@ namespace MeltPoolDG
       }
 
       const BlockVectorType &
-      get_solution_normal_vector() const
+      get_normal_vector() const
       {
         return normal_vector_operation->get_solution_normal_vector();
+      }
+
+      const VectorType &
+      get_level_set() const
+      {
+        return solution_level_set;
       }
 
     private:

@@ -41,7 +41,7 @@ namespace MeltPoolDG
                                   const int                 advec_diff_dof_idx,
                                   const int                 normal_vec_dof_idx,
                                   const int                 normal_vec_quad_idx,
-                                  VectorType &              advected_field, //@todo: make const
+                                  const VectorType &        advected_field, //@todo: make const
                                   const Parameters<double> &data_in)
         : scratch_data(scratch_data)
       {
@@ -123,10 +123,19 @@ namespace MeltPoolDG
         scratch_data.get_pcout() << std::endl;
       }
 
+      /**
+       *  getter
+       */
       const LinearAlgebra::distributed::BlockVector<double> &
       get_solution_normal_vector() const override
       {
         return normal_vector_field;
+      }
+
+      LevelSetOKZSolverComputeNormal<dim> &
+      get_adaflo_obj()
+      {
+        return *normal_vec_operation;
       }
 
     private:

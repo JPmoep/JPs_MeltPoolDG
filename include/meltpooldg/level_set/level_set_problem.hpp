@@ -59,9 +59,7 @@ namespace MeltPoolDG
               << "| ls: t= " << std::setw(10) << std::left << time_iterator.get_current_time();
             compute_advection_velocity(*base_in->get_advection_field("level_set"));
             level_set_operation.solve(dt, advection_velocity);
-            /*
-             *  do paraview output if requested
-             */
+            // do paraview output if requested
             output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
           }
       }
@@ -70,7 +68,7 @@ namespace MeltPoolDG
       get_name() final
       {
         return "level_set_problem";
-      };
+      }
 
     private:
       /*
@@ -174,9 +172,7 @@ namespace MeltPoolDG
                                                           base_in->parameters.ls.time_step_size,
                                                           100000,
                                                           false});
-        /*
-         *  set initial conditions of the levelset function
-         */
+        // set initial conditions of the levelset function
         AssertThrow(
           base_in->get_initial_condition("level_set"),
           ExcMessage(
@@ -186,7 +182,6 @@ namespace MeltPoolDG
             "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
             "'level_set') "));
 
-        VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution);
         dealii::VectorTools::project(scratch_data->get_mapping(),
                                      dof_handler,
@@ -196,9 +191,8 @@ namespace MeltPoolDG
                                      initial_solution);
 
         initial_solution.update_ghost_values();
-        /*
-         *    initialize the levelset operation class
-         */
+
+        // initialize the levelset operation class
         AssertThrow(base_in->get_advection_field("level_set"),
                     ExcMessage(
                       " It seems that your SimulationBase object does not contain "
@@ -248,9 +242,9 @@ namespace MeltPoolDG
       {
         if (parameters.paraview.do_output)
           {
-            MeltPoolDG::VectorTools::update_ghost_values(level_set_operation.solution_level_set,
-                                                         level_set_operation.solution_curvature,
-                                                         level_set_operation.solution_normal_vector,
+            MeltPoolDG::VectorTools::update_ghost_values(level_set_operation.get_level_set(),
+                                                         level_set_operation.get_curvature(),
+                                                         level_set_operation.get_normal_vector(),
                                                          advection_velocity);
 
             const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
@@ -259,21 +253,21 @@ namespace MeltPoolDG
              */
             DataOut<dim> data_out;
             data_out.attach_dof_handler(scratch_data->get_dof_handler());
-            data_out.add_data_vector(level_set_operation.solution_level_set, "level_set");
+            data_out.add_data_vector(level_set_operation.get_level_set(), "level_set");
 
             /*
              *  output normal vector field
              */
             if (parameters.paraview.print_normal_vector)
               for (unsigned int d = 0; d < dim; ++d)
-                data_out.add_data_vector(level_set_operation.solution_normal_vector.block(d),
+                data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
                                          "normal_" + std::to_string(d));
 
             /*
              *  output curvature
              */
             if (parameters.paraview.print_curvature)
-              data_out.add_data_vector(level_set_operation.solution_curvature, "curvature");
+              data_out.add_data_vector(level_set_operation.get_curvature(), "curvature");
             /*
              *  output advection velocity
              */
@@ -320,9 +314,9 @@ namespace MeltPoolDG
                 grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
               }
 
-            MeltPoolDG::VectorTools::zero_out_ghosts(level_set_operation.solution_level_set,
-                                                     level_set_operation.solution_curvature,
-                                                     level_set_operation.solution_normal_vector,
+            MeltPoolDG::VectorTools::zero_out_ghosts(level_set_operation.get_level_set(),
+                                                     level_set_operation.get_curvature(),
+                                                     level_set_operation.get_normal_vector(),
                                                      advection_velocity);
           }
       }
@@ -338,6 +332,7 @@ namespace MeltPoolDG
 
       TimeIterator<double>   time_iterator;
       LevelSetOperation<dim> level_set_operation;
+      VectorType             initial_solution;
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

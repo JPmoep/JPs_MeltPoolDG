@@ -72,6 +72,7 @@ namespace MeltPoolDG
     std::string        modeltype            = "olsson2007";
     bool               do_print_l2norm      = false;
     SolverData<number> solver;
+    std::string        implementation = "meltpooldg";
   };
 
   template <typename number = double>
@@ -119,9 +120,10 @@ namespace MeltPoolDG
   template <typename number = double>
   struct CurvatureData
   {
-    number damping_scale_factor = 0.0;
-    bool   do_matrix_free       = false;
-    bool   do_print_l2norm      = true;
+    number      damping_scale_factor = 0.0;
+    bool        do_matrix_free       = false;
+    bool        do_print_l2norm      = true;
+    std::string implementation       = "meltpooldg";
   };
 
   template <typename number = double>
@@ -487,6 +489,11 @@ namespace MeltPoolDG
           "reinit rel tolerance rhs",
           reinit.solver.rel_tolerance_rhs,
           "Set the relative tolerance for a successful solution of the linear system of equations.");
+        prm.add_parameter(
+          "reinit implementation",
+          reinit.implementation,
+          "Choose the corresponding implementation of the reinitialization operation.",
+          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
       /*
@@ -526,6 +533,10 @@ namespace MeltPoolDG
         prm.add_parameter("curv do print l2norm",
                           curv.do_print_l2norm,
                           "Defines if the l2norm of the curvature result should be printed)");
+        prm.add_parameter("curv implementation",
+                          curv.implementation,
+                          "Choose the corresponding implementation of the curvature operation.",
+                          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
       /*
