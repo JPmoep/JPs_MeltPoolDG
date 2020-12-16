@@ -34,6 +34,7 @@
 #include <meltpooldg/reinitialization/reinitialization_operation.hpp>
 #include <meltpooldg/reinitialization/reinitialization_operation_adaflo_wrapper.hpp>
 #include <meltpooldg/reinitialization/reinitialization_operation_base.hpp>
+#include <meltpooldg/utilities/amr.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
 // C++
 #include <memory>
@@ -227,6 +228,9 @@ namespace MeltPoolDG
          *  create the matrix-free object
          */
         scratch_data->build();
+
+        if (reinit_operation)
+          reinit_operation->reinit();
       }
 
       /*
@@ -235,87 +239,51 @@ namespace MeltPoolDG
       void
       refine_mesh(std::shared_ptr<SimulationBase<dim>> base_in)
       {
-        if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(
-              base_in->triangulation))
-          {
-            Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
+        const auto mark_cells_for_refinement =
+          [&](parallel::distributed::Triangulation<dim> &tria) -> bool {
+          Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
 
-            /*  @todo:
-             *  bug (?)
-             *  for the purpose of the KellyErrorEstimator initialize_dof_vector could not be used
-             *  scratch_data->initialize_dof_vector(locally_relevant_solution);
-             */
+          VectorType locally_relevant_solution;
+          locally_relevant_solution.reinit(scratch_data->get_partitioner());
+          locally_relevant_solution.copy_locally_owned_data_from(reinit_operation->get_level_set());
+          constraints.distribute(locally_relevant_solution);
+          locally_relevant_solution.update_ghost_values();
 
-            VectorType locally_relevant_solution;
-            locally_relevant_solution.reinit(scratch_data->get_partitioner());
-            locally_relevant_solution.copy_locally_owned_data_from(
-              reinit_operation->get_level_set());
-            constraints.distribute(locally_relevant_solution);
-            locally_relevant_solution.update_ghost_values();
+          KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
+                                             scratch_data->get_face_quadrature(),
+                                             {},
+                                             locally_relevant_solution,
+                                             estimated_error_per_cell);
 
-            KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
-                                               scratch_data->get_face_quadrature(),
-                                               {},
-                                               locally_relevant_solution,
-                                               estimated_error_per_cell);
+          parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
+            tria,
+            estimated_error_per_cell,
+            base_in->parameters.amr.upper_perc_to_refine,
+            base_in->parameters.amr.lower_perc_to_coarsen);
 
-            parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
-              *tria,
-              estimated_error_per_cell,
-              base_in->parameters.amr.upper_perc_to_refine,
-              base_in->parameters.amr.lower_perc_to_coarsen);
+          return true;
+        };
 
-            /*
-             *  Limit the maximum and minimum refinement levels of cells of the grid.
-             */
-            if (tria->n_levels() > base_in->parameters.amr.max_grid_refinement_level)
-              for (auto &cell : tria->active_cell_iterators_on_level(
-                     base_in->parameters.amr.max_grid_refinement_level))
-                cell->clear_refine_flag();
-            if (tria->n_levels() < base_in->parameters.amr.min_grid_refinement_level)
-              for (auto &cell : tria->active_cell_iterators_on_level(
-                     base_in->parameters.amr.min_grid_refinement_level))
-                cell->clear_coarsen_flag();
+        const auto attach_vectors = [&](std::vector<VectorType *> &vectors) {
+          reinit_operation->attach_vectors(vectors);
+        };
 
-            /*
-             *  Initialize the triangulation change from the old grid to the new grid
-             */
-            base_in->triangulation->prepare_coarsening_and_refinement();
-            /*
-             *  Initialize the solution transfer from the old grid to the new grid
-             */
-            parallel::distributed::SolutionTransfer<dim, VectorType, DoFHandlerType>
-              solution_transfer(dof_handler);
-            solution_transfer.prepare_for_coarsening_and_refinement(locally_relevant_solution);
+        const auto post = [&]() {
+          constraints.distribute(reinit_operation->get_level_set());
 
-            /*
-             *  Execute the grid refinement
-             */
-            base_in->triangulation->execute_coarsening_and_refinement();
+          VectorType temp(reinit_operation->get_level_set());
+          temp.copy_locally_owned_data_from(reinit_operation->get_level_set());
+          reinit_operation->update_initial_solution(temp);
+        };
 
-            /*
-             *  update dof-related scratch data to match the current triangulation
-             */
-            setup_dof_system(base_in, false);
+        const auto setup_dof_system = [&]() { this->setup_dof_system(base_in, false); };
 
-            /*
-             *  interpolate the given solution to the new discretization
-             *
-             */
-            VectorType interpolated_solution;
-            scratch_data->initialize_dof_vector(interpolated_solution);
-
-            solution_transfer.interpolate(interpolated_solution);
-
-            constraints.distribute(interpolated_solution);
-            /*
-             * update the reinitialization operator with the new solution values
-             */
-            reinit_operation->update_initial_solution(interpolated_solution);
-          }
-        else
-          //@todo: WIP
-          AssertThrow(false, ExcMessage("Mesh refinement for dim=1 not yet supported"));
+        refine_grid<dim, VectorType>(mark_cells_for_refinement,
+                                     attach_vectors,
+                                     post,
+                                     setup_dof_system,
+                                     base_in->parameters.amr,
+                                     dof_handler);
       }
 
       /*
