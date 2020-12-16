@@ -1,0 +1,41 @@
+{
+  "base" : { 
+    "problem name"       : "level_set", 
+    "application name"   : "rotating_bubble",
+    "dimension"          : "2",
+    "global refinements" : "6",
+    "degree"             : "1",
+    "do print parameters": "false"
+  },
+  "levelset" : {
+    "ls do reinitialization"    : "true",
+    "ls artificial diffusivity" : "0.0",
+    "ls do print l2norm"        : "true",
+    "ls time integration scheme" : "crank_nicolson",
+    "ls start time"             : "0.0",
+    "ls end time"               : "0.05",
+    "ls time step size"         : "0.01",
+    "ls do matrix free"         : "true"
+  },
+  "reinitialization" : {
+    "reinit max n steps"          : "5",
+    "reinit modeltype"            : "olsson2007",
+    "reinit do matrix free"       : "false", 
+    "reinit preconditioner type"  : "Identity", 
+    "reinit solver type"          : "CG", 
+    "reinit do print l2norm"      : "true",
+    "reinit eps scale factor"     : "0.5" 
+  },
+  "normal vector" : {
+    "normal vec damping scale factor" : "0.5",
+    "normal vec do matrix free"       : "true"
+  },
+  "curvature" : {
+    "curv damping scale factor" : "0.5",
+    "curv do matrix free"       : "true",
+    "curv implementation"       : "adaflo"
+  },
+  "paraview" : {
+    "paraview do output"           : "false"
+  }
+}

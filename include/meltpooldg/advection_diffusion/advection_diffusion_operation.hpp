@@ -32,11 +32,6 @@ namespace MeltPoolDG
 
     public:
       /*
-       *    This is the primary solution variable of this module, which will be also publically
-       *    accessible for output_results.
-       */
-      VectorType solution_advected_field;
-      /*
        *  All the necessary parameters are stored in this struct.
        */
       AdvectionDiffusionData<double> advec_diff_data;
@@ -143,6 +138,7 @@ namespace MeltPoolDG
         return solution_advected_field;
       }
 
+
       const LinearAlgebra::distributed::Vector<double> &
       get_advected_field_old() const override
       {
@@ -196,6 +192,11 @@ namespace MeltPoolDG
       unsigned int quad_idx;
       unsigned int dof_no_bc_idx;
       unsigned int velocity_dof_idx;
+      /*
+       *    This is the primary solution variable of this module, which will be also publically
+       *    accessible for output_results.
+       */
+      VectorType solution_advected_field;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

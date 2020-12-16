@@ -14,6 +14,7 @@
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operation.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operation_adaflo_wrapper.hpp>
 #include <meltpooldg/reinitialization/olsson_operator.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
@@ -43,9 +44,7 @@ namespace MeltPoolDG
        *    This is the primary solution variable of this module, which will be also publically
        *    accessible for output_results.
        */
-      VectorType             solution_level_set;
-      const BlockVectorType &solution_normal_vector =
-        normal_vector_operation.solution_normal_vector;
+      VectorType solution_level_set;
 
       ReinitializationOperation() = default;
 
@@ -60,7 +59,6 @@ namespace MeltPoolDG
         dof_idx      = dof_idx_in;
         quad_idx     = quad_idx_in;
         scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
-        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
         /*
          *    initialize the (local) parameters of the reinitialization
          *    from the global user-defined parameters
@@ -69,7 +67,32 @@ namespace MeltPoolDG
         /*
          *    initialize normal_vector_field
          */
-        normal_vector_operation.initialize(scratch_data_in, data_in, dof_idx_in, quad_idx_in);
+        if (data_in.normal_vec.implementation == "meltpooldg")
+          {
+            normal_vector_operation = std::make_shared<NormalVector::NormalVectorOperation<dim>>();
+
+            normal_vector_operation->initialize(scratch_data_in, data_in, dof_idx_in, quad_idx_in);
+          }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if (data_in.normal_vec.implementation == "adaflo")
+          {
+            AssertThrow(data_in.normal_vec.do_matrix_free, ExcNotImplemented());
+
+            normal_vector_operation =
+              std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(
+                *scratch_data_in,
+                dof_idx_in, // ls @todo
+                dof_idx_in, // normal vec @todo
+                quad_idx,
+                solution_level_set,
+                data_in);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
+
+
+
         /*
          *    compute the normal vector field and update the initial solution
          */
@@ -84,7 +107,7 @@ namespace MeltPoolDG
       /*
        *  By calling the reinitialize function, (1) the solution_level_set field
        *  and (2) the normal vector field corresponding to the given solution_level_set_field
-       *  is updated. This is commonly the first stage before performing the pesude-time-dependent
+       *  is updated. This is commonly the first stage before performing the pseudo-time-dependent
        *  solution procedure.
        */
       void
@@ -101,8 +124,8 @@ namespace MeltPoolDG
          *    level set; the normal vector field is called by reference within the
          *    operator class
          */
-        normal_vector_operation.update();
-        normal_vector_operation.solve(solution_level_set);
+        // normal_vector_operation->update();
+        normal_vector_operation->solve(solution_level_set);
       }
 
       void
@@ -190,6 +213,18 @@ namespace MeltPoolDG
           }
       }
 
+      const BlockVectorType &
+      get_normal_vector() const
+      {
+        return normal_vector_operation->get_solution_normal_vector();
+      }
+
+      const VectorType &
+      get_level_set() const
+      {
+        return solution_level_set;
+      }
+
     private:
       void
       set_reinitialization_parameters(const Parameters<double> &data_in)
@@ -204,7 +239,7 @@ namespace MeltPoolDG
           {
             reinit_operator = std::make_unique<OlssonOperator<dim, double>>(
               *scratch_data,
-              normal_vector_operation.solution_normal_vector,
+              normal_vector_operation->get_solution_normal_vector(),
               reinit_data.constant_epsilon,
               reinit_data.scale_factor_epsilon,
               dof_idx,
@@ -242,7 +277,8 @@ namespace MeltPoolDG
       /*
        *   Computation of the normal vectors
        */
-      NormalVector::NormalVectorOperation<dim> normal_vector_operation;
+      std::shared_ptr<NormalVector::NormalVectorOperationBase<dim>> normal_vector_operation;
+      // NormalVector::NormalVectorOperation<dim> normal_vector_operation;
       /*
        *  Based on the following indices the correct DoFHandler or quadrature rule from
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds

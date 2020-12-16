@@ -71,6 +71,7 @@ namespace MeltPoolDG
     std::string        modeltype            = "olsson2007";
     bool               do_print_l2norm      = false;
     SolverData<number> solver;
+    std::string        implementation = "meltpooldg";
   };
 
   template <typename number = double>
@@ -109,17 +110,19 @@ namespace MeltPoolDG
   template <typename number = double>
   struct NormalVectorData
   {
-    number damping_scale_factor = 0.5;
-    bool   do_matrix_free       = false;
-    bool   do_print_l2norm      = true;
+    number      damping_scale_factor = 0.5;
+    bool        do_matrix_free       = false;
+    bool        do_print_l2norm      = true;
+    std::string implementation       = "meltpooldg";
   };
 
   template <typename number = double>
   struct CurvatureData
   {
-    number damping_scale_factor = 0.0;
-    bool   do_matrix_free       = false;
-    bool   do_print_l2norm      = true;
+    number      damping_scale_factor = 0.0;
+    bool        do_matrix_free       = false;
+    bool        do_print_l2norm      = true;
+    std::string implementation       = "meltpooldg";
   };
 
   template <typename number = double>
@@ -260,6 +263,7 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_start = flow.time_step_size;
           adaflo_params.params.time_step_size_min   = flow.time_step_size;
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
+          adaflo_params.params.use_simplex_mesh     = base.do_simplex;
         }
 
 #endif
@@ -484,6 +488,11 @@ namespace MeltPoolDG
           "reinit rel tolerance rhs",
           reinit.solver.rel_tolerance_rhs,
           "Set the relative tolerance for a successful solution of the linear system of equations.");
+        prm.add_parameter(
+          "reinit implementation",
+          reinit.implementation,
+          "Choose the corresponding implementation of the reinitialization operation.",
+          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
       /*
@@ -502,6 +511,10 @@ namespace MeltPoolDG
         prm.add_parameter("normal vec do print l2norm",
                           normal_vec.do_print_l2norm,
                           "Defines if the l2norm of the normal vector result should be printed)");
+        prm.add_parameter("normal vec implementation",
+                          normal_vec.implementation,
+                          "Choose the corresponding implementation of the normal vector operation.",
+                          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
       /*
@@ -519,6 +532,10 @@ namespace MeltPoolDG
         prm.add_parameter("curv do print l2norm",
                           curv.do_print_l2norm,
                           "Defines if the l2norm of the curvature result should be printed)");
+        prm.add_parameter("curv implementation",
+                          curv.implementation,
+                          "Choose the corresponding implementation of the curvature operation.",
+                          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
       /*

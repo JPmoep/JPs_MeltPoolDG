@@ -11,6 +11,7 @@
 
 // MeltPoolDG
 #include <meltpooldg/interface/operator_base.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operation_base.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operator.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
@@ -39,7 +40,7 @@ namespace MeltPoolDG
      */
 
     template <int dim>
-    class NormalVectorOperation
+    class NormalVectorOperation : public NormalVectorOperationBase<dim>
     {
     private:
       using VectorType       = LinearAlgebra::distributed::Vector<double>;
@@ -60,7 +61,7 @@ namespace MeltPoolDG
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             dof_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             quad_idx_in) override
       {
         scratch_data = scratch_data_in;
         dof_idx      = dof_idx_in;
@@ -82,8 +83,9 @@ namespace MeltPoolDG
       }
 
       void
-      solve(const VectorType &solution_levelset_in)
+      solve(const VectorType &solution_levelset_in) override
       {
+        create_operator();
         BlockVectorType rhs;
 
         scratch_data->initialize_dof_vector(rhs, dof_idx);
@@ -126,6 +128,13 @@ namespace MeltPoolDG
             pcout << std::endl;
           }
       }
+
+      const BlockVectorType &
+      get_solution_normal_vector() const override
+      {
+        return solution_normal_vector;
+      }
+
 
     private:
       /**
