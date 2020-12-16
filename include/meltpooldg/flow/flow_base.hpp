@@ -59,7 +59,10 @@ namespace MeltPoolDG
       get_viscosity(const unsigned int cell, const unsigned int q) const = 0;
 
       virtual void
-      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
+      attach_vectors_u(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
+
+      virtual void
+      attach_vectors_p(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
     };
 
   } // namespace Flow

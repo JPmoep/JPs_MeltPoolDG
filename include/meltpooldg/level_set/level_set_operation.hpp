@@ -257,6 +257,8 @@ namespace MeltPoolDG
                               const unsigned int flow_quad_idx,
                               const bool         zero_out = true)
       {
+        curvature_operation->get_curvature().update_ghost_values();
+
         scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
           [&](const auto &matrix_free,
               auto &      force_rhs,
@@ -297,6 +299,8 @@ namespace MeltPoolDG
           force_rhs,
           level_set_as_heaviside,
           zero_out);
+
+        curvature_operation->get_curvature().zero_out_ghosts();
       }
       /*
        *  getter functions for solution vectors

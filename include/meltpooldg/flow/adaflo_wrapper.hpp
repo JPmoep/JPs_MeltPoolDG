@@ -209,10 +209,21 @@ namespace MeltPoolDG
       }
 
       void
-      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      attach_vectors_u(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
       {
-        Assert(false, ExcNotImplemented());
-        (void)vectors;
+        navier_stokes.solution.update_ghost_values();
+        navier_stokes.solution_old.update_ghost_values();
+        vectors.push_back(&navier_stokes.solution.block(0));
+        vectors.push_back(&navier_stokes.solution_old.block(0));
+      }
+
+      void
+      attach_vectors_p(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      {
+        navier_stokes.solution.update_ghost_values();
+        navier_stokes.solution_old.update_ghost_values();
+        vectors.push_back(&navier_stokes.solution.block(1));
+        vectors.push_back(&navier_stokes.solution_old.block(1));
       }
 
     private:
@@ -380,7 +391,14 @@ namespace MeltPoolDG
       }
 
       void
-      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      attach_vectors_u(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      {
+        Assert(false, ExcNotImplemented());
+        (void)vectors;
+      }
+
+      void
+      attach_vectors_p(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
       {
         Assert(false, ExcNotImplemented());
         (void)vectors;

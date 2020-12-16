@@ -196,7 +196,7 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
 #endif
 
-        setup_dof_system(base_in);
+        setup_dof_system(base_in, false);
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->initialize(base_in);
@@ -264,7 +264,7 @@ namespace MeltPoolDG
       }
 
       void
-      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in)
+      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in, const bool do_reinit = true)
       {
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
@@ -354,6 +354,9 @@ namespace MeltPoolDG
          */
         scratch_data->initialize_dof_vector(density, flow_dof_idx);
         scratch_data->initialize_dof_vector(viscosity, flow_dof_idx);
+
+        if (do_reinit)
+          level_set_operation.reinit();
       }
 
       /**
@@ -597,12 +600,9 @@ namespace MeltPoolDG
           VectorType locally_relevant_solution;
           locally_relevant_solution.reinit(scratch_data->get_partitioner());
 
-          Assert(false, ExcNotImplemented());
-
-          // TODO
-          // locally_relevant_solution.copy_locally_owned_data_from(
-          //   advec_diff_operation->get_advected_field());
-          // constraints.distribute(locally_relevant_solution);
+          locally_relevant_solution.copy_locally_owned_data_from(
+            level_set_operation.get_level_set());
+          ls_constraints_dirichlet.distribute(locally_relevant_solution);
           locally_relevant_solution.update_ghost_values();
 
           KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
@@ -620,20 +620,28 @@ namespace MeltPoolDG
           return true;
         };
 
-        const auto attach_vectors = [&](std::vector<VectorType *> &vectors) {
-          flow_operation->attach_vectors(vectors);
-        };
+        std::vector<
+          std::pair<const DoFHandler<dim> *, std::function<void(std::vector<VectorType *> &)>>>
+          data;
 
-        const auto post = [&]() { Assert(false, ExcNotImplemented()); };
+        data.emplace_back(&dof_handler, [&](std::vector<VectorType *> &vectors) {
+          level_set_operation.attach_vectors(vectors);
+        });
+        data.emplace_back(&flow_operation->get_dof_handler_velocity(),
+                          [&](std::vector<VectorType *> &vectors) {
+                            flow_operation->attach_vectors_u(vectors);
+                          });
+        data.emplace_back(&flow_operation->get_dof_handler_pressure(),
+                          [&](std::vector<VectorType *> &vectors) {
+                            flow_operation->attach_vectors_p(vectors);
+                          });
+
+        const auto post = [&]() { /*TODO*/ };
 
         const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
 
-        refine_grid<dim, VectorType>(mark_cells_for_refinement,
-                                     attach_vectors,
-                                     post,
-                                     setup_dof_system,
-                                     base_in->parameters.amr,
-                                     dof_handler);
+        refine_grid<dim, VectorType>(
+          mark_cells_for_refinement, data, post, setup_dof_system, base_in->parameters.amr);
       }
 
       //@todo this function might be designed more generic and shifted to vector tools

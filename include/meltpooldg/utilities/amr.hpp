@@ -12,14 +12,18 @@ namespace MeltPoolDG
   template <int dim, typename VectorType>
   void
   refine_grid(const std::function<bool(parallel::distributed::Triangulation<dim> &)>
-                &                                                     mark_cells_for_refinement,
-              const std::function<void(std::vector<VectorType *> &)> &attach_vectors,
-              const std::function<void()> &                           post,
-              const std::function<void()> &                           setup_dof_system,
-              const AdaptiveMeshingData &                             amr,
-              const DoFHandler<dim> &                                 dof_handler)
+                &mark_cells_for_refinement,
+              const std::vector<std::pair<const DoFHandler<dim> *,
+                                          std::function<void(std::vector<VectorType *> &)>>> &data,
+              const std::function<void()> &                                                   post,
+              const std::function<void()> &setup_dof_system,
+              const AdaptiveMeshingData &  amr)
   {
-    auto triangulation = const_cast<Triangulation<dim> *>(&dof_handler.get_triangulation());
+    const unsigned int n = data.size();
+
+    Assert(n > 0, ExcNotImplemented());
+
+    auto triangulation = const_cast<Triangulation<dim> *>(&data[0].first->get_triangulation());
 
     Assert(triangulation, ExcNotImplemented());
 
@@ -45,17 +49,24 @@ namespace MeltPoolDG
         /*
          *  Initialize the solution transfer from the old grid to the new grid
          */
-        parallel::distributed::SolutionTransfer<dim, VectorType> solution_transfer(dof_handler);
+        std::vector<std::shared_ptr<parallel::distributed::SolutionTransfer<dim, VectorType>>>
+          solution_transfer(n);
 
-        std::vector<VectorType *>       new_grid_solutions;
-        std::vector<const VectorType *> old_grid_solutions;
+        std::vector<std::vector<VectorType *>>       new_grid_solutions(n);
+        std::vector<std::vector<const VectorType *>> old_grid_solutions(n);
 
-        attach_vectors(new_grid_solutions);
+        for (unsigned int j = 0; j < n; ++j)
+          {
+            data[j].second(new_grid_solutions[j]);
 
-        for (const auto &i : new_grid_solutions)
-          old_grid_solutions.push_back(i);
+            for (const auto &i : new_grid_solutions[j])
+              old_grid_solutions[j].push_back(i);
 
-        solution_transfer.prepare_for_coarsening_and_refinement(old_grid_solutions);
+            solution_transfer[j] =
+              std::make_shared<parallel::distributed::SolutionTransfer<dim, VectorType>>(
+                *data[j].first);
+            solution_transfer[j]->prepare_for_coarsening_and_refinement(old_grid_solutions[j]);
+          }
 
         /*
          *  Execute the grid refinement
@@ -71,13 +82,34 @@ namespace MeltPoolDG
          *  interpolate the given solution to the new discretization
          *
          */
-        solution_transfer.interpolate(new_grid_solutions);
+        for (unsigned int j = 0; j < n; ++j)
+          solution_transfer[j]->interpolate(new_grid_solutions[j]);
 
         post();
       }
     else
       //@todo: WIP
       AssertThrow(false, ExcMessage("Mesh refinement for dim=1 not yet supported"));
+  }
+
+
+  template <int dim, typename VectorType>
+  void
+  refine_grid(const std::function<bool(parallel::distributed::Triangulation<dim> &)>
+                &                                                     mark_cells_for_refinement,
+              const std::function<void(std::vector<VectorType *> &)> &attach_vectors,
+              const std::function<void()> &                           post,
+              const std::function<void()> &                           setup_dof_system,
+              const AdaptiveMeshingData &                             amr,
+              const DoFHandler<dim> &                                 dof_handler)
+  {
+    refine_grid<dim, VectorType>(
+      mark_cells_for_refinement,
+      {std::pair<const DoFHandler<dim> *, std::function<void(std::vector<VectorType *> &)>>{
+        &dof_handler, attach_vectors}},
+      post,
+      setup_dof_system,
+      amr);
   }
 
 } // namespace MeltPoolDG
