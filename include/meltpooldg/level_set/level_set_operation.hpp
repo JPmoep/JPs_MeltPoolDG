@@ -468,6 +468,20 @@ namespace MeltPoolDG
       {
         return advec_diff_operation->get_advected_field();
       }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_level_set()
+      {
+        return advec_diff_operation->get_advected_field();
+      }
+
+      virtual void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
+      {
+        Assert(false, ExcNotImplemented());
+        (void)vectors;
+      }
+
       /*
        *   Computation of the normal vectors
        */
