@@ -35,6 +35,9 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
+      virtual void
+      reinit() = 0;
+
       /*
        *  getter functions
        */

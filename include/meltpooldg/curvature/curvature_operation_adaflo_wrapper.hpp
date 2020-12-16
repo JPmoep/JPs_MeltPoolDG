@@ -46,6 +46,9 @@ namespace MeltPoolDG
                                const VectorType &        advected_field, //@todo: make const
                                const Parameters<double> &data_in)
         : scratch_data(scratch_data)
+        , advec_diff_dof_idx(advec_diff_dof_idx)
+        , curv_dof_idx(curv_dof_idx)
+        , curv_quad_idx(curv_quad_idx)
       {
         (void)normal_vec_dof_idx;
 
@@ -53,16 +56,6 @@ namespace MeltPoolDG
          * set parameters of adaflo
          */
         set_adaflo_parameters(data_in, advec_diff_dof_idx, curv_dof_idx, curv_quad_idx);
-        /**
-         *  initialize the dof vectors
-         */
-        initialize_vectors();
-
-        compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
-                                    advec_diff_dof_idx,
-                                    cell_diameters,
-                                    cell_diameter_min,
-                                    cell_diameter_max);
 
         /**
          * initialize the projection matrix
@@ -95,6 +88,23 @@ namespace MeltPoolDG
           projection_matrix,
           ilu_projection_matrix);
 
+        this->reinit(); // TODO?
+      }
+
+      void
+      reinit() override
+      {
+        /**
+         *  initialize the dof vectors
+         */
+        initialize_vectors();
+
+        compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
+                                    advec_diff_dof_idx,
+                                    cell_diameters,
+                                    cell_diameter_min,
+                                    cell_diameter_max);
+
         /**
          * initialize the preconditioner -->  @todo: currently not used in adaflo
          */
@@ -114,6 +124,8 @@ namespace MeltPoolDG
           cell_diameters,
           *projection_matrix,
           *ilu_projection_matrix);
+
+        normal_vector_operation_adaflo->reinit();
       }
 
       /**
@@ -188,6 +200,11 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &scratch_data;
+
+      const unsigned int advec_diff_dof_idx;
+      const unsigned int curv_dof_idx;
+      const unsigned int curv_quad_idx;
+
       /**
        *  Vectors for computing the normals
        */

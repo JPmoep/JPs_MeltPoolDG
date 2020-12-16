@@ -190,6 +190,19 @@ namespace MeltPoolDG
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
+
+        this->reinit();
+      }
+
+      void
+      reinit()
+      {
+        advec_diff_operation->reinit();
+        reinit_operation->reinit();
+        curvature_operation->reinit();
+
+        if (normal_vector_operation)
+          normal_vector_operation->reinit();
       }
 
       void
@@ -478,8 +491,7 @@ namespace MeltPoolDG
       virtual void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
-        Assert(false, ExcNotImplemented());
-        (void)vectors;
+        advec_diff_operation->attach_vectors(vectors);
       }
 
       /*

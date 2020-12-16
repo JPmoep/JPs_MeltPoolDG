@@ -137,6 +137,13 @@ namespace MeltPoolDG
         return normal_vector_operation.get_solution_normal_vector();
       }
 
+
+      virtual void
+      reinit()
+      {
+        normal_vector_operation.reinit();
+      }
+
     private:
       void
       create_operator()

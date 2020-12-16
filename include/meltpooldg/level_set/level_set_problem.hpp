@@ -138,7 +138,7 @@ namespace MeltPoolDG
                                                           100000,
                                                           false});
 
-        setup_dof_system(base_in);
+        setup_dof_system(base_in, false);
 
         // set initial conditions of the levelset function
         AssertThrow(
@@ -174,7 +174,7 @@ namespace MeltPoolDG
       }
 
       void
-      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in)
+      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in, const bool do_reinit = true)
       {
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
@@ -261,6 +261,9 @@ namespace MeltPoolDG
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'level_set') "));
         compute_advection_velocity(*base_in->get_advection_field("level_set"));
+
+        if (do_reinit)
+          level_set_operation.reinit();
       }
 
       void

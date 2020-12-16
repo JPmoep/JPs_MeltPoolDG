@@ -77,6 +77,12 @@ namespace MeltPoolDG
       }
 
       void
+      reinit() override
+      {
+        // nothing to do
+      }
+
+      void
       update()
       {
         create_operator();

@@ -83,7 +83,7 @@ namespace MeltPoolDG
       }
 
       void
-      reinit()
+      reinit() override
       {
         /**
          *  initialize the dof vectors
