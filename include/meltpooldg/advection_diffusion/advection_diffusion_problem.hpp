@@ -57,6 +57,14 @@ namespace MeltPoolDG
       void
       run(std::shared_ptr<SimulationBase<dim>> base_in) final
       {
+        AssertThrow(base_in->get_advection_field("advection_diffusion"),
+                    ExcMessage(
+                      " It seems that your SimulationBase object does not contain "
+                      "a valid advection velocity. A shared_ptr to your advection velocity "
+                      "function, e.g., AdvectionFunc<dim> must be specified as follows: "
+                      "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
+                      "'advection_diffusion') "));
+
         initialize(base_in);
 
         while (!time_iterator.is_finished())
@@ -96,22 +104,8 @@ namespace MeltPoolDG
         /*
          *  setup DoFHandler
          */
-        dof_handler.reinit(*base_in->triangulation);
-        dof_handler_velocity.reinit(*base_in->triangulation);
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          {
-            dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
-            dof_handler_velocity.distribute_dofs(
-              FESystem<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
-          }
-        else
-#endif
-          {
-            dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
-            dof_handler_velocity.distribute_dofs(
-              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
-          }
+        dof_handler.distribute_dofs(*fe);
+        dof_handler_velocity.distribute_dofs(*fe_velocity);
 
         /*
          *  create the partititioning
@@ -164,18 +158,36 @@ namespace MeltPoolDG
          */
         scratch_data->build();
 
-        // TODO: better place
-        if (advec_diff_operation)
-          {
-            scratch_data->initialize_dof_vector(advec_diff_operation->get_advected_field());
-            scratch_data->initialize_dof_vector(advec_diff_operation->get_advected_field_old());
-          }
+        if (advec_diff_operation) // TODO: better place
+          advec_diff_operation->reinit();
       }
 
 
       void
       initialize(std::shared_ptr<SimulationBase<dim>> base_in)
       {
+        /*
+         *  setup DoFHandler
+         */
+        dof_handler.reinit(*base_in->triangulation);
+        dof_handler_velocity.reinit(*base_in->triangulation);
+
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          {
+            fe = std::make_unique<Simplex::FE_P<dim>>(base_in->parameters.base.degree);
+            fe_velocity =
+              std::make_unique<FESystem<dim>>(Simplex::FE_P<dim>(base_in->parameters.base.degree),
+                                              dim);
+          }
+        else
+#endif
+          {
+            fe = std::make_unique<FE_Q<dim>>(base_in->parameters.base.degree);
+            fe_velocity =
+              std::make_unique<FESystem<dim>>(FE_Q<dim>(base_in->parameters.base.degree), dim);
+          }
+
         /*
          *  setup scratch data
          */
@@ -252,13 +264,6 @@ namespace MeltPoolDG
         /*
          *    initialize the advection-diffusion operation class
          */
-        AssertThrow(base_in->get_advection_field("advection_diffusion"),
-                    ExcMessage(
-                      " It seems that your SimulationBase object does not contain "
-                      "a valid advection velocity. A shared_ptr to your advection velocity "
-                      "function, e.g., AdvectionFunc<dim> must be specified as follows: "
-                      "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
-                      "'advection_diffusion') "));
         compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
         if (base_in->parameters.advec_diff.implementation == "meltpooldg")
           {
@@ -278,13 +283,11 @@ namespace MeltPoolDG
             AssertThrow(base_in->parameters.advec_diff.do_matrix_free, ExcNotImplemented());
             advec_diff_operation =
               std::make_shared<MeltPoolDG::AdvectionDiffusionAdaflo::AdafloWrapper<dim>>(
-                *scratch_data,
-                dof_zero_bc_idx,
-                quad_idx,
-                dof_idx_velocity,
-                initial_solution,
-                advection_velocity,
-                base_in);
+                *scratch_data, dof_zero_bc_idx, quad_idx, dof_idx_velocity, base_in);
+
+            advec_diff_operation->reinit();
+
+            advec_diff_operation->set_initial_condition(initial_solution, advection_velocity);
           }
 #endif
         else
@@ -433,6 +436,9 @@ namespace MeltPoolDG
       }
 
     private:
+      std::unique_ptr<FiniteElement<dim>> fe;
+      std::unique_ptr<FiniteElement<dim>> fe_velocity;
+
       DoFHandler<dim>                   dof_handler;
       AffineConstraints<double>         constraints;
       AffineConstraints<double>         hanging_node_constraints;
