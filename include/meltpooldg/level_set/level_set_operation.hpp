@@ -191,7 +191,7 @@ namespace MeltPoolDG
         else
           AssertThrow(false, ExcNotImplemented());
 
-        this->reinit();
+        // this->reinit();
       }
 
       void
