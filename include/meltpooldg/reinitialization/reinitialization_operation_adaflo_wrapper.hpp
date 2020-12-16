@@ -118,12 +118,12 @@ namespace MeltPoolDG
                                               1 /*stab_steps @todo*/,
                                               0 /*diff_steps @todo*/,
                                               compute_normal);
-        force_compute_normal = false;
         scratch_data.get_pcout() << "\t |ΔΨ|∞ = " << std::setw(15) << std::left
                                  << std::setprecision(10) << increment.linfty_norm();
         scratch_data.get_pcout() << " |ΔΨ|²/dT = " << std::setw(15) << std::left
                                  << std::setprecision(10) << increment.l2_norm() / dt << "|"
                                  << std::endl;
+        force_compute_normal = false;
       }
 
       const LinearAlgebra::distributed::Vector<double> &
@@ -154,7 +154,7 @@ namespace MeltPoolDG
       update_initial_solution(const VectorType &level_set_in) override
       {
         (void)level_set_in;
-        // pass
+        force_compute_normal = true;
       }
 
     private:

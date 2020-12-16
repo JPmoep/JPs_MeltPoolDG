@@ -12,6 +12,7 @@
     "reinit modeltype":       "olsson2007",
     "reinit dtau":            "0.005",
     "reinit do matrix free":  "true",
+    "reinit implementation": "adaflo",
     "reinit do print l2norm": "true"
   },
   "normal vector": { 
