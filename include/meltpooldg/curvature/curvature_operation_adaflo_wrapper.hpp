@@ -48,6 +48,8 @@ namespace MeltPoolDG
                                const Parameters<double> &data_in)
         : scratch_data(scratch_data)
       {
+        (void)normal_vec_dof_idx;
+
         /**
          * set parameters of adaflo
          */

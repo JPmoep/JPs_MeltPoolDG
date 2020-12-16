@@ -91,38 +91,8 @@ namespace MeltPoolDG
        *  for the computation of the advection-diffusion problem
        */
       void
-      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in, const bool do_initial_setup)
+      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in)
       {
-        /*
-         *  setup scratch data
-         */
-        if (do_initial_setup)
-          {
-            scratch_data =
-              std::make_shared<ScratchData<dim>>(base_in->parameters.advec_diff.do_matrix_free);
-            /*
-             *  setup mapping
-             */
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-            if (base_in->parameters.base.do_simplex)
-              scratch_data->set_mapping(
-                MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
-            else
-#endif
-              scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
-              /*
-               *  create quadrature rule
-               */
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-            if (base_in->parameters.base.do_simplex)
-              quad_idx = scratch_data->attach_quadrature(
-                Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
-            else
-#endif
-              quad_idx =
-                scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-          }
-
         /*
          *  setup DoFHandler
          */
@@ -142,15 +112,6 @@ namespace MeltPoolDG
             dof_handler_velocity.distribute_dofs(
               FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
           }
-
-        if (do_initial_setup)
-          {
-            dof_idx          = scratch_data->attach_dof_handler(dof_handler);
-            dof_no_bc_idx    = scratch_data->attach_dof_handler(dof_handler);
-            dof_zero_bc_idx  = scratch_data->attach_dof_handler(dof_handler);
-            dof_idx_velocity = scratch_data->attach_dof_handler(dof_handler_velocity);
-          }
-
 
         /*
          *  create the partititioning
@@ -198,20 +159,13 @@ namespace MeltPoolDG
           }
         constraints.close();
 
-        if (do_initial_setup)
-          {
-            scratch_data->attach_constraint_matrix(constraints);
-            scratch_data->attach_constraint_matrix(hanging_node_constraints);
-            scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet);
-            scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
-          }
-
         /*
          *  create the matrix-free object
          */
         scratch_data->build();
 
-        if (do_initial_setup == false)
+        // TODO: better place
+        if (advec_diff_operation)
           {
             scratch_data->initialize_dof_vector(advec_diff_operation->get_advected_field());
             scratch_data->initialize_dof_vector(advec_diff_operation->get_advected_field_old());
@@ -222,7 +176,46 @@ namespace MeltPoolDG
       void
       initialize(std::shared_ptr<SimulationBase<dim>> base_in)
       {
-        setup_dof_system(base_in, true);
+        /*
+         *  setup scratch data
+         */
+        {
+          scratch_data =
+            std::make_shared<ScratchData<dim>>(base_in->parameters.advec_diff.do_matrix_free);
+          /*
+           *  setup mapping
+           */
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (base_in->parameters.base.do_simplex)
+            scratch_data->set_mapping(
+              MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+          else
+#endif
+            scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+            /*
+             *  create quadrature rule
+             */
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (base_in->parameters.base.do_simplex)
+            quad_idx = scratch_data->attach_quadrature(
+              Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
+          else
+#endif
+            quad_idx =
+              scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+
+          dof_idx          = scratch_data->attach_dof_handler(dof_handler);
+          dof_no_bc_idx    = scratch_data->attach_dof_handler(dof_handler);
+          dof_zero_bc_idx  = scratch_data->attach_dof_handler(dof_handler);
+          dof_idx_velocity = scratch_data->attach_dof_handler(dof_handler_velocity);
+
+          scratch_data->attach_constraint_matrix(constraints);
+          scratch_data->attach_constraint_matrix(hanging_node_constraints);
+          scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet);
+          scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
+        }
+
+        setup_dof_system(base_in);
 
         /*
          *  initialize the time iterator
@@ -429,7 +422,7 @@ namespace MeltPoolDG
           hanging_node_constraints.distribute(advec_diff_operation->get_advected_field());
         };
 
-        const auto setup_dof_system = [&]() { this->setup_dof_system(base_in, false); };
+        const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
 
         refine_grid<dim, VectorType>(mark_cells_for_refinement,
                                      attach_vectors,
