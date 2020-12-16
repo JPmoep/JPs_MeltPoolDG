@@ -16,6 +16,7 @@
 #include <meltpooldg/normal_vector/normal_vector_operation.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operation_adaflo_wrapper.hpp>
 #include <meltpooldg/reinitialization/olsson_operator.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation_base.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
@@ -31,7 +32,7 @@ namespace MeltPoolDG
      */
 
     template <int dim>
-    class ReinitializationOperation
+    class ReinitializationOperation : public ReinitializationOperationBase<dim>
     {
     private:
       using VectorType       = LinearAlgebra::distributed::Vector<double>;
@@ -53,7 +54,7 @@ namespace MeltPoolDG
                  const VectorType &                             solution_level_set_in,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             dof_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             quad_idx_in) override
       {
         scratch_data = scratch_data_in;
         dof_idx      = dof_idx_in;
@@ -111,7 +112,7 @@ namespace MeltPoolDG
        *  solution procedure.
        */
       void
-      update_initial_solution(const VectorType &solution_level_set_in)
+      update_initial_solution(const VectorType &solution_level_set_in) override
       {
         /*
          *    copy the given solution into the member variable
@@ -129,7 +130,7 @@ namespace MeltPoolDG
       }
 
       void
-      solve(const double d_tau)
+      solve(const double d_tau) override
       {
         VectorType src, rhs;
 
@@ -214,16 +215,29 @@ namespace MeltPoolDG
       }
 
       const BlockVectorType &
-      get_normal_vector() const
+      get_normal_vector() const override
       {
         return normal_vector_operation->get_solution_normal_vector();
       }
 
       const VectorType &
-      get_level_set() const
+      get_level_set() const override
       {
         return solution_level_set;
       }
+
+      VectorType &
+      get_level_set() override
+      {
+        return solution_level_set;
+      }
+
+      void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
+      {
+        vectors.push_back(&solution_level_set);
+      }
+
 
     private:
       void
@@ -267,6 +281,8 @@ namespace MeltPoolDG
         if (!reinit_data.solver.do_matrix_free)
           reinit_operator->initialize_matrix_based<dim>(*scratch_data);
       }
+
+
 
     private:
       std::shared_ptr<const ScratchData<dim>> scratch_data;

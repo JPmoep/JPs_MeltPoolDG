@@ -32,6 +32,8 @@
 #include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/reinitialization/reinitialization_operation.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation_adaflo_wrapper.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation_base.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
 // C++
 #include <memory>
@@ -71,7 +73,7 @@ namespace MeltPoolDG
             scratch_data->get_pcout()
               << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
 
-            reinit_operation.solve(d_tau);
+            reinit_operation->solve(d_tau);
 
             output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
 
@@ -134,8 +136,30 @@ namespace MeltPoolDG
         /*
          *    initialize the reinitialization operation class
          */
-        reinit_operation.initialize(
-          scratch_data, solution_level_set, base_in->parameters, dof_idx, quad_idx);
+
+        if (base_in->parameters.reinit.implementation == "meltpooldg")
+          {
+            reinit_operation = std::make_shared<ReinitializationOperation<dim>>();
+
+            reinit_operation->initialize(
+              scratch_data, solution_level_set, base_in->parameters, dof_idx, quad_idx);
+          }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if (base_in->parameters.reinit.implementation == "adaflo")
+          {
+            AssertThrow(base_in->parameters.reinit.solver.do_matrix_free, ExcNotImplemented());
+
+            reinit_operation =
+              std::make_shared<ReinitializationOperationAdaflo<dim>>(*scratch_data,
+                                                                     dof_idx,
+                                                                     quad_idx,
+                                                                     dof_idx, // normal vec @todo
+                                                                     solution_level_set,
+                                                                     base_in);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
       }
 
       void
@@ -225,7 +249,7 @@ namespace MeltPoolDG
             VectorType locally_relevant_solution;
             locally_relevant_solution.reinit(scratch_data->get_partitioner());
             locally_relevant_solution.copy_locally_owned_data_from(
-              reinit_operation.solution_level_set);
+              reinit_operation->get_level_set());
             constraints.distribute(locally_relevant_solution);
             locally_relevant_solution.update_ghost_values();
 
@@ -287,7 +311,7 @@ namespace MeltPoolDG
             /*
              * update the reinitialization operator with the new solution values
              */
-            reinit_operation.update_initial_solution(interpolated_solution);
+            reinit_operation->update_initial_solution(interpolated_solution);
           }
         else
           //@todo: WIP
@@ -304,12 +328,12 @@ namespace MeltPoolDG
           {
             DataOut<dim> data_out;
             data_out.attach_dof_handler(dof_handler);
-            data_out.add_data_vector(reinit_operation.solution_level_set, "psi");
+            data_out.add_data_vector(reinit_operation->get_level_set(), "psi");
 
             if (parameters.paraview.print_normal_vector)
               {
                 for (unsigned int d = 0; d < dim; ++d)
-                  data_out.add_data_vector(reinit_operation.get_normal_vector().block(d),
+                  data_out.add_data_vector(reinit_operation->get_normal_vector().block(d),
                                            "normal_" + std::to_string(d));
               }
 
@@ -327,11 +351,11 @@ namespace MeltPoolDG
       DoFHandler<dim>           dof_handler;
       AffineConstraints<double> constraints;
 
-      std::shared_ptr<ScratchData<dim>> scratch_data;
-      TimeIterator<double>              time_iterator;
-      ReinitializationOperation<dim>    reinit_operation;
-      unsigned int                      dof_idx;
-      unsigned int                      quad_idx;
+      std::shared_ptr<ScratchData<dim>>                   scratch_data;
+      TimeIterator<double>                                time_iterator;
+      std::shared_ptr<ReinitializationOperationBase<dim>> reinit_operation;
+      unsigned int                                        dof_idx;
+      unsigned int                                        quad_idx;
     };
   } // namespace Reinitialization
 } // namespace MeltPoolDG
