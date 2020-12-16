@@ -44,11 +44,47 @@ namespace MeltPoolDG
                                   const VectorType &        advected_field, //@todo: make const
                                   const Parameters<double> &data_in)
         : scratch_data(scratch_data)
+        , advec_diff_dof_idx(advec_diff_dof_idx)
+        , normal_vec_dof_idx(normal_vec_dof_idx)
+        , normal_vec_quad_idx(normal_vec_quad_idx)
+        , normal_vector_field(dim)
+        , rhs(dim)
       {
         /**
          * set parameters of adaflo
          */
         set_adaflo_parameters(data_in, advec_diff_dof_idx, normal_vec_dof_idx, normal_vec_quad_idx);
+
+        /**
+         * initialize the projection matrix
+         */
+        projection_matrix     = std::make_shared<BlockMatrixExtension>();
+        ilu_projection_matrix = std::make_shared<BlockILUExtension>();
+
+        /*
+         * initialize adaflo operation
+         */
+        normal_vec_operation =
+          std::make_shared<LevelSetOKZSolverComputeNormal<dim>>(normal_vector_field,
+                                                                rhs,
+                                                                advected_field,
+                                                                scratch_data.get_cell_diameters(),
+                                                                cell_diameter_max, // @todo
+                                                                cell_diameter_min,
+                                                                scratch_data.get_constraint(
+                                                                  normal_vec_dof_idx),
+                                                                normal_vec_adaflo_params,
+                                                                scratch_data.get_matrix_free(),
+                                                                preconditioner,
+                                                                projection_matrix,
+                                                                ilu_projection_matrix);
+
+        reinit();
+      }
+
+      void
+      reinit()
+      {
         /**
          *  initialize the dof vectors
          */
@@ -71,12 +107,6 @@ namespace MeltPoolDG
                                                      preconditioner);
 
 
-        /**
-         * initialize the projection matrix
-         */
-        projection_matrix     = std::make_shared<BlockMatrixExtension>();
-        ilu_projection_matrix = std::make_shared<BlockILUExtension>();
-
         initialize_projection_matrix<dim, double, VectorizedArray<double>>(
           scratch_data.get_matrix_free(),
           scratch_data.get_constraint(normal_vec_dof_idx),
@@ -87,23 +117,6 @@ namespace MeltPoolDG
           scratch_data.get_cell_diameters(),
           *projection_matrix,
           *ilu_projection_matrix);
-        /*
-         * initialize adaflo operation
-         */
-        normal_vec_operation =
-          std::make_shared<LevelSetOKZSolverComputeNormal<dim>>(normal_vector_field,
-                                                                rhs,
-                                                                advected_field,
-                                                                scratch_data.get_cell_diameters(),
-                                                                cell_diameter_max, // @todo
-                                                                cell_diameter_min,
-                                                                scratch_data.get_constraint(
-                                                                  normal_vec_dof_idx),
-                                                                normal_vec_adaflo_params,
-                                                                scratch_data.get_matrix_free(),
-                                                                preconditioner,
-                                                                projection_matrix,
-                                                                ilu_projection_matrix);
       }
 
       /**
@@ -169,6 +182,9 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &scratch_data;
+      const unsigned int      advec_diff_dof_idx;
+      const unsigned int      normal_vec_dof_idx;
+      const unsigned int      normal_vec_quad_idx;
       /**
        *  Vectors for computing the normals
        */
