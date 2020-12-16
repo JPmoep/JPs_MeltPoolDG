@@ -158,6 +158,7 @@ namespace MeltPoolDG
       void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
       {
+        solution_advected_field.update_ghost_values();
         vectors.push_back(&solution_advected_field);
       }
 

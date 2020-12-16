@@ -35,6 +35,9 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
+      virtual void
+      reinit() = 0;
+
       virtual const LinearAlgebra::distributed::BlockVector<double> &
       get_solution_normal_vector() const = 0;
     };
