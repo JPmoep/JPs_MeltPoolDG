@@ -33,15 +33,12 @@ namespace MeltPoolDG
       /**
        * Constructor.
        */
-      AdvectionDiffusionOperationAdaflo(
-        const ScratchData<dim> &             scratch_data,
-        const int                            advec_diff_dof_idx,
-        const int                            advec_diff_quad_idx,
-        const int                            velocity_dof_idx,
-        const VectorType                     initial_solution_advected_field,
-        const BlockVectorType &              velocity_vec_in, // @todo: make const ref
-        std::shared_ptr<SimulationBase<dim>> base_in,
-        std::string                          operation_name = "advection_diffusion")
+      AdvectionDiffusionOperationAdaflo(const ScratchData<dim> &             scratch_data,
+                                        const int                            advec_diff_dof_idx,
+                                        const int                            advec_diff_quad_idx,
+                                        const int                            velocity_dof_idx,
+                                        std::shared_ptr<SimulationBase<dim>> base_in,
+                                        std::string operation_name = "advection_diffusion")
         : scratch_data(scratch_data)
         , advec_diff_dof_idx(advec_diff_dof_idx)
         , advec_diff_quad_idx(advec_diff_quad_idx)

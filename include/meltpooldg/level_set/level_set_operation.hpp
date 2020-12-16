@@ -89,14 +89,12 @@ namespace MeltPoolDG
           {
             advec_diff_operation =
               std::make_shared<AdvectionDiffusion::AdvectionDiffusionOperationAdaflo<dim>>(
-                *scratch_data,
-                ls_zero_bc_idx,
-                quad_idx_in,
-                vel_dof_idx,
-                solution_level_set_in, // copy
-                advection_velocity,
-                base_in,
-                "level_set");
+                *scratch_data, ls_zero_bc_idx, quad_idx_in, vel_dof_idx, base_in, "level_set");
+
+            advec_diff_operation->reinit();
+
+            advec_diff_operation->set_initial_condition(solution_level_set_in, // copy
+                                                        advection_velocity);
           }
 #endif
         else
