@@ -104,22 +104,8 @@ namespace MeltPoolDG
         /*
          *  setup DoFHandler
          */
-        dof_handler.reinit(*base_in->triangulation);
-        dof_handler_velocity.reinit(*base_in->triangulation);
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          {
-            dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
-            dof_handler_velocity.distribute_dofs(
-              FESystem<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree), dim));
-          }
-        else
-#endif
-          {
-            dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
-            dof_handler_velocity.distribute_dofs(
-              FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
-          }
+        dof_handler.distribute_dofs(*fe);
+        dof_handler_velocity.distribute_dofs(*fe_velocity);
 
         /*
          *  create the partititioning
@@ -180,6 +166,28 @@ namespace MeltPoolDG
       void
       initialize(std::shared_ptr<SimulationBase<dim>> base_in)
       {
+        /*
+         *  setup DoFHandler
+         */
+        dof_handler.reinit(*base_in->triangulation);
+        dof_handler_velocity.reinit(*base_in->triangulation);
+
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          {
+            fe = std::make_unique<Simplex::FE_P<dim>>(base_in->parameters.base.degree);
+            fe_velocity =
+              std::make_unique<FESystem<dim>>(Simplex::FE_P<dim>(base_in->parameters.base.degree),
+                                              dim);
+          }
+        else
+#endif
+          {
+            fe = std::make_unique<FE_Q<dim>>(base_in->parameters.base.degree);
+            fe_velocity =
+              std::make_unique<FESystem<dim>>(FE_Q<dim>(base_in->parameters.base.degree), dim);
+          }
+
         /*
          *  setup scratch data
          */
@@ -428,6 +436,9 @@ namespace MeltPoolDG
       }
 
     private:
+      std::unique_ptr<FiniteElement<dim>> fe;
+      std::unique_ptr<FiniteElement<dim>> fe_velocity;
+
       DoFHandler<dim>                   dof_handler;
       AffineConstraints<double>         constraints;
       AffineConstraints<double>         hanging_node_constraints;
