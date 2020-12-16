@@ -75,7 +75,7 @@ namespace MeltPoolDG
                                                                            base_in->parameters);
 
         compute_normal = [&](bool do_compute_normal) {
-          if (do_compute_normal)
+          if (do_compute_normal && force_compute_normal)
             normal_vector_operation_adaflo->solve(level_set);
         };
 
@@ -83,7 +83,7 @@ namespace MeltPoolDG
          * initialize reinitialization operation from adaflo
          */
         reinit_operation_adaflo = std::make_shared<LevelSetOKZSolverReinitialization<dim>>(
-          normal_vector_field,
+          normal_vector_operation_adaflo->get_solution_normal_vector(),
           scratch_data.get_cell_diameters(),
           cell_diameter_max,
           cell_diameter_min,
@@ -115,15 +115,15 @@ namespace MeltPoolDG
       solve(const double dt) override
       {
         reinit_operation_adaflo->reinitialize(dt,
-                                              0 /*stab_steps @todo*/,
+                                              1 /*stab_steps @todo*/,
                                               0 /*diff_steps @todo*/,
                                               compute_normal);
-
-        for (unsigned int d = 0; d < dim; ++d)
-          scratch_data.get_pcout() << " |psi|=" << std::setw(15) << std::setprecision(10)
-                                   << std::left << level_set.l2_norm();
-
-        scratch_data.get_pcout() << std::endl;
+        force_compute_normal = false;
+        scratch_data.get_pcout() << "\t |ΔΨ|∞ = " << std::setw(15) << std::left
+                                 << std::setprecision(10) << increment.linfty_norm();
+        scratch_data.get_pcout() << " |ΔΨ|²/dT = " << std::setw(15) << std::left
+                                 << std::setprecision(10) << increment.l2_norm() / dt << "|"
+                                 << std::endl;
       }
 
       const LinearAlgebra::distributed::Vector<double> &
@@ -141,7 +141,7 @@ namespace MeltPoolDG
       const LinearAlgebra::distributed::BlockVector<double> &
       get_normal_vector() const override
       {
-        return normal_vector_field;
+        return normal_vector_operation_adaflo->get_solution_normal_vector();
       }
 
       void
@@ -174,7 +174,7 @@ namespace MeltPoolDG
         // if (parameters.reinit.time_integration_scheme == "implicit_euler")
         // reinit_params_adaflo.time.time_step_scheme =
         // TimeSteppingParameters::Scheme::implicit_euler;
-
+        //
         reinit_params_adaflo.time.time_stepping_cfl   = 0.8;  //@ todo
         reinit_params_adaflo.time.time_stepping_coef2 = 10.0; //@ todo capillary number
 
@@ -203,8 +203,7 @@ namespace MeltPoolDG
       /**
        *  advected field
        */
-      BlockVectorType normal_vector_field; // @todo dummy
-      VectorType      level_set;
+      VectorType level_set;
       /**
        *  vectors for the solution of the linear system
        */
@@ -233,6 +232,7 @@ namespace MeltPoolDG
       double                                 cell_diameter_min;
       double                                 cell_diameter_max;
       bool                                   first_reinit_step;
+      bool                                   force_compute_normal = true;
       std::function<void(bool)>              compute_normal;
     };
   } // namespace Reinitialization
