@@ -239,8 +239,11 @@ namespace MeltPoolDG
          *    initialize the flow operation class
          */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
-
         flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, flow_dof_idx, base_in);
+        dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->reinit_1();
+        scratch_data->build();
+        dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->reinit_2();
+        dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->initialize(base_in);
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
