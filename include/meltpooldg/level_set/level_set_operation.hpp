@@ -155,35 +155,6 @@ namespace MeltPoolDG
          */
         transform_level_set_to_smooth_heaviside();
         /*
-         *  initialize the normal vector operation class
-         */
-        if (data_in.normal_vec.implementation == "meltpooldg")
-          {
-            normal_vector_operation = std::make_shared<NormalVector::NormalVectorOperation<dim>>();
-
-            normal_vector_operation->initialize(scratch_data_in, data_in, dof_idx_in, quad_idx_in);
-          }
-#ifdef MELT_POOL_DG_WITH_ADAFLO
-        else if (data_in.normal_vec.implementation == "adaflo")
-          {
-            AssertThrow(data_in.normal_vec.do_matrix_free, ExcNotImplemented());
-
-            normal_vector_operation =
-              std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(
-                *scratch_data_in,
-                dof_idx,          // ls @todo
-                dof_no_bc_idx_in, // normal vec @todo
-                quad_idx_in,
-                advec_diff_operation->get_advected_field(),
-                data_in);
-          }
-#endif
-        else
-          AssertThrow(false, ExcNotImplemented());
-
-        normal_vector_operation->solve(advec_diff_operation->get_advected_field());
-
-        /*
          *    initialize the curvature operation class
          */
         if ((data_in.curv.implementation ==
@@ -214,8 +185,6 @@ namespace MeltPoolDG
               dof_no_bc_idx_in,
               quad_idx,
               advec_diff_operation->get_advected_field(),
-              normal_vector_operation
-                ->get_solution_normal_vector(), // @todo --> update normal vector before reinit
               data_in);
 
             curvature_operation->solve(advec_diff_operation->get_advected_field());
@@ -259,10 +228,6 @@ namespace MeltPoolDG
          *    compute the smoothened function
          */
         transform_level_set_to_smooth_heaviside();
-        /*
-         *    compute the normal vector
-         */
-        normal_vector_operation->solve(advec_diff_operation->get_advected_field());
         /*
          *    compute the curvature
          */
