@@ -199,6 +199,64 @@ namespace MeltPoolDG
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
+
+        /*
+         *  initialize the time stepping scheme
+         */
+        time_iterator.initialize(
+          TimeIteratorData<double>{base_in->parameters.flow.start_time,
+                                   base_in->parameters.flow.end_time,
+                                   base_in->parameters.flow.time_step_size,
+                                   base_in->parameters.flow.max_n_steps,
+                                   false /*cfl_condition-->not supported yet*/});
+        /*
+         *  set initial conditions of the levelset function
+         */
+        AssertThrow(
+          base_in->get_initial_condition("level_set"),
+          ExcMessage(
+            "It seems that your SimulationBase object does not contain "
+            "a valid initial field function for the level set field. A shared_ptr to your initial field "
+            "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+            "  this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), 'level_set') "));
+
+        VectorType initial_solution;
+        scratch_data->initialize_dof_vector(initial_solution, ls_dof_idx);
+        dealii::VectorTools::project(scratch_data->get_mapping(),
+                                     dof_handler,
+                                     ls_constraints_dirichlet,
+                                     scratch_data->get_quadrature(),
+                                     *base_in->get_initial_condition("level_set"),
+                                     initial_solution);
+        initial_solution.update_ghost_values();
+        /*
+         *    initialize the levelset operation class
+         */
+        level_set_operation.initialize(scratch_data,
+                                       initial_solution,
+                                       advection_velocity,
+                                       base_in->parameters,
+                                       ls_dof_idx,
+                                       dof_no_bc_idx,
+                                       ls_quad_idx,
+                                       flow_dof_idx,
+                                       base_in);
+        /*
+         *    initialize the melt pool operation class
+         */
+        if (base_in->parameters.base.problem_name == "melt_pool")
+          {
+            melt_pool_operation.initialize(scratch_data,
+                                           base_in->parameters,
+                                           ls_dof_idx,
+                                           flow_dof_idx,
+                                           flow_quad_idx,
+                                           dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as
+                                                             soon as heat problem is introduced*/
+                                           ls_quad_idx, /*temp_quad_idx@todo: may be changed as soon
+                                                           as heat problem is introduced*/
+                                           level_set_operation.level_set_as_heaviside);
+          }
       }
 
       void
@@ -267,65 +325,12 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
 #endif
         /*
-         *  initialize the time stepping scheme
-         */
-        time_iterator.initialize(
-          TimeIteratorData<double>{base_in->parameters.flow.start_time,
-                                   base_in->parameters.flow.end_time,
-                                   base_in->parameters.flow.time_step_size,
-                                   base_in->parameters.flow.max_n_steps,
-                                   false /*cfl_condition-->not supported yet*/});
-        /*
          *  initialize the velocity dof vector
          */
         scratch_data->initialize_dof_vector(advection_velocity, flow_dof_idx);
-        /*
-         *  set initial conditions of the levelset function
-         */
-        AssertThrow(
-          base_in->get_initial_condition("level_set"),
-          ExcMessage(
-            "It seems that your SimulationBase object does not contain "
-            "a valid initial field function for the level set field. A shared_ptr to your initial field "
-            "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
-            "  this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), 'level_set') "));
 
-        VectorType initial_solution;
-        scratch_data->initialize_dof_vector(initial_solution, ls_dof_idx);
-        dealii::VectorTools::project(scratch_data->get_mapping(),
-                                     dof_handler,
-                                     ls_constraints_dirichlet,
-                                     scratch_data->get_quadrature(),
-                                     *base_in->get_initial_condition("level_set"),
-                                     initial_solution);
-        initial_solution.update_ghost_values();
-        /*
-         *    initialize the levelset operation class
-         */
-        level_set_operation.initialize(scratch_data,
-                                       initial_solution,
-                                       advection_velocity,
-                                       base_in->parameters,
-                                       ls_dof_idx,
-                                       dof_no_bc_idx,
-                                       ls_quad_idx,
-                                       flow_dof_idx,
-                                       base_in);
-        /*
-         *    initialize the melt pool operation class
-         */
         if (base_in->parameters.base.problem_name == "melt_pool")
           {
-            melt_pool_operation.initialize(scratch_data,
-                                           base_in->parameters,
-                                           ls_dof_idx,
-                                           flow_dof_idx,
-                                           flow_quad_idx,
-                                           dof_no_bc_idx, /*temp_dof_idx @todo: may be changed as
-                                                             soon as heat problem is introduced*/
-                                           ls_quad_idx, /*temp_quad_idx@todo: may be changed as soon
-                                                           as heat problem is introduced*/
-                                           level_set_operation.level_set_as_heaviside);
             /*
              *    set the fluid velocity and the pressure in solid regions to zero
              */
