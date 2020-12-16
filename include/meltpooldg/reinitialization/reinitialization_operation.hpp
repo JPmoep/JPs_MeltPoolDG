@@ -91,9 +91,6 @@ namespace MeltPoolDG
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
-
-
-
         /*
          *    compute the normal vector field and update the initial solution
          */

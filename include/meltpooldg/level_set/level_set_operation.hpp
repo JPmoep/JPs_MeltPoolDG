@@ -47,16 +47,15 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_level_set_in,
-                 const BlockVectorType&                          advection_velocity,
+                 const BlockVectorType &                        advection_velocity,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             dof_idx_in,
                  const unsigned int                             dof_no_bc_idx_in,
                  const unsigned int                             quad_idx_in,
                  const unsigned int                             advection_dof_idx,
                  std::shared_ptr<SimulationBase<dim>>           base_in,
-                 const unsigned int                             vel_dof_idx = 0,
-                 const unsigned int                             ls_zero_bc_idx = 0
-                 )
+                 const unsigned int                             vel_dof_idx    = 0,
+                 const unsigned int                             ls_zero_bc_idx = 0)
       {
         // parameters = data_in;
         scratch_data  = scratch_data_in;
@@ -70,30 +69,6 @@ namespace MeltPoolDG
         /*
          *    initialize the advection diffusion operation and the reinitialization operation class
          */
-        if ((data_in.reinit.implementation ==
-             "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
-          {
-            reinit_operation = std::make_shared<Reinitialization::ReinitializationOperation<dim>>();
-            reinit_operation->initialize(
-              scratch_data, solution_level_set_in, data_in, dof_no_bc_idx_in, quad_idx_in);
-          }
-#ifdef MELT_POOL_DG_WITH_ADAFLO
-        else if ((data_in.reinit.implementation == "adaflo") ||
-                 (data_in.ls.implementation == "adaflo"))
-          {
-            AssertThrow(data_in.reinit.solver.do_matrix_free, ExcNotImplemented());
-            reinit_operation =
-              std::make_shared<Reinitialization::ReinitializationOperationAdaflo<dim>>(
-                *scratch_data,
-                dof_no_bc_idx_in,
-                quad_idx_in,
-                dof_no_bc_idx_in, // normal vec @todo
-                solution_level_set_in,
-                data_in);
-          }
-#endif
-        else
-          AssertThrow(false, ExcNotImplemented());
 
         if ((data_in.advec_diff.implementation ==
              "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
@@ -101,7 +76,7 @@ namespace MeltPoolDG
             advec_diff_operation =
               std::make_shared<AdvectionDiffusion::AdvectionDiffusionOperation<dim>>();
             advec_diff_operation->initialize(scratch_data,
-                                             solution_level_set_in,
+                                             solution_level_set_in, // copy
                                              data_in,
                                              dof_idx,
                                              dof_no_bc_idx_in,
@@ -118,7 +93,7 @@ namespace MeltPoolDG
                 ls_zero_bc_idx,
                 quad_idx_in,
                 vel_dof_idx,
-                solution_level_set_in,
+                solution_level_set_in, // copy
                 advection_velocity,
                 base_in,
                 "level_set");
@@ -127,6 +102,33 @@ namespace MeltPoolDG
         else
           AssertThrow(false, ExcNotImplemented());
 
+        if ((data_in.reinit.implementation ==
+             "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
+          {
+            reinit_operation = std::make_shared<Reinitialization::ReinitializationOperation<dim>>();
+            reinit_operation->initialize(scratch_data,
+                                         advec_diff_operation->get_advected_field(),
+                                         data_in,
+                                         dof_no_bc_idx_in,
+                                         quad_idx_in);
+          }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if ((data_in.reinit.implementation == "adaflo") ||
+                 (data_in.ls.implementation == "adaflo"))
+          {
+            AssertThrow(data_in.reinit.solver.do_matrix_free, ExcNotImplemented());
+            reinit_operation =
+              std::make_shared<Reinitialization::ReinitializationOperationAdaflo<dim>>(
+                *scratch_data,
+                dof_no_bc_idx_in,
+                quad_idx_in,
+                dof_no_bc_idx_in, // normal vec @todo
+                advec_diff_operation->get_advected_field(),
+                data_in);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
         /*
          *  set the parameters for the levelset problem; already determined parameters
          *  from the initialize call of advec_diff_operation are overwritten.
@@ -152,6 +154,35 @@ namespace MeltPoolDG
          *    compute the smoothened function
          */
         transform_level_set_to_smooth_heaviside();
+        /*
+         *  initialize the normal vector operation class
+         */
+        if (data_in.normal_vec.implementation == "meltpooldg")
+          {
+            normal_vector_operation = std::make_shared<NormalVector::NormalVectorOperation<dim>>();
+
+            normal_vector_operation->initialize(scratch_data_in, data_in, dof_idx_in, quad_idx_in);
+          }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if (data_in.normal_vec.implementation == "adaflo")
+          {
+            AssertThrow(data_in.normal_vec.do_matrix_free, ExcNotImplemented());
+
+            normal_vector_operation =
+              std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(
+                *scratch_data_in,
+                dof_idx,          // ls @todo
+                dof_no_bc_idx_in, // normal vec @todo
+                quad_idx_in,
+                advec_diff_operation->get_advected_field(),
+                data_in);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
+
+        normal_vector_operation->solve(advec_diff_operation->get_advected_field());
+
         /*
          *    initialize the curvature operation class
          */
@@ -183,7 +214,8 @@ namespace MeltPoolDG
               dof_no_bc_idx_in,
               quad_idx,
               advec_diff_operation->get_advected_field(),
-              reinit_operation->get_normal_vector(), // @todo --> update normal vector before reinit
+              normal_vector_operation
+                ->get_solution_normal_vector(), // @todo --> update normal vector before reinit
               data_in);
 
             curvature_operation->solve(advec_diff_operation->get_advected_field());
@@ -214,19 +246,23 @@ namespace MeltPoolDG
                                           << "| reini: τ= " << std::setw(10) << std::left
                                           << reinit_time_iterator.get_current_time();
                 reinit_operation->solve(d_tau);
+                /*
+                 *  reset the solution of the level set field to the reinitialized solution
+                 */
+                advec_diff_operation->get_advected_field() = reinit_operation->get_level_set();
               }
 
-            /*
-             *  reset the solution of the level set field to the reinitialized solution
-             */
-            advec_diff_operation->get_advected_field() =
-              reinit_operation->get_level_set(); // @ could be defined by reference
+
             reinit_time_iterator.reset();
           }
         /*
          *    compute the smoothened function
          */
         transform_level_set_to_smooth_heaviside();
+        /*
+         *    compute the normal vector
+         */
+        normal_vector_operation->solve(advec_diff_operation->get_advected_field());
         /*
          *    compute the curvature
          */
@@ -469,6 +505,10 @@ namespace MeltPoolDG
       {
         return advec_diff_operation->get_advected_field();
       }
+      /*
+       *   Computation of the normal vectors
+       */
+      std::shared_ptr<NormalVector::NormalVectorOperationBase<dim>> normal_vector_operation;
       /*
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update

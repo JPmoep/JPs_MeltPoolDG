@@ -59,7 +59,7 @@ namespace MeltPoolDG
     bool        do_print_l2norm         = false;
     bool        do_curvature_correction = false;
     bool        do_matrix_free          = false;
-    std::string        implementation = "meltpooldg";
+    std::string implementation          = "meltpooldg";
   };
 
   template <typename number = double>
@@ -434,11 +434,10 @@ namespace MeltPoolDG
           "Set this parameter to true if in areas outside the interface region a correction "
           "of the curvature values should be applied. This parameter can be helpful to avoid "
           "numerical instabilities.");
-        prm.add_parameter(
-          "ls implementation",
-          ls.implementation,
-          "Choose the corresponding implementation of the ls operation.",
-          Patterns::Selection("meltpooldg|adaflo"));
+        prm.add_parameter("ls implementation",
+                          ls.implementation,
+                          "Choose the corresponding implementation of the ls operation.",
+                          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
 

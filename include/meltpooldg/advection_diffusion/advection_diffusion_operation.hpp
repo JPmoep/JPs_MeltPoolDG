@@ -137,7 +137,6 @@ namespace MeltPoolDG
         return solution_advected_field;
       }
 
-
       const LinearAlgebra::distributed::Vector<double> &
       get_advected_field_old() const override
       {

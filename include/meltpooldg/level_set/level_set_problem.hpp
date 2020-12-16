@@ -114,8 +114,8 @@ namespace MeltPoolDG
 
         const unsigned int dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
         const unsigned int dof_idx       = scratch_data->attach_dof_handler(dof_handler);
-        ls_zero_bc_idx = scratch_data->attach_dof_handler(dof_handler);
-        vel_dof_idx = scratch_data->attach_dof_handler(dof_handler_velocity);
+        ls_zero_bc_idx                   = scratch_data->attach_dof_handler(dof_handler);
+        vel_dof_idx                      = scratch_data->attach_dof_handler(dof_handler_velocity);
         /*
          *  create partitioning
          */
@@ -142,13 +142,17 @@ namespace MeltPoolDG
 
         constraints_dirichlet.clear();
         constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs(dof_idx));
-        constraints_dirichlet.merge(hanging_node_constraints,
-                          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
+        constraints_dirichlet.merge(
+          hanging_node_constraints,
+          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
         for (const auto &bc : base_in->get_dirichlet_bc(
                "level_set")) // @todo: add name of bc at a more central place
           {
-            dealii::VectorTools::interpolate_boundary_values(
-              scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints_dirichlet);
+            dealii::VectorTools::interpolate_boundary_values(scratch_data->get_mapping(),
+                                                             dof_handler,
+                                                             bc.first,
+                                                             *bc.second,
+                                                             constraints_dirichlet);
           }
         constraints_dirichlet.close();
 
@@ -167,7 +171,7 @@ namespace MeltPoolDG
 
         scratch_data->attach_constraint_matrix(hanging_node_constraints);
         scratch_data->attach_constraint_matrix(constraints_dirichlet);
-        scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet); 
+        scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet);
         scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
         /*
          *  create quadrature rule

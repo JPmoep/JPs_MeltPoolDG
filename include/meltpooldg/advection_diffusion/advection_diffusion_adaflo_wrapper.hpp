@@ -41,7 +41,7 @@ namespace MeltPoolDG
         const VectorType                     initial_solution_advected_field,
         const BlockVectorType &              velocity_vec_in, // @todo: make const ref
         std::shared_ptr<SimulationBase<dim>> base_in,
-        std::string operation_name="advection_diffusion")
+        std::string                          operation_name = "advection_diffusion")
         : scratch_data(scratch_data)
       {
         /**
