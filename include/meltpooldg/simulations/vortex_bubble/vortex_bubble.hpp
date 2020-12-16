@@ -80,13 +80,15 @@ namespace MeltPoolDG
               const double time = this->get_time();
 
               const double Tf = 2.0;
-              const double x = p[0];
-              const double y = p[1];
-              
-              const double reverseCoefficient = std::cos(numbers::PI * time / Tf );
+              const double x  = p[0];
+              const double y  = p[1];
 
-              value_[0] = reverseCoefficient * (  std::sin( 2. * numbers::PI * y) * std::pow( std::sin( numbers::PI * x ), 2.) );
-              value_[1] = reverseCoefficient * ( -std::sin( 2. * numbers::PI * x) * std::pow( std::sin( numbers::PI * y ), 2.) );
+              const double reverseCoefficient = std::cos(numbers::PI * time / Tf);
+
+              value_[0] = reverseCoefficient * (std::sin(2. * numbers::PI * y) *
+                                                std::pow(std::sin(numbers::PI * x), 2.));
+              value_[1] = reverseCoefficient * (-std::sin(2. * numbers::PI * x) *
+                                                std::pow(std::sin(numbers::PI * y), 2.));
               return value_;
             }
           else
@@ -192,7 +194,7 @@ namespace MeltPoolDG
             {
               for (auto &face : this->triangulation->active_face_iterators())
                 if ((face->at_boundary()))
-                    face->set_boundary_id(inflow_bc);
+                  face->set_boundary_id(inflow_bc);
             }
           else
             {

@@ -48,11 +48,11 @@ namespace MeltPoolDG
           return std::make_shared<SlottedDisc::SimulationSlottedDisc<dim>>(parameter_file,
                                                                            mpi_communicator);
         else if (simulation_name == "recoil_pressure")
-            return std::make_shared<RecoilPressure::SimulationRecoilPressure<dim>>(
-              parameter_file, mpi_communicator);
+          return std::make_shared<RecoilPressure::SimulationRecoilPressure<dim>>(parameter_file,
+                                                                                 mpi_communicator);
         else if (simulation_name == "vortex_bubble")
           return std::make_shared<VortexBubble::SimulationVortexBubble<dim>>(parameter_file,
-                                                                           mpi_communicator);
+                                                                             mpi_communicator);
         /* add your simulation here*/
         else
           AssertThrow(false,
