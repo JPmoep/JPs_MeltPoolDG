@@ -19,13 +19,11 @@
     "reinit dtau": "0.005",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
-    "reinit constant epsilon": "0.05"
-  },
-  "normal vector" : { 
-      "normal vec do matrix free": "true"
+    "reinit constant epsilon": "0.05",
+    "reinit implementation": "adaflo"
   },
   "paraview":
   {
-    "paraview do output" : "false"
+    "paraview do output" : "true"
   }
 }
