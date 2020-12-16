@@ -131,9 +131,9 @@ namespace MeltPoolDG
       {
         return normal_vector_field;
       }
-      
+
       LevelSetOKZSolverComputeNormal<dim> &
-      get_adaflo_obj() 
+      get_adaflo_obj()
       {
         return *normal_vec_operation;
       }
