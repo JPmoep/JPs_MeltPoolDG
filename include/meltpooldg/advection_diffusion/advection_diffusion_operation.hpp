@@ -131,7 +131,7 @@ namespace MeltPoolDG
       {
         return solution_advected_field;
       }
-      
+
       LinearAlgebra::distributed::Vector<double> &
       get_advected_field() override
       {

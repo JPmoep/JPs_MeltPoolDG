@@ -129,6 +129,7 @@ namespace MeltPoolDG
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
       this->partitioner.clear();
+      this->pout.clear();
 
       int dof_idx = 0;
       for (const auto &dof : dof_handler)
@@ -158,6 +159,10 @@ namespace MeltPoolDG
             std::make_shared<Utilities::MPI::Partitioner>(this->get_locally_owned_dofs(dof_idx),
                                                           this->get_locally_relevant_dofs(dof_idx),
                                                           this->get_mpi_comm(dof_idx)));
+          this->pout.push_back(
+            ConditionalOStream(std::cout,
+                               Utilities::MPI::this_mpi_process(this->get_mpi_comm(dof_idx)) == 0));
+
           dof_idx += 1;
         }
     }
@@ -255,6 +260,7 @@ namespace MeltPoolDG
       this->cell_diameters.clear();
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
+      this->pout.clear();
     }
 
     /**
@@ -306,6 +312,12 @@ namespace MeltPoolDG
     get_face_quadratures() const
     {
       return this->face_quad;
+    }
+
+    MatrixFree<dim, number, VectorizedArrayType> &
+    get_matrix_free()
+    {
+      return this->matrix_free;
     }
 
     const MatrixFree<dim, number, VectorizedArrayType> &
@@ -380,16 +392,15 @@ namespace MeltPoolDG
       return this->partitioner[dof_idx];
     }
 
-    ConditionalOStream
+    const ConditionalOStream &
     get_pcout(const unsigned int dof_idx = 0) const
     {
-      return ConditionalOStream(std::cout,
-                                Utilities::MPI::this_mpi_process(this->get_mpi_comm(dof_idx)) == 0);
+      return pout[dof_idx];
     }
 
   private:
-    bool do_matrix_free;
-
+    bool                                                      do_matrix_free;
+    std::vector<ConditionalOStream>                           pout;
     std::shared_ptr<Mapping<dim, spacedim>>                   mapping;
     std::vector<const DoFHandler<dim, spacedim> *>            dof_handler;
     std::vector<const AffineConstraints<number> *>            constraint;

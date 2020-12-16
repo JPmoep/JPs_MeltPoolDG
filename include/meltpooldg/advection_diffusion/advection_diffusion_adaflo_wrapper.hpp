@@ -39,7 +39,7 @@ namespace MeltPoolDG
                     const int                            advec_diff_quad_idx,
                     const int                            velocity_dof_idx,
                     const VectorType                     initial_solution_advected_field,
-                    const BlockVectorType&               velocity_vec_in, // @todo: make const ref
+                    const BlockVectorType &              velocity_vec_in, // @todo: make const ref
                     std::shared_ptr<SimulationBase<dim>> base_in)
         : scratch_data(scratch_data)
       {
@@ -138,7 +138,7 @@ namespace MeltPoolDG
       {
         return advected_field;
       }
-      
+
       LinearAlgebra::distributed::Vector<double> &
       get_advected_field() override
       {
@@ -188,8 +188,7 @@ namespace MeltPoolDG
 
         adaflo_params.convection_stabilization = false; //@ todo
         adaflo_params.do_iteration             = false; //@ todo
-        adaflo_params.tol_nl_iteration         = 1e-8; //@ todo
-
+        adaflo_params.tol_nl_iteration         = 1e-8;  //@ todo
       }
 
       void

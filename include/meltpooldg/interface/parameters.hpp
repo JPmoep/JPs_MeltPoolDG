@@ -72,7 +72,7 @@ namespace MeltPoolDG
     std::string        modeltype            = "olsson2007";
     bool               do_print_l2norm      = false;
     SolverData<number> solver;
-    std::string        implementation       = "meltpooldg";
+    std::string        implementation = "meltpooldg";
   };
 
   template <typename number = double>
@@ -264,6 +264,7 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_start = flow.time_step_size;
           adaflo_params.params.time_step_size_min   = flow.time_step_size;
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
+          adaflo_params.params.use_simplex_mesh     = base.do_simplex;
         }
 
 #endif
@@ -488,10 +489,11 @@ namespace MeltPoolDG
           "reinit rel tolerance rhs",
           reinit.solver.rel_tolerance_rhs,
           "Set the relative tolerance for a successful solution of the linear system of equations.");
-        prm.add_parameter("reinit implementation",
-                          reinit.implementation,
-                          "Choose the corresponding implementation of the reinitialization operation.",
-                          Patterns::Selection("meltpooldg|adaflo"));
+        prm.add_parameter(
+          "reinit implementation",
+          reinit.implementation,
+          "Choose the corresponding implementation of the reinitialization operation.",
+          Patterns::Selection("meltpooldg|adaflo"));
       }
       prm.leave_subsection();
       /*

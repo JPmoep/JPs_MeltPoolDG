@@ -60,7 +60,6 @@ namespace MeltPoolDG
 
         while (!time_iterator.is_finished())
           {
-
             const double dt = time_iterator.get_next_time_increment();
             scratch_data->get_pcout()
               << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();

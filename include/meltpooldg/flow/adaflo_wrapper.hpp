@@ -38,9 +38,7 @@ namespace MeltPoolDG
         : dof_handler_meltpool(scratch_data.get_dof_handler(idx))
         , timer(std::cout, TimerOutput::never, TimerOutput::wall_times)
         , navier_stokes(base_in->parameters.adaflo_params.get_parameters(),
-                        *const_cast<parallel::distributed::Triangulation<dim> *>(
-                          dynamic_cast<const parallel::distributed::Triangulation<dim> *>(
-                            &scratch_data.get_triangulation())),
+                        *const_cast<Triangulation<dim> *>(&scratch_data.get_triangulation()),
                         &timer)
       {
         /*
@@ -70,7 +68,45 @@ namespace MeltPoolDG
             "a valid initial field function for the level set field. A shared_ptr to your initial field "
             "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
             "  this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), 'navier_stokes_u') "));
+#  if false
         navier_stokes.setup_problem(*base_in->get_initial_condition("navier_stokes_u"));
+#  else
+        navier_stokes.distribute_dofs();
+        navier_stokes.initialize_data_structures();
+
+        const unsigned int dof_index_u =
+          scratch_data.attach_dof_handler(navier_stokes.get_dof_handler_u());
+        const unsigned int dof_index_p =
+          scratch_data.attach_dof_handler(navier_stokes.get_dof_handler_p());
+
+        scratch_data.attach_constraint_matrix(navier_stokes.get_constraints_u());
+        scratch_data.attach_constraint_matrix(navier_stokes.get_constraints_p());
+
+        const auto &adaflo_params = base_in->parameters.adaflo_params.get_parameters();
+
+        const unsigned int quad_index_u =
+          adaflo_params.use_simplex_mesh ?
+            scratch_data.attach_quadrature(
+              Simplex::QGauss<dim>(adaflo_params.velocity_degree + 1)) :
+            scratch_data.attach_quadrature(QGauss<dim>(adaflo_params.velocity_degree + 1));
+        const unsigned int quad_index_p =
+          adaflo_params.use_simplex_mesh ?
+            scratch_data.attach_quadrature(Simplex::QGauss<dim>(adaflo_params.velocity_degree)) :
+            scratch_data.attach_quadrature(QGauss<dim>(adaflo_params.velocity_degree));
+
+        scratch_data.build();
+
+        navier_stokes.initialize_matrix_free(
+          &scratch_data.get_matrix_free(), dof_index_u, dof_index_p, quad_index_u, quad_index_p);
+
+        dealii::VectorTools::interpolate(navier_stokes.mapping,
+                                         navier_stokes.get_dof_handler_u(),
+                                         *base_in->get_initial_condition("navier_stokes_u"),
+                                         navier_stokes.solution.block(0));
+        // navier_stokes.hanging_node_constraints_u.distribute(solution.block(0)); // TODO needed?
+        navier_stokes.solution.update_ghost_values();
+        navier_stokes.solution_old.update_ghost_values();
+#  endif
       }
 
       /**

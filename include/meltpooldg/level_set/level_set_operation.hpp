@@ -10,9 +10,9 @@
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
-#include <meltpooldg/curvature/curvature_operation_base.hpp>
 #include <meltpooldg/curvature/curvature_operation.hpp>
 #include <meltpooldg/curvature/curvature_operation_adaflo_wrapper.hpp>
+#include <meltpooldg/curvature/curvature_operation_base.hpp>
 #include <meltpooldg/reinitialization/reinitialization_operation.hpp>
 
 namespace MeltPoolDG
@@ -92,8 +92,7 @@ namespace MeltPoolDG
                                           << reinit_time_iterator.get_current_time();
                 reinit_operation.solve(d_tau);
               }
-            advec_diff_operation.solution_advected_field =
-              reinit_operation.solution_level_set; // @ could be defined by reference
+            advec_diff_operation.get_advected_field() = reinit_operation.get_level_set();
             reinit_time_iterator.reset();
           }
         /*
@@ -104,41 +103,41 @@ namespace MeltPoolDG
          *    initialize the curvature operation class
          */
         if (data_in.curv.implementation == "meltpooldg")
-        {
-          curvature_operation->initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
-          /*
-           *    compute the curvature of the initial level set field
-           */
-          curvature_operation->solve(advec_diff_operation.solution_advected_field);
-          /*
-           *    correct the curvature value far away from the zero level set
-           */
-          if (level_set_data.do_curvature_correction)
-            correct_curvature_values();
-        }
+          {
+            curvature_operation = std::make_shared<Curvature::CurvatureOperation<dim>>();
+
+            curvature_operation->initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
+            /*
+             *    compute the curvature of the initial level set field
+             */
+            curvature_operation->solve(advec_diff_operation.get_advected_field());
+            /*
+             *    correct the curvature value far away from the zero level set
+             */
+            if (level_set_data.do_curvature_correction)
+              correct_curvature_values();
+          }
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         else if (data_in.curv.implementation == "adaflo")
           {
-            AssertThrow(data_in.normal_vec.do_matrix_free, ExcNotImplemented());
+            AssertThrow(data_in.curv.do_matrix_free, ExcNotImplemented());
 
-            curvature_operation =
-              std::make_shared<Curvature::CurvatureOperationAdaflo<dim>>(*scratch_data_in,
-                                                                          dof_no_bc_idx_in, //@todo
-                                                                          dof_no_bc_idx_in, //@todo
-                                                                          dof_no_bc_idx_in,
-                                                                          quad_idx,
-                                                                          solution_level_set,
-                                                                          data_in);
+            curvature_operation = std::make_shared<Curvature::CurvatureOperationAdaflo<dim>>(
+              *scratch_data_in,
+              dof_no_bc_idx_in, //@todo
+              dof_no_bc_idx_in, //@todo
+              dof_no_bc_idx_in,
+              quad_idx,
+              solution_level_set,
+              reinit_operation.get_normal_vector(), // @todo
+              data_in);
+
+
+            curvature_operation->solve(advec_diff_operation.get_advected_field());
           }
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
-
-
-
-
-
-
       }
 
       void
@@ -153,7 +152,7 @@ namespace MeltPoolDG
          */
         if (level_set_data.do_reinitialization)
           {
-            reinit_operation.update_initial_solution(advec_diff_operation.solution_advected_field);
+            reinit_operation.update_initial_solution(advec_diff_operation.get_advected_field());
 
             while (!reinit_time_iterator.is_finished())
               {
@@ -167,8 +166,8 @@ namespace MeltPoolDG
             /*
              *  reset the solution of the level set field to the reinitialized solution
              */
-            advec_diff_operation.solution_advected_field =
-              reinit_operation.solution_level_set; // @ could be defined by reference
+            advec_diff_operation.get_advected_field() =
+              reinit_operation.get_level_set(); // @ could be defined by reference
             reinit_time_iterator.reset();
           }
         /*
@@ -178,7 +177,7 @@ namespace MeltPoolDG
         /*
          *    compute the curvature
          */
-        curvature_operation->solve(advec_diff_operation.solution_advected_field);
+        curvature_operation->solve(advec_diff_operation.get_advected_field());
         /*
          *    correct the curvature value far away from the zero level set
          */
@@ -215,7 +214,7 @@ namespace MeltPoolDG
                 surface_tension.reinit(cell);
 
                 curvature.reinit(cell);
-                curvature.read_dof_values_plain(solution_curvature);
+                curvature.read_dof_values_plain(curvature_operation->get_curvature());
                 curvature.evaluate(true, false);
 
                 for (unsigned int q_index = 0; q_index < surface_tension.n_q_points; ++q_index)
@@ -339,7 +338,7 @@ namespace MeltPoolDG
       void
       correct_curvature_values()
       {
-        for (unsigned int i = 0; i < solution_curvature.local_size(); ++i)
+        for (unsigned int i = 0; i < curvature_operation->get_curvature().local_size(); ++i)
           // if (std::abs(solution_curvature.local_element(i)) > 1e-4)
           if (1. - solution_level_set.local_element(i) * solution_level_set.local_element(i) > 1e-2)
             curvature_operation->get_curvature().local_element(i) =
@@ -375,8 +374,8 @@ namespace MeltPoolDG
        *  The following objects are the operations, which are performed for solving the
        *  level set equation.
        */
-      AdvectionDiffusionOperation<dim>   advec_diff_operation;
-      ReinitializationOperation<dim>     reinit_operation;
+      AdvectionDiffusionOperation<dim>                        advec_diff_operation;
+      ReinitializationOperation<dim>                          reinit_operation;
       std::shared_ptr<Curvature::CurvatureOperationBase<dim>> curvature_operation;
       /*
        *  The reinitialization of the level set function is a "pseudo"-time-dependent
@@ -392,21 +391,27 @@ namespace MeltPoolDG
       unsigned int quad_idx;
 
     public:
+      const LinearAlgebra::distributed::Vector<double> &
+      get_curvature() const
+      {
+        return curvature_operation->get_curvature();
+      }
+
+      const LinearAlgebra::distributed::BlockVector<double> &
+      get_normal_vector() const
+      {
+        return reinit_operation.get_normal_vector();
+      }
+      const LinearAlgebra::distributed::Vector<double> &
+      get_level_set() const
+      {
+        return advec_diff_operation.get_advected_field();
+      }
       /*
        *    This is the primary solution variable of this module, which will be also publically
        *    accessible for output_results.
        */
-      const VectorType &solution_level_set = advec_diff_operation.solution_advected_field;
-      /*
-       *    This is the curvature solution variable, which will be publically
-       *    accessible for output_results.
-       */
-      const VectorType &solution_curvature = curvature_operation->get_curvature();
-      /*
-       *    This is the normal vector field, which will be publically
-       *    accessible for output_results.
-       */
-      const BlockVectorType &solution_normal_vector = curvature_operation->get_normal_vector();
+      const VectorType &solution_level_set = advec_diff_operation.get_advected_field();
       /*
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update

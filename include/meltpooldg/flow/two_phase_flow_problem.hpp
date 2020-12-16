@@ -94,7 +94,7 @@ namespace MeltPoolDG
                   melt_pool_operation.compute_temperature_dependent_surface_tension(
                     force_rhs,
                     level_set_operation.level_set_as_heaviside,
-                    level_set_operation.solution_curvature,
+                    level_set_operation.get_curvature(),
                     base_in->parameters.flow.surface_tension_coefficient,
                     base_in->parameters.flow.temperature_dependent_surface_tension_coefficient,
                     base_in->parameters.flow.surface_tension_reference_temperature,
@@ -140,15 +140,32 @@ namespace MeltPoolDG
         /*
          *  setup mapping
          */
-        scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          scratch_data->set_mapping(
+            MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+        else
+#endif
+          scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
         /*
          *  setup DoFHandler
          */
         dof_handler.reinit(*base_in->triangulation);
-        dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
-
         flow_dof_handler.reinit(*base_in->triangulation);
-        flow_dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.flow.velocity_degree));
+
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          {
+            dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
+            flow_dof_handler.distribute_dofs(
+              Simplex::FE_P<dim>(base_in->parameters.flow.velocity_degree));
+          }
+        else
+#endif
+          {
+            dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
+            flow_dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.flow.velocity_degree));
+          }
 
         scratch_data->attach_dof_handler(dof_handler);
         scratch_data->attach_dof_handler(dof_handler);
@@ -191,14 +208,39 @@ namespace MeltPoolDG
         /*
          *  create quadrature rule
          */
-        ls_quad_idx =
-          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-        flow_quad_idx =
-          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          {
+            ls_quad_idx = scratch_data->attach_quadrature(
+              Simplex::QGauss<1>(base_in->parameters.base.n_q_points_1d));
+            flow_quad_idx = scratch_data->attach_quadrature(
+              Simplex::QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
+          }
+        else
+#endif
+          {
+            ls_quad_idx =
+              scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+            flow_quad_idx = scratch_data->attach_quadrature(
+              QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
+          }
+
+          /*
+           *    initialize the flow operation class
+           */
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+
+        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, flow_dof_idx, base_in);
+#else
+        AssertThrow(false, ExcNotImplemented());
+#endif
+
         /*
          *  create the matrix-free object
          */
+#if false
         scratch_data->build();
+#endif
         /*
          *  initialize the time stepping scheme
          */
@@ -242,14 +284,6 @@ namespace MeltPoolDG
                                        dof_no_bc_idx,
                                        ls_quad_idx,
                                        flow_dof_idx);
-        /*
-         *    initialize the flow operation class
-         */
-#ifdef MELT_POOL_DG_WITH_ADAFLO
-        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, flow_dof_idx, base_in);
-#else
-        AssertThrow(false, ExcNotImplemented());
-#endif
         /*
          *    initialize the melt pool operation class
          */
@@ -397,9 +431,9 @@ namespace MeltPoolDG
                                              density,
                                              viscosity,
                                              pressure,
-                                             level_set_operation.solution_level_set,
-                                             level_set_operation.solution_curvature,
-                                             level_set_operation.solution_normal_vector,
+                                             level_set_operation.get_level_set(),
+                                             level_set_operation.get_curvature(),
+                                             level_set_operation.get_normal_vector(),
                                              level_set_operation.level_set_as_heaviside,
                                              level_set_operation.distance_to_level_set);
 
@@ -412,23 +446,24 @@ namespace MeltPoolDG
             DataOut<dim> data_out;
 
             DataOutBase::VtkFlags flags;
-            flags.write_higher_order_cells = true;
+            if (parameters.base.do_simplex == false)
+              flags.write_higher_order_cells = true;
             data_out.set_flags(flags);
 
             data_out.attach_dof_handler(dof_handler);
             /*
              * level set
              */
-            data_out.add_data_vector(level_set_operation.solution_level_set, "level_set");
+            data_out.add_data_vector(level_set_operation.get_level_set(), "level_set");
             /*
              * curvature
              */
-            data_out.add_data_vector(level_set_operation.solution_curvature, "curvature");
+            data_out.add_data_vector(level_set_operation.get_curvature(), "curvature");
             /*
              *  normal vector field
              */
             for (unsigned int d = 0; d < dim; ++d)
-              data_out.add_data_vector(level_set_operation.solution_normal_vector.block(d),
+              data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
                                        "normal_" + std::to_string(d));
             /*
              *  flow velocity
@@ -499,9 +534,9 @@ namespace MeltPoolDG
                                          density,
                                          viscosity,
                                          pressure,
-                                         level_set_operation.solution_level_set,
-                                         level_set_operation.solution_curvature,
-                                         level_set_operation.solution_normal_vector,
+                                         level_set_operation.get_level_set(),
+                                         level_set_operation.get_curvature(),
+                                         level_set_operation.get_normal_vector(),
                                          level_set_operation.level_set_as_heaviside,
                                          level_set_operation.distance_to_level_set);
 
