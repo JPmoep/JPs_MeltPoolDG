@@ -19,6 +19,8 @@ namespace MeltPoolDG
     class AdvectionDiffusionOperationBase
     {
     public:
+      AdvectionDiffusionData<double> advec_diff_data;
+
       virtual void
       solve(const double dt, const LinearAlgebra::distributed::BlockVector<double> &velocity) = 0;
 

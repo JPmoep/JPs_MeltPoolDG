@@ -20,11 +20,10 @@
 
 namespace MeltPoolDG
 {
-  namespace AdvectionDiffusionAdaflo
+  namespace AdvectionDiffusion
   {
     template <int dim>
-    class AdafloWrapper
-      : public MeltPoolDG::AdvectionDiffusion::AdvectionDiffusionOperationBase<dim>
+    class AdvectionDiffusionOperationAdaflo : public AdvectionDiffusionOperationBase<dim>
     {
     private:
       using VectorType      = LinearAlgebra::distributed::Vector<double>;
@@ -34,13 +33,14 @@ namespace MeltPoolDG
       /**
        * Constructor.
        */
-      AdafloWrapper(ScratchData<dim> &                   scratch_data,
-                    const int                            advec_diff_dof_idx,
-                    const int                            advec_diff_quad_idx,
-                    const int                            velocity_dof_idx,
-                    const VectorType                     initial_solution_advected_field,
-                    const BlockVectorType &              velocity_vec_in, // @todo: make const ref
-                    std::shared_ptr<SimulationBase<dim>> base_in)
+      AdvectionDiffusionOperationAdaflo(
+        const ScratchData<dim> &             scratch_data,
+        const int                            advec_diff_dof_idx,
+        const int                            advec_diff_quad_idx,
+        const int                            velocity_dof_idx,
+        const VectorType                     initial_solution_advected_field,
+        const BlockVectorType &              velocity_vec_in, // @todo: make const ref
+        std::shared_ptr<SimulationBase<dim>> base_in)
         : scratch_data(scratch_data)
       {
         /**
@@ -305,7 +305,7 @@ namespace MeltPoolDG
        */
       DiagonalPreconditioner<double> preconditioner;
     };
-  } // namespace AdvectionDiffusionAdaflo
+  } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG
 
 #endif

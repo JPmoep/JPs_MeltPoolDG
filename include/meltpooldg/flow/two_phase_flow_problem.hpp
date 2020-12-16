@@ -265,7 +265,6 @@ namespace MeltPoolDG
             "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
             "  this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), 'level_set') "));
 
-        VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution, ls_dof_idx);
         dealii::VectorTools::project(scratch_data->get_mapping(),
                                      dof_handler,
@@ -279,11 +278,13 @@ namespace MeltPoolDG
          */
         level_set_operation.initialize(scratch_data,
                                        initial_solution,
+                                       advection_velocity,
                                        base_in->parameters,
                                        ls_dof_idx,
                                        dof_no_bc_idx,
                                        ls_quad_idx,
-                                       flow_dof_idx);
+                                       flow_dof_idx,
+                                       base_in);
         /*
          *    initialize the melt pool operation class
          */
@@ -624,6 +625,7 @@ namespace MeltPoolDG
       BlockVectorType force_rhs;
       VectorType      density;
       VectorType      viscosity;
+      VectorType      initial_solution;
 
       unsigned int ls_dof_idx;
       unsigned int dof_no_bc_idx;

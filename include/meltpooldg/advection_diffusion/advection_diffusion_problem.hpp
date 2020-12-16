@@ -284,14 +284,13 @@ namespace MeltPoolDG
           {
             AssertThrow(base_in->parameters.advec_diff.do_matrix_free, ExcNotImplemented());
             advec_diff_operation =
-              std::make_shared<MeltPoolDG::AdvectionDiffusionAdaflo::AdafloWrapper<dim>>(
-                *scratch_data,
-                dof_zero_bc_idx,
-                quad_idx,
-                dof_idx_velocity,
-                initial_solution,
-                advection_velocity,
-                base_in);
+              std::make_shared<AdvectionDiffusionOperationAdaflo<dim>>(*scratch_data,
+                                                                       dof_zero_bc_idx,
+                                                                       quad_idx,
+                                                                       dof_idx_velocity,
+                                                                       initial_solution,
+                                                                       advection_velocity,
+                                                                       base_in);
           }
 #endif
         else
