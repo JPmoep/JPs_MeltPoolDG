@@ -193,6 +193,12 @@ namespace MeltPoolDG
 #endif
 
         setup_dof_system(base_in);
+
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->initialize(base_in);
+#else
+        AssertThrow(false, ExcNotImplemented());
+#endif
       }
 
       void
@@ -257,7 +263,6 @@ namespace MeltPoolDG
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->reinit_2();
-        dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->initialize(base_in);
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
