@@ -16,6 +16,7 @@
 #include <meltpooldg/normal_vector/normal_vector_operation.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operation_adaflo_wrapper.hpp>
 #include <meltpooldg/reinitialization/olsson_operator.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation_base.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
@@ -31,7 +32,7 @@ namespace MeltPoolDG
      */
 
     template <int dim>
-    class ReinitializationOperation
+    class ReinitializationOperation : public ReinitializationOperationBase<dim>
     {
     private:
       using VectorType       = LinearAlgebra::distributed::Vector<double>;
@@ -225,6 +226,19 @@ namespace MeltPoolDG
         return solution_level_set;
       }
 
+      VectorType &
+      get_level_set()
+      {
+        return solution_level_set;
+      }
+
+      void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
+      {
+        vectors.push_back(&solution_level_set);
+      }
+
+
     private:
       void
       set_reinitialization_parameters(const Parameters<double> &data_in)
@@ -267,6 +281,8 @@ namespace MeltPoolDG
         if (!reinit_data.solver.do_matrix_free)
           reinit_operator->initialize_matrix_based<dim>(*scratch_data);
       }
+
+
 
     private:
       std::shared_ptr<const ScratchData<dim>> scratch_data;
