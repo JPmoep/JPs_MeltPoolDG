@@ -184,6 +184,14 @@ namespace MeltPoolDG
                 QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
             }
         }
+
+
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, flow_dof_idx, base_in);
+#else
+        AssertThrow(false, ExcNotImplemented());
+#endif
+
         setup_dof_system(base_in);
       }
 
@@ -203,6 +211,16 @@ namespace MeltPoolDG
             dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
             flow_dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.flow.velocity_degree));
           }
+
+          /*
+           *    initialize the flow operation class
+           */
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->reinit_1();
+#else
+        AssertThrow(false, ExcNotImplemented());
+#endif
+
         /*
          *  create partitioning
          */
@@ -235,24 +253,13 @@ namespace MeltPoolDG
         ls_constraints_dirichlet.merge(ls_hanging_node_constraints);
         ls_constraints_dirichlet.close();
 
-        /*
-         *    initialize the flow operation class
-         */
-#ifdef MELT_POOL_DG_WITH_ADAFLO
-        flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, flow_dof_idx, base_in);
-        dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->reinit_1();
         scratch_data->build();
+
+#ifdef MELT_POOL_DG_WITH_ADAFLO
         dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->reinit_2();
         dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->initialize(base_in);
 #else
         AssertThrow(false, ExcNotImplemented());
-#endif
-
-        /*
-         *  create the matrix-free object
-         */
-#if false
-        scratch_data->build();
 #endif
         /*
          *  initialize the time stepping scheme
