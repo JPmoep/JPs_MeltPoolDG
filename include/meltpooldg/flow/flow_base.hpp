@@ -57,6 +57,9 @@ namespace MeltPoolDG
 
       virtual const VectorizedArray<double> &
       get_viscosity(const unsigned int cell, const unsigned int q) const = 0;
+
+      virtual void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
     };
 
   } // namespace Flow

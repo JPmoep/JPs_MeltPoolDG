@@ -208,6 +208,13 @@ namespace MeltPoolDG
         return navier_stokes.get_matrix().begin_viscosities(cell)[q];
       }
 
+      void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      {
+        Assert(false, ExcNotImplemented());
+        (void)vectors;
+      }
+
     private:
       ScratchData<dim, dim, double, VectorizedArray<double>> &scratch_data;
       /**
@@ -370,6 +377,13 @@ namespace MeltPoolDG
         (void)cell;
         (void)q;
         return dummy;
+      }
+
+      void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      {
+        Assert(false, ExcNotImplemented());
+        (void)vectors;
       }
 
     private:
