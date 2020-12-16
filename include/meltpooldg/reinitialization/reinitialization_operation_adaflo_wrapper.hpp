@@ -108,6 +108,12 @@ namespace MeltPoolDG
                                                      preconditioner);
       }
 
+      void
+      reinit() override
+      {
+        Assert(false, ExcNotImplemented());
+      }
+
       /**
        * Solver time step
        */

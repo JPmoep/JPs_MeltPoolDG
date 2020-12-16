@@ -38,6 +38,9 @@ namespace MeltPoolDG
       }
 
       virtual void
+      reinit() = 0;
+
+      virtual void
       update_initial_solution(
         const LinearAlgebra::distributed::Vector<double> &solution_level_set_in) = 0;
 
