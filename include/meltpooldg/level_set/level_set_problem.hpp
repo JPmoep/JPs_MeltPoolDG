@@ -101,6 +101,81 @@ namespace MeltPoolDG
          */
         dof_handler.reinit(*base_in->triangulation);
         dof_handler_velocity.reinit(*base_in->triangulation);
+
+        this->dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
+        this->dof_idx       = scratch_data->attach_dof_handler(dof_handler);
+        ls_zero_bc_idx      = scratch_data->attach_dof_handler(dof_handler);
+        vel_dof_idx         = scratch_data->attach_dof_handler(dof_handler_velocity);
+
+        /*
+         *  create quadrature rule
+         */
+
+        unsigned int quad_idx = 0;
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          quad_idx = scratch_data->attach_quadrature(
+            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
+        else
+#endif
+          quad_idx =
+            scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+
+          // TODO: only do once!
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+        if (base_in->parameters.base.do_simplex)
+          scratch_data->attach_quadrature(
+            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
+        else
+#endif
+          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+        /*
+         *  initialize the time iterator
+         */
+        time_iterator.initialize(TimeIteratorData<double>{base_in->parameters.ls.start_time,
+                                                          base_in->parameters.ls.end_time,
+                                                          base_in->parameters.ls.time_step_size,
+                                                          100000,
+                                                          false});
+
+        setup_dof_system(base_in);
+
+        // set initial conditions of the levelset function
+        AssertThrow(
+          base_in->get_initial_condition("level_set"),
+          ExcMessage(
+            "It seems that your SimulationBase object does not contain "
+            "a valid initial field function for the level set field. A shared_ptr to your initial field "
+            "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+            "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
+            "'level_set') "));
+
+        scratch_data->initialize_dof_vector(initial_solution);
+        dealii::VectorTools::project(scratch_data->get_mapping(),
+                                     dof_handler,
+                                     constraints_dirichlet,
+                                     scratch_data->get_quadrature(),
+                                     *base_in->get_initial_condition("level_set"),
+                                     initial_solution);
+
+        initial_solution.update_ghost_values();
+
+        level_set_operation.initialize(scratch_data,
+                                       initial_solution,
+                                       advection_velocity,
+                                       base_in->parameters,
+                                       dof_idx,
+                                       dof_no_bc_idx,
+                                       quad_idx,
+                                       dof_idx,
+                                       base_in,
+                                       vel_dof_idx,
+                                       ls_zero_bc_idx);
+      }
+
+      void
+      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in)
+      {
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
           {
@@ -115,11 +190,6 @@ namespace MeltPoolDG
             dof_handler_velocity.distribute_dofs(
               FESystem<dim>(FE_Q<dim>(base_in->parameters.base.degree), dim));
           }
-
-        const unsigned int dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
-        const unsigned int dof_idx       = scratch_data->attach_dof_handler(dof_handler);
-        ls_zero_bc_idx                   = scratch_data->attach_dof_handler(dof_handler);
-        vel_dof_idx                      = scratch_data->attach_dof_handler(dof_handler_velocity);
         /*
          *  create partitioning
          */
@@ -178,58 +248,9 @@ namespace MeltPoolDG
         scratch_data->attach_constraint_matrix(hanging_node_constraints_with_zero_dirichlet);
         scratch_data->attach_constraint_matrix(hanging_node_constraints_velocity);
         /*
-         *  create quadrature rule
-         */
-
-        unsigned int quad_idx = 0;
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          quad_idx = scratch_data->attach_quadrature(
-            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
-        else
-#endif
-          quad_idx =
-            scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-
-          // TODO: only do once!
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          scratch_data->attach_quadrature(
-            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
-        else
-#endif
-          scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-        /*
          *  create the matrix-free object
          */
         scratch_data->build();
-        /*
-         *  initialize the time iterator
-         */
-        time_iterator.initialize(TimeIteratorData<double>{base_in->parameters.ls.start_time,
-                                                          base_in->parameters.ls.end_time,
-                                                          base_in->parameters.ls.time_step_size,
-                                                          100000,
-                                                          false});
-        // set initial conditions of the levelset function
-        AssertThrow(
-          base_in->get_initial_condition("level_set"),
-          ExcMessage(
-            "It seems that your SimulationBase object does not contain "
-            "a valid initial field function for the level set field. A shared_ptr to your initial field "
-            "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
-            "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
-            "'level_set') "));
-
-        scratch_data->initialize_dof_vector(initial_solution);
-        dealii::VectorTools::project(scratch_data->get_mapping(),
-                                     dof_handler,
-                                     constraints_dirichlet,
-                                     scratch_data->get_quadrature(),
-                                     *base_in->get_initial_condition("level_set"),
-                                     initial_solution);
-
-        initial_solution.update_ghost_values();
 
         // initialize the levelset operation class
         AssertThrow(base_in->get_advection_field("level_set"),
@@ -240,24 +261,6 @@ namespace MeltPoolDG
                       "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
                       "'level_set') "));
         compute_advection_velocity(*base_in->get_advection_field("level_set"));
-
-        level_set_operation.initialize(scratch_data,
-                                       initial_solution,
-                                       advection_velocity,
-                                       base_in->parameters,
-                                       dof_idx,
-                                       dof_no_bc_idx,
-                                       quad_idx,
-                                       dof_idx,
-                                       base_in,
-                                       vel_dof_idx,
-                                       ls_zero_bc_idx);
-      }
-
-      void
-      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in)
-      {
-        (void)base_in;
       }
 
       void
@@ -439,6 +442,8 @@ namespace MeltPoolDG
       VectorType             initial_solution;
       unsigned int           vel_dof_idx;
       unsigned int           ls_zero_bc_idx;
+      unsigned int           dof_no_bc_idx;
+      unsigned int           dof_idx;
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG
