@@ -308,6 +308,12 @@ namespace MeltPoolDG
       return this->face_quad;
     }
 
+    MatrixFree<dim, number, VectorizedArrayType> &
+    get_matrix_free()
+    {
+      return this->matrix_free;
+    }
+
     const MatrixFree<dim, number, VectorizedArrayType> &
     get_matrix_free() const
     {
