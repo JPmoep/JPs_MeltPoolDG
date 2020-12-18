@@ -64,7 +64,7 @@ namespace MeltPoolDG
          *    initialize normal_vector_operation for computing the normal vector to the given
          *    scalar function for which the curvature should be calculated.
          */
-        normal_vector_operation.initialize(scratch_data, data_in, dof_idx, quad_idx);
+        normal_vector_operation.initialize(scratch_data, data_in, dof_idx, quad_idx, dof_idx);
         /*
          *  initialize the operator (input-dependent: matrix-based or matrix-free)
          */

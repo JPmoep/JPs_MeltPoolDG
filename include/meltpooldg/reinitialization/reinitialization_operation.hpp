@@ -53,13 +53,15 @@ namespace MeltPoolDG
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_level_set_in,
                  const Parameters<double> &                     data_in,
-                 const unsigned int                             dof_idx_in,
-                 const unsigned int                             quad_idx_in) override
+                 const unsigned int                             reinit_dof_idx_in,
+                 const unsigned int                             reinit_quad_idx_in,
+                 const unsigned int                             normal_dof_idx_in) override
       {
-        scratch_data = scratch_data_in;
-        dof_idx      = dof_idx_in;
-        quad_idx     = quad_idx_in;
-        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
+        scratch_data    = scratch_data_in;
+        reinit_dof_idx  = reinit_dof_idx_in;
+        reinit_quad_idx = reinit_quad_idx_in;
+        normal_dof_idx  = normal_dof_idx_in;
+        scratch_data->initialize_dof_vector(solution_level_set, reinit_dof_idx);
         /*
          *    initialize the (local) parameters of the reinitialization
          *    from the global user-defined parameters
@@ -72,7 +74,8 @@ namespace MeltPoolDG
           {
             normal_vector_operation = std::make_shared<NormalVector::NormalVectorOperation<dim>>();
 
-            normal_vector_operation->initialize(scratch_data_in, data_in, dof_idx_in, quad_idx_in);
+            normal_vector_operation->initialize(
+              scratch_data_in, data_in, normal_dof_idx, reinit_quad_idx, reinit_dof_idx);
           }
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         else if (data_in.normal_vec.implementation == "adaflo")
@@ -82,9 +85,9 @@ namespace MeltPoolDG
             normal_vector_operation =
               std::make_shared<NormalVector::NormalVectorOperationAdaflo<dim>>(
                 *scratch_data_in,
-                dof_idx_in, // ls @todo
-                dof_idx_in, // normal vec @todo
-                quad_idx,
+                reinit_dof_idx, //@todo -- this is actually ls dof idx; must this be added??
+                normal_dof_idx,
+                reinit_quad_idx,
                 solution_level_set,
                 data_in);
           }
@@ -105,7 +108,7 @@ namespace MeltPoolDG
       void
       reinit() override
       {
-        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
+        scratch_data->initialize_dof_vector(solution_level_set, reinit_dof_idx);
       }
 
       /*
@@ -120,7 +123,7 @@ namespace MeltPoolDG
         /*
          *    copy the given solution into the member variable
          */
-        scratch_data->initialize_dof_vector(solution_level_set, dof_idx);
+        scratch_data->initialize_dof_vector(solution_level_set, reinit_dof_idx);
         solution_level_set.copy_locally_owned_data_from(solution_level_set_in);
         solution_level_set.update_ghost_values();
         /*
@@ -137,8 +140,8 @@ namespace MeltPoolDG
       {
         VectorType src, rhs;
 
-        scratch_data->initialize_dof_vector(src, dof_idx);
-        scratch_data->initialize_dof_vector(rhs, dof_idx);
+        scratch_data->initialize_dof_vector(src, reinit_dof_idx);
+        scratch_data->initialize_dof_vector(rhs, reinit_dof_idx);
 
         reinit_operator->set_time_increment(d_tau);
 
@@ -147,7 +150,7 @@ namespace MeltPoolDG
         if (reinit_data.solver.do_matrix_free)
           {
             VectorType src_rhs;
-            scratch_data->initialize_dof_vector(src_rhs, dof_idx);
+            scratch_data->initialize_dof_vector(src_rhs, reinit_dof_idx);
             src_rhs.copy_locally_owned_data_from(solution_level_set);
             src_rhs.update_ghost_values();
             reinit_operator->create_rhs(rhs, src_rhs);
@@ -200,7 +203,7 @@ namespace MeltPoolDG
                                                              reinit_data.solver.rel_tolerance_rhs);
               }
           }
-        scratch_data->get_constraint(dof_idx).distribute(src);
+        scratch_data->get_constraint(reinit_dof_idx).distribute(src);
 
         solution_level_set += src;
 
@@ -208,7 +211,7 @@ namespace MeltPoolDG
 
         if (reinit_data.do_print_l2norm)
           {
-            const ConditionalOStream &pcout = scratch_data->get_pcout(dof_idx);
+            const ConditionalOStream &pcout = scratch_data->get_pcout(reinit_dof_idx);
             pcout << "| CG: i=" << std::setw(5) << std::left << iter;
             pcout << "\t |ΔΨ|∞ = " << std::setw(15) << std::left << std::setprecision(10)
                   << src.linfty_norm();
@@ -259,8 +262,8 @@ namespace MeltPoolDG
               normal_vector_operation->get_solution_normal_vector(),
               reinit_data.constant_epsilon,
               reinit_data.scale_factor_epsilon,
-              dof_idx,
-              quad_idx);
+              reinit_dof_idx,
+              reinit_quad_idx);
           }
         /*
          * add your desired operators here
@@ -303,8 +306,9 @@ namespace MeltPoolDG
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
        *  multiple DoFHandlers, quadrature rules, etc.
        */
-      unsigned int dof_idx;
-      unsigned int quad_idx;
+      unsigned int reinit_dof_idx;
+      unsigned int reinit_quad_idx;
+      unsigned int normal_dof_idx;
     };
   } // namespace Reinitialization
 } // namespace MeltPoolDG

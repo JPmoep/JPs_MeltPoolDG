@@ -34,12 +34,16 @@ namespace MeltPoolDG
 
       NormalVectorOperator(const ScratchData<dim> &scratch_data_in,
                            const double            damping_in,
-                           const unsigned int      dof_idx_in,
-                           const unsigned int      quad_idx_in)
+                           const unsigned int      normal_dof_idx_in,
+                           const unsigned int      normal_quad_idx_in,
+                           const unsigned int      ls_dof_idx_in)
         : scratch_data(scratch_data_in)
         , damping(damping_in)
+        , normal_dof_idx(normal_dof_idx_in)
+        , normal_quad_idx(normal_quad_idx_in)
+        , ls_dof_idx(ls_dof_idx_in)
       {
-        this->reset_indices(dof_idx_in, quad_idx_in);
+        this->reset_indices(normal_dof_idx_in, normal_quad_idx_in);
       }
 
       void
@@ -49,53 +53,60 @@ namespace MeltPoolDG
       {
         level_set_in.update_ghost_values();
 
-        FEValues<dim> fe_values(scratch_data.get_mapping(),
-                                scratch_data.get_dof_handler(this->dof_idx).get_fe(),
-                                scratch_data.get_quadrature(this->quad_idx),
-                                update_values | update_gradients | update_quadrature_points |
-                                  update_JxW_values);
+        FEValues<dim> normal_values(scratch_data.get_mapping(),
+                                    scratch_data.get_dof_handler(normal_dof_idx).get_fe(),
+                                    scratch_data.get_quadrature(normal_quad_idx),
+                                    update_values | update_gradients | update_quadrature_points |
+                                      update_JxW_values);
 
-        const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell(this->dof_idx);
+        FEValues<dim> ls_values(scratch_data.get_mapping(),
+                                scratch_data.get_dof_handler(ls_dof_idx).get_fe(),
+                                scratch_data.get_quadrature(normal_quad_idx),
+                                update_gradients);
+
+        const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell(normal_dof_idx);
 
         FullMatrix<double>                   normal_cell_matrix(dofs_per_cell, dofs_per_cell);
         std::vector<Vector<double>>          normal_cell_rhs(dim, Vector<double>(dofs_per_cell));
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
-        const unsigned int n_q_points = fe_values.get_quadrature().size();
+        const unsigned int n_q_points = normal_values.get_quadrature().size();
 
         std::vector<Tensor<1, dim>> normal_at_q(n_q_points, Tensor<1, dim>());
 
         matrix = 0.0;
         rhs    = 0.0;
 
-        for (const auto &cell : scratch_data.get_dof_handler(this->dof_idx).active_cell_iterators())
+        for (const auto &cell :
+             scratch_data.get_dof_handler(normal_dof_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
-              fe_values.reinit(cell);
+              normal_values.reinit(cell);
+              ls_values.reinit(cell);
               cell->get_dof_indices(local_dof_indices);
 
               normal_cell_matrix = 0.0;
               for (auto &normal_cell : normal_cell_rhs)
                 normal_cell = 0.0;
 
-              fe_values.get_function_gradients(
+              ls_values.get_function_gradients(
                 level_set_in, normal_at_q); // compute normals from level set solution at tau=0
-              for (const unsigned int q_index : fe_values.quadrature_point_indices())
+              for (const unsigned int q_index : normal_values.quadrature_point_indices())
                 {
                   for (unsigned int i = 0; i < dofs_per_cell; ++i)
                     {
-                      const double         phi_i      = fe_values.shape_value(i, q_index);
-                      const Tensor<1, dim> grad_phi_i = fe_values.shape_grad(i, q_index);
+                      const double         phi_i      = normal_values.shape_value(i, q_index);
+                      const Tensor<1, dim> grad_phi_i = normal_values.shape_grad(i, q_index);
 
                       for (unsigned int j = 0; j < dofs_per_cell; ++j)
                         {
-                          const double         phi_j      = fe_values.shape_value(j, q_index);
-                          const Tensor<1, dim> grad_phi_j = fe_values.shape_grad(j, q_index);
+                          const double         phi_j      = normal_values.shape_value(j, q_index);
+                          const Tensor<1, dim> grad_phi_j = normal_values.shape_grad(j, q_index);
 
                           //clang-format off
                           normal_cell_matrix(i, j) +=
                             (phi_i * phi_j + damping * grad_phi_i * grad_phi_j) *
-                            fe_values.JxW(q_index);
+                            normal_values.JxW(q_index);
                           //clang-format on
                         }
 
@@ -103,7 +114,7 @@ namespace MeltPoolDG
                         {
                           //clang-format off
                           normal_cell_rhs[d](i) +=
-                            phi_i * normal_at_q[q_index][d] * fe_values.JxW(q_index);
+                            phi_i * normal_at_q[q_index][d] * normal_values.JxW(q_index);
                           //clang-format on
                         }
                     }
@@ -112,10 +123,10 @@ namespace MeltPoolDG
               // assembly
               cell->get_dof_indices(local_dof_indices);
 
-              scratch_data.get_constraint(this->dof_idx)
+              scratch_data.get_constraint(normal_dof_idx)
                 .distribute_local_to_global(normal_cell_matrix, local_dof_indices, matrix);
               for (unsigned int d = 0; d < dim; ++d)
-                scratch_data.get_constraint(this->dof_idx)
+                scratch_data.get_constraint(normal_dof_idx)
                   .distribute_local_to_global(normal_cell_rhs[d], local_dof_indices, rhs.block(d));
 
             } // end of cell loop
@@ -133,8 +144,8 @@ namespace MeltPoolDG
         scratch_data.get_matrix_free().template cell_loop<BlockVectorType, BlockVectorType>(
           [&](const auto &, auto &dst, const auto &src, auto cell_range) {
             FECellIntegrator<dim, dim, number> normal(scratch_data.get_matrix_free(),
-                                                      this->dof_idx,
-                                                      this->quad_idx);
+                                                      normal_dof_idx,
+                                                      normal_quad_idx);
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
                 normal.reinit(cell);
@@ -158,11 +169,11 @@ namespace MeltPoolDG
       create_rhs(BlockVectorType &dst, const VectorType &src) const override
       {
         FECellIntegrator<dim, dim, number> normal_vector(scratch_data.get_matrix_free(),
-                                                         this->dof_idx,
-                                                         this->quad_idx);
+                                                         normal_dof_idx,
+                                                         normal_quad_idx);
         FECellIntegrator<dim, 1, number>   level_set(scratch_data.get_matrix_free(),
-                                                   this->dof_idx,
-                                                   this->quad_idx);
+                                                   ls_dof_idx,
+                                                   normal_quad_idx);
 
         scratch_data.get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
           [&](const auto &, auto &dst, const auto &src, auto macro_cells) {
@@ -212,7 +223,10 @@ namespace MeltPoolDG
     private:
       const ScratchData<dim> &scratch_data;
 
-      double damping;
+      double             damping;
+      const unsigned int normal_dof_idx;
+      const unsigned int normal_quad_idx;
+      const unsigned int ls_dof_idx;
     };
   } // namespace NormalVector
 } // namespace MeltPoolDG

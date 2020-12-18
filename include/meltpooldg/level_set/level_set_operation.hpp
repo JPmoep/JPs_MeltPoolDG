@@ -107,8 +107,9 @@ namespace MeltPoolDG
             reinit_operation->initialize(scratch_data,
                                          advec_diff_operation->get_advected_field(),
                                          data_in,
-                                         dof_no_bc_idx_in,
-                                         quad_idx_in);
+                                         dof_no_bc_idx_in,  /* reinit*/
+                                         quad_idx_in,       /* reinit */
+                                         dof_no_bc_idx_in); /* normal */
           }
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         else if ((data_in.reinit.implementation == "adaflo") ||
