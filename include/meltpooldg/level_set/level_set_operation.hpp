@@ -161,7 +161,12 @@ namespace MeltPoolDG
           {
             curvature_operation = std::make_shared<Curvature::CurvatureOperation<dim>>();
 
-            curvature_operation->initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
+            curvature_operation->initialize(scratch_data,
+                                            data_in,
+                                            dof_no_bc_idx_in /*curv*/,
+                                            quad_idx_in /*curv*/,
+                                            dof_no_bc_idx /*normal*/,
+                                            dof_idx /*ls*/);
             /*
              *    compute the curvature of the initial level set field
              */
