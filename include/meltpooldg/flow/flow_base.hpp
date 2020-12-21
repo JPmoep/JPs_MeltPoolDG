@@ -47,7 +47,7 @@ namespace MeltPoolDG
       get_constraints_pressure() = 0;
 
       virtual void
-      set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> &vec) = 0;
+      set_force_rhs(const LinearAlgebra::distributed::Vector<double> &vec) = 0;
 
       virtual VectorizedArray<double> &
       get_density(const unsigned int cell, const unsigned int q) = 0;

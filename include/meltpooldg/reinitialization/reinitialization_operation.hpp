@@ -70,6 +70,11 @@ namespace MeltPoolDG
         /*
          *    initialize normal_vector_field
          */
+        AssertThrow(data_in.normal_vec.do_matrix_free == data_in.reinit.solver.do_matrix_free,
+                    ExcMessage("For the reinitialization problem both the "
+                               " normal vector and the reinitialization operation have to be "
+                               " computed either matrix-based or matrix-free."));
+
         if (data_in.normal_vec.implementation == "meltpooldg")
           {
             normal_vector_operation = std::make_shared<NormalVector::NormalVectorOperation<dim>>();
@@ -131,13 +136,17 @@ namespace MeltPoolDG
          *    level set; the normal vector field is called by reference within the
          *    operator class
          */
-        // normal_vector_operation->update();
+        normal_vector_operation->reinit();
         normal_vector_operation->solve(solution_level_set);
       }
 
       void
       solve(const double d_tau) override
       {
+        /**
+         * update the distributed sparsity pattern for matrix-based amr
+         */
+        update_operator();
         VectorType src, rhs;
 
         scratch_data->initialize_dof_vector(src, reinit_dof_idx);

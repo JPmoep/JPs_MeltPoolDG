@@ -384,7 +384,7 @@ namespace MeltPoolDG
           Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
 
           VectorType locally_relevant_solution;
-          locally_relevant_solution.reinit(scratch_data->get_partitioner());
+          locally_relevant_solution.reinit(scratch_data->get_partitioner(ls_dof_idx));
           locally_relevant_solution.copy_locally_owned_data_from(
             level_set_operation.get_level_set());
           constraints_dirichlet.distribute(locally_relevant_solution);
@@ -411,16 +411,19 @@ namespace MeltPoolDG
 
         const auto post = [&]() {
           hanging_node_constraints.distribute(level_set_operation.get_level_set());
+          // hanging_node_constraints.distribute(level_set_operation.get_level_set_as_heaviside());
         };
 
         const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
 
+        std::cout << " before refine " << std::endl;
         refine_grid<dim, VectorType>(mark_cells_for_refinement,
                                      attach_vectors,
                                      post,
                                      setup_dof_system,
                                      base_in->parameters.amr,
                                      dof_handler);
+        std::cout << " after refine " << std::endl;
       }
 
     private:

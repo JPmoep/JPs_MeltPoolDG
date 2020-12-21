@@ -76,7 +76,7 @@ namespace MeltPoolDG
               level_set_operation.compute_surface_tension(
                 force_rhs,
                 base_in->parameters.flow.surface_tension_coefficient,
-                flow_dof_idx,
+                vel_dof_idx,
                 flow_quad_idx,
                 false /*false means add to force vector*/);
 
@@ -89,7 +89,7 @@ namespace MeltPoolDG
                   dt,
                   false /*false means add to force vector*/);
 
-                // ... d) temperature-dependent surface tension
+                //// ... d) temperature-dependent surface tension
                 if (base_in->parameters.flow.temperature_dependent_surface_tension_coefficient >
                     0.0)
                   melt_pool_operation.compute_temperature_dependent_surface_tension(
@@ -100,9 +100,9 @@ namespace MeltPoolDG
                     base_in->parameters.flow.temperature_dependent_surface_tension_coefficient,
                     base_in->parameters.flow.surface_tension_reference_temperature,
                     ls_dof_idx,
-                    flow_dof_idx,
+                    vel_dof_idx,
                     flow_quad_idx,
-                    ls_hanging_nodes_dof_idx, /*temp_dof_idx*/
+                    temp_dof_idx,
                     false /*false means add to force vector*/);
               }
 
@@ -249,24 +249,30 @@ namespace MeltPoolDG
                                        reinit_dof_idx,
                                        curv_dof_idx,
                                        normal_dof_idx,
-                                       flow_operation->get_dof_handler_idx_velocity(),
+                                       vel_dof_idx,
                                        ls_dof_idx /* todo: ls_zero_bc_idx*/);
         /*
          *    initialize the melt pool operation class
          */
         if (base_in->parameters.base.problem_name == "melt_pool")
           {
-            melt_pool_operation.initialize(
-              scratch_data,
-              base_in->parameters,
-              ls_dof_idx,
-              flow_dof_idx,
-              flow_quad_idx,
-              ls_hanging_nodes_dof_idx, /*temp_dof_idx @todo: may be changed as
-                                soon as heat problem is introduced*/
-              ls_quad_idx,              /*temp_quad_idx@todo: may be changed as soon
-                                           as heat problem is introduced*/
-              level_set_operation.level_set_as_heaviside);
+            melt_pool_operation.initialize(scratch_data,
+                                           base_in->parameters,
+                                           ls_dof_idx,
+                                           vel_dof_idx,
+                                           flow_quad_idx,
+                                           temp_dof_idx,
+                                           temp_quad_idx,
+                                           level_set_operation.level_set_as_heaviside);
+          }
+        if (base_in->parameters.base.problem_name == "melt_pool")
+          {
+            /*
+             *    set the fluid velocity and the pressure in solid regions to zero
+             */
+            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+              flow_operation->get_dof_handler_velocity(),
+              flow_operation->get_constraints_velocity());
           }
       }
 
@@ -340,22 +346,10 @@ namespace MeltPoolDG
          */
         scratch_data->initialize_dof_vector(advection_velocity, vel_dof_idx);
 
-        if (base_in->parameters.base.problem_name == "melt_pool")
-          {
-            /*
-             *    set the fluid velocity and the pressure in solid regions to zero
-             */
-            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
-              flow_operation->get_dof_handler_velocity(),
-              flow_operation->get_constraints_velocity());
-            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
-              flow_operation->get_dof_handler_pressure(),
-              flow_operation->get_constraints_pressure());
-          }
         /*
          *    initialize the force vector for calculating surface tension
          */
-        scratch_data->initialize_dof_vector(force_rhs, flow_dof_idx);
+        scratch_data->initialize_dof_vector(force_rhs, vel_dof_idx);
         /*
          *    initialize the density and viscosity (for postprocessing)
          */
@@ -423,14 +417,12 @@ namespace MeltPoolDG
        * @todo Find a better place.
        */
       void
-      compute_gravity_force(BlockVectorType &vec,
-                            const double     gravity,
-                            const bool       zero_out = true) const
+      compute_gravity_force(VectorType &vec, const double gravity, const bool zero_out = true) const
       {
-        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
+        scratch_data->get_matrix_free().template cell_loop<VectorType, std::nullptr_t>(
           [&](const auto &matrix_free, auto &vec, const auto &, auto macro_cells) {
             FECellIntegrator<dim, dim, double> force_values(matrix_free,
-                                                            flow_dof_idx,
+                                                            vel_dof_idx,
                                                             flow_quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
@@ -526,10 +518,10 @@ namespace MeltPoolDG
             /*
              * force vector (surface tension + gravity force)
              */
-            for (auto d = 0; d < dim; ++d)
-              data_out.add_data_vector(flow_dof_handler,
-                                       force_rhs.block(d),
-                                       "force_" + std::to_string(d));
+            data_out.add_data_vector(flow_operation->get_dof_handler_velocity(),
+                                     force_rhs,
+                                     std::vector<std::string>(dim, "force_rhs"),
+                                     vector_component_interpretation);
             /*
              * density
              */
@@ -728,10 +720,10 @@ namespace MeltPoolDG
       AffineConstraints<double> ls_hanging_node_constraints;
       AffineConstraints<double> flow_dummy_constraint;
 
-      VectorType      advection_velocity;
-      BlockVectorType force_rhs;
-      VectorType      density;
-      VectorType      viscosity;
+      VectorType advection_velocity;
+      VectorType force_rhs;
+      VectorType density;
+      VectorType viscosity;
 
       unsigned int ls_dof_idx;
       unsigned int ls_hanging_nodes_dof_idx;
@@ -740,6 +732,8 @@ namespace MeltPoolDG
       const unsigned int &reinit_dof_idx = ls_hanging_nodes_dof_idx;
       const unsigned int &curv_dof_idx   = ls_hanging_nodes_dof_idx;
       const unsigned int &normal_dof_idx = ls_hanging_nodes_dof_idx;
+      const unsigned int &temp_dof_idx   = ls_hanging_nodes_dof_idx;
+      const unsigned int &temp_quad_idx  = ls_quad_idx;
 
       unsigned int vel_dof_idx;
       unsigned int flow_dof_idx;

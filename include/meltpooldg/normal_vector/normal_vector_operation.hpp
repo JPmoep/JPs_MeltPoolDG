@@ -81,19 +81,13 @@ namespace MeltPoolDG
       void
       reinit() override
       {
-        // nothing to do
-      }
-
-      void
-      update()
-      {
-        create_operator();
+        if (!normal_vector_data.do_matrix_free)
+          normal_vector_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 
       void
       solve(const VectorType &solution_levelset_in) override
       {
-        create_operator();
         BlockVectorType rhs;
 
         scratch_data->initialize_dof_vector(rhs, normal_dof_idx);

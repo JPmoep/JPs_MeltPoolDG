@@ -179,12 +179,13 @@ namespace MeltPoolDG
       }
 
       void
-      set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> &vec) override
+      set_force_rhs(const LinearAlgebra::distributed::Vector<double> &vec) override
       {
-        VectorTools::convert_block_vector_to_fe_sytem_vector(vec,
-                                                             dof_handler_meltpool,
-                                                             navier_stokes.user_rhs.block(0),
-                                                             navier_stokes.get_dof_handler_u());
+        navier_stokes.user_rhs.block(0) = vec;
+        // VectorTools::convert_block_vector_to_fe_sytem_vector(vec,
+        // dof_handler_meltpool,
+        // navier_stokes.user_rhs.block(0),
+        // navier_stokes.get_dof_handler_u());
       }
 
       VectorizedArray<double> &
@@ -351,7 +352,7 @@ namespace MeltPoolDG
       }
 
       void
-      set_force_rhs(const LinearAlgebra::distributed::BlockVector<double> &) override
+      set_force_rhs(const LinearAlgebra::distributed::Vector<double> &) override
       {
         AssertThrow(false, ExcNotImplemented());
       }

@@ -260,15 +260,15 @@ namespace MeltPoolDG
       }
 
       void
-      compute_surface_tension(BlockVectorType &  force_rhs,
+      compute_surface_tension(VectorType &       force_rhs,
                               const double       surface_tension_coefficient,
-                              const unsigned int flow_dof_idx,
+                              const unsigned int flow_vel_dof_idx,
                               const unsigned int flow_quad_idx,
                               const bool         zero_out = true)
       {
         curvature_operation->get_curvature().update_ghost_values();
 
-        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
+        scratch_data->get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &matrix_free,
               auto &      force_rhs,
               const auto &level_set_as_heaviside,
@@ -278,7 +278,7 @@ namespace MeltPoolDG
             FECellIntegrator<dim, 1, double> curvature(matrix_free, curv_dof_idx, flow_quad_idx);
 
             FECellIntegrator<dim, dim, double> surface_tension(matrix_free,
-                                                               flow_dof_idx,
+                                                               flow_vel_dof_idx,
                                                                flow_quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
@@ -504,10 +504,18 @@ namespace MeltPoolDG
         return advec_diff_operation->get_advected_field();
       }
 
+      LinearAlgebra::distributed::Vector<double> &
+      get_level_set_as_heaviside()
+      {
+        return level_set_as_heaviside;
+      }
+
       virtual void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
         advec_diff_operation->attach_vectors(vectors);
+        // level_set_as_heaviside.update_ghost_values();
+        // vectors.push_back(&level_set_as_heaviside);
       }
 
       /*
