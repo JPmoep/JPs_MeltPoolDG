@@ -302,12 +302,9 @@ namespace MeltPoolDG
             data_out.attach_dof_handler(dof_handler);
             data_out.add_data_vector(reinit_operation->get_level_set(), "psi");
 
-            if (parameters.paraview.print_normal_vector)
-              {
-                for (unsigned int d = 0; d < dim; ++d)
-                  data_out.add_data_vector(reinit_operation->get_normal_vector().block(d),
-                                           "normal_" + std::to_string(d));
-              }
+            for (unsigned int d = 0; d < dim; ++d)
+              data_out.add_data_vector(reinit_operation->get_normal_vector().block(d),
+                                       "normal_" + std::to_string(d));
 
             data_out.build_patches(scratch_data->get_mapping());
             data_out.write_vtu_with_pvtu_record("./",

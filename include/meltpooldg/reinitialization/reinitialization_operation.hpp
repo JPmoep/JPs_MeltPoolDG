@@ -114,6 +114,8 @@ namespace MeltPoolDG
       reinit() override
       {
         scratch_data->initialize_dof_vector(solution_level_set, reinit_dof_idx);
+        update_operator();
+        normal_vector_operation->reinit();
       }
 
       /*
@@ -136,7 +138,6 @@ namespace MeltPoolDG
          *    level set; the normal vector field is called by reference within the
          *    operator class
          */
-        normal_vector_operation->reinit();
         normal_vector_operation->solve(solution_level_set);
       }
 
@@ -146,7 +147,6 @@ namespace MeltPoolDG
         /**
          * update the distributed sparsity pattern for matrix-based amr
          */
-        update_operator();
         VectorType src, rhs;
 
         scratch_data->initialize_dof_vector(src, reinit_dof_idx);
