@@ -129,14 +129,6 @@ namespace MeltPoolDG
       {
         vec = navier_stokes.solution.block(0);
       }
-      void
-      get_velocity(LinearAlgebra::distributed::BlockVector<double> &vec) const override
-      {
-        VectorTools::convert_fe_sytem_vector_to_block_vector(navier_stokes.solution.block(0),
-                                                             navier_stokes.get_dof_handler_u(),
-                                                             vec,
-                                                             dof_handler_meltpool);
-      }
 
       const DoFHandler<dim> &
       get_dof_handler_velocity() const override
@@ -306,12 +298,6 @@ namespace MeltPoolDG
 
       void
       get_velocity(LinearAlgebra::distributed::Vector<double> &) const override
-      {
-        AssertThrow(false, ExcNotImplemented());
-      }
-
-      void
-      get_velocity(LinearAlgebra::distributed::BlockVector<double> &) const override
       {
         AssertThrow(false, ExcNotImplemented());
       }

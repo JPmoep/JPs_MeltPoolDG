@@ -102,6 +102,12 @@ namespace MeltPoolDG
         else
           AssertThrow(false, ExcNotImplemented());
 
+        /*
+         *  set the parameters for the levelset problem; already determined parameters
+         *  from the initialize call of advec_diff_operation are overwritten.
+         */
+        set_level_set_parameters(base_in->parameters);
+
         if ((base_in->parameters.reinit.implementation ==
              "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
           {
@@ -130,11 +136,6 @@ namespace MeltPoolDG
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
-        /*
-         *  set the parameters for the levelset problem; already determined parameters
-         *  from the initialize call of advec_diff_operation are overwritten.
-         */
-        set_level_set_parameters(base_in->parameters);
         /*
          *  The initial solution of the level set equation will be reinitialized.
          */

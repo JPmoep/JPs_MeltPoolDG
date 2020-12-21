@@ -196,7 +196,10 @@ namespace MeltPoolDG
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
-
+        /*
+         *  set index of velocity dof handler
+         */
+        vel_dof_idx = flow_operation->get_dof_handler_idx_velocity();
         setup_dof_system(base_in, false);
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
@@ -204,7 +207,6 @@ namespace MeltPoolDG
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
-
         /*
          *  initialize the time stepping scheme
          */
@@ -237,19 +239,18 @@ namespace MeltPoolDG
         /*
          *    initialize the levelset operation class
          */
-        level_set_operation.initialize(
-          scratch_data,
-          initial_solution,
-          advection_velocity,
-          base_in,
-          ls_dof_idx,
-          ls_hanging_nodes_dof_idx,
-          ls_quad_idx,
-          reinit_dof_idx,
-          curv_dof_idx,
-          normal_dof_idx,
-          flow_operation->get_dof_handler_idx_velocity(), // vel_dof_idx /* ???*/
-          ls_hanging_nodes_dof_idx /* todo: ls_zero_bc_idx*/);
+        level_set_operation.initialize(scratch_data,
+                                       initial_solution,
+                                       advection_velocity,
+                                       base_in,
+                                       ls_dof_idx,
+                                       ls_hanging_nodes_dof_idx,
+                                       ls_quad_idx,
+                                       reinit_dof_idx,
+                                       curv_dof_idx,
+                                       normal_dof_idx,
+                                       flow_operation->get_dof_handler_idx_velocity(),
+                                       ls_dof_idx /* todo: ls_zero_bc_idx*/);
         /*
          *    initialize the melt pool operation class
          */
@@ -337,7 +338,7 @@ namespace MeltPoolDG
         /*
          *  initialize the velocity dof vector
          */
-        scratch_data->initialize_dof_vector(advection_velocity, flow_dof_idx);
+        scratch_data->initialize_dof_vector(advection_velocity, vel_dof_idx);
 
         if (base_in->parameters.base.problem_name == "melt_pool")
           {
@@ -740,6 +741,7 @@ namespace MeltPoolDG
       const unsigned int &curv_dof_idx   = ls_hanging_nodes_dof_idx;
       const unsigned int &normal_dof_idx = ls_hanging_nodes_dof_idx;
 
+      unsigned int vel_dof_idx;
       unsigned int flow_dof_idx;
       unsigned int flow_quad_idx;
 
