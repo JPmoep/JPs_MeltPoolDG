@@ -63,18 +63,16 @@ namespace MeltPoolDG
       };
 
       template <int dim>
-      class AdvectionField : public TensorFunction<1, dim>
+      class AdvectionField : public Function<dim>
       {
       public:
         AdvectionField()
-          : TensorFunction<1, dim>()
+          : Function<dim>(dim)
         {}
 
-        Tensor<1, dim>
-        value(const Point<dim> &p) const
+        void
+        vector_value(const Point<dim> &p, Vector<double> &values) const override
         {
-          Tensor<1, dim> value_;
-
           if constexpr (dim == 2)
             {
               const double time = this->get_time();
@@ -85,16 +83,13 @@ namespace MeltPoolDG
 
               const double reverseCoefficient = std::cos(numbers::PI * time / Tf);
 
-              value_[0] = reverseCoefficient * (std::sin(2. * numbers::PI * y) *
+              values[0] = reverseCoefficient * (std::sin(2. * numbers::PI * y) *
                                                 std::pow(std::sin(numbers::PI * x), 2.));
-              value_[1] = reverseCoefficient * (-std::sin(2. * numbers::PI * x) *
+              values[1] = reverseCoefficient * (-std::sin(2. * numbers::PI * x) *
                                                 std::pow(std::sin(numbers::PI * y), 2.));
-              return value_;
             }
           else
             AssertThrow(false, ExcMessage("Advection field for dim!=2 not implemented"));
-
-          return value_;
         }
       };
 

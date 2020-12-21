@@ -125,6 +125,11 @@ namespace MeltPoolDG
       }
 
       void
+      get_velocity(LinearAlgebra::distributed::Vector<double> &vec) const override
+      {
+        vec = navier_stokes.solution.block(0);
+      }
+      void
       get_velocity(LinearAlgebra::distributed::BlockVector<double> &vec) const override
       {
         VectorTools::convert_fe_sytem_vector_to_block_vector(navier_stokes.solution.block(0),
@@ -137,6 +142,12 @@ namespace MeltPoolDG
       get_dof_handler_velocity() const override
       {
         return navier_stokes.get_dof_handler_u();
+      }
+
+      const unsigned int &
+      get_dof_handler_idx_velocity() const override
+      {
+        return dof_index_u;
       }
 
       const AffineConstraints<double> &
@@ -293,6 +304,11 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
+      void
+      get_velocity(LinearAlgebra::distributed::Vector<double> &) const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
 
       void
       get_velocity(LinearAlgebra::distributed::BlockVector<double> &) const override
@@ -302,6 +318,12 @@ namespace MeltPoolDG
 
       const DoFHandler<1> &
       get_dof_handler_velocity() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      const unsigned int &
+      get_dof_handler_idx_velocity() const override
       {
         AssertThrow(false, ExcNotImplemented());
       }

@@ -33,10 +33,10 @@ namespace MeltPoolDG
       /**
        * Constructor.
        */
-      AdvectionDiffusionOperationAdaflo(const ScratchData<dim> &             scratch_data,
-                                        const int                            advec_diff_dof_idx,
-                                        const int                            advec_diff_quad_idx,
-                                        const int                            velocity_dof_idx,
+      AdvectionDiffusionOperationAdaflo(const ScratchData<dim> &scratch_data,
+                                        const int advec_diff_dof_idx, // @todo: set zero inside?
+                                        const int advec_diff_quad_idx,
+                                        const int velocity_dof_idx,
                                         std::shared_ptr<SimulationBase<dim>> base_in,
                                         std::string operation_name = "advection_diffusion")
         : scratch_data(scratch_data)
@@ -98,8 +98,8 @@ namespace MeltPoolDG
       }
 
       void
-      set_initial_condition(const VectorType &     initial_solution_advected_field,
-                            const BlockVectorType &velocity_vec_in) override
+      set_initial_condition(const VectorType &initial_solution_advected_field,
+                            const VectorType &velocity_vec_in) override
       {
         /**
          *  set initial solution of advected field
@@ -118,7 +118,7 @@ namespace MeltPoolDG
        * Solver time step
        */
       void
-      solve(const double dt, const BlockVectorType &current_velocity) override
+      solve(const double dt, const VectorType &current_velocity) override
       {
         advected_field_old_old.reinit(advected_field_old);
         advected_field_old_old.copy_locally_owned_data_from(advected_field_old);
@@ -218,7 +218,7 @@ namespace MeltPoolDG
       }
 
       void
-      set_velocity(const LinearAlgebra::distributed::BlockVector<double> &vec)
+      set_velocity(const LinearAlgebra::distributed::Vector<double> &vec)
       {
         velocity_vec_old_old.zero_out_ghosts();
         velocity_vec_old.zero_out_ghosts();
@@ -226,11 +226,12 @@ namespace MeltPoolDG
 
         velocity_vec_old_old = velocity_vec_old;
         velocity_vec_old     = velocity_vec;
-        VectorTools::convert_block_vector_to_fe_sytem_vector(
-          vec,
-          scratch_data.get_dof_handler(adaflo_params.dof_index_ls),
-          velocity_vec,
-          scratch_data.get_dof_handler(adaflo_params.dof_index_vel));
+        velocity_vec         = vec;
+        // VectorTools::convert_block_vector_to_fe_sytem_vector(
+        // vec,
+        // scratch_data.get_dof_handler(adaflo_params.dof_index_ls),
+        // velocity_vec,
+        // scratch_data.get_dof_handler(adaflo_params.dof_index_vel));
 
         velocity_vec_old_old.update_ghost_values();
         velocity_vec_old.update_ghost_values();

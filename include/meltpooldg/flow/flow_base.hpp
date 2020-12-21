@@ -20,10 +20,16 @@ namespace MeltPoolDG
       solve() = 0;
 
       virtual void
+      get_velocity(LinearAlgebra::distributed::Vector<double> &vec) const = 0;
+
+      virtual void
       get_velocity(LinearAlgebra::distributed::BlockVector<double> &vec) const = 0;
 
       virtual const DoFHandler<dim> &
       get_dof_handler_velocity() const = 0;
+
+      virtual const unsigned int &
+      get_dof_handler_idx_velocity() const = 0;
 
       virtual const AffineConstraints<double> &
       get_constraints_velocity() const = 0;
