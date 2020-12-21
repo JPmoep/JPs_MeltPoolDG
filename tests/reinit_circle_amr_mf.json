@@ -26,6 +26,6 @@
   },
   "paraview":
   {
-    "paraview do output" : "false"
+    "paraview do output" : "true"
   }
 }
