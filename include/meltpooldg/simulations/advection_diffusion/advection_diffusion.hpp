@@ -107,6 +107,7 @@ namespace MeltPoolDG
         {
           (void)p;
           (void)component;
+
           return -1.0;
         }
       };

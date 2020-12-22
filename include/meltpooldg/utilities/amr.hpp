@@ -67,7 +67,6 @@ namespace MeltPoolDG
                 *data[j].first);
             solution_transfer[j]->prepare_for_coarsening_and_refinement(old_grid_solutions[j]);
           }
-
         /*
          *  Execute the grid refinement
          */
@@ -84,7 +83,6 @@ namespace MeltPoolDG
          */
         for (unsigned int j = 0; j < n; ++j)
           solution_transfer[j]->interpolate(new_grid_solutions[j]);
-
         post();
       }
     else

@@ -72,7 +72,6 @@ namespace MeltPoolDG
             /*
              * compute the advection velocity for the current time
              */
-            // compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
             compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
             advec_diff_operation->solve(dt, advection_velocity);
             /*
@@ -140,7 +139,7 @@ namespace MeltPoolDG
         hanging_node_constraints_velocity.close();
 
         constraints.clear();
-        constraints.reinit(scratch_data->get_locally_relevant_dofs());
+        constraints.reinit(scratch_data->get_locally_relevant_dofs(advec_diff_dof_idx));
         constraints.merge(hanging_node_constraints,
                           AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
         for (const auto &bc : base_in->get_dirichlet_bc(
@@ -303,8 +302,7 @@ namespace MeltPoolDG
          */
         advec_func.set_time(time_iterator.get_current_time());
         /*
-         *  work around to interpolate a vector-valued quantity on a scalar DoFHandler
-         *  @todo: could be shifted to a utility function
+         *  interpolate the values of the advection velocity
          */
         dealii::VectorTools::interpolate(scratch_data->get_mapping(),
                                          scratch_data->get_dof_handler(velocity_dof_idx),
@@ -319,7 +317,7 @@ namespace MeltPoolDG
           {
             const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
 
-            // advec_diff_operation.solution_advected_field.update_ghost_values();
+            advec_diff_operation->get_advected_field().update_ghost_values();
             advection_velocity.update_ghost_values();
             /*
              *  output advected field
@@ -350,7 +348,7 @@ namespace MeltPoolDG
                                                 parameters.paraview.n_digits_timestep,
                                                 parameters.paraview.n_groups);
 
-            // advec_diff_operation.solution_advected_field.zero_out_ghosts();
+            advec_diff_operation->get_advected_field().zero_out_ghosts();
             advection_velocity.zero_out_ghosts();
             /*
              * write data of boundary -- @todo: move to own utility function
@@ -390,7 +388,7 @@ namespace MeltPoolDG
           Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
 
           VectorType locally_relevant_solution;
-          locally_relevant_solution.reinit(scratch_data->get_partitioner());
+          locally_relevant_solution.reinit(scratch_data->get_partitioner(advec_diff_dof_idx));
           locally_relevant_solution.copy_locally_owned_data_from(
             advec_diff_operation->get_advected_field());
           constraints.distribute(locally_relevant_solution);
@@ -416,7 +414,7 @@ namespace MeltPoolDG
         };
 
         const auto post = [&]() {
-          hanging_node_constraints.distribute(advec_diff_operation->get_advected_field());
+          constraints.distribute(advec_diff_operation->get_advected_field());
         };
 
         const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
@@ -427,6 +425,7 @@ namespace MeltPoolDG
                                      setup_dof_system,
                                      base_in->parameters.amr,
                                      dof_handler);
+        constraints.distribute(advec_diff_operation->get_advected_field());
       }
 
     private:

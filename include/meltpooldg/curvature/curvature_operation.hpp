@@ -145,6 +145,8 @@ namespace MeltPoolDG
       virtual void
       reinit()
       {
+        if (!curvature_data.do_matrix_free)
+          curvature_operator->initialize_matrix_based<dim>(*scratch_data);
         normal_vector_operation.reinit();
       }
 

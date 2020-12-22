@@ -410,7 +410,7 @@ namespace MeltPoolDG
         };
 
         const auto post = [&]() {
-          hanging_node_constraints.distribute(level_set_operation.get_level_set());
+          constraints_dirichlet.distribute(level_set_operation.get_level_set());
           // hanging_node_constraints.distribute(level_set_operation.get_level_set_as_heaviside());
         };
 
