@@ -39,11 +39,12 @@ namespace MeltPoolDG
 
   struct AdaptiveMeshingData
   {
-    bool         do_amr                    = false;
-    double       upper_perc_to_refine      = 0.0;
-    double       lower_perc_to_coarsen     = 0.0;
-    unsigned int max_grid_refinement_level = 12;
-    unsigned int min_grid_refinement_level = 1;
+    bool   do_amr                      = false;
+    double upper_perc_to_refine        = 0.0;
+    double lower_perc_to_coarsen       = 0.0;
+    int    n_initial_refinement_cycles = 0;
+    int    max_grid_refinement_level   = 12;
+    int    min_grid_refinement_level   = 1;
   };
 
   template <typename number = double>
@@ -345,6 +346,13 @@ namespace MeltPoolDG
           "max grid refinement level",
           amr.max_grid_refinement_level,
           "Defines the number of maximum refinement steps one grid cell will be undergone.");
+        prm.add_parameter(
+          "min grid refinement level",
+          amr.min_grid_refinement_level,
+          "Defines the number of minimum refinement steps one grid cell will be undergone.");
+        prm.add_parameter("n initial refinement cycles",
+                          amr.n_initial_refinement_cycles,
+                          "Defines the number of initial refinements.");
       }
       prm.leave_subsection();
       /*
