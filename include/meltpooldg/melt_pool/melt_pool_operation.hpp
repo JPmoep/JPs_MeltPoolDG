@@ -94,6 +94,7 @@ namespace MeltPoolDG
         // 2) update the temperature field
         compute_temperature_vector(level_set_as_heaviside);
 
+        temperature.update_ghost_values();
         // 3) update the recoil pressure force
         scratch_data->get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &matrix_free,
@@ -139,6 +140,7 @@ namespace MeltPoolDG
           force_rhs,
           level_set_as_heaviside,
           zero_out);
+        temperature.zero_out_ghosts();
       }
 
       /**
@@ -287,11 +289,12 @@ namespace MeltPoolDG
 
       void
       set_flow_field_in_solid_regions_to_zero(const DoFHandler<dim> &    flow_dof_handler,
-                                              AffineConstraints<double> &flow_constraints)
+                                              AffineConstraints<double> &flow_constraints,
+                                              const unsigned int         flow_quad_idx_in)
       {
         FEValues<dim> fe_values(scratch_data->get_mapping(),
                                 flow_dof_handler.get_fe(),
-                                scratch_data->get_quadrature(flow_quad_idx),
+                                scratch_data->get_quadrature(flow_quad_idx_in),
                                 update_values);
 
         const unsigned int dofs_per_cell = flow_dof_handler.get_fe().n_dofs_per_cell();
@@ -303,12 +306,12 @@ namespace MeltPoolDG
                                              flow_dof_handler,
                                              support_points);
 
-        AffineConstraints<double> solid_constraints;
-
         IndexSet flow_locally_relevant_dofs;
         DoFTools::extract_locally_relevant_dofs(flow_dof_handler, flow_locally_relevant_dofs);
 
+        AffineConstraints<double> solid_constraints;
         solid_constraints.reinit(flow_locally_relevant_dofs);
+
         for (const auto &cell : flow_dof_handler.active_cell_iterators())
           if (cell->is_locally_owned())
             {
@@ -321,17 +324,17 @@ namespace MeltPoolDG
                   }
             }
         flow_constraints.merge(solid_constraints,
-                               AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
+                               AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
         flow_constraints.close();
       }
 
       void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
-        temperature.update_ghost_values();
-        solid.update_ghost_values();
-        vectors.push_back(&temperature);
-        vectors.push_back(&solid);
+        // temperature.update_ghost_values();
+        // solid.update_ghost_values();
+        // vectors.push_back(&temperature);
+        // vectors.push_back(&solid);
       }
 
 
