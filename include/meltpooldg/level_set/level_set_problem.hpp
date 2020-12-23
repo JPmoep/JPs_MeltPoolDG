@@ -116,14 +116,13 @@ namespace MeltPoolDG
          *  create quadrature rule
          */
 
-        unsigned int quad_idx = 0;
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          quad_idx = scratch_data->attach_quadrature(
+          ls_quad_idx = scratch_data->attach_quadrature(
             Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
         else
 #endif
-          quad_idx =
+          ls_quad_idx =
             scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
 
           // TODO: only do once!
@@ -171,7 +170,7 @@ namespace MeltPoolDG
                                        base_in,
                                        ls_dof_idx,
                                        ls_hanging_nodes_dof_idx,
-                                       quad_idx,
+                                       ls_quad_idx,
                                        reinit_dof_idx,
                                        curv_dof_idx,
                                        normal_dof_idx,
@@ -390,13 +389,21 @@ namespace MeltPoolDG
           constraints_dirichlet.distribute(locally_relevant_solution);
           locally_relevant_solution.update_ghost_values();
 
-          KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
-                                             scratch_data->get_face_quadrature(),
-                                             {},
-                                             locally_relevant_solution,
-                                             estimated_error_per_cell);
+          for (unsigned int i = 0; i < locally_relevant_solution.local_size(); ++i)
+            locally_relevant_solution.local_element(i) =
+              (1.0 - locally_relevant_solution.local_element(i) *
+                       locally_relevant_solution.local_element(i));
 
-          parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
+          locally_relevant_solution.update_ghost_values();
+
+          dealii::VectorTools::integrate_difference(scratch_data->get_dof_handler(ls_dof_idx),
+                                                    locally_relevant_solution,
+                                                    Functions::ZeroFunction<dim>(),
+                                                    estimated_error_per_cell,
+                                                    scratch_data->get_quadrature(ls_quad_idx),
+                                                    dealii::VectorTools::L2_norm);
+
+          parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(
             tria,
             estimated_error_per_cell,
             base_in->parameters.amr.upper_perc_to_refine,
@@ -411,19 +418,16 @@ namespace MeltPoolDG
 
         const auto post = [&]() {
           constraints_dirichlet.distribute(level_set_operation.get_level_set());
-          // hanging_node_constraints.distribute(level_set_operation.get_level_set_as_heaviside());
         };
 
         const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
 
-        std::cout << " before refine " << std::endl;
         refine_grid<dim, VectorType>(mark_cells_for_refinement,
                                      attach_vectors,
                                      post,
                                      setup_dof_system,
                                      base_in->parameters.amr,
                                      dof_handler);
-        std::cout << " after refine " << std::endl;
       }
 
     private:
@@ -441,12 +445,14 @@ namespace MeltPoolDG
       LevelSetOperation<dim> level_set_operation;
       VectorType             initial_solution;
       unsigned int           ls_dof_idx;
+      unsigned int           ls_quad_idx;
       unsigned int           ls_zero_bc_idx;
       unsigned int           ls_hanging_nodes_dof_idx;
       unsigned int           vel_dof_idx;
       const unsigned int &   curv_dof_idx   = ls_hanging_nodes_dof_idx;
       const unsigned int &   normal_dof_idx = ls_hanging_nodes_dof_idx;
-      const unsigned int &   reinit_dof_idx = ls_hanging_nodes_dof_idx;
+      const unsigned int &   reinit_dof_idx =
+        ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG
