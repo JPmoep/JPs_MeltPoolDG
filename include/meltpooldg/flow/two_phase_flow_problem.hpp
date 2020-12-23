@@ -530,37 +530,40 @@ namespace MeltPoolDG
             /*
              * curvature
              */
-            if ((parameters.amr.n_initial_refinement_cycles==0) && (time_step == 0)) //@todo: find a better solution
+            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
+                (time_step == 0)) //@todo: find a better solution
               data_out.add_data_vector(level_set_operation.get_curvature(), "curvature");
             /*
              *  normal vector field
              */
-            if ((parameters.amr.n_initial_refinement_cycles==0) && (time_step == 0)) //@todo: find a better solution
-            {
-              for (unsigned int d = 0; d < dim; ++d)
-                data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
-                "normal_" + std::to_string(d));
-            }
+            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
+                (time_step == 0)) //@todo: find a better solution
+              {
+                for (unsigned int d = 0; d < dim; ++d)
+                  data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
+                                           "normal_" + std::to_string(d));
+              }
             /*
              *  flow velocity
              */
-             std::vector<DataComponentInterpretation::DataComponentInterpretation>
-             vector_component_interpretation(
-             dim, DataComponentInterpretation::component_is_part_of_vector);
+            std::vector<DataComponentInterpretation::DataComponentInterpretation>
+              vector_component_interpretation(
+                dim, DataComponentInterpretation::component_is_part_of_vector);
 
             data_out.add_data_vector(flow_operation->get_dof_handler_velocity(),
-            flow_operation->get_velocity(),
-            std::vector<std::string>(dim, "velocity"),
-            vector_component_interpretation);
+                                     flow_operation->get_velocity(),
+                                     std::vector<std::string>(dim, "velocity"),
+                                     vector_component_interpretation);
 
             /*
              * force vector (surface tension + gravity force)
              */
-            if ((parameters.amr.n_initial_refinement_cycles==0) && (time_step == 0)) //@todo: find a better solution
+            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
+                (time_step == 0)) //@todo: find a better solution
               data_out.add_data_vector(flow_operation->get_dof_handler_velocity(),
-              force_rhs,
-              std::vector<std::string>(dim, "force_rhs"),
-              vector_component_interpretation);
+                                       force_rhs,
+                                       std::vector<std::string>(dim, "force_rhs"),
+                                       vector_component_interpretation);
             /*
              * density
              */
@@ -572,38 +575,42 @@ namespace MeltPoolDG
             /*
              * heaviside
              */
-            if ((parameters.amr.n_initial_refinement_cycles==0) && (time_step == 0)) //@todo: find a better solution
+            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
+                (time_step == 0)) //@todo: find a better solution
               data_out.add_data_vector(dof_handler,
-              level_set_operation.level_set_as_heaviside,
-              "heaviside");
+                                       level_set_operation.level_set_as_heaviside,
+                                       "heaviside");
             /*
              * distance to zero level set
              */
-            if ((parameters.amr.n_initial_refinement_cycles==0) && (time_step == 0)) //@todo: find a better solution
+            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
+                (time_step == 0)) //@todo: find a better solution
               data_out.add_data_vector(dof_handler,
-              level_set_operation.distance_to_level_set,
-              "distance");
+                                       level_set_operation.distance_to_level_set,
+                                       "distance");
             /*
              * pressure
              */
             data_out.add_data_vector(flow_operation->get_dof_handler_pressure(),
-            pressure,
-            "pressure");
+                                     pressure,
+                                     "pressure");
             /*
              * temperature
              */
             if (parameters.base.problem_name == "melt_pool")
-            {
-            if ((parameters.amr.n_initial_refinement_cycles==0) && (time_step == 0)) //@todo: find a better solution
-               data_out.add_data_vector(dof_handler,
-               melt_pool_operation.temperature,
-              "temperature");
-            /*
-             * solid
-             */
-            if ((parameters.amr.n_initial_refinement_cycles==0) && (time_step == 0)) //@todo: find a better solution
-              data_out.add_data_vector(dof_handler, melt_pool_operation.solid, "solid");
-            }
+              {
+                if ((parameters.amr.n_initial_refinement_cycles == 0) &&
+                    (time_step == 0)) //@todo: find a better solution
+                  data_out.add_data_vector(dof_handler,
+                                           melt_pool_operation.temperature,
+                                           "temperature");
+                /*
+                 * solid
+                 */
+                if ((parameters.amr.n_initial_refinement_cycles == 0) &&
+                    (time_step == 0)) //@todo: find a better solution
+                  data_out.add_data_vector(dof_handler, melt_pool_operation.solid, "solid");
+              }
 
             data_out.build_patches(scratch_data->get_mapping());
             data_out.write_vtu_with_pvtu_record("./",

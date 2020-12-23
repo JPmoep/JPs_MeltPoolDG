@@ -123,7 +123,7 @@ namespace MeltPoolDG
       solve() override
       {
         navier_stokes.get_constraints_u().set_zero(navier_stokes.user_rhs.block(0));
-        // navier_stokes.get_constraints_p().set_zero(navier_stokes.user_rhs.block(1));
+        // navier_stokes.get_constraints_p().set_zero(navier_stokes.user_rhs.block(1)); // @todo -- needed?
         navier_stokes.advance_time_step();
       }
 

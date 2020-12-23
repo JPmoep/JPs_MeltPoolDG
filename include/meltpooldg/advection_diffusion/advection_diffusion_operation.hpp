@@ -166,6 +166,12 @@ namespace MeltPoolDG
         vectors.push_back(&solution_advected_field);
       }
 
+      void
+      attach_output_vectors()
+      {
+        /*todo*/
+      }
+
     private:
       void
       set_advection_diffusion_parameters(const Parameters<double> &data_in)

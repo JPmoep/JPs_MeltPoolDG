@@ -40,8 +40,6 @@ namespace MeltPoolDG
                                         std::shared_ptr<SimulationBase<dim>> base_in,
                                         std::string operation_name = "advection_diffusion")
         : scratch_data(scratch_data)
-        , advec_diff_dof_idx(advec_diff_dof_idx)
-        , advec_diff_quad_idx(advec_diff_quad_idx)
       {
         /**
          * set parameters of adaflo
@@ -91,9 +89,9 @@ namespace MeltPoolDG
          */
         initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
                                                      scratch_data.get_constraint(
-                                                       advec_diff_dof_idx),
-                                                     advec_diff_dof_idx,
-                                                     advec_diff_quad_idx,
+                                                       adaflo_params.dof_index_ls),
+                                                     adaflo_params.dof_index_ls,
+                                                     adaflo_params.quad_index,
                                                      preconditioner);
       }
 
@@ -229,11 +227,6 @@ namespace MeltPoolDG
         velocity_vec_old_old = velocity_vec_old;
         velocity_vec_old     = velocity_vec;
         velocity_vec         = vec;
-        // VectorTools::convert_block_vector_to_fe_sytem_vector(
-        // vec,
-        // scratch_data.get_dof_handler(adaflo_params.dof_index_ls),
-        // velocity_vec,
-        // scratch_data.get_dof_handler(adaflo_params.dof_index_vel));
 
         velocity_vec_old_old.update_ghost_values();
         velocity_vec_old.update_ghost_values();
@@ -264,10 +257,6 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &scratch_data;
-
-      const unsigned int advec_diff_dof_idx;
-      const unsigned int advec_diff_quad_idx;
-
       /**
        *  advected field
        */

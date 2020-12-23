@@ -46,9 +46,6 @@ namespace MeltPoolDG
                                const VectorType &        advected_field, //@todo: make const
                                const Parameters<double> &data_in)
         : scratch_data(scratch_data)
-        , advec_diff_dof_idx(advec_diff_dof_idx)
-        , curv_dof_idx(curv_dof_idx)
-        , curv_quad_idx(curv_quad_idx)
       {
         (void)normal_vec_dof_idx;
 
@@ -100,7 +97,7 @@ namespace MeltPoolDG
         initialize_vectors();
 
         compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
-                                    advec_diff_dof_idx,
+                                    curv_adaflo_params.dof_index_ls,
                                     cell_diameters,
                                     cell_diameter_min,
                                     cell_diameter_max);
@@ -109,16 +106,17 @@ namespace MeltPoolDG
          * initialize the preconditioner -->  @todo: currently not used in adaflo
          */
         initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
-                                                     scratch_data.get_constraint(curv_dof_idx),
-                                                     curv_dof_idx,
-                                                     curv_quad_idx,
+                                                     scratch_data.get_constraint(
+                                                       curv_adaflo_params.dof_index_curvature),
+                                                     curv_adaflo_params.dof_index_curvature,
+                                                     curv_adaflo_params.quad_index,
                                                      preconditioner);
 
         initialize_projection_matrix<dim, double, VectorizedArray<double>>(
           scratch_data.get_matrix_free(),
-          scratch_data.get_constraint(curv_dof_idx),
-          curv_dof_idx,
-          curv_quad_idx,
+          scratch_data.get_constraint(curv_adaflo_params.dof_index_curvature),
+          curv_adaflo_params.dof_index_curvature,
+          curv_adaflo_params.quad_index,
           cell_diameter_max, // @todo
           cell_diameter_min, // @todo
           cell_diameters,
@@ -180,7 +178,8 @@ namespace MeltPoolDG
         curv_adaflo_params.epsilon                 = 1.0;   //@ todo
         curv_adaflo_params.approximate_projections = false; //@ todo
         curv_adaflo_params.curvature_correction    = false; //@ todo
-        // curv_adaflo_params.damping_scale_factor = parameters.normal_vec.damping_scale_factor;
+        // curv_adaflo_params.damping_scale_factor = parameters.normal_vec.damping_scale_factor; //@
+        // todo
       }
 
       void
@@ -200,11 +199,6 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &scratch_data;
-
-      const unsigned int advec_diff_dof_idx;
-      const unsigned int curv_dof_idx;
-      const unsigned int curv_quad_idx;
-
       /**
        *  Vectors for computing the normals
        */

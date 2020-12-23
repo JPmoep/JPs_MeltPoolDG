@@ -75,11 +75,6 @@ namespace MeltPoolDG
         AssertThrow(data.diffusivity >= 0.0,
                     ExcMessage("Advection diffusion operator: diffusivity is smaller than zero!"));
 
-        //// @todo: the case where the size of the velocity dof vector is
-        //// different than the level set field must be added
-        // AssertThrow(velocity_dof_idx == this->dof_idx,
-        // ExcMessage("not implemented; try matrix free operation"));
-
         advected_field_old.update_ghost_values();
 
         const FEValuesExtractors::Vector velocities(0);
