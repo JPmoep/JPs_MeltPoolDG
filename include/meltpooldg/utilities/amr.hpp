@@ -31,17 +31,32 @@ namespace MeltPoolDG
       {
         if (mark_cells_for_refinement(*tria) == false)
           return;
-
         /*
          *  Limit the maximum and minimum refinement levels of cells of the grid.
          */
         if (tria->n_levels() > amr.max_grid_refinement_level)
           for (auto &cell : tria->active_cell_iterators_on_level(amr.max_grid_refinement_level))
             cell->clear_refine_flag();
-        if (tria->n_levels() < amr.min_grid_refinement_level)
-          for (auto &cell : tria->active_cell_iterators_on_level(amr.min_grid_refinement_level))
-            cell->clear_coarsen_flag();
 
+        for (auto &cell : tria->active_cell_iterators())
+          {
+            if (cell->is_locally_owned())
+              {
+                if (cell->level() <= amr.min_grid_refinement_level)
+                  cell->clear_coarsen_flag();
+                /*
+                 *  do not coarsen/refine cells along boundary
+                 */
+                for (auto &face : cell->face_iterators())
+                  if (face->at_boundary())
+                    {
+                      if (cell->refine_flag_set())
+                        cell->clear_refine_flag();
+                      else
+                        cell->clear_coarsen_flag();
+                    }
+              }
+          }
         /*
          *  Initialize the triangulation change from the old grid to the new grid
          */
@@ -61,7 +76,6 @@ namespace MeltPoolDG
 
             for (const auto &i : new_grid_solutions[j])
               old_grid_solutions[j].push_back(i);
-
             solution_transfer[j] =
               std::make_shared<parallel::distributed::SolutionTransfer<dim, VectorType>>(
                 *data[j].first);
@@ -71,12 +85,10 @@ namespace MeltPoolDG
          *  Execute the grid refinement
          */
         tria->execute_coarsening_and_refinement();
-
         /*
          *  update dof-related scratch data to match the current triangulation
          */
         setup_dof_system();
-
         /*
          *  interpolate the given solution to the new discretization
          *
