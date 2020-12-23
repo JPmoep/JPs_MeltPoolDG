@@ -32,10 +32,8 @@ namespace MeltPoolDG
        * Constructor.
        */
       AdafloWrapper(ScratchData<dim, dim, double, VectorizedArray<double>> &scratch_data,
-                    const unsigned int                                      idx,
                     std::shared_ptr<SimulationBase<dim>>                    base_in)
         : scratch_data(scratch_data)
-        , dof_handler_meltpool(scratch_data.get_dof_handler(idx))
         , timer(std::cout, TimerOutput::never, TimerOutput::wall_times)
         , navier_stokes(base_in->parameters.adaflo_params.get_parameters(),
                         *const_cast<Triangulation<dim> *>(&scratch_data.get_triangulation()),
@@ -95,7 +93,9 @@ namespace MeltPoolDG
                                          navier_stokes.get_dof_handler_u(),
                                          *base_in->get_initial_condition("navier_stokes_u"),
                                          navier_stokes.solution.block(0));
-        // navier_stokes.hanging_node_constraints_u.distribute(solution.block(0)); // TODO needed?
+
+        // navier_stokes.get_constraints_u().distribute(navier_stokes.solution.block(0)); // TODO
+        // needed?
         navier_stokes.solution.update_ghost_values();
         navier_stokes.solution_old.update_ghost_values();
       }
@@ -103,7 +103,9 @@ namespace MeltPoolDG
       void
       reinit_1()
       {
+        // clear constraints and setup hanging node constraints
         navier_stokes.distribute_dofs();
+        // fill constraints_u and constraints_p
         navier_stokes.initialize_data_structures();
       }
 
@@ -121,13 +123,20 @@ namespace MeltPoolDG
       solve() override
       {
         navier_stokes.get_constraints_u().set_zero(navier_stokes.user_rhs.block(0));
+        // navier_stokes.get_constraints_p().set_zero(navier_stokes.user_rhs.block(1));
         navier_stokes.advance_time_step();
       }
 
-      void
-      get_velocity(LinearAlgebra::distributed::Vector<double> &vec) const override
+      const LinearAlgebra::distributed::Vector<double> &
+      get_velocity() const override
       {
-        vec = navier_stokes.solution.block(0);
+        return navier_stokes.solution.block(0);
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_velocity() override
+      {
+        return navier_stokes.solution.block(0);
       }
 
       const DoFHandler<dim> &
@@ -140,6 +149,12 @@ namespace MeltPoolDG
       get_dof_handler_idx_velocity() const override
       {
         return dof_index_u;
+      }
+
+      const unsigned int &
+      get_quad_idx_velocity() const override
+      {
+        return quad_index_u;
       }
 
       const AffineConstraints<double> &
@@ -160,10 +175,22 @@ namespace MeltPoolDG
         return navier_stokes.solution.block(1);
       }
 
+      LinearAlgebra::distributed::Vector<double> &
+      get_pressure() override
+      {
+        return navier_stokes.solution.block(1);
+      }
+
       const DoFHandler<dim> &
       get_dof_handler_pressure() const override
       {
         return navier_stokes.get_dof_handler_p();
+      }
+
+      const unsigned int &
+      get_dof_handler_idx_pressure() const override
+      {
+        return dof_index_p;
       }
 
       const AffineConstraints<double> &
@@ -233,11 +260,6 @@ namespace MeltPoolDG
     private:
       ScratchData<dim, dim, double, VectorizedArray<double>> &scratch_data;
       /**
-       * Reference to the dof_handler attached to scratch_data in the two_phase_flow_problem class
-       */
-      const DoFHandler<dim> &dof_handler_meltpool;
-
-      /**
        * Timer
        */
       TimerOutput timer;
@@ -268,11 +290,9 @@ namespace MeltPoolDG
        * Dummy constructor.
        */
       AdafloWrapper(ScratchData<1, 1, double, VectorizedArray<double>> &scratch_data,
-                    const unsigned int                                  idx,
                     std::shared_ptr<SimulationBase<1>>                  base_in)
       {
         (void)scratch_data;
-        (void)idx;
         (void)base_in;
 
         AssertThrow(false, ExcNotImplemented());
@@ -297,8 +317,14 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
-      void
-      get_velocity(LinearAlgebra::distributed::Vector<double> &) const override
+      const LinearAlgebra::distributed::Vector<double> &
+      get_velocity() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_velocity() override
       {
         AssertThrow(false, ExcNotImplemented());
       }
@@ -311,6 +337,12 @@ namespace MeltPoolDG
 
       const unsigned int &
       get_dof_handler_idx_velocity() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      const unsigned int &
+      get_quad_idx_velocity() const override
       {
         AssertThrow(false, ExcNotImplemented());
       }
@@ -333,8 +365,20 @@ namespace MeltPoolDG
         AssertThrow(false, ExcNotImplemented());
       }
 
+      LinearAlgebra::distributed::Vector<double> &
+      get_pressure() override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
       const DoFHandler<1> &
       get_dof_handler_pressure() const override
+      {
+        AssertThrow(false, ExcNotImplemented());
+      }
+
+      const unsigned int &
+      get_dof_handler_idx_pressure() const override
       {
         AssertThrow(false, ExcNotImplemented());
       }
