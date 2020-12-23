@@ -394,8 +394,8 @@ namespace MeltPoolDG
           constraints.distribute(locally_relevant_solution);
           locally_relevant_solution.update_ghost_values();
 
-          KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
-                                             scratch_data->get_face_quadrature(),
+          KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(advec_diff_dof_idx),
+                                             scratch_data->get_face_quadrature(advec_diff_quad_idx),
                                              {},
                                              locally_relevant_solution,
                                              estimated_error_per_cell);
