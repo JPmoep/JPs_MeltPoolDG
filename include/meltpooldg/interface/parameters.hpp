@@ -43,7 +43,7 @@ namespace MeltPoolDG
     double upper_perc_to_refine        = 0.0;
     double lower_perc_to_coarsen       = 0.0;
     int    n_initial_refinement_cycles = 0;
-    int    max_grid_refinement_level   = 12;
+    unsigned int max_grid_refinement_level   = 12;
     int    min_grid_refinement_level   = 1;
   };
 
