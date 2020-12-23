@@ -8,7 +8,7 @@
     "do print parameters": "false"
   },
   "reinitialization" : {
-    "reinit max n steps":     "30",
+    "reinit max n steps":     "5",
     "reinit modeltype":       "olsson2007",
     "reinit dtau":            "0.005",
     "reinit do matrix free":  "true",

@@ -44,9 +44,6 @@ namespace MeltPoolDG
                                   const VectorType &        advected_field, //@todo: make const
                                   const Parameters<double> &data_in)
         : scratch_data(scratch_data)
-        , advec_diff_dof_idx(advec_diff_dof_idx)
-        , normal_vec_dof_idx(normal_vec_dof_idx)
-        , normal_vec_quad_idx(normal_vec_quad_idx)
         , normal_vector_field(dim)
         , rhs(dim)
       {
@@ -91,7 +88,7 @@ namespace MeltPoolDG
         initialize_vectors();
 
         compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
-                                    advec_diff_dof_idx,
+                                    normal_vec_adaflo_params.dof_index_ls,
                                     cell_diameters,
                                     cell_diameter_min,
                                     cell_diameter_max);
@@ -101,17 +98,17 @@ namespace MeltPoolDG
          */
         initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
                                                      scratch_data.get_constraint(
-                                                       normal_vec_dof_idx),
-                                                     normal_vec_dof_idx,
-                                                     normal_vec_quad_idx,
+                                                       normal_vec_adaflo_params.dof_index_normal),
+                                                     normal_vec_adaflo_params.dof_index_normal,
+                                                     normal_vec_adaflo_params.quad_index,
                                                      preconditioner);
 
 
         initialize_projection_matrix<dim, double, VectorizedArray<double>>(
           scratch_data.get_matrix_free(),
-          scratch_data.get_constraint(normal_vec_dof_idx),
-          normal_vec_dof_idx,
-          normal_vec_quad_idx,
+          scratch_data.get_constraint(normal_vec_adaflo_params.dof_index_normal),
+          normal_vec_adaflo_params.dof_index_normal,
+          normal_vec_adaflo_params.quad_index,
           cell_diameter_max, // @todo
           cell_diameter_min, // @todo
           scratch_data.get_cell_diameters(),
@@ -182,9 +179,6 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &scratch_data;
-      const unsigned int      advec_diff_dof_idx;
-      const unsigned int      normal_vec_dof_idx;
-      const unsigned int      normal_vec_quad_idx;
       /**
        *  Vectors for computing the normals
        */

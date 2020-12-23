@@ -198,7 +198,7 @@ namespace MeltPoolDG
       return field_conditions_map[operation_name]->initial_field;
     }
 
-    const std::shared_ptr<TensorFunction<1, dim>> &
+    const std::shared_ptr<Function<dim>> &
     get_advection_field(const std::string operation_name)
     {
       return field_conditions_map[operation_name]->advection_field;

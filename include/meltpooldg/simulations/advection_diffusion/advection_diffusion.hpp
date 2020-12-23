@@ -57,15 +57,15 @@ namespace MeltPoolDG
       };
 
       template <int dim>
-      class AdvectionField : public TensorFunction<1, dim>
+      class AdvectionField : public Function<dim>
       {
       public:
         AdvectionField()
-          : TensorFunction<1, dim>()
+          : Function<dim>(dim)
         {}
 
-        Tensor<1, dim>
-        value(const Point<dim> &p) const override
+        double
+        value(const Point<dim> &p, const unsigned int component) const override
         {
           Tensor<1, dim> value_;
 
@@ -80,7 +80,14 @@ namespace MeltPoolDG
           else
             AssertThrow(false, ExcMessage("Advection field for dim!=2 not implemented"));
 
-          return value_;
+          return value_[component];
+        }
+
+        void
+        vector_value(const Point<dim> &p, Vector<double> &values) const override
+        {
+          for (unsigned int c = 0; c < this->n_components; ++c)
+            values(c) = value(p, c);
         }
       };
 
@@ -100,6 +107,7 @@ namespace MeltPoolDG
         {
           (void)p;
           (void)component;
+
           return -1.0;
         }
       };

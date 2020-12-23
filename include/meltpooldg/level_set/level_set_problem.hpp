@@ -102,10 +102,10 @@ namespace MeltPoolDG
         dof_handler.reinit(*base_in->triangulation);
         dof_handler_velocity.reinit(*base_in->triangulation);
 
-        this->dof_no_bc_idx = scratch_data->attach_dof_handler(dof_handler);
-        this->dof_idx       = scratch_data->attach_dof_handler(dof_handler);
-        ls_zero_bc_idx      = scratch_data->attach_dof_handler(dof_handler);
-        vel_dof_idx         = scratch_data->attach_dof_handler(dof_handler_velocity);
+        this->ls_hanging_nodes_dof_idx = scratch_data->attach_dof_handler(dof_handler);
+        this->ls_dof_idx               = scratch_data->attach_dof_handler(dof_handler);
+        ls_zero_bc_idx                 = scratch_data->attach_dof_handler(dof_handler);
+        vel_dof_idx                    = scratch_data->attach_dof_handler(dof_handler_velocity);
 
         scratch_data->attach_constraint_matrix(hanging_node_constraints);
         scratch_data->attach_constraint_matrix(constraints_dirichlet);
@@ -116,14 +116,13 @@ namespace MeltPoolDG
          *  create quadrature rule
          */
 
-        unsigned int quad_idx = 0;
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          quad_idx = scratch_data->attach_quadrature(
+          ls_quad_idx = scratch_data->attach_quadrature(
             Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
         else
 #endif
-          quad_idx =
+          ls_quad_idx =
             scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
 
           // TODO: only do once!
@@ -168,12 +167,13 @@ namespace MeltPoolDG
         level_set_operation.initialize(scratch_data,
                                        initial_solution,
                                        advection_velocity,
-                                       base_in->parameters,
-                                       dof_idx,
-                                       dof_no_bc_idx,
-                                       quad_idx,
-                                       dof_idx,
                                        base_in,
+                                       ls_dof_idx,
+                                       ls_hanging_nodes_dof_idx,
+                                       ls_quad_idx,
+                                       reinit_dof_idx,
+                                       curv_dof_idx,
+                                       normal_dof_idx,
                                        vel_dof_idx,
                                        ls_zero_bc_idx);
       }
@@ -208,7 +208,8 @@ namespace MeltPoolDG
          *  dirichlet constraints are supported)
          */
         hanging_node_constraints.clear();
-        hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs(dof_no_bc_idx));
+        hanging_node_constraints.reinit(
+          scratch_data->get_locally_relevant_dofs(ls_hanging_nodes_dof_idx));
         DoFTools::make_hanging_node_constraints(dof_handler, hanging_node_constraints);
         hanging_node_constraints.close();
 
@@ -220,7 +221,7 @@ namespace MeltPoolDG
         hanging_node_constraints_velocity.close();
 
         constraints_dirichlet.clear();
-        constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs(dof_idx));
+        constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs(ls_dof_idx));
         constraints_dirichlet.merge(
           hanging_node_constraints,
           AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
@@ -267,27 +268,18 @@ namespace MeltPoolDG
       }
 
       void
-      compute_advection_velocity(TensorFunction<1, dim> &advec_func)
+      compute_advection_velocity(Function<dim> &advec_func)
       {
-        scratch_data->initialize_dof_vector(advection_velocity);
+        scratch_data->initialize_dof_vector(advection_velocity, vel_dof_idx);
         /*
          *  set the current time to the advection field function
          */
         advec_func.set_time(time_iterator.get_current_time());
-        /*
-         *  work around to interpolate a vector-valued quantity on a scalar DoFHandler
-         *  @todo: could be shifted to a utility function
-         */
-        for (auto d = 0; d < dim; ++d)
-          {
-            dealii::VectorTools::interpolate(scratch_data->get_mapping(),
-                                             scratch_data->get_dof_handler(),
-                                             ScalarFunctionFromFunctionObject<dim>(
-                                               [&](const Point<dim> &p) {
-                                                 return advec_func.value(p)[d];
-                                               }),
-                                             advection_velocity.block(d));
-          }
+
+        dealii::VectorTools::interpolate(scratch_data->get_mapping(),
+                                         scratch_data->get_dof_handler(vel_dof_idx),
+                                         advec_func,
+                                         advection_velocity);
         advection_velocity.update_ghost_values();
       }
       /*
@@ -327,13 +319,14 @@ namespace MeltPoolDG
             /*
              *  output advection velocity
              */
-            if (parameters.paraview.print_advection)
-              {
-                for (auto d = 0; d < dim; ++d)
-                  data_out.add_data_vector(dof_handler,
-                                           advection_velocity.block(d),
-                                           "advection_velocity_" + std::to_string(d));
-              }
+            std::vector<DataComponentInterpretation::DataComponentInterpretation>
+              vector_component_interpretation(
+                dim, DataComponentInterpretation::component_is_part_of_vector);
+
+            data_out.add_data_vector(dof_handler_velocity,
+                                     advection_velocity,
+                                     std::vector<std::string>(dim, "velocity"),
+                                     vector_component_interpretation);
             /*
              * write data to vtu file
              */
@@ -390,19 +383,27 @@ namespace MeltPoolDG
           Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
 
           VectorType locally_relevant_solution;
-          locally_relevant_solution.reinit(scratch_data->get_partitioner());
+          locally_relevant_solution.reinit(scratch_data->get_partitioner(ls_dof_idx));
           locally_relevant_solution.copy_locally_owned_data_from(
             level_set_operation.get_level_set());
           constraints_dirichlet.distribute(locally_relevant_solution);
           locally_relevant_solution.update_ghost_values();
 
-          KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
-                                             scratch_data->get_face_quadrature(),
-                                             {},
-                                             locally_relevant_solution,
-                                             estimated_error_per_cell);
+          for (unsigned int i = 0; i < locally_relevant_solution.local_size(); ++i)
+            locally_relevant_solution.local_element(i) =
+              (1.0 - locally_relevant_solution.local_element(i) *
+                       locally_relevant_solution.local_element(i));
 
-          parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
+          locally_relevant_solution.update_ghost_values();
+
+          dealii::VectorTools::integrate_difference(scratch_data->get_dof_handler(ls_dof_idx),
+                                                    locally_relevant_solution,
+                                                    Functions::ZeroFunction<dim>(),
+                                                    estimated_error_per_cell,
+                                                    scratch_data->get_quadrature(ls_quad_idx),
+                                                    dealii::VectorTools::L2_norm);
+
+          parallel::distributed::GridRefinement::refine_and_coarsen_fixed_number(
             tria,
             estimated_error_per_cell,
             base_in->parameters.amr.upper_perc_to_refine,
@@ -416,7 +417,7 @@ namespace MeltPoolDG
         };
 
         const auto post = [&]() {
-          hanging_node_constraints.distribute(level_set_operation.get_level_set());
+          constraints_dirichlet.distribute(level_set_operation.get_level_set());
         };
 
         const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
@@ -438,15 +439,20 @@ namespace MeltPoolDG
       AffineConstraints<double> hanging_node_constraints_with_zero_dirichlet;
 
       std::shared_ptr<ScratchData<dim>> scratch_data;
-      BlockVectorType                   advection_velocity;
+      VectorType                        advection_velocity;
 
       TimeIterator<double>   time_iterator;
       LevelSetOperation<dim> level_set_operation;
       VectorType             initial_solution;
-      unsigned int           vel_dof_idx;
+      unsigned int           ls_dof_idx;
+      unsigned int           ls_quad_idx;
       unsigned int           ls_zero_bc_idx;
-      unsigned int           dof_no_bc_idx;
-      unsigned int           dof_idx;
+      unsigned int           ls_hanging_nodes_dof_idx;
+      unsigned int           vel_dof_idx;
+      const unsigned int &   curv_dof_idx   = ls_hanging_nodes_dof_idx;
+      const unsigned int &   normal_dof_idx = ls_hanging_nodes_dof_idx;
+      const unsigned int &   reinit_dof_idx =
+        ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG

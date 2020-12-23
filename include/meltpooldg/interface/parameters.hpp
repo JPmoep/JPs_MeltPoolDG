@@ -39,11 +39,12 @@ namespace MeltPoolDG
 
   struct AdaptiveMeshingData
   {
-    bool         do_amr                    = false;
-    double       upper_perc_to_refine      = 0.0;
-    double       lower_perc_to_coarsen     = 0.0;
-    unsigned int max_grid_refinement_level = 12;
-    unsigned int min_grid_refinement_level = 1;
+    bool         do_amr                      = false;
+    double       upper_perc_to_refine        = 0.0;
+    double       lower_perc_to_coarsen       = 0.0;
+    int          n_initial_refinement_cycles = 0;
+    unsigned int max_grid_refinement_level   = 12;
+    int          min_grid_refinement_level   = 1;
   };
 
   template <typename number = double>
@@ -137,6 +138,7 @@ namespace MeltPoolDG
     std::string melt_pool_shape                      = "ellipse";
     number      scan_speed                           = 0.0;
     bool        do_move_laser                        = false;
+    bool        set_velocity_to_zero_in_solid        = false;
     number      ambient_temperature                  = 0.0;
     number      domain_x_min                         = 0.0;
     number      domain_y_min                         = 0.0;
@@ -345,6 +347,13 @@ namespace MeltPoolDG
           "max grid refinement level",
           amr.max_grid_refinement_level,
           "Defines the number of maximum refinement steps one grid cell will be undergone.");
+        prm.add_parameter(
+          "min grid refinement level",
+          amr.min_grid_refinement_level,
+          "Defines the number of minimum refinement steps one grid cell will be undergone.");
+        prm.add_parameter("n initial refinement cycles",
+                          amr.n_initial_refinement_cycles,
+                          "Defines the number of initial refinements.");
       }
       prm.leave_subsection();
       /*
@@ -638,6 +647,10 @@ namespace MeltPoolDG
           mp.do_move_laser,
           "Set this parameter to true to move the laser in x-direction with the given parameter scan speed "
           "(in case of an analytical temperature field).");
+        prm.add_parameter(
+          "mp set velocity to zero in solid",
+          mp.set_velocity_to_zero_in_solid,
+          "Set this parameter to true to constrain the flow velocity in the solid domain.");
         prm.add_parameter("mp ambient temperature",
                           mp.ambient_temperature,
                           "Ambient temperature in the inert gas.");

@@ -123,12 +123,12 @@ namespace MeltPoolDG
               Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
           else
 #endif
-            quad_idx =
+            reinit_quad_idx =
               scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
 
           scratch_data->attach_dof_handler(dof_handler);
-          dof_idx = scratch_data->attach_constraint_matrix(constraints);
-
+          reinit_dof_idx = scratch_data->attach_constraint_matrix(constraints);
+          normal_dof_idx = reinit_dof_idx;
           /*
            *  setup DoFHandler
            */
@@ -178,21 +178,25 @@ namespace MeltPoolDG
           {
             reinit_operation = std::make_shared<ReinitializationOperation<dim>>();
 
-            reinit_operation->initialize(
-              scratch_data, solution_level_set, base_in->parameters, dof_idx, quad_idx);
+            reinit_operation->initialize(scratch_data,
+                                         solution_level_set,
+                                         base_in->parameters,
+                                         reinit_dof_idx,
+                                         reinit_quad_idx,
+                                         normal_dof_idx);
           }
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         else if (base_in->parameters.reinit.implementation == "adaflo")
           {
             AssertThrow(base_in->parameters.reinit.solver.do_matrix_free, ExcNotImplemented());
 
-            reinit_operation =
-              std::make_shared<ReinitializationOperationAdaflo<dim>>(*scratch_data,
-                                                                     dof_idx,
-                                                                     quad_idx,
-                                                                     dof_idx, // normal vec @todo
-                                                                     solution_level_set,
-                                                                     base_in->parameters);
+            reinit_operation = std::make_shared<ReinitializationOperationAdaflo<dim>>(
+              *scratch_data,
+              reinit_dof_idx,
+              reinit_quad_idx,
+              normal_dof_idx, // normal vec @todo
+              solution_level_set,
+              base_in->parameters);
           }
 #endif
         else
@@ -298,12 +302,9 @@ namespace MeltPoolDG
             data_out.attach_dof_handler(dof_handler);
             data_out.add_data_vector(reinit_operation->get_level_set(), "psi");
 
-            if (parameters.paraview.print_normal_vector)
-              {
-                for (unsigned int d = 0; d < dim; ++d)
-                  data_out.add_data_vector(reinit_operation->get_normal_vector().block(d),
-                                           "normal_" + std::to_string(d));
-              }
+            for (unsigned int d = 0; d < dim; ++d)
+              data_out.add_data_vector(reinit_operation->get_normal_vector().block(d),
+                                       "normal_" + std::to_string(d));
 
             data_out.build_patches(scratch_data->get_mapping());
             data_out.write_vtu_with_pvtu_record("./",
@@ -322,8 +323,9 @@ namespace MeltPoolDG
       std::shared_ptr<ScratchData<dim>>                   scratch_data;
       TimeIterator<double>                                time_iterator;
       std::shared_ptr<ReinitializationOperationBase<dim>> reinit_operation;
-      unsigned int                                        dof_idx;
-      unsigned int                                        quad_idx;
+      unsigned int                                        reinit_dof_idx;
+      unsigned int                                        normal_dof_idx;
+      unsigned int                                        reinit_quad_idx;
     };
   } // namespace Reinitialization
 } // namespace MeltPoolDG

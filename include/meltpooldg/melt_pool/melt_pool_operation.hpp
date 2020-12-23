@@ -30,7 +30,6 @@ namespace MeltPoolDG
        *    This are the primary solution variables of this module, which will be also publically
        *    accessible for output_results.
        */
-      VectorType recoil_pressure;
       VectorType temperature;
       VectorType solid;
       /*
@@ -45,18 +44,18 @@ namespace MeltPoolDG
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             ls_dof_idx_in,
-                 const unsigned int                             flow_dof_idx_in,
+                 const unsigned int                             flow_vel_dof_idx_in,
                  const unsigned int                             flow_quad_idx_in,
                  const unsigned int                             temp_dof_idx_in,
                  const unsigned int                             temp_quad_idx_in,
                  const VectorType &                             level_set_as_heaviside)
       {
-        scratch_data  = scratch_data_in;
-        ls_dof_idx    = ls_dof_idx_in;
-        flow_dof_idx  = flow_dof_idx_in;
-        flow_quad_idx = flow_quad_idx_in;
-        temp_dof_idx  = temp_dof_idx_in;
-        temp_quad_idx = temp_quad_idx_in;
+        scratch_data     = scratch_data_in;
+        ls_dof_idx       = ls_dof_idx_in;
+        flow_vel_dof_idx = flow_vel_dof_idx_in;
+        flow_quad_idx    = flow_quad_idx_in;
+        temp_dof_idx     = temp_dof_idx_in;
+        temp_quad_idx    = temp_quad_idx_in;
         /*
          *  set the advection diffusion data
          */
@@ -83,7 +82,7 @@ namespace MeltPoolDG
        * computed.
        */
       void
-      compute_recoil_pressure_force(BlockVectorType & force_rhs,
+      compute_recoil_pressure_force(VectorType &      force_rhs,
                                     const VectorType &level_set_as_heaviside,
                                     const double      dt,
                                     bool              zero_out = true)
@@ -95,15 +94,16 @@ namespace MeltPoolDG
         // 2) update the temperature field
         compute_temperature_vector(level_set_as_heaviside);
 
+        temperature.update_ghost_values();
         // 3) update the recoil pressure force
-        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
+        scratch_data->get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &matrix_free,
               auto &      force_rhs,
               const auto &level_set_as_heaviside,
               auto        macro_cells) {
             FECellIntegrator<dim, 1, double>   level_set(matrix_free, ls_dof_idx, flow_quad_idx);
             FECellIntegrator<dim, dim, double> recoil_pressure(matrix_free,
-                                                               flow_dof_idx,
+                                                               flow_vel_dof_idx,
                                                                flow_quad_idx);
 
             FECellIntegrator<dim, 1, double> temperature_val(matrix_free,
@@ -140,6 +140,7 @@ namespace MeltPoolDG
           force_rhs,
           level_set_as_heaviside,
           zero_out);
+        temperature.zero_out_ghosts();
       }
 
       /**
@@ -148,21 +149,21 @@ namespace MeltPoolDG
        */
       void
       compute_temperature_dependent_surface_tension(
-        BlockVectorType &  force_rhs,
+        VectorType &       force_rhs,
         const VectorType & level_set_as_heaviside,
         const VectorType & solution_curvature,
         const double       surface_tension_coefficient,
         const double       temperature_dependent_surface_tension_coefficient,
         const double       surface_tension_reference_temperature,
         const unsigned int ls_dof_idx,
-        const unsigned int flow_dof_idx,
+        const unsigned int flow_vel_dof_idx,
         const unsigned int flow_quad_idx,
         const unsigned int temp_dof_idx,
         const bool         zero_out = true)
       {
         solution_curvature.update_ghost_values();
 
-        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, VectorType>(
+        scratch_data->get_matrix_free().template cell_loop<VectorType, VectorType>(
           [&](const auto &matrix_free,
               auto &      force_rhs,
               const auto &level_set_as_heaviside,
@@ -177,7 +178,7 @@ namespace MeltPoolDG
                                                              flow_quad_idx);
 
             FECellIntegrator<dim, dim, double> surface_tension(matrix_free,
-                                                               flow_dof_idx,
+                                                               flow_vel_dof_idx,
                                                                flow_quad_idx);
 
             const double &alpha0   = surface_tension_coefficient;
@@ -283,6 +284,13 @@ namespace MeltPoolDG
                     is_solid_region(support_points[local_dof_indices[i]]);
                 }
             }
+
+        temperature.compress(VectorOperation::insert);
+        solid.compress(VectorOperation::insert);
+
+        scratch_data->get_constraint(temp_dof_idx).distribute(temperature);
+        scratch_data->get_constraint(temp_dof_idx).distribute(solid);
+
         level_set_as_heaviside.zero_out_ghosts();
       }
 
@@ -290,26 +298,21 @@ namespace MeltPoolDG
       set_flow_field_in_solid_regions_to_zero(const DoFHandler<dim> &    flow_dof_handler,
                                               AffineConstraints<double> &flow_constraints)
       {
-        FEValues<dim> fe_values(scratch_data->get_mapping(),
-                                flow_dof_handler.get_fe(),
-                                scratch_data->get_quadrature(flow_quad_idx),
-                                update_values);
-
         const unsigned int dofs_per_cell = flow_dof_handler.get_fe().n_dofs_per_cell();
 
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
         std::map<types::global_dof_index, Point<dim>> support_points;
-        DoFTools::map_dofs_to_support_points(MappingQGeneric<dim>(1),
+        DoFTools::map_dofs_to_support_points(scratch_data->get_mapping(),
                                              flow_dof_handler,
                                              support_points);
-
-        AffineConstraints<double> solid_constraints;
 
         IndexSet flow_locally_relevant_dofs;
         DoFTools::extract_locally_relevant_dofs(flow_dof_handler, flow_locally_relevant_dofs);
 
+        AffineConstraints<double> solid_constraints;
         solid_constraints.reinit(flow_locally_relevant_dofs);
+
         for (const auto &cell : flow_dof_handler.active_cell_iterators())
           if (cell->is_locally_owned())
             {
@@ -317,13 +320,27 @@ namespace MeltPoolDG
 
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
                 if (is_solid_region(support_points[local_dof_indices[i]]))
-                  {
-                    solid_constraints.add_line(local_dof_indices[i]);
-                  }
+                  solid_constraints.add_line(local_dof_indices[i]);
             }
+        solid_constraints.close();
         flow_constraints.merge(solid_constraints,
                                AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
-        flow_constraints.close();
+      }
+
+      void
+      reinit()
+      {
+        scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
+        scratch_data->initialize_dof_vector(solid, temp_dof_idx);
+      }
+
+      void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
+      {
+        temperature.update_ghost_values();
+        solid.update_ghost_values();
+        vectors.push_back(&temperature);
+        vectors.push_back(&solid);
       }
 
     private:
@@ -450,7 +467,7 @@ namespace MeltPoolDG
        *  multiple DoFHandlers, quadrature rules, etc.
        */
       unsigned int ls_dof_idx;
-      unsigned int flow_dof_idx;
+      unsigned int flow_vel_dof_idx;
       unsigned int flow_quad_idx;
       unsigned int temp_dof_idx;
       unsigned int temp_quad_idx;

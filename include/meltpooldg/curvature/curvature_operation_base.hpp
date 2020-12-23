@@ -25,13 +25,17 @@ namespace MeltPoolDG
       virtual void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const Parameters<double> &                     data_in,
-                 const unsigned int                             dof_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             curv_dof_idx_in,
+                 const unsigned int                             curv_quad_idx_in,
+                 const unsigned int                             normal_dof_idx_in,
+                 const unsigned int                             ls_dof_idx_in)
       {
         (void)scratch_data_in;
         (void)data_in;
-        (void)dof_idx_in;
-        (void)quad_idx_in;
+        (void)curv_dof_idx_in;
+        (void)curv_quad_idx_in;
+        (void)normal_dof_idx_in;
+        (void)ls_dof_idx_in;
         AssertThrow(false, ExcNotImplemented());
       }
 

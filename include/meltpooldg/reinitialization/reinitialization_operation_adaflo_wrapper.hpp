@@ -42,8 +42,6 @@ namespace MeltPoolDG
                                       const VectorType &        initial_solution_level_set,
                                       const Parameters<double> &parameters)
         : scratch_data(scratch_data)
-        , reinit_dof_idx(reinit_dof_idx)
-        , reinit_quad_idx(reinit_quad_idx)
       {
         /**
          * set parameters of adaflo
@@ -115,7 +113,7 @@ namespace MeltPoolDG
         initialize_vectors();
 
         compute_cell_diameters<dim>(scratch_data.get_matrix_free(),
-                                    reinit_dof_idx,
+                                    reinit_params_adaflo.dof_index_ls,
                                     cell_diameters,
                                     cell_diameter_min,
                                     cell_diameter_max);
@@ -124,9 +122,10 @@ namespace MeltPoolDG
          * initialize the preconditioner
          */
         initialize_mass_matrix_diagonal<dim, double>(scratch_data.get_matrix_free(),
-                                                     scratch_data.get_constraint(reinit_dof_idx),
-                                                     reinit_dof_idx,
-                                                     reinit_quad_idx,
+                                                     scratch_data.get_constraint(
+                                                       reinit_params_adaflo.dof_index_ls),
+                                                     reinit_params_adaflo.dof_index_ls,
+                                                     reinit_params_adaflo.quad_index,
                                                      preconditioner);
 
         normal_vector_operation_adaflo->reinit();
@@ -225,9 +224,6 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &scratch_data;
-
-      const unsigned int reinit_dof_idx;
-      const unsigned int reinit_quad_idx;
       /**
        *  advected field
        */
@@ -251,7 +247,7 @@ namespace MeltPoolDG
       std::shared_ptr<LevelSetOKZSolverReinitialization<dim>> reinit_operation_adaflo;
 
       /**
-       *  Diagonal preconditioner @todo
+       *  Diagonal preconditioner
        */
       DiagonalPreconditioner<double> preconditioner;
 

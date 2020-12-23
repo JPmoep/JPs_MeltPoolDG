@@ -22,7 +22,7 @@
     "reinit constant epsilon": "0.05"
   },
   "normal vector" : { 
-      "normal vec do matrix free": "true"
+    "normal vec do matrix free": "false"
   },
   "paraview":
   {

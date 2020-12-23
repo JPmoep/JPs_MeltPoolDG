@@ -36,7 +36,6 @@ namespace MeltPoolDG
       public:
         InitializePhi()
           : Function<dim>()
-          , epsInterface(0.0313)
         {}
         virtual double
         value(const Point<dim> &p, const unsigned int component = 0) const
@@ -58,21 +57,6 @@ namespace MeltPoolDG
           // this->epsInterface
           //);
         }
-
-        void
-        setEpsInterface(double eps)
-        {
-          this->epsInterface = eps;
-        }
-
-        double
-        getEpsInterface()
-        {
-          return this->epsInterface;
-        }
-
-      private:
-        double epsInterface;
       };
 
       template <int dim>
@@ -102,30 +86,26 @@ namespace MeltPoolDG
 
 
       template <int dim>
-      class AdvectionField : public TensorFunction<1, dim>
+      class AdvectionField : public Function<dim>
       {
       public:
         AdvectionField()
-          : TensorFunction<1, dim>()
+          : Function<dim>(dim)
         {}
 
-        Tensor<1, dim>
-        value(const Point<dim> &p) const
+        void
+        vector_value(const Point<dim> &p, Vector<double> &values) const override
         {
-          Tensor<1, dim> value_;
-
           if constexpr (dim == 2)
             {
               const double x = p[0];
               const double y = p[1];
 
-              value_[0] = 4 * y;
-              value_[1] = -4 * x;
+              values[0] = 4 * y;
+              values[1] = -4 * x;
             }
           else
             AssertThrow(false, ExcMessage("Advection field for dim!=2 not implemented"));
-
-          return value_;
         }
       };
 
