@@ -75,7 +75,10 @@ namespace MeltPoolDG
             data[j].second(new_grid_solutions[j]);
 
             for (const auto &i : new_grid_solutions[j])
-              old_grid_solutions[j].push_back(i);
+              {
+                i->update_ghost_values();
+                old_grid_solutions[j].push_back(i);
+              }
             solution_transfer[j] =
               std::make_shared<parallel::distributed::SolutionTransfer<dim, VectorType>>(
                 *data[j].first);

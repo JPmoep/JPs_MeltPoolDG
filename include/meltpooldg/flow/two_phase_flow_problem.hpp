@@ -268,33 +268,33 @@ namespace MeltPoolDG
 
 
         //@todo --> for amr
-        // if (base_in->parameters.base.problem_name == "melt_pool" )
-        //{
+        if (base_in->parameters.base.problem_name == "melt_pool" &&
+            base_in->parameters.mp.set_velocity_to_zero_in_solid)
+          {
+            // set the fluid velocity and the pressure in solid regions to zero
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+              scratch_data->get_dof_handler(vel_dof_idx),
+              flow_operation->get_constraints_velocity());
+#else
+            AssertThrow(false, ExcNotImplemented());
+#endif
+          }
         /*
-         *    set the fluid velocity and the pressure in solid regions to zero
-         */
-        //#ifdef MELT_POOL_DG_WITH_ADAFLO
-        // melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
-        // scratch_data->get_dof_handler(vel_dof_idx),
-        // flow_operation->get_constraints_velocity(),
-        // flow_operation->get_quad_idx_velocity()
-        //);
-        //#else
-        // AssertThrow(false, ExcNotImplemented());
-        //#endif
-        //}
-        /*
-         *    Do initial refinement steps if requeseted
+         *    Do initial refinement steps if requested
          */
         if (base_in->parameters.amr.do_amr &&
             base_in->parameters.amr.n_initial_refinement_cycles > 0)
           for (int i = 0; i < base_in->parameters.amr.n_initial_refinement_cycles; ++i)
             {
-              refine_mesh(base_in);
               scratch_data->get_pcout()
                 << "cycle: " << i << " n_dofs: " << dof_handler.n_dofs() << "(ls) + "
                 << flow_operation->get_dof_handler_velocity().n_dofs() << "(vel) + "
-                << flow_operation->get_dof_handler_pressure().n_dofs() << "(p)" << std::endl;
+                << flow_operation->get_dof_handler_pressure().n_dofs() << "(p)"
+                << " T.size " << melt_pool_operation.temperature.size() << " solid.size "
+                << melt_pool_operation.solid.size() << std::endl;
+
+              refine_mesh(base_in);
             }
       }
 
@@ -323,27 +323,25 @@ namespace MeltPoolDG
 #else
         AssertThrow(false, ExcNotImplemented());
 #endif
-        //@todo --> for amr
-        // if (base_in->parameters.base.problem_name == "melt_pool" && do_reinit)
-        //{
-        /*
-         *    set the fluid velocity and the pressure in solid regions to zero
-         */
-        //#ifdef MELT_POOL_DG_WITH_ADAFLO
-        // melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
-        // scratch_data->get_dof_handler(vel_dof_idx),
-        // flow_operation->get_constraints_velocity(),
-        // flow_operation->get_quad_idx_velocity()
-        //);
-        //#else
-        // AssertThrow(false, ExcNotImplemented());
-        //#endif
-        //}
-
         /*
          *  create partitioning
          */
         scratch_data->create_partitioning();
+        /*
+         *  set the fluid velocity in solid regions to zero
+         */
+        //@todo --> for amr
+        if (base_in->parameters.base.problem_name == "melt_pool" &&
+            base_in->parameters.mp.set_velocity_to_zero_in_solid && do_reinit)
+          {
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+              scratch_data->get_dof_handler(vel_dof_idx),
+              flow_operation->get_constraints_velocity());
+#else
+            AssertThrow(false, ExcNotImplemented());
+#endif
+          }
         /*
          *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
          *  dirichlet constraints are supported)
@@ -375,8 +373,11 @@ namespace MeltPoolDG
         scratch_data->build();
 
         if (do_reinit)
-          level_set_operation.reinit();
-
+          {
+            level_set_operation.reinit();
+            if (base_in->parameters.base.problem_name == "melt_pool")
+              melt_pool_operation.reinit();
+          }
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         dynamic_cast<AdafloWrapper<dim> *>(flow_operation.get())->reinit_2();
@@ -486,6 +487,10 @@ namespace MeltPoolDG
       {
         if (parameters.paraview.do_output && !(time_step % parameters.paraview.write_frequency))
           {
+            bool do_output_of_dependent_variable =
+              (parameters.amr.n_initial_refinement_cycles == 0) &&
+              (time_step == parameters.flow.start_time);
+
             fill_dof_vector_from_cell_operation(density,
                                                 parameters.flow.velocity_degree,
                                                 parameters.flow.velocity_n_q_points_1d,
@@ -530,14 +535,13 @@ namespace MeltPoolDG
             /*
              * curvature
              */
-            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
-                (time_step == 0)) //@todo: find a better solution
+
+            if (do_output_of_dependent_variable)
               data_out.add_data_vector(level_set_operation.get_curvature(), "curvature");
             /*
              *  normal vector field
              */
-            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
-                (time_step == 0)) //@todo: find a better solution
+            if (do_output_of_dependent_variable)
               {
                 for (unsigned int d = 0; d < dim; ++d)
                   data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
@@ -558,12 +562,10 @@ namespace MeltPoolDG
             /*
              * force vector (surface tension + gravity force)
              */
-            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
-                (time_step == 0)) //@todo: find a better solution
-              data_out.add_data_vector(flow_operation->get_dof_handler_velocity(),
-                                       force_rhs,
-                                       std::vector<std::string>(dim, "force_rhs"),
-                                       vector_component_interpretation);
+            data_out.add_data_vector(flow_operation->get_dof_handler_velocity(),
+                                     force_rhs,
+                                     std::vector<std::string>(dim, "force_rhs"),
+                                     vector_component_interpretation);
             /*
              * density
              */
@@ -575,16 +577,14 @@ namespace MeltPoolDG
             /*
              * heaviside
              */
-            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
-                (time_step == 0)) //@todo: find a better solution
+            if (do_output_of_dependent_variable)
               data_out.add_data_vector(dof_handler,
                                        level_set_operation.level_set_as_heaviside,
                                        "heaviside");
             /*
              * distance to zero level set
              */
-            if ((parameters.amr.n_initial_refinement_cycles == 0) &&
-                (time_step == 0)) //@todo: find a better solution
+            if (do_output_of_dependent_variable)
               data_out.add_data_vector(dof_handler,
                                        level_set_operation.distance_to_level_set,
                                        "distance");
@@ -599,17 +599,13 @@ namespace MeltPoolDG
              */
             if (parameters.base.problem_name == "melt_pool")
               {
-                if ((parameters.amr.n_initial_refinement_cycles == 0) &&
-                    (time_step == 0)) //@todo: find a better solution
-                  data_out.add_data_vector(dof_handler,
-                                           melt_pool_operation.temperature,
-                                           "temperature");
+                data_out.add_data_vector(dof_handler,
+                                         melt_pool_operation.temperature,
+                                         "temperature");
                 /*
                  * solid
                  */
-                if ((parameters.amr.n_initial_refinement_cycles == 0) &&
-                    (time_step == 0)) //@todo: find a better solution
-                  data_out.add_data_vector(dof_handler, melt_pool_operation.solid, "solid");
+                data_out.add_data_vector(dof_handler, melt_pool_operation.solid, "solid");
               }
 
             data_out.build_patches(scratch_data->get_mapping());
@@ -685,6 +681,10 @@ namespace MeltPoolDG
           std::pair<const DoFHandler<dim> *, std::function<void(std::vector<VectorType *> &)>>>
           data;
 
+        if (base_in->parameters.base.problem_name == "melt_pool")
+          data.emplace_back(&dof_handler, [&](std::vector<VectorType *> &vectors) {
+            melt_pool_operation.attach_vectors(vectors); // temperature + solid
+          });
         data.emplace_back(&dof_handler, [&](std::vector<VectorType *> &vectors) {
           level_set_operation.attach_vectors(vectors); // ls
         });
@@ -701,6 +701,13 @@ namespace MeltPoolDG
           ls_constraints_dirichlet.distribute(level_set_operation.get_level_set());
           scratch_data->get_constraint(vel_dof_idx).distribute(flow_operation->get_velocity());
           scratch_data->get_constraint(pressure_dof_idx).distribute(flow_operation->get_pressure());
+
+          if (base_in->parameters.base.problem_name == "melt_pool")
+            {
+              scratch_data->get_constraint(temp_dof_idx)
+                .distribute(melt_pool_operation.temperature);
+              scratch_data->get_constraint(temp_dof_idx).distribute(melt_pool_operation.solid);
+            }
         };
 
         const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };

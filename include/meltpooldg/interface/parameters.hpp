@@ -138,6 +138,7 @@ namespace MeltPoolDG
     std::string melt_pool_shape                      = "ellipse";
     number      scan_speed                           = 0.0;
     bool        do_move_laser                        = false;
+    bool        set_velocity_to_zero_in_solid        = false;
     number      ambient_temperature                  = 0.0;
     number      domain_x_min                         = 0.0;
     number      domain_y_min                         = 0.0;
@@ -646,6 +647,10 @@ namespace MeltPoolDG
           mp.do_move_laser,
           "Set this parameter to true to move the laser in x-direction with the given parameter scan speed "
           "(in case of an analytical temperature field).");
+        prm.add_parameter(
+          "mp set velocity to zero in solid",
+          mp.set_velocity_to_zero_in_solid,
+          "Set this parameter to true to constrain the flow velocity in the solid domain.");
         prm.add_parameter("mp ambient temperature",
                           mp.ambient_temperature,
                           "Ambient temperature in the inert gas.");

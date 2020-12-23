@@ -284,25 +284,26 @@ namespace MeltPoolDG
                     is_solid_region(support_points[local_dof_indices[i]]);
                 }
             }
+
+        temperature.compress(VectorOperation::insert);
+        solid.compress(VectorOperation::insert);
+
+        scratch_data->get_constraint(temp_dof_idx).distribute(temperature);
+        scratch_data->get_constraint(temp_dof_idx).distribute(solid);
+
         level_set_as_heaviside.zero_out_ghosts();
       }
 
       void
       set_flow_field_in_solid_regions_to_zero(const DoFHandler<dim> &    flow_dof_handler,
-                                              AffineConstraints<double> &flow_constraints,
-                                              const unsigned int         flow_quad_idx_in)
+                                              AffineConstraints<double> &flow_constraints)
       {
-        FEValues<dim> fe_values(scratch_data->get_mapping(),
-                                flow_dof_handler.get_fe(),
-                                scratch_data->get_quadrature(flow_quad_idx_in),
-                                update_values);
-
         const unsigned int dofs_per_cell = flow_dof_handler.get_fe().n_dofs_per_cell();
 
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
         std::map<types::global_dof_index, Point<dim>> support_points;
-        DoFTools::map_dofs_to_support_points(MappingQGeneric<dim>(1),
+        DoFTools::map_dofs_to_support_points(scratch_data->get_mapping(),
                                              flow_dof_handler,
                                              support_points);
 
@@ -319,24 +320,28 @@ namespace MeltPoolDG
 
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
                 if (is_solid_region(support_points[local_dof_indices[i]]))
-                  {
-                    solid_constraints.add_line(local_dof_indices[i]);
-                  }
+                  solid_constraints.add_line(local_dof_indices[i]);
             }
+        solid_constraints.close();
         flow_constraints.merge(solid_constraints,
-                               AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
-        flow_constraints.close();
+                               AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
+      }
+
+      void
+      reinit()
+      {
+        scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
+        scratch_data->initialize_dof_vector(solid, temp_dof_idx);
       }
 
       void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
-        // temperature.update_ghost_values();
-        // solid.update_ghost_values();
-        // vectors.push_back(&temperature);
-        // vectors.push_back(&solid);
+        temperature.update_ghost_values();
+        solid.update_ghost_values();
+        vectors.push_back(&temperature);
+        vectors.push_back(&solid);
       }
-
 
     private:
       void
