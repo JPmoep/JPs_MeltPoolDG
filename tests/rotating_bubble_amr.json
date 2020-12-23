@@ -7,6 +7,12 @@
     "degree"             : "1",
     "do print parameters": "false"
   },
+  "adaptive meshing" : {
+    "do amr":                    "true",
+    "upper perc to refine": "     0.3",
+    "lower perc to coarsen": "    0.00",
+    "max grid refinement level": "8"
+  },
   "levelset" : {
     "ls do reinitialization"    : "true",
     "ls artificial diffusivity" : "0.0",
@@ -15,12 +21,12 @@
     "ls start time"             : "0.0",
     "ls end time"               : "0.05",
     "ls time step size"         : "0.01",
-    "ls do matrix free"         : "true"
+    "ls do matrix free"         : "false"
   },
   "reinitialization" : {
     "reinit max n steps"          : "5",
     "reinit modeltype"            : "olsson2007",
-    "reinit do matrix free"       : "true", 
+    "reinit do matrix free"       : "false", 
     "reinit preconditioner type"  : "Identity", 
     "reinit solver type"          : "CG", 
     "reinit do print l2norm"      : "true",
@@ -28,12 +34,7 @@
   },
   "normal vector" : {
     "normal vec damping scale factor" : "0.5",
-    "normal vec do matrix free"       : "true"
-  },
-  "curvature" : {
-    "curv damping scale factor" : "0.5",
-    "curv do matrix free"       : "true",
-    "curv implementation"       : "adaflo"
+    "normal vec do matrix free"       : "false"
   },
   "paraview" : {
     "paraview do output"           : "false"
