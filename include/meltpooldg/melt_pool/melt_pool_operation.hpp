@@ -48,7 +48,8 @@ namespace MeltPoolDG
                  const unsigned int                             flow_quad_idx_in,
                  const unsigned int                             temp_dof_idx_in,
                  const unsigned int                             temp_quad_idx_in,
-                 const VectorType &                             level_set_as_heaviside)
+                 const VectorType &                             level_set_as_heaviside,
+                 const double                                   start_time_in)
       {
         scratch_data     = scratch_data_in;
         ls_dof_idx       = ls_dof_idx_in;
@@ -56,6 +57,7 @@ namespace MeltPoolDG
         flow_quad_idx    = flow_quad_idx_in;
         temp_dof_idx     = temp_dof_idx_in;
         temp_quad_idx    = temp_quad_idx_in;
+        time             = start_time_in;
         /*
          *  set the advection diffusion data
          */
@@ -87,6 +89,7 @@ namespace MeltPoolDG
                                     const double      dt,
                                     bool              zero_out = true)
       {
+        time += dt;
         // 1) compute the current center of the laser beam
         if (mp_data.do_move_laser)
           laser_center[0] += mp_data.scan_speed * dt;
@@ -300,6 +303,7 @@ namespace MeltPoolDG
       {
         const unsigned int dofs_per_cell = flow_dof_handler.get_fe().n_dofs_per_cell();
 
+
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
         std::map<types::global_dof_index, Point<dim>> support_points;
@@ -312,6 +316,7 @@ namespace MeltPoolDG
 
         AffineConstraints<double> solid_constraints;
         solid_constraints.reinit(flow_locally_relevant_dofs);
+        DoFTools::make_hanging_node_constraints(flow_dof_handler, solid_constraints);
 
         for (const auto &cell : flow_dof_handler.active_cell_iterators())
           if (cell->is_locally_owned())
@@ -320,8 +325,11 @@ namespace MeltPoolDG
 
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
                 if (is_solid_region(support_points[local_dof_indices[i]]))
-                  solid_constraints.add_line(local_dof_indices[i]);
+                  {
+                    solid_constraints.add_line(local_dof_indices[i]);
+                  }
             }
+
         solid_constraints.close();
         flow_constraints.merge(solid_constraints,
                                AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
@@ -362,9 +370,25 @@ namespace MeltPoolDG
             //
             //  In order to capture anisotropic temperature fields, a modification is introduced.
             const double indicator = UtilityFunctions::CharacteristicFunctions::heaviside(phi, 0.5);
-            const double &P        = mp_data.laser_power;
-            const double &v        = mp_data.scan_speed;
-            const double &T0       = mp_data.ambient_temperature;
+
+
+            double laser_intensity = 1.0;
+            if (mp_data.laser_power_over_time == "ramp")
+              {
+                AssertThrow(
+                  mp_data.laser_power_end_time > mp_data.laser_power_start_time,
+                  ExcMessage(
+                    "For the temporal ramp distribution of the laser power,"
+                    " the parameter laser power end time must be larger than laser power start time."));
+                laser_intensity = (time - mp_data.laser_power_start_time) /
+                                  (mp_data.laser_power_end_time - mp_data.laser_power_start_time);
+                laser_intensity = std::min(std::max(0.0, laser_intensity), 1.0);
+              }
+
+
+            const double &P  = mp_data.laser_power * laser_intensity;
+            const double &v  = mp_data.scan_speed;
+            const double &T0 = mp_data.ambient_temperature;
             const double &absorptivity =
               (indicator == 1) ? mp_data.liquid.absorptivity : mp_data.gas.absorptivity;
             const double &conductivity =
@@ -396,8 +420,8 @@ namespace MeltPoolDG
        *  This function determines for a given point, whether it belongs to the solid domain.
        *
        *  WARNING: All points above (component dim-1) the center point of the laser source are
-       * automatically identified as gaseous parts. Thus, this function has to be modified when the
-       * initial interface between the feedstock and the ambient gas is not planar.
+       *  automatically identified as gaseous parts. Thus, this function has to be modified when the
+       *  initial interface between the feedstock and the ambient gas is not planar.
        */
       bool
       is_solid_region(const Point<dim> point)
@@ -471,6 +495,11 @@ namespace MeltPoolDG
       unsigned int flow_quad_idx;
       unsigned int temp_dof_idx;
       unsigned int temp_quad_idx;
+
+      /*
+       *  current time
+       */
+      double time;
     };
   } // namespace MeltPool
 } // namespace MeltPoolDG

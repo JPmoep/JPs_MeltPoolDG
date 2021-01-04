@@ -94,7 +94,7 @@ namespace MeltPoolDG
                                          *base_in->get_initial_condition("navier_stokes_u"),
                                          navier_stokes.solution.block(0));
 
-        // navier_stokes.get_constraints_u().distribute(navier_stokes.solution.block(0)); // TODO
+        navier_stokes.get_constraints_u().distribute(navier_stokes.solution.block(0)); // TODO
         // needed?
         navier_stokes.solution.update_ghost_values();
         navier_stokes.solution_old.update_ghost_values();
@@ -123,7 +123,6 @@ namespace MeltPoolDG
       solve() override
       {
         navier_stokes.get_constraints_u().set_zero(navier_stokes.user_rhs.block(0));
-        // navier_stokes.get_constraints_p().set_zero(navier_stokes.user_rhs.block(1)); // @todo -- needed?
         navier_stokes.advance_time_step();
       }
 
@@ -209,10 +208,6 @@ namespace MeltPoolDG
       set_force_rhs(const LinearAlgebra::distributed::Vector<double> &vec) override
       {
         navier_stokes.user_rhs.block(0) = vec;
-        // VectorTools::convert_block_vector_to_fe_sytem_vector(vec,
-        // dof_handler_meltpool,
-        // navier_stokes.user_rhs.block(0),
-        // navier_stokes.get_dof_handler_u());
       }
 
       VectorizedArray<double> &

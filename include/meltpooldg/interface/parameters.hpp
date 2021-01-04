@@ -133,6 +133,9 @@ namespace MeltPoolDG
     std::string temperature_formulation              = "analytical";
     number      temperature_x_to_y_ratio             = 1.0;
     number      laser_power                          = 0.0;
+    std::string laser_power_over_time                = "constant";
+    number      laser_power_start_time               = 0.0;
+    number      laser_power_end_time                 = 0.0;
     std::string laser_center                         = "0,0,0";
     std::string melt_pool_center                     = "not_initialized";
     std::string melt_pool_shape                      = "ellipse";
@@ -613,9 +616,17 @@ namespace MeltPoolDG
         prm.add_parameter("mp temperature x to y ratio",
                           mp.temperature_x_to_y_ratio,
                           "This factor scales the analytical temperature field to be anisotropic.");
-        prm.add_parameter("mp laser power",
-                          mp.laser_power, //@todo: add user input function
-                          "Intensity of the laser");
+        prm.add_parameter("mp laser power", mp.laser_power, "Intensity of the laser");
+        prm.add_parameter("mp laser power over time",
+                          mp.laser_power_over_time,
+                          "Temporal distribution of the laser power",
+                          Patterns::Selection("constant|ramp"));
+        prm.add_parameter("mp laser power start time",
+                          mp.laser_power_start_time,
+                          "In case of time-dependent laser power: activation time of laser.");
+        prm.add_parameter("mp laser power end time",
+                          mp.laser_power_end_time,
+                          "In case of time-dependent laser power: end time of laser.");
         prm.add_parameter("mp laser center",
                           mp.laser_center,
                           "Center coordinates of the laser beam on the interface melt/gas.");

@@ -62,6 +62,8 @@ namespace MeltPoolDG
             scratch_data->get_pcout()
               << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
 
+
+
             // ... solve level-set problem with the given advection field
             level_set_operation.solve(dt, flow_operation->get_velocity());
 
@@ -104,6 +106,18 @@ namespace MeltPoolDG
                     flow_quad_idx,
                     temp_dof_idx,
                     false /*false means add to force vector*/);
+
+                if (base_in->parameters.mp.set_velocity_to_zero_in_solid)
+                  {
+                    // set the fluid velocity in solid regions to zero
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+                    melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
+                      flow_operation->get_dof_handler_velocity(),
+                      flow_operation->get_constraints_velocity());
+#else
+                    AssertThrow(false, ExcNotImplemented());
+#endif
+                  }
               }
 
             //  ... and set forces within the Navier-Stokes solver
@@ -262,24 +276,13 @@ namespace MeltPoolDG
                                            flow_quad_idx,
                                            temp_dof_idx,
                                            temp_quad_idx,
-                                           level_set_operation.level_set_as_heaviside);
+                                           level_set_operation.level_set_as_heaviside,
+                                           base_in->parameters.flow.start_time);
           }
 
 
 
         //@todo --> for amr
-        if (base_in->parameters.base.problem_name == "melt_pool" &&
-            base_in->parameters.mp.set_velocity_to_zero_in_solid)
-          {
-            // set the fluid velocity and the pressure in solid regions to zero
-#ifdef MELT_POOL_DG_WITH_ADAFLO
-            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
-              scratch_data->get_dof_handler(vel_dof_idx),
-              flow_operation->get_constraints_velocity());
-#else
-            AssertThrow(false, ExcNotImplemented());
-#endif
-          }
         /*
          *    Do initial refinement steps if requested
          */
@@ -327,21 +330,6 @@ namespace MeltPoolDG
          *  create partitioning
          */
         scratch_data->create_partitioning();
-        /*
-         *  set the fluid velocity in solid regions to zero
-         */
-        //@todo --> for amr
-        if (base_in->parameters.base.problem_name == "melt_pool" &&
-            base_in->parameters.mp.set_velocity_to_zero_in_solid && do_reinit)
-          {
-#ifdef MELT_POOL_DG_WITH_ADAFLO
-            melt_pool_operation.set_flow_field_in_solid_regions_to_zero(
-              scratch_data->get_dof_handler(vel_dof_idx),
-              flow_operation->get_constraints_velocity());
-#else
-            AssertThrow(false, ExcNotImplemented());
-#endif
-          }
         /*
          *  make hanging nodes and dirichlet constraints (at the moment no time-dependent
          *  dirichlet constraints are supported)
