@@ -61,7 +61,7 @@ namespace MeltPoolDG
             compute_advection_velocity(*base_in->get_advection_field("level_set"));
             level_set_operation.solve(dt, advection_velocity);
             // do paraview output if requested
-            output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
+            output_results(time_iterator.get_current_time_step_number());
 
             if (base_in->parameters.amr.do_amr)
               refine_mesh(base_in);
@@ -176,6 +176,14 @@ namespace MeltPoolDG
                                        normal_dof_idx,
                                        vel_dof_idx,
                                        ls_zero_bc_idx);
+        /*
+         *  initialize postprocessor
+         */
+        post_processor =
+          std::make_shared<Postprocessor<dim>>(scratch_data->get_mpi_comm(ls_dof_idx),
+                                               base_in->parameters.paraview,
+                                               scratch_data->get_mapping(),
+                                               scratch_data->get_triangulation(ls_dof_idx));
       }
 
       void
@@ -286,91 +294,26 @@ namespace MeltPoolDG
        *  This function is to create paraview output
        */
       void
-      output_results(const unsigned int time_step, const Parameters<double> &parameters) const
+      output_results(const unsigned int time_step) const
       {
-        if (parameters.paraview.do_output)
-          {
-            MeltPoolDG::VectorTools::update_ghost_values(level_set_operation.get_level_set(),
-                                                         level_set_operation.get_curvature(),
-                                                         level_set_operation.get_normal_vector(),
-                                                         advection_velocity);
+        const auto attach_output_vectors = [&](DataOut<dim> &data_out) {
+          level_set_operation.attach_output_vectors(data_out);
 
-            const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
-            /*
-             *  output advected field
-             */
-            DataOut<dim> data_out;
-            data_out.attach_dof_handler(scratch_data->get_dof_handler());
-            data_out.add_data_vector(level_set_operation.get_level_set(), "level_set");
+          /*
+           *  output advection velocity
+           */
+          MeltPoolDG::VectorTools::update_ghost_values(advection_velocity);
+          std::vector<DataComponentInterpretation::DataComponentInterpretation>
+            vector_component_interpretation(
+              dim, DataComponentInterpretation::component_is_part_of_vector);
 
-            /*
-             *  output normal vector field
-             */
-            if (parameters.paraview.print_normal_vector)
-              for (unsigned int d = 0; d < dim; ++d)
-                data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
-                                         "normal_" + std::to_string(d));
-
-            /*
-             *  output curvature
-             */
-            if (parameters.paraview.print_curvature)
-              data_out.add_data_vector(level_set_operation.get_curvature(), "curvature");
-            /*
-             *  output advection velocity
-             */
-            std::vector<DataComponentInterpretation::DataComponentInterpretation>
-              vector_component_interpretation(
-                dim, DataComponentInterpretation::component_is_part_of_vector);
-
-            data_out.add_data_vector(dof_handler_velocity,
-                                     advection_velocity,
-                                     std::vector<std::string>(dim, "velocity"),
-                                     vector_component_interpretation);
-            /*
-             * write data to vtu file
-             */
-            data_out.build_patches(scratch_data->get_mapping());
-            data_out.write_vtu_with_pvtu_record("./",
-                                                parameters.paraview.filename,
-                                                time_step,
-                                                scratch_data->get_mpi_comm(),
-                                                parameters.paraview.n_digits_timestep,
-                                                parameters.paraview.n_groups);
-
-            /*
-             * write data of boundary -- @todo: move to own utility function
-             */
-            if (parameters.paraview.print_boundary_id)
-              {
-                const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
-                const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
-
-                const unsigned int n_digits =
-                  static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
-
-                std::string filename = "./solution_level_set_boundary_IDs" +
-                                       Utilities::int_to_string(rank, n_digits) + ".vtk";
-                std::ofstream output(filename.c_str());
-
-                GridOut           grid_out;
-                GridOutFlags::Vtk flags;
-                flags.output_cells         = false;
-                flags.output_faces         = true;
-                flags.output_edges         = false;
-                flags.output_only_relevant = false;
-                grid_out.set_flags(flags);
-                grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
-              }
-
-            MeltPoolDG::VectorTools::zero_out_ghosts(level_set_operation.get_level_set(),
-                                                     level_set_operation.get_curvature(),
-                                                     level_set_operation.get_normal_vector(),
-                                                     advection_velocity);
-          }
+          data_out.add_data_vector(dof_handler_velocity,
+                                   advection_velocity,
+                                   std::vector<std::string>(dim, "velocity"),
+                                   vector_component_interpretation);
+        };
+        post_processor->process(time_step, attach_output_vectors);
       }
-
-
 
       /*
        *  perform mesh refinement
@@ -453,6 +396,8 @@ namespace MeltPoolDG
       const unsigned int &   normal_dof_idx = ls_hanging_nodes_dof_idx;
       const unsigned int &   reinit_dof_idx =
         ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
+
+      std::shared_ptr<Postprocessor<dim>> post_processor;
     };
   } // namespace LevelSet
 } // namespace MeltPoolDG
