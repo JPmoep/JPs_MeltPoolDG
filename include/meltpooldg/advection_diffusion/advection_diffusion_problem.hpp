@@ -319,6 +319,9 @@ namespace MeltPoolDG
                                          advection_velocity);
       }
 
+      /*
+       *  perform output of results
+       */
       void
       output_results(const unsigned int time_step)
       {

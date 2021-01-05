@@ -57,6 +57,9 @@ namespace MeltPoolDG
 
       virtual void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
+
+      virtual void
+      attach_output_vectors(DataOut<dim> &data_out) const = 0;
     };
 
   } // namespace Reinitialization
