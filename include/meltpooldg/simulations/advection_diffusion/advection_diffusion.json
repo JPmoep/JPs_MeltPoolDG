@@ -17,10 +17,7 @@
   },
   "paraview" : {
     "paraview do output": "true",
-    "paraview filename": "solution_melt_pool",
-    "paraview print normal vector": "true",
-    "paraview print curvature": "true",
-    "paraview print advection": "true"
+    "paraview filename": "solution_advection_diffusion"
   },
   "output":
   {
