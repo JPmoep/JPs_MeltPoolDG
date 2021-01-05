@@ -22,16 +22,92 @@ namespace MeltPoolDG
   {
   private:
     using VectorType = LinearAlgebra::distributed::Vector<double>;
+
     std::vector<std::vector<double>> volumes;
     TableHandler                     volume_table;
-    ConditionalOStream               pcout;
+
+    const MPI_Comm              mpi_communicator;
+    const ParaviewData<double> &pv_data;
+    const Mapping<dim> &        mapping;
+    const Triangulation<dim> &  triangulation;
+    ConditionalOStream          pcout;
+
+    DataOut<dim> data_out;
 
   public:
-    Postprocessor(const MPI_Comm &mpi_communicator)
-      : pcout(std::cout, (Utilities::MPI::this_mpi_process(mpi_communicator) == 0))
+    Postprocessor(const MPI_Comm              mpi_communicator_in,
+                  const ParaviewData<double> &pv_data_in,
+                  const Mapping<dim> &        mapping_in,
+                  const Triangulation<dim> &  triangulation_in)
+      : mpi_communicator(mpi_communicator_in)
+      , pv_data(pv_data_in)
+      , mapping(mapping_in)
+      , triangulation(triangulation_in)
+      , pcout(std::cout, (Utilities::MPI::this_mpi_process(mpi_communicator) == 0))
     {}
 
+    /*
+     *  This function collects and performs all relevant postprocessing steps.
+     */
+    void
+    process(const double                               time_step,
+            const std::function<void(DataOut<dim> &)> &attach_output_vectors,
+            const std::function<void()> &              post_operation = {})
+    {
+      attach_output_vectors(data_out);
 
+      if (pv_data.do_output)
+        {
+          write_paraview_files(time_step);
+
+          if (pv_data.print_boundary_id)
+            print_boundary_ids();
+        }
+
+      if (post_operation)
+        post_operation();
+
+      data_out.clear();
+    }
+
+  private:
+    void
+    write_paraview_files(const double time_step)
+    {
+      data_out.build_patches(mapping);
+      data_out.write_vtu_with_pvtu_record("./",
+                                          pv_data.filename,
+                                          time_step,
+                                          mpi_communicator,
+                                          pv_data.n_digits_timestep,
+                                          pv_data.n_groups);
+    }
+
+    void
+    print_boundary_ids()
+    {
+      const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
+      const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
+
+      const unsigned int n_digits = static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
+
+      std::string filename =
+        pv_data.filename + "_boundary_ids" + Utilities::int_to_string(rank, n_digits) + ".vtk";
+      std::ofstream output(filename.c_str());
+
+      GridOut           grid_out;
+      GridOutFlags::Vtk flags;
+      flags.output_cells         = false;
+      flags.output_faces         = true;
+      flags.output_edges         = false;
+      flags.output_only_relevant = false;
+      grid_out.set_flags(flags);
+      grid_out.write_vtk(triangulation, output);
+    }
+
+    /*
+     * @todo
+     */
     void
     compute_error(const int              n_q_points,
                   const VectorType &     approximate_solution,
@@ -43,28 +119,29 @@ namespace MeltPoolDG
       const auto     qGauss = QGauss<dim>(n_q_points);
       Vector<double> norm_per_cell(triangulation.n_active_cells());
 
-      VectorTools::integrate_difference(dof_handler,
-                                        approximate_solution,
-                                        ExactSolution,
-                                        norm_per_cell,
-                                        qGauss,
-                                        VectorTools::L2_norm);
+      dealii::VectorTools::integrate_difference(dof_handler,
+                                                approximate_solution,
+                                                ExactSolution,
+                                                norm_per_cell,
+                                                qGauss,
+                                                dealii::VectorTools::L2_norm);
 
       pcout << "L2 error =    " << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
-            << compute_global_error(triangulation, norm_per_cell, VectorTools::L2_norm)
+            << compute_global_error(triangulation, norm_per_cell, dealii::VectorTools::L2_norm)
             << std::endl;
 
       Vector<double> difference_per_cell(triangulation.n_active_cells());
 
-      VectorTools::integrate_difference(dof_handler,
-                                        approximate_solution,
-                                        ExactSolution,
-                                        difference_per_cell,
-                                        qGauss,
-                                        VectorTools::L1_norm);
+      dealii::VectorTools::integrate_difference(dof_handler,
+                                                approximate_solution,
+                                                ExactSolution,
+                                                difference_per_cell,
+                                                qGauss,
+                                                dealii::VectorTools::L1_norm);
 
-      double h1_error =
-        VectorTools::compute_global_error(triangulation, difference_per_cell, VectorTools::L1_norm);
+      double h1_error = dealii::VectorTools::compute_global_error(triangulation,
+                                                                  difference_per_cell,
+                                                                  dealii::VectorTools::L1_norm);
       pcout << "L1 error = " << h1_error << std::endl;
     }
 
