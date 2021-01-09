@@ -5,6 +5,7 @@
 #include <deal.II/base/point.h>
 #include <deal.II/base/tensor_function.h>
 
+#include <deal.II/distributed/shared_tria.h>
 #include <deal.II/distributed/tria.h>
 
 #include <deal.II/grid/grid_generator.h>
@@ -70,8 +71,17 @@ namespace MeltPoolDG
         void
         create_spatial_discretization() override
         {
-          this->triangulation =
-            std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+          if (dim == 1 || this->parameters.base.do_simplex)
+            {
+              // AssertDimension(Utilities::MPI::n_mpi_processes(this->mpi_communicator), 1);
+              this->triangulation =
+                std::make_shared<parallel::shared::Triangulation<dim>>(this->mpi_communicator);
+            }
+          else
+            {
+              this->triangulation =
+                std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+            }
 
           const double &x_min = this->parameters.mp.domain_x_min;
           const double &x_max = this->parameters.mp.domain_x_max;
@@ -86,8 +96,9 @@ namespace MeltPoolDG
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
               if (this->parameters.base.do_simplex)
                 {
-                  unsigned int refinement =
-                    Utilities::pow(2, this->parameters.base.global_refinements);
+                  // unsigned int refinement =
+                  // Utilities::pow(2, this->parameters.base.global_refinements);
+                  unsigned int refinement = this->parameters.base.global_refinements;
                   GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
                                                                            {refinement, refinement},
                                                                            bottom_left,
@@ -111,7 +122,9 @@ namespace MeltPoolDG
                   unsigned int refinement =
                     Utilities::pow(2, this->parameters.base.global_refinements);
                   GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
-                                                                           {refinement, refinement},
+                                                                           {refinement,
+                                                                            refinement,
+                                                                            refinement},
                                                                            bottom_left,
                                                                            top_right);
                 }
