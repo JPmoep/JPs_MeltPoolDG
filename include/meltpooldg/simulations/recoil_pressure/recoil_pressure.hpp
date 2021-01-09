@@ -71,9 +71,8 @@ namespace MeltPoolDG
         void
         create_spatial_discretization() override
         {
-          if (dim == 1 || this->parameters.base.do_simplex)
+          if (this->parameters.base.do_simplex)
             {
-              // AssertDimension(Utilities::MPI::n_mpi_processes(this->mpi_communicator), 1);
               this->triangulation =
                 std::make_shared<parallel::shared::Triangulation<dim>>(this->mpi_communicator);
             }
@@ -88,43 +87,27 @@ namespace MeltPoolDG
           const double &y_min = this->parameters.mp.domain_y_min;
           const double &y_max = this->parameters.mp.domain_y_max;
 
-          if (dim == 2)
+          if constexpr ((dim == 2) || (dim == 3))
             {
               // create mesh
-              const Point<dim> bottom_left(x_min, y_min);
-              const Point<dim> top_right(x_max, y_max);
+              const Point<dim> bottom_left =
+                (dim == 2) ? Point<dim>(x_min, y_min) : Point<dim>(x_min, x_min, y_min);
+              const Point<dim> top_right =
+                (dim == 2) ? Point<dim>(x_max, y_max) : Point<dim>(x_max, x_max, y_max);
+
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
               if (this->parameters.base.do_simplex)
                 {
-                  // unsigned int refinement =
-                  // Utilities::pow(2, this->parameters.base.global_refinements);
-                  unsigned int refinement = this->parameters.base.global_refinements;
+                  // create mesh
+                  std::vector<unsigned int> subdivisions(
+                    dim,
+                    5 * (this->parameters.base.do_simplex ?
+                           Utilities::pow(2, this->parameters.base.global_refinements) :
+                           1));
+                  subdivisions[dim - 1] *= 2;
+
                   GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
-                                                                           {refinement, refinement},
-                                                                           bottom_left,
-                                                                           top_right);
-                }
-              else
-#endif
-                {
-                  GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
-                  this->triangulation->refine_global(this->parameters.base.global_refinements);
-                }
-            }
-          else if (dim == 3)
-            {
-              // create mesh
-              const Point<dim> bottom_left(x_min, x_min, y_min);
-              const Point<dim> top_right(x_max, x_max, y_max);
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-              if (this->parameters.base.do_simplex)
-                {
-                  unsigned int refinement =
-                    Utilities::pow(2, this->parameters.base.global_refinements);
-                  GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
-                                                                           {refinement,
-                                                                            refinement,
-                                                                            refinement},
+                                                                           subdivisions,
                                                                            bottom_left,
                                                                            top_right);
                 }
