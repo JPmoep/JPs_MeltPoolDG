@@ -83,18 +83,44 @@ namespace MeltPoolDG
               // create mesh
               const Point<dim> bottom_left(x_min, y_min);
               const Point<dim> top_right(x_max, y_max);
-
-              GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+              if (this->parameters.base.do_simplex)
+                {
+                  unsigned int refinement =
+                    Utilities::pow(2, this->parameters.base.global_refinements);
+                  GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
+                                                                           {refinement, refinement},
+                                                                           bottom_left,
+                                                                           top_right);
+                }
+              else
+#endif
+                {
+                  GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
+                  this->triangulation->refine_global(this->parameters.base.global_refinements);
+                }
             }
           else if (dim == 3)
             {
               // create mesh
               const Point<dim> bottom_left(x_min, x_min, y_min);
               const Point<dim> top_right(x_max, x_max, y_max);
-
-              GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+              if (this->parameters.base.do_simplex)
+                {
+                  unsigned int refinement =
+                    Utilities::pow(2, this->parameters.base.global_refinements);
+                  GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
+                                                                           {refinement, refinement},
+                                                                           bottom_left,
+                                                                           top_right);
+                }
+              else
+#endif
+                {
+                  GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
+                  this->triangulation->refine_global(this->parameters.base.global_refinements);
+                }
             }
           else
             {
