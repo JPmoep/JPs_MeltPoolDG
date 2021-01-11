@@ -5,6 +5,7 @@
 #include <deal.II/base/point.h>
 #include <deal.II/base/tensor_function.h>
 
+#include <deal.II/distributed/shared_tria.h>
 #include <deal.II/distributed/tria.h>
 
 #include <deal.II/grid/grid_generator.h>
@@ -70,31 +71,51 @@ namespace MeltPoolDG
         void
         create_spatial_discretization() override
         {
-          this->triangulation =
-            std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+          if (this->parameters.base.do_simplex)
+            {
+              this->triangulation =
+                std::make_shared<parallel::shared::Triangulation<dim>>(this->mpi_communicator);
+            }
+          else
+            {
+              this->triangulation =
+                std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
+            }
 
           const double &x_min = this->parameters.mp.domain_x_min;
           const double &x_max = this->parameters.mp.domain_x_max;
           const double &y_min = this->parameters.mp.domain_y_min;
           const double &y_max = this->parameters.mp.domain_y_max;
 
-          if (dim == 2)
+          if constexpr ((dim == 2) || (dim == 3))
             {
               // create mesh
-              const Point<dim> bottom_left(x_min, y_min);
-              const Point<dim> top_right(x_max, y_max);
+              std::vector<unsigned int> subdivisions(
+                dim,
+                5 * (this->parameters.base.do_simplex ?
+                       Utilities::pow(2, this->parameters.base.global_refinements) :
+                       1));
+              subdivisions[dim - 1] *= 2;
 
-              GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
-            }
-          else if (dim == 3)
-            {
-              // create mesh
-              const Point<dim> bottom_left(x_min, x_min, y_min);
-              const Point<dim> top_right(x_max, x_max, y_max);
+              const Point<dim> bottom_left =
+                (dim == 2 ? Point<dim>(x_min, y_min) : Point<dim>(x_min, x_min, y_min));
+              const Point<dim> top_right =
+                (dim == 2 ? Point<dim>(x_max, y_max) : Point<dim>(x_max, x_max, y_max));
 
-              GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+              if (this->parameters.base.do_simplex)
+                {
+                  GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
+                                                                           subdivisions,
+                                                                           bottom_left,
+                                                                           top_right);
+                }
+              else
+#endif
+                {
+                  GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
+                  this->triangulation->refine_global(this->parameters.base.global_refinements);
+                }
             }
           else
             {
