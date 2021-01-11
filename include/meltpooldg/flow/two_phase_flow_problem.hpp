@@ -173,9 +173,9 @@ namespace MeltPoolDG
           if (base_in->parameters.base.do_simplex)
             {
               ls_quad_idx = scratch_data->attach_quadrature(
-                Simplex::QGauss<1>(base_in->parameters.base.n_q_points_1d));
+                Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
               flow_quad_idx = scratch_data->attach_quadrature(
-                Simplex::QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
+                Simplex::QGauss<dim>(base_in->parameters.flow.velocity_degree + 1));
             }
           else
 #endif
