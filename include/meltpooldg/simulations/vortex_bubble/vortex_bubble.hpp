@@ -164,8 +164,7 @@ namespace MeltPoolDG
           /*
            *  create a pair of (boundary_id, dirichlet_function)
            */
-          constexpr types::boundary_id inflow_bc  = 42;
-          constexpr types::boundary_id do_nothing = 0;
+          constexpr types::boundary_id inflow_bc = 42;
 
           this->attach_dirichlet_boundary_condition(inflow_bc,
                                                     std::make_shared<DirichletCondition<dim>>(),
@@ -192,9 +191,7 @@ namespace MeltPoolDG
                   face->set_boundary_id(inflow_bc);
             }
           else
-            {
-              (void)do_nothing; // suppress unused variable for 1D
-            }
+            {}
         }
 
         void
