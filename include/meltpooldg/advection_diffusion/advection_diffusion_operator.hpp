@@ -38,10 +38,12 @@ namespace MeltPoolDG
                                 const BlockVectorType                &advection_velocity_in,
                                 const AdvectionDiffusionData<number> &data_in,
                                 const unsigned int                   dof_idx_in,
-                                const unsigned int                   quad_idx_in )
+                                const unsigned int                   quad_idx_in, 
+                                const unsigned int                   velocity_dof_idx_in)
     : scratch_data        ( scratch_data_in       )
     , advection_velocity  ( advection_velocity_in )
     , data                ( data_in               )
+    , velocity_dof_idx   ( velocity_dof_idx_in)
     {
       this->reset_indices(dof_idx_in, quad_idx_in);
     }
@@ -60,8 +62,12 @@ namespace MeltPoolDG
         AssertThrow(data.diffusivity >= 0.0,
                     ExcMessage("Advection diffusion operator: diffusivity is smaller than zero!"));
 
-        advected_field_old.update_ghost_values();
+        // @todo: the case where the size of the velocity dof vector is
+        // different than the level set field must be added
+        AssertThrow(velocity_dof_idx == this->dof_idx,
+                    ExcMessage("not implemented; try matrix free operation"));
 
+        advected_field_old.update_ghost_values();
 
         FEValues<dim> fe_values(scratch_data.get_mapping(),
                                 scratch_data.get_dof_handler(this->dof_idx).get_fe(),
@@ -168,7 +174,9 @@ namespace MeltPoolDG
             FECellIntegrator<dim, 1, number>   advected_field(matrix_free,
                                                             this->dof_idx,
                                                             this->quad_idx);
-            FECellIntegrator<dim, dim, number> velocity(matrix_free, this->dof_idx, this->quad_idx);
+            FECellIntegrator<dim, dim, number> velocity(matrix_free,
+                                                        velocity_dof_idx,
+                                                        this->quad_idx);
 
             for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
               {
@@ -217,7 +225,9 @@ namespace MeltPoolDG
             FECellIntegrator<dim, 1, number, VectorizedArrayType> advected_field(matrix_free,
                                                                                  this->dof_idx,
                                                                                  this->quad_idx);
-            FECellIntegrator<dim, dim, number> velocity(matrix_free, this->dof_idx, this->quad_idx);
+            FECellIntegrator<dim, dim, number>                    velocity(matrix_free,
+                                                        velocity_dof_idx,
+                                                        this->quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
@@ -275,6 +285,7 @@ namespace MeltPoolDG
       const ScratchData<dim> &              scratch_data;
       const BlockVectorType &               advection_velocity;
       const AdvectionDiffusionData<number> &data;
+      const unsigned int                    velocity_dof_idx;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

@@ -1,6 +1,6 @@
 {
   "base" : {
-    "application name":   "reinit_circle_amr",
+    "application name":   "reinit_circle",
     "problem name":       "reinitialization",
     "dimension": "         2",
     "global refinements": "6",

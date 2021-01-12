@@ -62,7 +62,7 @@ namespace MeltPoolDG
             /*
              * compute the advection velocity for the current time
              */
-            compute_advection_velocity(*base_in->get_advection_field());
+            compute_advection_velocity(*base_in->get_advection_field("advection_diffusion"));
             advec_diff_operation.solve(dt, advection_velocity);
             /*
              *  do paraview output if requested
@@ -130,7 +130,8 @@ namespace MeltPoolDG
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs());
         constraints.merge(hanging_node_constraints);
-        for (const auto &bc : base_in->get_boundary_conditions().dirichlet_bc)
+        for (const auto &bc : base_in->get_dirichlet_bc(
+               "advection_diffusion")) // @todo: add name of bc at a more central place
           {
             VectorTools::interpolate_boundary_values(
               scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);
@@ -145,9 +146,8 @@ namespace MeltPoolDG
         unsigned int quad_idx = 0;
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          quad_idx = scratch_data->attach_quadrature(Simplex::QGauss<dim>(
-            dim == 2 ? (base_in->parameters.base.n_q_points_1d == 1 ? 3 : 7) :
-                       (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
+          quad_idx = scratch_data->attach_quadrature(
+            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
         else
 #endif
           quad_idx =
@@ -156,9 +156,8 @@ namespace MeltPoolDG
           // @TODO: only do once!
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          scratch_data->attach_quadrature(Simplex::QGauss<dim>(
-            dim == 2 ? (base_in->parameters.base.n_q_points_1d == 1 ? 3 : 7) :
-                       (base_in->parameters.base.n_q_points_1d == 1 ? 4 : 10)));
+          scratch_data->attach_quadrature(
+            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
         else
 #endif
           scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
@@ -179,6 +178,14 @@ namespace MeltPoolDG
         /*
          *  set initial conditions of the levelset function
          */
+        AssertThrow(
+          base_in->get_initial_condition("advection_diffusion"),
+          ExcMessage(
+            "It seems that your SimulationBase object does not contain "
+            "a valid initial field function for the level set field. A shared_ptr to your initial field "
+            "function, e.g., MyInitializeFunc<dim> must be specified as follows: "
+            "this->attach_initial_condition(std::make_shared<MyInitializeFunc<dim>>(), "
+            "'advection_diffusion') "));
         VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution);
 
@@ -186,22 +193,27 @@ namespace MeltPoolDG
                              dof_handler,
                              constraints,
                              scratch_data->get_quadrature(),
-                             *base_in->get_field_conditions()->initial_field,
+                             *base_in->get_initial_condition("advection_diffusion"),
                              initial_solution);
 
         initial_solution.update_ghost_values();
         /*
          *    initialize the advection-diffusion operation class
          */
-        AssertThrow(
-          base_in->get_advection_field(),
-          ExcMessage(
-            " It seems that your SimulationBase object does not contain "
-            "a valid advection velocity. A shared_ptr to your advection velocity "
-            "function, e.g., AdvectionFunc<dim> must be specified as follows: "
-            "this->field_conditions.advection_field = std::make_shared<AdvectionFunc<dim>>();"));
-        advec_diff_operation.initialize(
-          scratch_data, initial_solution, base_in->parameters, dof_idx, dof_no_bc_idx, quad_idx);
+        AssertThrow(base_in->get_advection_field("advection_diffusion"),
+                    ExcMessage(
+                      " It seems that your SimulationBase object does not contain "
+                      "a valid advection velocity. A shared_ptr to your advection velocity "
+                      "function, e.g., AdvectionFunc<dim> must be specified as follows: "
+                      "this->attach_advection_field(std::make_shared<AdvecFunc<dim>>(), "
+                      "'advection_diffusion') "));
+        advec_diff_operation.initialize(scratch_data,
+                                        initial_solution,
+                                        base_in->parameters,
+                                        dof_idx,
+                                        dof_no_bc_idx,
+                                        quad_idx,
+                                        dof_no_bc_idx);
       }
 
       void
