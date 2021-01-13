@@ -73,8 +73,11 @@ namespace MeltPoolDG
         {
           if (this->parameters.base.do_simplex)
             {
-              this->triangulation =
-                std::make_shared<parallel::shared::Triangulation<dim>>(this->mpi_communicator);
+              this->triangulation = std::make_shared<parallel::shared::Triangulation<dim>>(
+                this->mpi_communicator,
+                (::Triangulation<dim>::none),
+                false,
+                parallel::shared::Triangulation<dim>::Settings::partition_metis);
             }
           else
             {
@@ -100,10 +103,7 @@ namespace MeltPoolDG
                 {
                   // create mesh
                   std::vector<unsigned int> subdivisions(
-                    dim,
-                    5 * (this->parameters.base.do_simplex ?
-                           Utilities::pow(2, this->parameters.base.global_refinements) :
-                           1));
+                    dim, 5 * Utilities::pow(2, this->parameters.base.global_refinements));
                   subdivisions[dim - 1] *= 2;
 
                   GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
