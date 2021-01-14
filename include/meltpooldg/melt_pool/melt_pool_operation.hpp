@@ -32,6 +32,7 @@ namespace MeltPoolDG
        */
       VectorType temperature;
       VectorType solid;
+      VectorType liquid;
       /*
        *  All the necessary parameters are stored in this struct.
        */
@@ -336,6 +337,86 @@ namespace MeltPoolDG
       }
 
       void
+      set_level_set(VectorType &level_set)
+      {
+        scratch_data->initialize_dof_vector(liquid, temp_dof_idx);
+        level_set.update_ghost_values();
+
+        FEValues<dim> fe_values(scratch_data->get_mapping(),
+                                scratch_data->get_dof_handler(temp_dof_idx).get_fe(),
+                                scratch_data->get_quadrature(temp_quad_idx),
+                                update_values | update_gradients | update_quadrature_points |
+                                  update_JxW_values);
+
+        const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell(temp_dof_idx);
+
+        std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
+        std::map<types::global_dof_index, Point<dim>> support_points;
+        DoFTools::map_dofs_to_support_points(scratch_data->get_mapping(),
+                                             scratch_data->get_dof_handler(temp_dof_idx),
+                                             support_points);
+
+        for (const auto &cell : scratch_data->get_dof_handler(temp_dof_idx).active_cell_iterators())
+          if (cell->is_locally_owned())
+            {
+              cell->get_dof_indices(local_dof_indices);
+              for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                {
+                  liquid[local_dof_indices[i]] =
+                    is_liquid_region(support_points[local_dof_indices[i]]);
+                  if (liquid[local_dof_indices[i]])
+                    level_set[local_dof_indices[i]] = 1.0;
+                  else if (is_solid_region(support_points[local_dof_indices[i]]))
+                    level_set[local_dof_indices[i]] = 0.0;
+                  else
+                    level_set[local_dof_indices[i]] = -1.0;
+                }
+            }
+        level_set.zero_out_ghosts();
+      }
+
+      void
+      remove_the_level_set_from_solid_regions(const DoFHandler<dim> &    level_set_dof_handler,
+                                              AffineConstraints<double> &level_set_constraints)
+
+
+      {
+        FEValues<dim> fe_values(scratch_data->get_mapping(),
+                                level_set_dof_handler.get_fe(),
+                                scratch_data->get_quadrature(flow_quad_idx),
+                                update_values);
+
+        const unsigned int dofs_per_cell = level_set_dof_handler.get_fe().n_dofs_per_cell();
+
+        std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
+        std::map<types::global_dof_index, Point<dim>> support_points;
+        DoFTools::map_dofs_to_support_points(scratch_data->get_mapping(),
+                                             level_set_dof_handler,
+                                             support_points);
+
+        AffineConstraints<double> solid_constraints;
+
+        IndexSet ls_locally_relevant_dofs;
+        DoFTools::extract_locally_relevant_dofs(level_set_dof_handler, ls_locally_relevant_dofs);
+
+        solid_constraints.reinit(ls_locally_relevant_dofs);
+        for (const auto &cell : level_set_dof_handler.active_cell_iterators())
+          if (cell->is_locally_owned())
+            {
+              cell->get_dof_indices(local_dof_indices);
+
+              for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                if (is_solid_region(support_points[local_dof_indices[i]]))
+                  solid_constraints.add_line(local_dof_indices[i]);
+            }
+        level_set_constraints.merge(
+          solid_constraints, AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
+        level_set_constraints.close();
+      }
+
+      void
       reinit()
       {
         scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
@@ -466,6 +547,51 @@ namespace MeltPoolDG
           }
       }
 
+      /*
+       * check if a given point is liquid
+       */
+      bool
+      is_liquid_region(const Point<dim> point)
+      {
+        if (mp_data.liquid.melt_pool_radius == 0)
+          return false;
+        else if (point[dim - 1] >= laser_center[dim - 1])
+          return false;
+        else
+          {
+            Point<dim> shifted_center =
+              MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(
+                mp_data.melt_pool_center);
+
+            if (mp_data.melt_pool_shape == "parabola")
+              {
+                if (dim == 2)
+                  {
+                    const double sign =
+                      -2 * mp_data.liquid.melt_pool_radius * (point[1] - shifted_center[1]) +
+                      std::pow(point[0] - shifted_center[0], 2);
+                    return (sign >= 0) ? false : true;
+                  }
+                else
+                  AssertThrow(false, ExcMessage("not implemented"));
+              }
+            else if (mp_data.melt_pool_shape == "ellipse")
+              return UtilityFunctions::DistanceFunctions::ellipsoidal_manifold<dim>(
+                       point,
+                       shifted_center,
+                       mp_data.liquid.melt_pool_radius,
+                       mp_data.liquid.melt_pool_depth) > 0 ?
+                       true :
+                       false;
+            else if (mp_data.melt_pool_shape == "temperature_dependent")
+              return (analytical_temperature_field(point, 1.0 /* is_liquid */) >=
+                      mp_data.liquid.melting_point) ?
+                       true :
+                       false;
+            else
+              AssertThrow(false, ExcMessage("not implemented"));
+          }
+      }
       /**
        *  This function computes the recoil pressure coefficient for a given temperature value
        *  dependent on the input parameters.

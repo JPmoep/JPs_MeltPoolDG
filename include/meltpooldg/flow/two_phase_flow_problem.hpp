@@ -203,7 +203,6 @@ namespace MeltPoolDG
             }
         }
 
-
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, base_in);
 #else
