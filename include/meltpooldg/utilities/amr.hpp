@@ -5,6 +5,8 @@
  * ---------------------------------------------------------------------*/
 #pragma once
 
+#include <deal.II/distributed/solution_transfer.h>
+
 namespace MeltPoolDG
 {
   using namespace dealii;

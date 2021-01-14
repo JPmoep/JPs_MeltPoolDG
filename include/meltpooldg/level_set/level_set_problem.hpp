@@ -172,6 +172,7 @@ namespace MeltPoolDG
                                        ls_hanging_nodes_dof_idx,
                                        ls_quad_idx,
                                        reinit_dof_idx,
+                                       reinit_dof_idx,
                                        curv_dof_idx,
                                        normal_dof_idx,
                                        vel_dof_idx,
@@ -395,6 +396,8 @@ namespace MeltPoolDG
       const unsigned int &   curv_dof_idx   = ls_hanging_nodes_dof_idx;
       const unsigned int &   normal_dof_idx = ls_hanging_nodes_dof_idx;
       const unsigned int &   reinit_dof_idx =
+        ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
+      const unsigned int &reinit_hanging_nodes_dof_idx =
         ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
 
       std::shared_ptr<Postprocessor<dim>> post_processor;

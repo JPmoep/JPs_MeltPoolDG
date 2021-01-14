@@ -51,7 +51,6 @@ namespace MeltPoolDG
 
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-                 const VectorType &                             solution_level_set_in,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             reinit_dof_idx_in,
                  const unsigned int                             reinit_quad_idx_in,
@@ -99,10 +98,6 @@ namespace MeltPoolDG
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
-        /*
-         *    compute the normal vector field and update the initial solution
-         */
-        update_initial_solution(solution_level_set_in);
         /*
          *   create reinitialization operator. This class supports matrix-based
          *   and matrix-free computation.

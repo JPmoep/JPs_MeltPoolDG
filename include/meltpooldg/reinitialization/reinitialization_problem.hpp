@@ -178,12 +178,8 @@ namespace MeltPoolDG
           {
             reinit_operation = std::make_shared<ReinitializationOperation<dim>>();
 
-            reinit_operation->initialize(scratch_data,
-                                         solution_level_set,
-                                         base_in->parameters,
-                                         reinit_dof_idx,
-                                         reinit_quad_idx,
-                                         normal_dof_idx);
+            reinit_operation->initialize(
+              scratch_data, base_in->parameters, reinit_dof_idx, reinit_quad_idx, normal_dof_idx);
           }
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         else if (base_in->parameters.reinit.implementation == "adaflo")
@@ -201,6 +197,8 @@ namespace MeltPoolDG
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
+
+        reinit_operation->update_initial_solution(solution_level_set);
       }
 
       void

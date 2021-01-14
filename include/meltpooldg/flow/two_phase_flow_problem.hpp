@@ -173,12 +173,14 @@ namespace MeltPoolDG
 
           scratch_data->attach_dof_handler(dof_handler);
           scratch_data->attach_dof_handler(dof_handler);
+          scratch_data->attach_dof_handler(dof_handler);
           scratch_data->attach_dof_handler(flow_dof_handler);
 
           ls_hanging_nodes_dof_idx =
             scratch_data->attach_constraint_matrix(ls_hanging_node_constraints);
-          ls_dof_idx   = scratch_data->attach_constraint_matrix(ls_constraints_dirichlet);
-          flow_dof_idx = scratch_data->attach_constraint_matrix(flow_dummy_constraint);
+          ls_dof_idx     = scratch_data->attach_constraint_matrix(ls_constraints_dirichlet);
+          reinit_dof_idx = scratch_data->attach_constraint_matrix(reinit_constraints_dirichlet);
+          flow_dof_idx   = scratch_data->attach_constraint_matrix(flow_dummy_constraint);
 
           /*
            *  create quadrature rule
@@ -260,6 +262,7 @@ namespace MeltPoolDG
                                        ls_hanging_nodes_dof_idx,
                                        ls_quad_idx,
                                        reinit_dof_idx,
+                                       reinit_hanging_nodes_dof_idx,
                                        curv_dof_idx,
                                        normal_dof_idx,
                                        vel_dof_idx,
@@ -357,6 +360,26 @@ namespace MeltPoolDG
 
         ls_constraints_dirichlet.merge(ls_hanging_node_constraints);
         ls_constraints_dirichlet.close();
+
+        reinit_constraints_dirichlet.clear();
+        reinit_constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
+        if (base_in->get_bc("reinitialization") &&
+            !base_in->get_dirichlet_bc("reinitialization").empty())
+          {
+            for (const auto &bc : base_in->get_dirichlet_bc(
+                   "reinitialization")) // @todo: add name of bc at a more central place
+              {
+                std::cout << "bc:: " << std::endl;
+                dealii::VectorTools::interpolate_boundary_values(
+                  scratch_data->get_mapping(),
+                  dof_handler,
+                  bc.first, //@todo: function map can be provided as argument directly
+                  *bc.second,
+                  reinit_constraints_dirichlet);
+              }
+          }
+        reinit_constraints_dirichlet.merge(ls_hanging_node_constraints);
+        reinit_constraints_dirichlet.close();
 
         scratch_data->build();
 
@@ -775,6 +798,7 @@ namespace MeltPoolDG
 
       AffineConstraints<double> ls_constraints_dirichlet;
       AffineConstraints<double> ls_hanging_node_constraints;
+      AffineConstraints<double> reinit_constraints_dirichlet;
       AffineConstraints<double> flow_dummy_constraint;
 
       VectorType force_rhs;
@@ -784,12 +808,13 @@ namespace MeltPoolDG
       unsigned int ls_dof_idx;
       unsigned int ls_hanging_nodes_dof_idx;
       unsigned int ls_quad_idx;
+      unsigned int reinit_dof_idx;
 
-      const unsigned int &reinit_dof_idx = ls_hanging_nodes_dof_idx;
-      const unsigned int &curv_dof_idx   = ls_hanging_nodes_dof_idx;
-      const unsigned int &normal_dof_idx = ls_hanging_nodes_dof_idx;
-      const unsigned int &temp_dof_idx   = ls_hanging_nodes_dof_idx;
-      const unsigned int &temp_quad_idx  = ls_quad_idx;
+      const unsigned int &reinit_hanging_nodes_dof_idx = ls_hanging_nodes_dof_idx;
+      const unsigned int &curv_dof_idx                 = ls_hanging_nodes_dof_idx;
+      const unsigned int &normal_dof_idx               = ls_hanging_nodes_dof_idx;
+      const unsigned int &temp_dof_idx                 = ls_hanging_nodes_dof_idx;
+      const unsigned int &temp_quad_idx                = ls_quad_idx;
 
       unsigned int vel_dof_idx;
       unsigned int pressure_dof_idx;

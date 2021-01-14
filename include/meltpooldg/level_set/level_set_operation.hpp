@@ -53,6 +53,7 @@ namespace MeltPoolDG
                  const unsigned int                             ls_hanging_nodes_dof_idx_in,
                  const unsigned int                             ls_quad_idx_in,
                  const unsigned int                             reinit_dof_idx_in,
+                 const unsigned int                             reinit_hanging_nodes_dof_idx_in,
                  const unsigned int                             curv_dof_idx_in,
                  const unsigned int                             normal_dof_idx_in,
                  const unsigned int                             vel_dof_idx,
@@ -75,6 +76,8 @@ namespace MeltPoolDG
         if ((base_in->parameters.advec_diff.implementation ==
              "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
           {
+            (void)advection_velocity;
+            (void)ls_zero_bc_idx;
             advec_diff_operation =
               std::make_shared<AdvectionDiffusion::AdvectionDiffusionOperation<dim>>();
             advec_diff_operation->initialize(scratch_data,
@@ -113,9 +116,8 @@ namespace MeltPoolDG
           {
             reinit_operation = std::make_shared<Reinitialization::ReinitializationOperation<dim>>();
             reinit_operation->initialize(scratch_data,
-                                         advec_diff_operation->get_advected_field(),
                                          base_in->parameters,
-                                         reinit_dof_idx_in,
+                                         reinit_hanging_nodes_dof_idx_in,
                                          ls_quad_idx_in,
                                          normal_dof_idx_in);
           }
@@ -127,7 +129,7 @@ namespace MeltPoolDG
             reinit_operation =
               std::make_shared<Reinitialization::ReinitializationOperationAdaflo<dim>>(
                 *scratch_data,
-                reinit_dof_idx_in,
+                reinit_hanging_nodes_dof_idx_in,
                 ls_quad_idx_in,
                 normal_dof_idx_in,
                 advec_diff_operation->get_advected_field(),
@@ -137,10 +139,13 @@ namespace MeltPoolDG
         else
           AssertThrow(false, ExcNotImplemented());
         /*
-         *  The initial solution of the level set equation will be reinitialized.
+         * 1) The initial solution of the level set equation will be reinitialized first WITHOUT
+         *    dirichlet constraints of the reinitialization.
          */
         if (level_set_data.do_reinitialization)
           {
+            reinit_operation->update_initial_solution(advec_diff_operation->get_advected_field());
+
             while (!reinit_time_iterator.is_finished())
               {
                 const double d_tau = reinit_time_iterator.get_next_time_increment();
@@ -151,6 +156,41 @@ namespace MeltPoolDG
               }
             advec_diff_operation->get_advected_field() = reinit_operation->get_level_set();
             reinit_time_iterator.reset();
+          }
+        /*
+         * 2) From now on, the initial solution of the level set equation will be reinitialized
+         *    with dirichlet constraints of the reinitialization.
+         */
+        if (reinit_dof_idx_in != reinit_hanging_nodes_dof_idx_in)
+          {
+            if ((base_in->parameters.reinit.implementation ==
+                 "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
+              {
+                reinit_operation =
+                  std::make_shared<Reinitialization::ReinitializationOperation<dim>>();
+                reinit_operation->initialize(scratch_data,
+                                             base_in->parameters,
+                                             reinit_dof_idx_in,
+                                             ls_quad_idx_in,
+                                             normal_dof_idx_in);
+              }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+            else if ((base_in->parameters.reinit.implementation == "adaflo") ||
+                     (base_in->parameters.ls.implementation == "adaflo"))
+              {
+                AssertThrow(base_in->parameters.reinit.solver.do_matrix_free, ExcNotImplemented());
+                reinit_operation =
+                  std::make_shared<Reinitialization::ReinitializationOperationAdaflo<dim>>(
+                    *scratch_data,
+                    reinit_dof_idx_in,
+                    ls_quad_idx_in,
+                    normal_dof_idx_in,
+                    advec_diff_operation->get_advected_field(),
+                    base_in->parameters);
+              }
+#endif
+            else
+              AssertThrow(false, ExcNotImplemented());
           }
         /*
          *    compute the smoothened function
