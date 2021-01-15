@@ -145,6 +145,12 @@ namespace MeltPoolDG
         return normal_vector_field;
       }
 
+      LinearAlgebra::distributed::BlockVector<double> &
+      get_solution_normal_vector() override
+      {
+        return normal_vector_field;
+      }
+
       LevelSetOKZSolverComputeNormal<dim> &
       get_adaflo_obj()
       {
