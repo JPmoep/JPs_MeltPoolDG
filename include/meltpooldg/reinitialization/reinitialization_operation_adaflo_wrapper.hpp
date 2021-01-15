@@ -167,6 +167,13 @@ namespace MeltPoolDG
         return normal_vector_operation_adaflo->get_solution_normal_vector();
       }
 
+      LinearAlgebra::distributed::BlockVector<double> &
+      get_normal_vector() override
+      {
+        return normal_vector_operation_adaflo->get_solution_normal_vector();
+      }
+
+
       void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
       {

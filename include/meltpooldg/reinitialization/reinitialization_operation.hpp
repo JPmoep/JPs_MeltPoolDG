@@ -242,6 +242,12 @@ namespace MeltPoolDG
         return solution_level_set;
       }
 
+      BlockVectorType &
+      get_normal_vector() override
+      {
+        return normal_vector_operation->get_solution_normal_vector();
+      }
+
       void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
