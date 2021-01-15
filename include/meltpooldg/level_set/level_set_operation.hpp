@@ -163,6 +163,8 @@ namespace MeltPoolDG
          */
         if (reinit_dof_idx_in != reinit_hanging_nodes_dof_idx_in)
           {
+            auto normal_vec_temp = reinit_operation->get_normal_vector();
+
             if ((base_in->parameters.reinit.implementation ==
                  "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
               {
@@ -191,6 +193,8 @@ namespace MeltPoolDG
 #endif
             else
               AssertThrow(false, ExcNotImplemented());
+
+            reinit_operation->get_normal_vector() = normal_vec_temp;
           }
         /*
          *    compute the smoothened function
@@ -563,7 +567,9 @@ namespace MeltPoolDG
       {
         MeltPoolDG::VectorTools::update_ghost_values(get_level_set(),
                                                      get_curvature(),
-                                                     get_normal_vector());
+                                                     get_normal_vector(),
+                                                     level_set_as_heaviside,
+                                                     distance_to_level_set);
         /*
          *  output advected field
          */
@@ -575,11 +581,18 @@ namespace MeltPoolDG
          */
         for (unsigned int d = 0; d < dim; ++d)
           data_out.add_data_vector(get_normal_vector().block(d), "normal_" + std::to_string(d));
-
         /*
          *  output curvature
          */
         data_out.add_data_vector(get_curvature(), "curvature");
+        /*
+         *  output heaviside
+         */
+        data_out.add_data_vector(level_set_as_heaviside, "heaviside");
+        /*
+         *  output distance function
+         */
+        data_out.add_data_vector(distance_to_level_set, "distance");
       }
       /*
        *   Computation of the normal vectors

@@ -413,7 +413,6 @@ namespace MeltPoolDG
 
       unsigned int advec_diff_quad_idx;
 
-
       std::shared_ptr<Postprocessor<dim>> post_processor;
     };
   } // namespace AdvectionDiffusion

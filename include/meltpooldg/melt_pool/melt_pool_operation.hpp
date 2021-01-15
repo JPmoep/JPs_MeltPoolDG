@@ -259,6 +259,7 @@ namespace MeltPoolDG
 
         scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
         scratch_data->initialize_dof_vector(solid, temp_dof_idx);
+        scratch_data->initialize_dof_vector(liquid, temp_dof_idx);
 
         FEValues<dim> fe_values(scratch_data->get_mapping(),
                                 scratch_data->get_dof_handler(temp_dof_idx).get_fe(),
@@ -286,6 +287,8 @@ namespace MeltPoolDG
                                                  level_set_as_heaviside[local_dof_indices[i]]);
                   solid[local_dof_indices[i]] =
                     is_solid_region(support_points[local_dof_indices[i]]);
+                  liquid[local_dof_indices[i]] =
+                    is_liquid_region(support_points[local_dof_indices[i]]);
                 }
             }
 
@@ -339,7 +342,6 @@ namespace MeltPoolDG
       void
       set_level_set(VectorType &level_set)
       {
-        scratch_data->initialize_dof_vector(liquid, temp_dof_idx);
         level_set.update_ghost_values();
 
         FEValues<dim> fe_values(scratch_data->get_mapping(),
@@ -363,8 +365,6 @@ namespace MeltPoolDG
               cell->get_dof_indices(local_dof_indices);
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
                 {
-                  liquid[local_dof_indices[i]] =
-                    is_liquid_region(support_points[local_dof_indices[i]]);
                   if (liquid[local_dof_indices[i]])
                     level_set[local_dof_indices[i]] = 1.0;
                   else if (is_solid_region(support_points[local_dof_indices[i]]))
@@ -421,6 +421,7 @@ namespace MeltPoolDG
       {
         scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
         scratch_data->initialize_dof_vector(solid, temp_dof_idx);
+        scratch_data->initialize_dof_vector(liquid, temp_dof_idx);
       }
 
       void
@@ -428,8 +429,30 @@ namespace MeltPoolDG
       {
         temperature.update_ghost_values();
         solid.update_ghost_values();
+        liquid.update_ghost_values();
         vectors.push_back(&temperature);
         vectors.push_back(&solid);
+        vectors.push_back(&liquid);
+      }
+
+      void
+      attach_output_vectors(DataOut<dim> &data_out) const
+      {
+        MeltPoolDG::VectorTools::update_ghost_values(temperature, solid, liquid);
+        /**
+         *  temperature
+         */
+        data_out.add_data_vector(scratch_data->get_dof_handler(temp_dof_idx),
+                                 temperature,
+                                 "temperature");
+        /**
+         *  solid
+         */
+        data_out.add_data_vector(scratch_data->get_dof_handler(temp_dof_idx), solid, "solid");
+        /**
+         *  liquid
+         */
+        data_out.add_data_vector(scratch_data->get_dof_handler(temp_dof_idx), liquid, "liquid");
       }
 
     private:
