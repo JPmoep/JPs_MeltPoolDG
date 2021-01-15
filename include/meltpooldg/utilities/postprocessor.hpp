@@ -31,6 +31,7 @@ namespace MeltPoolDG
     const Mapping<dim> &        mapping;
     const Triangulation<dim> &  triangulation;
     ConditionalOStream          pcout;
+    bool                        do_simplex;
 
     DataOut<dim> data_out;
 
@@ -44,21 +45,22 @@ namespace MeltPoolDG
       , mapping(mapping_in)
       , triangulation(triangulation_in)
       , pcout(std::cout, (Utilities::MPI::this_mpi_process(mpi_communicator) == 0))
+      , do_simplex(!triangulation.all_reference_cell_types_are_hyper_cube())
     {}
 
     /*
      *  This function collects and performs all relevant postprocessing steps.
      */
     void
-    process(const double                               time_step,
+    process(const int                                  n_time_step,
             const std::function<void(DataOut<dim> &)> &attach_output_vectors,
             const std::function<void()> &              post_operation = {})
     {
       attach_output_vectors(data_out);
 
-      if (pv_data.do_output)
+      if ((pv_data.do_output) && !(n_time_step % pv_data.write_frequency))
         {
-          write_paraview_files(time_step);
+          write_paraview_files(n_time_step);
 
           if (pv_data.print_boundary_id)
             print_boundary_ids();
@@ -74,6 +76,11 @@ namespace MeltPoolDG
     void
     write_paraview_files(const double time_step)
     {
+      DataOutBase::VtkFlags flags;
+      if (do_simplex == false)
+        flags.write_higher_order_cells = true;
+      data_out.set_flags(flags);
+
       data_out.build_patches(mapping);
       data_out.write_vtu_with_pvtu_record("./",
                                           pv_data.filename,
