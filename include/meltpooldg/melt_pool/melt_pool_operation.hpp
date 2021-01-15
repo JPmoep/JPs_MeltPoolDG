@@ -49,7 +49,6 @@ namespace MeltPoolDG
                  const unsigned int                             flow_quad_idx_in,
                  const unsigned int                             temp_dof_idx_in,
                  const unsigned int                             temp_quad_idx_in,
-                 const VectorType &                             level_set_as_heaviside,
                  const double                                   start_time_in)
       {
         scratch_data     = scratch_data_in;
@@ -60,10 +59,6 @@ namespace MeltPoolDG
         temp_quad_idx    = temp_quad_idx_in;
         time             = start_time_in;
         /*
-         *  set the advection diffusion data
-         */
-        mp_data = data_in.mp;
-        /*
          *  set the parameters for the melt pool operation
          */
         set_melt_pool_parameters(data_in);
@@ -72,6 +67,11 @@ namespace MeltPoolDG
          */
         laser_center =
           MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(mp_data.laser_center);
+      }
+
+      void
+      set_initial_condition(const VectorType &level_set_as_heaviside)
+      {
         /*
          *  Initialize the temperature field
          */
