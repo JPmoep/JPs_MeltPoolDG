@@ -450,17 +450,17 @@ namespace MeltPoolDG::Flow
                     parameters.flow.viscosity + parameters.flow.viscosity_difference * indicator;
 
                   // check if no spurious densities or viscosities are computed
-                  const auto densities = flow_operation->get_density(cell, q);
-                  for (auto dens : densities)
+                  for (auto dens : flow_operation->get_density(cell, q))
                     if (!((dens == parameters.flow.density) ||
                           (dens == parameters.flow.density_difference + parameters.flow.density)))
-                      std::cout << "density is wrong:" << dens << std::endl;
-                  const auto viscosities = flow_operation->get_viscosity(cell, q);
-                  for (auto visc : viscosities)
+                      std::cout << "WARNING: density does not comply with input:" << dens
+                                << std::endl;
+                  for (auto visc : flow_operation->get_viscosity(cell, q))
                     if (!((visc == parameters.flow.viscosity) ||
                           (visc ==
                            parameters.flow.viscosity_difference + parameters.flow.viscosity)))
-                      std::cout << "viscosity is wrong:" << visc << std::endl;
+                      std::cout << "WARNING: viscosity does not comply with input:" << visc
+                                << std::endl;
                 }
             }
         },
