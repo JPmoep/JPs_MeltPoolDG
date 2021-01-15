@@ -214,6 +214,19 @@ namespace MeltPoolDG
         vel_dof_idx      = flow_operation->get_dof_handler_idx_velocity();
         pressure_dof_idx = flow_operation->get_dof_handler_idx_pressure();
 
+        /*
+         *    initialize the melt pool operation class
+         */
+        if (base_in->parameters.base.problem_name == "melt_pool")
+          melt_pool_operation.initialize(scratch_data,
+                                         base_in->parameters,
+                                         ls_dof_idx,
+                                         vel_dof_idx,
+                                         flow_quad_idx,
+                                         temp_dof_idx,
+                                         temp_quad_idx,
+                                         base_in->parameters.flow.start_time);
+
         setup_dof_system(base_in, false);
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
@@ -243,6 +256,7 @@ namespace MeltPoolDG
 
         VectorType initial_solution;
         scratch_data->initialize_dof_vector(initial_solution, ls_dof_idx);
+
         dealii::VectorTools::project(scratch_data->get_mapping(),
                                      dof_handler,
                                      ls_constraints_dirichlet,
@@ -267,22 +281,10 @@ namespace MeltPoolDG
                                        vel_dof_idx,
                                        ls_dof_idx /* todo: ls_zero_bc_idx*/);
         /*
-         *    initialize the melt pool operation class
+         * set initial condition of the melt pool class
          */
         if (base_in->parameters.base.problem_name == "melt_pool")
-          {
-            melt_pool_operation.initialize(scratch_data,
-                                           base_in->parameters,
-                                           ls_dof_idx,
-                                           vel_dof_idx,
-                                           flow_quad_idx,
-                                           temp_dof_idx,
-                                           temp_quad_idx,
-                                           level_set_operation.level_set_as_heaviside,
-                                           base_in->parameters.flow.start_time);
-          }
-
-
+          melt_pool_operation.set_initial_condition(level_set_operation.level_set_as_heaviside);
 
         //@todo --> for amr
         /*
@@ -381,6 +383,18 @@ namespace MeltPoolDG
         reinit_constraints_dirichlet.close();
 
         scratch_data->build();
+        /*
+         *    limit the level set interface to the touching regions of liquid/gas
+         */
+        if ((base_in->parameters.base.problem_name == "melt_pool") &&
+            base_in->parameters.mp.set_level_set_to_zero_in_solid)
+
+          {
+            melt_pool_operation.remove_the_level_set_from_solid_regions(dof_handler,
+                                                                        ls_constraints_dirichlet);
+            melt_pool_operation.remove_the_level_set_from_solid_regions(
+              dof_handler, reinit_constraints_dirichlet);
+          }
 
         if (do_reinit)
           {
@@ -551,12 +565,12 @@ namespace MeltPoolDG
             /*
              *  normal vector field
              */
-            if (do_output_of_dependent_variable)
-              {
-                for (unsigned int d = 0; d < dim; ++d)
-                  data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
-                                           "normal_" + std::to_string(d));
-              }
+            // if (do_output_of_dependent_variable)
+            //{
+            // for (unsigned int d = 0; d < dim; ++d)
+            // data_out.add_data_vector(level_set_operation.get_normal_vector().block(d),
+            //"normal_" + std::to_string(d));
+            //}
             /*
              *  flow velocity
              */
