@@ -3,7 +3,7 @@
     "problem name": "two_phase_flow",
     "application name": "spurious_currents",
     "dimension": "2",
-    "degree": "2",
+    "degree": "1",
     "global refinements": "6",
     "gravity": "0.00"
   },
