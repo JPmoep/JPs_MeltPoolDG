@@ -1,5 +1,5 @@
-SET(TEST_LIBRARIES run_simulation)
-SET(TEST_TARGET run_simulation)
+SET(TEST_LIBRARIES meltpooldg)
+SET(TEST_TARGET meltpooldg)
 DEAL_II_PICKUP_TESTS()
 
 SET(_n_tests "0")

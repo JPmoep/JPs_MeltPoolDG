@@ -83,11 +83,11 @@ IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
   SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
 ENDIF()
 
-SET(projectName "run_simulation")
+SET(projectName "meltpooldg")
 
-message("--------- building project: ${CMAKE_PROJECT_NAME}")
+message("-- building project: ${CMAKE_PROJECT_NAME}")
 ADD_EXECUTABLE(${projectName} 
-                run_simulation.cpp)
+                meltpooldg.cpp)
 
 DEAL_II_SETUP_TARGET(${projectName})
 
