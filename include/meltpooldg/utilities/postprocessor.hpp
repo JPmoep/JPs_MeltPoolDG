@@ -56,10 +56,10 @@ namespace MeltPoolDG
             const std::function<void(DataOut<dim> &)> &attach_output_vectors,
             const std::function<void()> &              post_operation = {})
     {
-      attach_output_vectors(data_out);
-
       if ((pv_data.do_output) && !(n_time_step % pv_data.write_frequency))
         {
+          attach_output_vectors(data_out);
+
           write_paraview_files(n_time_step);
 
           if (pv_data.print_boundary_id)

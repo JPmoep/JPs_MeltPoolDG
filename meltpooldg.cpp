@@ -1,27 +1,11 @@
 // deal-specific libraries
-#include <deal.II/base/function.h>
-#include <deal.II/base/point.h>
-#include <deal.II/base/tensor_function.h>
-
-#include <deal.II/distributed/tria.h>
-
-#include <deal.II/grid/grid_generator.h>
-
-#include <deal.II/lac/vector.h>
-
-#include <deal.II/numerics/error_estimator.h>
-#include <deal.II/numerics/vector_tools.h>
+#include <deal.II/base/mpi.h>
 // c++
-#include <cmath>
 #include <iostream>
 // MeltPoolDG
 #include <meltpooldg/interface/problem_selector.hpp>
-#include <meltpooldg/utilities/utilityfunctions.hpp>
-// simulations
-#include <meltpooldg/simulations/advection_diffusion/advection_diffusion.hpp>
-#include <meltpooldg/simulations/reinit_circle/reinit_circle.hpp>
-#include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
 #include <meltpooldg/simulations/simulation_selector.hpp>
+// simulations
 
 namespace MeltPoolDG
 {

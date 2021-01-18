@@ -56,14 +56,17 @@ INCLUDE_DIRECTORIES(include ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 PROJECT(MeltPoolDG)
 
-#ADD_LIBRARY(MeltPoolDG ${TARGET_SRC} .)
+SET(projectName "meltpool")
+
+message("-- building project: ${CMAKE_PROJECT_NAME}")
+ADD_EXECUTABLE(${projectName} 
+                meltpooldg.cpp)
 
 FIND_LIBRARY(ADAFLO adaflo HINTS ${ADAFLO_LIB})
 IF(ADAFLO)
   MESSAGE("-- Adaflo found: ${ADAFLO}") 
   TARGET_COMPILE_DEFINITIONS(${projectName} PUBLIC MELT_POOL_DG_WITH_ADAFLO)
   TARGET_INCLUDE_DIRECTORIES(${projectName} PUBLIC ${ADAFLO_INCLUDE})
-  TARGET_LINK_LIBRARIES(${projectName} ${ADAFLO})
   TARGET_LINK_LIBRARIES(${projectName} ${ADAFLO})
   SET(DEAL_II_WITH_ADAFLO_SUPPORT ON )
 ENDIF()
@@ -82,19 +85,11 @@ ADD_CUSTOM_TARGET(release
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
-  MESSAGE("-- tests found")
   SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
 ENDIF()
 
-SET(projectName "my")
-
-message("-- building project: ${CMAKE_PROJECT_NAME}")
-ADD_EXECUTABLE(${projectName} 
-                meltpooldg.cpp)
 
 DEAL_II_SETUP_TARGET(${projectName})
-
-TARGET_LINK_LIBRARIES(${projectName})
 
 #tests
 SET(_n_tests "0")

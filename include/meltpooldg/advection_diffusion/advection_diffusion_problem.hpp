@@ -21,6 +21,7 @@
 #include <deal.II/grid/grid_out.h>
 
 #include <deal.II/numerics/data_out.h>
+#include <deal.II/numerics/error_estimator.h>
 
 #include <deal.II/simplex/fe_lib.h>
 #include <deal.II/simplex/quadrature_lib.h>
