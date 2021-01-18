@@ -49,8 +49,6 @@ namespace MeltPoolDG::Flow
     {
       initialize(base_in);
 
-      output_results(0, base_in->parameters.base.problem_name == "melt_pool");
-
       while (!time_iterator.is_finished())
         {
           const auto dt = time_iterator.get_next_time_increment();
@@ -290,7 +288,12 @@ namespace MeltPoolDG::Flow
                                              base_in->parameters.paraview,
                                              scratch_data->get_mapping(),
                                              scratch_data->get_triangulation(flow_dof_idx));
-      //@todo --> for amr
+      /*
+       *  output results of initialization --> initial refinement is done afterwards (!)
+       *  @todo: find a way to plot vectors on the refined mesh, which are only relevant for output
+       *  and which must not be transferred to the new mesh everytime refine_mesh() is called.
+       */
+      output_results(0, base_in->parameters.base.problem_name == "melt_pool");
       /*
        *    Do initial refinement steps if requested
        */
