@@ -1,5 +1,5 @@
-SET(TEST_LIBRARIES meltpooldg)
-SET(TEST_TARGET meltpooldg)
+SET(TEST_LIBRARIES ${projectName})
+SET(TEST_TARGET ${projectName})
 DEAL_II_PICKUP_TESTS()
 
 SET(_n_tests "0")

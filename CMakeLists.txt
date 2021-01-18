@@ -31,6 +31,8 @@ IF(NOT ${deal.II_FOUND})
     )
 ENDIF()
 
+MESSAGE("-- deal.II found: ${DEAL_II_DIR}")
+
 IF(NOT DEAL_II_WITH_P4EST)
   MESSAGE(FATAL_ERROR
     "\nThis library requires a deal.II installation built with support for p4est but it appears to be missing!\n"
@@ -54,14 +56,15 @@ INCLUDE_DIRECTORIES(include ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 PROJECT(MeltPoolDG)
 
-ADD_LIBRARY(MeltPoolDG ${TARGET_SRC})
+#ADD_LIBRARY(MeltPoolDG ${TARGET_SRC} .)
 
 FIND_LIBRARY(ADAFLO adaflo HINTS ${ADAFLO_LIB})
 IF(ADAFLO)
   MESSAGE("-- Adaflo found: ${ADAFLO}") 
-  TARGET_COMPILE_DEFINITIONS(MeltPoolDG PUBLIC MELT_POOL_DG_WITH_ADAFLO)
-  TARGET_INCLUDE_DIRECTORIES(MeltPoolDG PUBLIC ${ADAFLO_INCLUDE})
-  TARGET_LINK_LIBRARIES(MeltPoolDG ${ADAFLO})
+  TARGET_COMPILE_DEFINITIONS(${projectName} PUBLIC MELT_POOL_DG_WITH_ADAFLO)
+  TARGET_INCLUDE_DIRECTORIES(${projectName} PUBLIC ${ADAFLO_INCLUDE})
+  TARGET_LINK_LIBRARIES(${projectName} ${ADAFLO})
+  TARGET_LINK_LIBRARIES(${projectName} ${ADAFLO})
   SET(DEAL_II_WITH_ADAFLO_SUPPORT ON )
 ENDIF()
 
@@ -83,7 +86,7 @@ IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
   SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
 ENDIF()
 
-SET(projectName "meltpooldg")
+SET(projectName "my")
 
 message("-- building project: ${CMAKE_PROJECT_NAME}")
 ADD_EXECUTABLE(${projectName} 
@@ -91,7 +94,7 @@ ADD_EXECUTABLE(${projectName}
 
 DEAL_II_SETUP_TARGET(${projectName})
 
-TARGET_LINK_LIBRARIES(${projectName} ${CMAKE_PROJECT_NAME})
+TARGET_LINK_LIBRARIES(${projectName})
 
 #tests
 SET(_n_tests "0")
