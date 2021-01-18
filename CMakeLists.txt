@@ -56,7 +56,7 @@ INCLUDE_DIRECTORIES(include ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 PROJECT(MeltPoolDG)
 
-SET(projectName "meltpool")
+SET(projectName "meltpooldg")
 
 message("-- building project: ${CMAKE_PROJECT_NAME}")
 ADD_EXECUTABLE(${projectName} 
