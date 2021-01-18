@@ -412,7 +412,7 @@ namespace MeltPoolDG
                   solid_constraints.add_line(local_dof_indices[i]);
             }
         level_set_constraints.merge(
-          solid_constraints, AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
+          solid_constraints, AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
         level_set_constraints.close();
       }
 

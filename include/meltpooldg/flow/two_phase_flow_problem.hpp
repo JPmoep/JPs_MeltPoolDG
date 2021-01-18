@@ -49,7 +49,7 @@ namespace MeltPoolDG::Flow
     {
       initialize(base_in);
 
-      output_results(0);
+      output_results(0, base_in->parameters.base.problem_name == "melt_pool");
 
       while (!time_iterator.is_finished())
         {
@@ -123,7 +123,7 @@ namespace MeltPoolDG::Flow
           flow_operation->solve();
 
           // ... and output the results to vtk files.
-          output_results(n);
+          output_results(n, base_in->parameters.base.problem_name == "melt_pool");
 
           if (base_in->parameters.amr.do_amr)
             refine_mesh(base_in);
@@ -503,7 +503,7 @@ namespace MeltPoolDG::Flow
      *  This function is to create paraview output
      */
     void
-    output_results(const unsigned int n_time_step)
+    output_results(const unsigned int n_time_step, const bool do_melt_pool)
     {
       /**
        * collect all relevant output data
@@ -511,7 +511,8 @@ namespace MeltPoolDG::Flow
       const auto attach_output_vectors = [&](DataOut<dim> &data_out) {
         level_set_operation.attach_output_vectors(data_out);
 
-        melt_pool_operation.attach_output_vectors(data_out);
+        if (do_melt_pool)
+          melt_pool_operation.attach_output_vectors(data_out);
 
         flow_operation->attach_output_vectors(data_out);
       };
