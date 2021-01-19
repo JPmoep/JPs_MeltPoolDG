@@ -173,6 +173,12 @@ namespace MeltPoolDG
   };
 
   template <typename number = double>
+  struct EvaporationData
+  {
+    number evaporative_mass_flux = 0.0;
+  };
+
+  template <typename number = double>
   struct ParaviewData
   {
     bool        do_output           = false;
@@ -719,6 +725,16 @@ namespace MeltPoolDG
       }
       prm.leave_subsection();
       /*
+       *  evaporation
+       */
+      prm.enter_subsection("evaporation");
+      {
+        prm.add_parameter("evapor evaporative mass flux",
+                          evapor.evaporative_mass_flux,
+                          "Mass flux due to evaporation (SI unit in kg/m²s).");
+      }
+      prm.leave_subsection();
+      /*
        *   paraview
        */
       prm.enter_subsection("paraview");
@@ -803,6 +819,7 @@ namespace MeltPoolDG
     NormalVectorData<number>       normal_vec;
     CurvatureData<number>          curv;
     MeltPoolData<number>           mp;
+    EvaporationData<number>        evapor;
     ParaviewData<number>           paraview;
     OutputData<number>             output;
     Flow::AdafloWrapperParameters  adaflo_params;
