@@ -20,7 +20,6 @@
   "paraview":
   {
     "paraview filename" :            "output/reinit_circle/solution_reinitialization",
-    "paraview do output" :           "true",
-    "paraview print normal vector" : "true"
+    "paraview do output" :           "true"
   }
 }

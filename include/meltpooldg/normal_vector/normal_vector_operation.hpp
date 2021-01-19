@@ -137,6 +137,11 @@ namespace MeltPoolDG
         return solution_normal_vector;
       }
 
+      BlockVectorType &
+      get_solution_normal_vector() override
+      {
+        return solution_normal_vector;
+      }
 
     private:
       /**

@@ -76,7 +76,7 @@ namespace MeltPoolDG
 
             reinit_operation->solve(d_tau);
 
-            output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
+            output_results(time_iterator.get_current_time_step_number());
 
             if (base_in->parameters.amr.do_amr)
               refine_mesh(base_in);
@@ -178,12 +178,8 @@ namespace MeltPoolDG
           {
             reinit_operation = std::make_shared<ReinitializationOperation<dim>>();
 
-            reinit_operation->initialize(scratch_data,
-                                         solution_level_set,
-                                         base_in->parameters,
-                                         reinit_dof_idx,
-                                         reinit_quad_idx,
-                                         normal_dof_idx);
+            reinit_operation->initialize(
+              scratch_data, base_in->parameters, reinit_dof_idx, reinit_quad_idx, normal_dof_idx);
           }
 #ifdef MELT_POOL_DG_WITH_ADAFLO
         else if (base_in->parameters.reinit.implementation == "adaflo")
@@ -201,6 +197,8 @@ namespace MeltPoolDG
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
+
+        reinit_operation->update_initial_solution(solution_level_set);
       }
 
       void
@@ -235,6 +233,15 @@ namespace MeltPoolDG
 
         if (reinit_operation)
           reinit_operation->reinit();
+
+        /*
+         *  initialize postprocessor
+         */
+        post_processor =
+          std::make_shared<Postprocessor<dim>>(scratch_data->get_mpi_comm(reinit_dof_idx),
+                                               base_in->parameters.paraview,
+                                               scratch_data->get_mapping(),
+                                               scratch_data->get_triangulation(reinit_dof_idx));
       }
 
       /*
@@ -294,26 +301,11 @@ namespace MeltPoolDG
        *  Creating paraview output
        */
       void
-      output_results(const unsigned int time_step, const Parameters<double> &parameters) const
+      output_results(const unsigned int time_step) const
       {
-        if (parameters.paraview.do_output)
-          {
-            DataOut<dim> data_out;
-            data_out.attach_dof_handler(dof_handler);
-            data_out.add_data_vector(reinit_operation->get_level_set(), "psi");
-
-            for (unsigned int d = 0; d < dim; ++d)
-              data_out.add_data_vector(reinit_operation->get_normal_vector().block(d),
-                                       "normal_" + std::to_string(d));
-
-            data_out.build_patches(scratch_data->get_mapping());
-            data_out.write_vtu_with_pvtu_record("./",
-                                                parameters.paraview.filename,
-                                                time_step,
-                                                scratch_data->get_mpi_comm(),
-                                                parameters.paraview.n_digits_timestep,
-                                                parameters.paraview.n_groups);
-          }
+        post_processor->process(time_step, [&](DataOut<dim> &data_out) {
+          reinit_operation->attach_output_vectors(data_out);
+        });
       }
 
     private:
@@ -326,6 +318,8 @@ namespace MeltPoolDG
       unsigned int                                        reinit_dof_idx;
       unsigned int                                        normal_dof_idx;
       unsigned int                                        reinit_quad_idx;
+
+      std::shared_ptr<Postprocessor<dim>> post_processor;
     };
   } // namespace Reinitialization
 } // namespace MeltPoolDG

@@ -73,8 +73,11 @@ namespace MeltPoolDG
         {
           if (this->parameters.base.do_simplex)
             {
-              this->triangulation =
-                std::make_shared<parallel::shared::Triangulation<dim>>(this->mpi_communicator);
+              this->triangulation = std::make_shared<parallel::shared::Triangulation<dim>>(
+                this->mpi_communicator,
+                (::Triangulation<dim>::none),
+                false,
+                parallel::shared::Triangulation<dim>::Settings::partition_metis);
             }
           else
             {
@@ -90,21 +93,19 @@ namespace MeltPoolDG
           if constexpr ((dim == 2) || (dim == 3))
             {
               // create mesh
-              std::vector<unsigned int> subdivisions(
-                dim,
-                5 * (this->parameters.base.do_simplex ?
-                       Utilities::pow(2, this->parameters.base.global_refinements) :
-                       1));
-              subdivisions[dim - 1] *= 2;
-
               const Point<dim> bottom_left =
-                (dim == 2 ? Point<dim>(x_min, y_min) : Point<dim>(x_min, x_min, y_min));
+                (dim == 2) ? Point<dim>(x_min, y_min) : Point<dim>(x_min, x_min, y_min);
               const Point<dim> top_right =
-                (dim == 2 ? Point<dim>(x_max, y_max) : Point<dim>(x_max, x_max, y_max));
+                (dim == 2) ? Point<dim>(x_max, y_max) : Point<dim>(x_max, x_max, y_max);
 
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
               if (this->parameters.base.do_simplex)
                 {
+                  // create mesh
+                  std::vector<unsigned int> subdivisions(
+                    dim, 5 * Utilities::pow(2, this->parameters.base.global_refinements));
+                  subdivisions[dim - 1] *= 2;
+
                   GridGenerator::subdivided_hyper_rectangle_with_simplices(*this->triangulation,
                                                                            subdivisions,
                                                                            bottom_left,

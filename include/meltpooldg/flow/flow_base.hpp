@@ -78,6 +78,9 @@ namespace MeltPoolDG
 
       virtual void
       attach_vectors_p(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
+
+      virtual void
+      attach_output_vectors(DataOut<dim> &data_out) = 0;
     };
 
   } // namespace Flow

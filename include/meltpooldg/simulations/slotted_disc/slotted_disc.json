@@ -30,8 +30,6 @@
   "paraview" : {
     "paraview filename"            : "output/slotted_disc/solution_reinitialization",
     "paraview do output"           : "true",
-    "paraview print curvature"     : "true",
-    "paraview print exactsolution" : "true",
-    "paraview print normal vector" : "true"
+    "paraview print exactsolution" : "true"
   }
 }
