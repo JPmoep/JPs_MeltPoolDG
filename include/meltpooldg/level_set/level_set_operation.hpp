@@ -531,11 +531,18 @@ namespace MeltPoolDG
         return curvature_operation->get_curvature();
       }
 
+      LinearAlgebra::distributed::Vector<double> &
+      get_curvature()
+      {
+        return curvature_operation->get_curvature();
+      }
+
       const LinearAlgebra::distributed::BlockVector<double> &
       get_normal_vector() const
       {
         return reinit_operation->get_normal_vector();
       }
+
       const LinearAlgebra::distributed::Vector<double> &
       get_level_set() const
       {
@@ -558,8 +565,6 @@ namespace MeltPoolDG
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
         advec_diff_operation->attach_vectors(vectors);
-        // level_set_as_heaviside.update_ghost_values();
-        // vectors.push_back(&level_set_as_heaviside);
       }
 
       void

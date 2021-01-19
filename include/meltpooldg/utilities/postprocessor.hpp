@@ -82,7 +82,7 @@ namespace MeltPoolDG
       data_out.set_flags(flags);
 
       data_out.build_patches(mapping);
-      data_out.write_vtu_with_pvtu_record("./",
+      data_out.write_vtu_with_pvtu_record(pv_data.directory,
                                           pv_data.filename,
                                           time_step,
                                           mpi_communicator,
@@ -119,14 +119,16 @@ namespace MeltPoolDG
     compute_error(const int              n_q_points,
                   const VectorType &     approximate_solution,
                   const Function<dim> &  ExactSolution,
-                  const DoFHandler<dim> &dof_handler)
+                  const DoFHandler<dim> &dof_handler,
+                  const Mapping<dim> &   mapping)
     {
       const auto &triangulation = dof_handler.get_triangulation();
 
       const auto     qGauss = QGauss<dim>(n_q_points);
       Vector<double> norm_per_cell(triangulation.n_active_cells());
 
-      dealii::VectorTools::integrate_difference(dof_handler,
+      dealii::VectorTools::integrate_difference(mapping,
+                                                dof_handler,
                                                 approximate_solution,
                                                 ExactSolution,
                                                 norm_per_cell,
@@ -139,7 +141,8 @@ namespace MeltPoolDG
 
       Vector<double> difference_per_cell(triangulation.n_active_cells());
 
-      dealii::VectorTools::integrate_difference(dof_handler,
+      dealii::VectorTools::integrate_difference(mapping,
+                                                dof_handler,
                                                 approximate_solution,
                                                 ExactSolution,
                                                 difference_per_cell,

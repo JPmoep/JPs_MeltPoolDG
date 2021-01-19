@@ -177,6 +177,7 @@ namespace MeltPoolDG
   {
     bool        do_output           = false;
     std::string filename            = "solution";
+    std::string directory           = "./";
     int         write_frequency     = 1;
     bool        do_initial_state    = true;
     bool        print_levelset      = true;
@@ -728,6 +729,9 @@ namespace MeltPoolDG
         prm.add_parameter("paraview filename",
                           paraview.filename,
                           "Sets the base name for the paraview file output.");
+        prm.add_parameter("paraview directory",
+                          paraview.directory,
+                          "Sets the base directory for the paraview file output.");
         prm.add_parameter("paraview write frequency",
                           paraview.write_frequency,
                           "every n timestep that should be written");

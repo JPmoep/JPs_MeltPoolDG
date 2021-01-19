@@ -57,8 +57,6 @@ namespace MeltPoolDG::Flow
           scratch_data->get_pcout()
             << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
 
-
-
           // ... solve level-set problem with the given advection field
           level_set_operation.solve(dt, flow_operation->get_velocity());
 
