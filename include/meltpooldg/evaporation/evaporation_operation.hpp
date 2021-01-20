@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Author: Magdalena Schreter, TUM, September 2020
+ * Author: Magdalena Schreter, UIBK/TUM, January 2021
  *
  * ---------------------------------------------------------------------*/
 #pragma once
@@ -27,92 +27,144 @@ namespace MeltPoolDG
       using BlockVectorType = LinearAlgebra::distributed::BlockVector<double>;
 
     public:
-      Evaporation(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-                  const VectorType &                             velocity_in,
-                  const BlockVectorType &                        normal_vector_in,
-                  const VectorType &                             density_liquid_in,
-                  std::shared_ptr<SimulationBase<dim>>           base_in,
-                  const unsigned int                             normal_dof_idx_in,
-                  const unsigned int                             vel_dof_idx_in,
-                  const unsigned int                             vel_quad_idx_in,
-                  const unsigned int                             density_dof_idx_in)
+      EvaporationOperation(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
+                           const VectorType &                             velocity_in,
+                           const VectorType &                             level_set_in,
+                           const BlockVectorType &                        normal_vector_in,
+                           std::shared_ptr<SimulationBase<dim>>           base_in,
+                           const unsigned int                             normal_dof_idx_in,
+                           const unsigned int                             vel_dof_idx_in,
+                           const unsigned int                             ls_dof_idx_in,
+                           const unsigned int                             ls_quad_idx_in)
         : scratch_data(scratch_data_in)
-        , evaporation_data(base_in->parameters.evaporation_data)
+        , evaporation_data(base_in->parameters.evapor)
         , advection_velocity(velocity_in)
+        , level_set(level_set_in)
         , normal_vector(normal_vector_in)
-        , density_liquid(density_liquid_in)
         , normal_dof_idx(normal_dof_idx_in)
         , vel_dof_idx(vel_dof_idx_in)
-        , vel_quad_idx(vel_quad_idx_in)
-        , density_dof_idx(density_dof_idx_in)
-
-      {}
+        , ls_dof_idx(ls_dof_idx_in)
+        , ls_quad_idx(ls_quad_idx_in)
+      {
+        reinit();
+      }
 
       void
       reinit()
-      {}
+      {
+        scratch_data->initialize_dof_vector(evaporation_velocity, vel_dof_idx);
+      }
 
       void
       solve()
       {
-        scratch_data->get_matrix_free().template cell_loop<VectorType, VectorType>(
-          [&](const auto &matrix_free, auto &dst, const auto &src, auto macro_cells) {
-            FECellIntegrator<dim, 1, double> velocity(matrix_free, vel_dof_idx, vel_quad_idx);
-            FECellIntegrator<dim, 1, double> interface_velocity(matrix_free,
-                                                                vel_dof_idx,
-                                                                vel_quad_idx);
+        level_set.update_ghost_values();
+        evaporation_velocity.update_ghost_values();
 
-            FECellIntegrator<dim, dim, double> normal_vec(matrix_free,
-                                                          normal_dof_idx,
-                                                          vel_quad_idx);
+        evaporation_velocities.resize(scratch_data->get_matrix_free().n_cell_batches() * dim *
+                                      scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx));
 
-            FECellIntegrator<dim, dim, double> density_liquid(matrix_free,
-                                                              density_dof_idx,
-                                                              vel_quad_idx);
+        FECellIntegrator<dim, 1, double> ls(scratch_data->get_matrix_free(),
+                                            ls_dof_idx,
+                                            ls_quad_idx);
 
-            for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
+        FECellIntegrator<dim, dim, double> normal_vec(scratch_data->get_matrix_free(),
+                                                      normal_dof_idx,
+                                                      ls_quad_idx);
+
+        for (unsigned int cell = 0; cell < scratch_data->get_matrix_free().n_cell_batches(); ++cell)
+          {
+            Tensor<1, dim, VectorizedArray<double>> *evapor_velocity =
+              begin_interface_velocity(cell);
+
+            ls.reinit(cell);
+            ls.read_dof_values_plain(level_set);
+            ls.evaluate(true, false);
+
+            normal_vec.reinit(cell);
+            normal_vec.read_dof_values_plain(normal_vector);
+            normal_vec.evaluate(true, false);
+
+            for (unsigned int q_index = 0; q_index < ls.n_q_points; ++q_index)
               {
-                velocity.reinit(cell);
-                velocity.read_dof_values_plain(src);
-                velocity.evaluate(true, false);
+                auto is_liquid = UtilityFunctions::heaviside(ls.get_value(q_index), 0.0);
+                auto density =
+                  evaporation_data.density_liquid +
+                  (evaporation_data.density_liquid - evaporation_data.density_gas) * is_liquid;
 
-                interface_velocity.reinit(cell);
-
-                normal_vec.reinit(cell);
-                normal_vec.read_dof_values_plain(normal_vector);
-                normal_vec.evaluate(true, false);
-
-                density_liquid.reinit(cell);
-                density_liquid.read_dof_values_plain(density_liquid);
-                density_liquid.evaluate(true, false);
-
-                for (unsigned int q_index = 0; q_index < interface_velocity.n_q_points; ++q_index)
-                  {
-                    interface_velocity.submit_value(velocity.get_value(q_index) +
-                                                      normal_vec.get_value(q_index) *
-                                                        evaporation_data.evaporative_mass_flux /
-                                                        density_liquid.get_value(q_index),
-                                                    q_index);
-                  }
-                interface_velocity.integrate_scatter(true, false, dst);
+                evapor_velocity[q_index] =
+                  normal_vec.get_value(q_index) *
+                  make_vectorized_array<double>(evaporation_data.evaporative_mass_flux) / density;
               }
-          },
-          interface_velocity,
-          advection_velocity,
-          true);
+          }
+
+        level_set.zero_out_ghosts();
+
+        // UtilityFunctions::fill_dof_vector_from_cell_operation<dim, dim>(
+        // evaporation_velocity,
+        // scratch_data->get_matrix_free(),
+        // vel_dof_idx,
+        // ls_quad_idx,
+        // scratch_data->get_fe(vel_dof_idx).tensor_degree(), // fe_degree
+        // scratch_data->get_fe(vel_dof_idx).tensor_degree() + 1, // n_q_points_1d
+        // dim, // n_components
+        //[&](const unsigned int cell, const unsigned int quad) -> const
+        // Tensor<1,dim,VectorizedArray<double>> & { return begin_interface_velocity(cell)[quad];
+        //});
       }
 
+      inline Tensor<1, dim, VectorizedArray<double>> *
+      begin_interface_velocity(const unsigned int macro_cell)
+      {
+        AssertIndexRange(macro_cell, scratch_data->get_matrix_free().n_cell_batches());
+        AssertDimension(evaporation_velocities.size(),
+                        scratch_data->get_matrix_free().n_cell_batches() *
+                          scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx) * dim);
+        return &evaporation_velocities[scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx) *
+                                       dim * macro_cell];
+      }
+
+      inline const Tensor<1, dim, VectorizedArray<double>> &
+      begin_interface_velocity(const unsigned int macro_cell) const
+      {
+        AssertIndexRange(macro_cell, scratch_data->get_matrix_free().n_cell_batches());
+        AssertDimension(evaporation_velocities.size(),
+                        scratch_data->get_matrix_free().n_cell_batches() *
+                          scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx) * dim);
+        return evaporation_velocities[scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx) *
+                                      dim * macro_cell];
+      }
 
     public:
       const LinearAlgebra::distributed::Vector<double> &
-      get_interface_velocity() const
+      get_evaporation_velocity() const
       {
-        return interface_velocity;
+        return evaporation_velocity;
       }
 
       virtual void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
-      {}
+      {
+        (void)vectors;
+      }
+
+      void
+      attach_output_vectors(DataOut<dim> &data_out) const
+      {
+        /*
+         *  evaporation velocity
+         */
+        MeltPoolDG::VectorTools::update_ghost_values(evaporation_velocity);
+
+        std::vector<DataComponentInterpretation::DataComponentInterpretation>
+          vector_component_interpretation(dim,
+                                          DataComponentInterpretation::component_is_part_of_vector);
+
+        data_out.add_data_vector(scratch_data->get_dof_handler(vel_dof_idx),
+                                 evaporation_velocity,
+                                 std::vector<std::string>(dim, "evaporation_velocity"),
+                                 vector_component_interpretation);
+      }
 
     private:
       std::shared_ptr<const ScratchData<dim>> scratch_data;
@@ -124,19 +176,23 @@ namespace MeltPoolDG
        * this vector refers to the advection velocity
        */
       const VectorType &     advection_velocity;
+      const VectorType &     level_set;
       const BlockVectorType &normal_vector;
-      const VectorType &     density_liquid;
       /*
        * select the relevant DoFHandlers and quadrature rules
        */
       unsigned int normal_dof_idx;
       unsigned int vel_dof_idx;
-      unsigned int vel_quad_idx;
-      unsigned int density_dof_idx;
+      unsigned int ls_dof_idx;
+      unsigned int ls_quad_idx;
       /*
        * this vector holds the interface velocity
        */
-      VectorType interface_velocity;
+      AlignedVector<Tensor<1, dim, VectorizedArray<double>>> evaporation_velocities;
+      /*
+       * this vector holds the velocity term due to evaporation
+       */
+      VectorType evaporation_velocity;
     };
   } // namespace Evaporation
 } // namespace MeltPoolDG
