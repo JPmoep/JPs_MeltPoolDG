@@ -25,6 +25,7 @@
 
 #include <deal.II/grid/grid_out.h>
 // MeltPoolDG
+#include <meltpooldg/evaporation/evaporation_operation.hpp>
 #include <meltpooldg/interface/problembase.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/level_set/level_set_operation.hpp>
@@ -59,9 +60,21 @@ namespace MeltPoolDG
             scratch_data->get_pcout()
               << "| ls: t= " << std::setw(10) << std::left << time_iterator.get_current_time();
             compute_advection_velocity(*base_in->get_advection_field("level_set"));
+
+            if (base_in->parameters.base.problem_name == "level_set_with_evaporation")
+              {
+                /**
+                 * If evaporative mass flux is considered the interface velocity will be modified.
+                 * Note that the normal vector is used from the old step.
+                 */
+                evaporation_operation->solve();
+                // advection_velocity = evaporation_operation->get_interface_velocity();
+              }
             level_set_operation.solve(dt, advection_velocity);
+
             // do paraview output if requested
-            output_results(time_iterator.get_current_time_step_number());
+            output_results(time_iterator.get_current_time_step_number(),
+                           base_in->parameters.base.problem_name == "level_set_with_evaporation");
 
             if (base_in->parameters.amr.do_amr)
               refine_mesh(base_in);
@@ -177,6 +190,20 @@ namespace MeltPoolDG
                                        normal_dof_idx,
                                        vel_dof_idx,
                                        ls_zero_bc_idx);
+
+        if (base_in->parameters.base.problem_name == "level_set_with_evaporation")
+          {
+            evaporation_operation = std::make_shared<Evaporation::EvaporationOperation<dim>>(
+              scratch_data,
+              advection_velocity,
+              level_set_operation.get_level_set(),
+              level_set_operation.get_normal_vector(),
+              base_in,
+              normal_dof_idx,
+              vel_dof_idx,
+              ls_quad_idx,
+              ls_dof_idx);
+          }
         /*
          *  initialize postprocessor
          */
@@ -273,7 +300,10 @@ namespace MeltPoolDG
         compute_advection_velocity(*base_in->get_advection_field("level_set"));
 
         if (do_reinit)
-          level_set_operation.reinit();
+          {
+            level_set_operation.reinit();
+            evaporation_operation->reinit();
+          }
       }
 
       void
@@ -295,11 +325,12 @@ namespace MeltPoolDG
        *  This function is to create paraview output
        */
       void
-      output_results(const unsigned int time_step) const
+      output_results(const unsigned int time_step, bool do_evaporation) const
       {
         const auto attach_output_vectors = [&](DataOut<dim> &data_out) {
           level_set_operation.attach_output_vectors(data_out);
-
+          if (do_evaporation)
+            evaporation_operation->attach_output_vectors(data_out);
           /*
            *  output advection velocity
            */
@@ -385,17 +416,18 @@ namespace MeltPoolDG
       std::shared_ptr<ScratchData<dim>> scratch_data;
       VectorType                        advection_velocity;
 
-      TimeIterator<double>   time_iterator;
-      LevelSetOperation<dim> level_set_operation;
-      VectorType             initial_solution;
-      unsigned int           ls_dof_idx;
-      unsigned int           ls_quad_idx;
-      unsigned int           ls_zero_bc_idx;
-      unsigned int           ls_hanging_nodes_dof_idx;
-      unsigned int           vel_dof_idx;
-      const unsigned int &   curv_dof_idx   = ls_hanging_nodes_dof_idx;
-      const unsigned int &   normal_dof_idx = ls_hanging_nodes_dof_idx;
-      const unsigned int &   reinit_dof_idx =
+      TimeIterator<double>                                    time_iterator;
+      LevelSetOperation<dim>                                  level_set_operation;
+      std::shared_ptr<Evaporation::EvaporationOperation<dim>> evaporation_operation;
+      VectorType                                              initial_solution;
+      unsigned int                                            ls_dof_idx;
+      unsigned int                                            ls_quad_idx;
+      unsigned int                                            ls_zero_bc_idx;
+      unsigned int                                            ls_hanging_nodes_dof_idx;
+      unsigned int                                            vel_dof_idx;
+      const unsigned int &curv_dof_idx   = ls_hanging_nodes_dof_idx;
+      const unsigned int &normal_dof_idx = ls_hanging_nodes_dof_idx;
+      const unsigned int &reinit_dof_idx =
         ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
       const unsigned int &reinit_hanging_nodes_dof_idx =
         ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
