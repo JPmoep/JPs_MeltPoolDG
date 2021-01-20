@@ -176,6 +176,8 @@ namespace MeltPoolDG
   struct EvaporationData
   {
     number evaporative_mass_flux = 0.0;
+    number density_liquid        = 0.0;
+    number density_gas           = 0.0;
   };
 
   template <typename number = double>
@@ -324,7 +326,7 @@ namespace MeltPoolDG
           base.problem_name,
           "Sets the base name for the problem that should be solved.",
           Patterns::Selection(
-            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool"));
+            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool|level_set_with_evaporation"));
         prm.add_parameter("dimension", base.dimension, "Defines the dimension of the problem");
         prm.add_parameter("global refinements",
                           base.global_refinements,
@@ -732,6 +734,12 @@ namespace MeltPoolDG
         prm.add_parameter("evapor evaporative mass flux",
                           evapor.evaporative_mass_flux,
                           "Mass flux due to evaporation (SI unit in kg/m²s).");
+        prm.add_parameter("evapor density liquid",
+                          evapor.density_liquid,
+                          "Density value of the liquid fluid.");
+        prm.add_parameter("evapor density ",
+                          evapor.density_gas,
+                          "Density value of the gaseous fluid.");
       }
       prm.leave_subsection();
       /*
