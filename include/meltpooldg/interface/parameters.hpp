@@ -37,14 +37,17 @@ namespace MeltPoolDG
     number       gravity             = 0.0;
   };
 
+  template <typename number = double>
   struct AdaptiveMeshingData
   {
-    bool         do_amr                      = false;
-    double       upper_perc_to_refine        = 0.0;
-    double       lower_perc_to_coarsen       = 0.0;
-    int          n_initial_refinement_cycles = 0;
-    unsigned int max_grid_refinement_level   = 12;
-    int          min_grid_refinement_level   = 1;
+    bool         do_amr                       = false;
+    bool         do_not_modify_boundary_cells = true;
+    number       upper_perc_to_refine         = 0.0;
+    number       lower_perc_to_coarsen        = 0.0;
+    int          n_initial_refinement_cycles  = 0;
+    int          every_n_step                 = 1;
+    unsigned int max_grid_refinement_level    = 12;
+    int          min_grid_refinement_level    = 1;
   };
 
   template <typename number = double>
@@ -178,6 +181,8 @@ namespace MeltPoolDG
     number evaporative_mass_flux = 0.0;
     number density_liquid        = 0.0;
     number density_gas           = 0.0;
+    number ls_value_liquid       = 1.0;
+    number ls_value_gas          = -1.0;
   };
 
   template <typename number = double>
@@ -245,6 +250,13 @@ namespace MeltPoolDG
        */
       if (mp.max_temperature < mp.boiling_temperature)
         mp.max_temperature = mp.boiling_temperature + 500;
+      /*
+       *  check if level set assignment of gaseous/liquid phase is done correctly
+       */
+      if (evapor.ls_value_liquid == evapor.ls_value_gas)
+        AssertThrow(false,
+                    ExcMessage(
+                      "Parameterhandler: ls value liquid must not be equal to ls value gas."));
         /*
          *  parameters for adaflo
          */
@@ -350,6 +362,9 @@ namespace MeltPoolDG
         prm.add_parameter("do amr",
                           amr.do_amr,
                           "Sets this parameter to true to activate adaptive meshing");
+        prm.add_parameter("do not modify boundary cells",
+                          amr.do_not_modify_boundary_cells,
+                          "Sets this parameter to true to not refine/coarsen along boundaries.");
         prm.add_parameter("upper perc to refine",
                           amr.upper_perc_to_refine,
                           "Defines the (upper) percentage of elements that should be refined");
@@ -367,6 +382,9 @@ namespace MeltPoolDG
         prm.add_parameter("n initial refinement cycles",
                           amr.n_initial_refinement_cycles,
                           "Defines the number of initial refinements.");
+        prm.add_parameter("every n step",
+                          amr.every_n_step,
+                          "Defines at every nth step the amr should be performed.");
       }
       prm.leave_subsection();
       /*
@@ -737,9 +755,17 @@ namespace MeltPoolDG
         prm.add_parameter("evapor density liquid",
                           evapor.density_liquid,
                           "Density value of the liquid fluid.");
-        prm.add_parameter("evapor density ",
+        prm.add_parameter("evapor density gas",
                           evapor.density_gas,
                           "Density value of the gaseous fluid.");
+        prm.add_parameter("evapor ls value liquid",
+                          evapor.ls_value_liquid,
+                          "Set the level set value corresponding to the liquid domain.",
+                          Patterns::Selection("1|-1|1.|-1.|1.0|-1.0"));
+        prm.add_parameter("evapor ls value gas",
+                          evapor.ls_value_gas,
+                          "Set the level set value corresponding to the gaseous domain.",
+                          Patterns::Selection("1|-1|1.|-1.|1.0|-1.0"));
       }
       prm.leave_subsection();
       /*
@@ -819,7 +845,7 @@ namespace MeltPoolDG
     ParameterHandler prm;
 
     BaseData<number>               base;
-    AdaptiveMeshingData            amr;
+    AdaptiveMeshingData<number>    amr;
     LevelSetData<number>           ls;
     ReinitializationData<number>   reinit;
     AdvectionDiffusionData<number> advec_diff;
