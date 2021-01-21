@@ -68,7 +68,7 @@ namespace MeltPoolDG
                  * Note that the normal vector is used from the old step.
                  */
                 evaporation_operation->solve();
-                // advection_velocity = evaporation_operation->get_interface_velocity();
+                advection_velocity += evaporation_operation->get_evaporation_velocity();
               }
             level_set_operation.solve(dt, advection_velocity);
 
