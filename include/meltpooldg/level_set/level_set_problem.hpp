@@ -67,6 +67,7 @@ namespace MeltPoolDG
                  * If evaporative mass flux is considered the interface velocity will be modified.
                  * Note that the normal vector is used from the old step.
                  */
+                level_set_operation.update_normal_vector();
                 evaporation_operation->solve();
                 advection_velocity += evaporation_operation->get_evaporation_velocity();
               }
@@ -212,6 +213,20 @@ namespace MeltPoolDG
                                                base_in->parameters.paraview,
                                                scratch_data->get_mapping(),
                                                scratch_data->get_triangulation(ls_dof_idx));
+
+        // initialize variables
+        output_results(0, base_in->parameters.base.problem_name == "melt_pool");
+        /*
+         *    Do initial refinement steps if requested
+         */
+        if (base_in->parameters.amr.do_amr &&
+            base_in->parameters.amr.n_initial_refinement_cycles > 0)
+          for (int i = 0; i < base_in->parameters.amr.n_initial_refinement_cycles; ++i)
+            {
+              scratch_data->get_pcout()
+                << "cycle: " << i << " n_dofs: " << dof_handler.n_dofs() << "(ls)" << std::endl;
+              refine_mesh(base_in);
+            }
       }
 
       void
@@ -402,7 +417,8 @@ namespace MeltPoolDG
                                      post,
                                      setup_dof_system,
                                      base_in->parameters.amr,
-                                     dof_handler);
+                                     dof_handler,
+                                     time_iterator.get_current_time_step_number());
       }
 
     private:
