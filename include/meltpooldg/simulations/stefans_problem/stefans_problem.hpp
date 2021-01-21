@@ -89,27 +89,6 @@ namespace MeltPoolDG::Simulation::StefansProblem
     }
   };
 
-  /* for constant Dirichlet conditions we could also use the ConstantFunction
-   * utility from dealii
-   */
-  template <int dim>
-  class DirichletCondition : public Function<dim>
-  {
-  public:
-    DirichletCondition()
-      : Function<dim>()
-    {}
-
-    double
-    value(const Point<dim> &p, const unsigned int component = 0) const override
-    {
-      (void)p;
-      (void)component;
-
-      return 1.0;
-    }
-  };
-
   /*
    *      This class collects all relevant input data for the level set simulation
    */
@@ -181,10 +160,13 @@ namespace MeltPoolDG::Simulation::StefansProblem
       /*
        *  create a pair of (boundary_id, dirichlet_function)
        */
-      constexpr types::boundary_id inflow_bc = 42;
+      constexpr types::boundary_id lower_bc = 1;
+      constexpr types::boundary_id upper_bc = 2;
 
-      auto dirichlet = std::make_shared<DirichletCondition<dim>>();
-      this->attach_dirichlet_boundary_condition(inflow_bc, dirichlet, "level_set");
+      this->attach_dirichlet_boundary_condition(
+        lower_bc, std::make_shared<Functions::ConstantFunction<dim>>(1.0), "level_set");
+      this->attach_dirichlet_boundary_condition(
+        upper_bc, std::make_shared<Functions::ConstantFunction<dim>>(-1.0), "level_set");
 
       /*
        *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
@@ -207,7 +189,9 @@ namespace MeltPoolDG::Simulation::StefansProblem
             if ((face->at_boundary()))
               {
                 if (face->center()[1] == y_min)
-                  face->set_boundary_id(inflow_bc);
+                  face->set_boundary_id(lower_bc);
+                else if (face->center()[1] == y_max)
+                  face->set_boundary_id(upper_bc);
               }
         }
       else

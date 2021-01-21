@@ -59,6 +59,7 @@ namespace MeltPoolDG
       solve()
       {
         level_set.update_ghost_values();
+        normal_vector.update_ghost_values();
         reinit();
         evaporation_velocities.resize(scratch_data->get_matrix_free().n_cell_batches() * dim *
                                       scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx));
@@ -86,18 +87,24 @@ namespace MeltPoolDG
 
             for (unsigned int q_index = 0; q_index < ls.n_q_points; ++q_index)
               {
-                auto is_liquid = UtilityFunctions::heaviside(ls.get_value(q_index), 0.0);
+                auto is_one_phase =
+                  (evaporation_data.ls_value_gas == 1.0) ?
+                    UtilityFunctions::heaviside(ls.get_value(q_index), 0.0) :
+                    std::abs(1. - UtilityFunctions::heaviside(ls.get_value(q_index), 0.0));
                 auto density =
                   evaporation_data.density_liquid +
-                  (evaporation_data.density_liquid - evaporation_data.density_gas) * is_liquid;
+                  (evaporation_data.density_gas - evaporation_data.density_liquid) * is_one_phase;
 
                 evapor_velocity[q_index] =
                   normal_vec.get_value(q_index) *
                   make_vectorized_array<double>(evaporation_data.evaporative_mass_flux) / density;
+                if (evaporation_data.ls_value_gas == 1.0)
+                  evapor_velocity[q_index] *= -1.0;
               }
           }
 
         level_set.zero_out_ghosts();
+        normal_vector.zero_out_ghosts();
 
         UtilityFunctions::fill_dof_vector_from_cell_operation_vec<dim, dim>(
           evaporation_velocity,

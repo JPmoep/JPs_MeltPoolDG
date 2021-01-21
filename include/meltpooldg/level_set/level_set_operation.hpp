@@ -253,9 +253,16 @@ namespace MeltPoolDG
         advec_diff_operation->reinit();
         reinit_operation->reinit();
         curvature_operation->reinit();
+      }
 
-        if (normal_vector_operation)
-          normal_vector_operation->reinit();
+      /**
+       *  this function may be called to recompute the normal vector with the
+       *  current level set.
+       */
+      void
+      update_normal_vector()
+      {
+        reinit_operation->update_initial_solution(get_level_set());
       }
 
       void
@@ -561,6 +568,9 @@ namespace MeltPoolDG
         return level_set_as_heaviside;
       }
 
+      /**
+       * register vectors for adaptive mesh refinement
+       */
       virtual void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
@@ -599,10 +609,6 @@ namespace MeltPoolDG
          */
         data_out.add_data_vector(distance_to_level_set, "distance");
       }
-      /*
-       *   Computation of the normal vectors
-       */
-      std::shared_ptr<NormalVector::NormalVectorOperationBase<dim>> normal_vector_operation;
       /*
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update
