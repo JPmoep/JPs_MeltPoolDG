@@ -59,8 +59,7 @@ namespace MeltPoolDG
       solve()
       {
         level_set.update_ghost_values();
-        evaporation_velocity.update_ghost_values();
-
+        reinit();
         evaporation_velocities.resize(scratch_data->get_matrix_free().n_cell_batches() * dim *
                                       scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx));
 
@@ -100,17 +99,17 @@ namespace MeltPoolDG
 
         level_set.zero_out_ghosts();
 
-        // UtilityFunctions::fill_dof_vector_from_cell_operation<dim, dim>(
-        // evaporation_velocity,
-        // scratch_data->get_matrix_free(),
-        // vel_dof_idx,
-        // ls_quad_idx,
-        // scratch_data->get_fe(vel_dof_idx).tensor_degree(), // fe_degree
-        // scratch_data->get_fe(vel_dof_idx).tensor_degree() + 1, // n_q_points_1d
-        // dim, // n_components
-        //[&](const unsigned int cell, const unsigned int quad) -> const
-        // Tensor<1,dim,VectorizedArray<double>> & { return begin_interface_velocity(cell)[quad];
-        //});
+        UtilityFunctions::fill_dof_vector_from_cell_operation_vec<dim, dim>(
+          evaporation_velocity,
+          scratch_data->get_matrix_free(),
+          vel_dof_idx,
+          ls_quad_idx,
+          scratch_data->get_fe(vel_dof_idx).tensor_degree(),     // fe_degree
+          scratch_data->get_fe(vel_dof_idx).tensor_degree() + 1, // n_q_points_1d
+          [&](const unsigned int cell,
+              const unsigned int quad) -> const Tensor<1, dim, VectorizedArray<double>> & {
+            return begin_interface_velocity(cell)[quad];
+          });
       }
 
       inline Tensor<1, dim, VectorizedArray<double>> *

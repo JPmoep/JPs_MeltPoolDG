@@ -37,7 +37,7 @@ namespace MeltPoolDG
       return tria_parallel != nullptr ? tria_parallel->get_communicator() : MPI_COMM_SELF;
     }
 
-    template <int dim>
+    template <int dim, int n_components>
     void
     fill_dof_vector_from_cell_operation(
       VectorType &                                                                vec,
@@ -46,7 +46,6 @@ namespace MeltPoolDG
       unsigned int                                                                quad_idx,
       unsigned int                                                                fe_degree,
       unsigned int                                                                n_q_points_1D,
-      unsigned int                                                                n_components,
       const std::function<const VectorizedArray<double> &(const unsigned int cell,
                                                           const unsigned int q)> &cell_operation)
     {
@@ -64,7 +63,7 @@ namespace MeltPoolDG
         for (unsigned int j = 0; j < fe_fine.dofs_per_cell; ++j, ++k)
           projection_matrix_1d[k] = matrix(j, i);
 
-      FECellIntegrator<dim, 1, double> fe_eval(matrix_free, dof_idx, quad_idx);
+      FECellIntegrator<dim, n_components, double> fe_eval(matrix_free, dof_idx, quad_idx);
 
       for (unsigned int cell = 0; cell < matrix_free.n_cell_batches(); ++cell)
         {
@@ -72,6 +71,73 @@ namespace MeltPoolDG
 
           for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
             fe_eval.begin_values()[q] = cell_operation(cell, q);
+
+          // perform basis change from quadrature points to support points
+          internal::FEEvaluationImplBasisChange<
+            internal::evaluate_general,
+            internal::EvaluatorQuantity::value,
+            dim,
+            0,
+            0,
+            VectorizedArray<double>,
+            VectorizedArray<double>>::do_forward(n_components, // n_components
+                                                 projection_matrix_1d,
+                                                 fe_eval.begin_values(),
+                                                 fe_eval.begin_dof_values(),
+                                                 n_q_points_1D, // number of
+                                                                // quadrature points
+                                                 fe_degree + 1  // number of support points
+          );
+
+          // write values back into global vector
+          fe_eval.set_dof_values(vec);
+        }
+
+      vec.compress(VectorOperation::max);
+    }
+
+    /*
+     * @todo: replace Tensor<1, n_components, VectorizedArray> as template argument --> C++20
+     */
+    template <int dim, int n_components>
+    void
+    fill_dof_vector_from_cell_operation_vec(
+      VectorType &                                            vec,
+      const MatrixFree<dim, double, VectorizedArray<double>> &matrix_free,
+      unsigned int                                            dof_idx,
+      unsigned int                                            quad_idx,
+      unsigned int                                            fe_degree,
+      unsigned int                                            n_q_points_1D,
+      const std::function<const Tensor<1, n_components, VectorizedArray<double>>(
+        const unsigned int cell,
+        const unsigned int q)> &                              cell_operation)
+    {
+      FE_DGQArbitraryNodes<1> fe_coarse(QGauss<1>(n_q_points_1D).get_points());
+      FE_Q<1>                 fe_fine(fe_degree);
+
+      /// create 1D projection matrix for sum factorization
+      FullMatrix<double> matrix(fe_fine.dofs_per_cell, fe_coarse.dofs_per_cell);
+      FETools::get_projection_matrix(fe_coarse, fe_fine, matrix);
+
+      AlignedVector<VectorizedArray<double>> projection_matrix_1d(fe_fine.dofs_per_cell *
+                                                                  fe_coarse.dofs_per_cell);
+
+      for (unsigned int i = 0, k = 0; i < fe_coarse.dofs_per_cell; ++i)
+        for (unsigned int j = 0; j < fe_fine.dofs_per_cell; ++j, ++k)
+          projection_matrix_1d[k] = matrix(j, i);
+
+      FECellIntegrator<dim, n_components, double> fe_eval(matrix_free, dof_idx, quad_idx);
+
+      for (unsigned int cell = 0; cell < matrix_free.n_cell_batches(); ++cell)
+        {
+          fe_eval.reinit(cell);
+
+          for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
+            {
+              const auto temp = cell_operation(cell, q);
+              for (int c = 0; c < n_components; ++c)
+                fe_eval.begin_values()[c * fe_eval.n_q_points + q] = temp[c];
+            }
 
           // perform basis change from quadrature points to support points
           internal::FEEvaluationImplBasisChange<
@@ -95,9 +161,6 @@ namespace MeltPoolDG
 
       vec.compress(VectorOperation::max);
     }
-
-
-
     /*
      * This function converts a string of coordinates given as e.g. "5,10,5" to a Point<dim>
      * object.
