@@ -33,7 +33,7 @@ namespace MeltPoolDG
                            const BlockVectorType &                        normal_vector_in,
                            std::shared_ptr<SimulationBase<dim>>           base_in,
                            const unsigned int                             normal_dof_idx_in,
-                           const unsigned int                             vel_dof_idx_in,
+                           const unsigned int                             vel_hanging_nodes_dof_idx_in,
                            const unsigned int                             ls_dof_idx_in,
                            const unsigned int                             ls_quad_idx_in)
         : scratch_data(scratch_data_in)
@@ -42,7 +42,7 @@ namespace MeltPoolDG
         , level_set(level_set_in)
         , normal_vector(normal_vector_in)
         , normal_dof_idx(normal_dof_idx_in)
-        , vel_dof_idx(vel_dof_idx_in)
+        , vel_hanging_nodes_dof_idx(vel_hanging_nodes_dof_idx_in)
         , ls_dof_idx(ls_dof_idx_in)
         , ls_quad_idx(ls_quad_idx_in)
       {
@@ -52,7 +52,7 @@ namespace MeltPoolDG
       void
       reinit()
       {
-        scratch_data->initialize_dof_vector(evaporation_velocity, vel_dof_idx);
+        scratch_data->initialize_dof_vector(evaporation_velocity, vel_hanging_nodes_dof_idx);
       }
 
       void
@@ -87,18 +87,17 @@ namespace MeltPoolDG
 
             for (unsigned int q_index = 0; q_index < ls.n_q_points; ++q_index)
               {
-                auto is_one_phase =
-                  (evaporation_data.ls_value_gas == 1.0) ?
-                    UtilityFunctions::heaviside(ls.get_value(q_index), 0.0) :
-                    std::abs(1. - UtilityFunctions::heaviside(ls.get_value(q_index), 0.0));
+                //@todo: comment
+                auto is_one_phase = (evaporation_data.ls_value_gas==1.0) ? UtilityFunctions::heaviside(ls.get_value(q_index), 0.0) 
+                  :  std::abs(1.-UtilityFunctions::heaviside(ls.get_value(q_index), 0.0));
+
                 auto density =
                   evaporation_data.density_liquid +
                   (evaporation_data.density_gas - evaporation_data.density_liquid) * is_one_phase;
-
-                evapor_velocity[q_index] =
-                  normal_vec.get_value(q_index) *
-                  make_vectorized_array<double>(evaporation_data.evaporative_mass_flux) / density;
-                if (evaporation_data.ls_value_gas == 1.0)
+                
+                evapor_velocity[q_index] = normal_vec.get_value(q_index) * evaporation_data.evaporative_mass_flux / density;
+                
+                if (evaporation_data.ls_value_gas==1.0)
                   evapor_velocity[q_index] *= -1.0;
               }
           }
@@ -109,14 +108,16 @@ namespace MeltPoolDG
         UtilityFunctions::fill_dof_vector_from_cell_operation_vec<dim, dim>(
           evaporation_velocity,
           scratch_data->get_matrix_free(),
-          vel_dof_idx,
+          vel_hanging_nodes_dof_idx,
           ls_quad_idx,
-          scratch_data->get_fe(vel_dof_idx).tensor_degree(),     // fe_degree
-          scratch_data->get_fe(vel_dof_idx).tensor_degree() + 1, // n_q_points_1d
+          scratch_data->get_fe(vel_hanging_nodes_dof_idx).tensor_degree(),     // fe_degree
+          scratch_data->get_fe(vel_hanging_nodes_dof_idx).tensor_degree() + 1, // n_q_points_1d
           [&](const unsigned int cell,
               const unsigned int quad) -> const Tensor<1, dim, VectorizedArray<double>> & {
             return begin_interface_velocity(cell)[quad];
           });
+
+        scratch_data->get_constraint(vel_hanging_nodes_dof_idx).distribute(evaporation_velocity);
       }
 
       inline Tensor<1, dim, VectorizedArray<double>> *
@@ -148,10 +149,17 @@ namespace MeltPoolDG
         return evaporation_velocity;
       }
 
+      LinearAlgebra::distributed::Vector<double> &
+      get_evaporation_velocity()
+      {
+        return evaporation_velocity;
+      }
+
       virtual void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
-        (void)vectors;
+        evaporation_velocity.update_ghost_values();
+        vectors.push_back(&evaporation_velocity);
       }
 
       void
@@ -166,7 +174,7 @@ namespace MeltPoolDG
           vector_component_interpretation(dim,
                                           DataComponentInterpretation::component_is_part_of_vector);
 
-        data_out.add_data_vector(scratch_data->get_dof_handler(vel_dof_idx),
+        data_out.add_data_vector(scratch_data->get_dof_handler(vel_hanging_nodes_dof_idx),
                                  evaporation_velocity,
                                  std::vector<std::string>(dim, "evaporation_velocity"),
                                  vector_component_interpretation);
@@ -188,7 +196,7 @@ namespace MeltPoolDG
        * select the relevant DoFHandlers and quadrature rules
        */
       unsigned int normal_dof_idx;
-      unsigned int vel_dof_idx;
+      unsigned int vel_hanging_nodes_dof_idx;
       unsigned int ls_dof_idx;
       unsigned int ls_quad_idx;
       /*
