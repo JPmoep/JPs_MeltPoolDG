@@ -37,11 +37,6 @@ namespace MeltPoolDG
       using BlockVectorType = LinearAlgebra::distributed::BlockVector<double>;
 
     public:
-      /*
-       *  All the necessary parameters are stored in this vector.
-       */
-      LevelSetData<double> level_set_data;
-
       LevelSetOperation() = default;
 
       void
@@ -519,6 +514,10 @@ namespace MeltPoolDG
        */
       TimeIterator<double> reinit_time_iterator;
       /*
+       *  All the necessary parameters are stored in this vector.
+       */
+      LevelSetData<double> level_set_data;
+      /*
        * select the relevant DoFHandler
        */
       unsigned int ls_dof_idx;
@@ -526,7 +525,6 @@ namespace MeltPoolDG
       unsigned int ls_quad_idx;
       unsigned int curv_dof_idx;
       unsigned int normal_dof_idx;
-
 
       double reinit_constant_epsilon     = 0; //@todo: better solution
       double reinit_scale_factor_epsilon = 0; //@todo: better solution
@@ -547,7 +545,10 @@ namespace MeltPoolDG
       const LinearAlgebra::distributed::BlockVector<double> &
       get_normal_vector() const
       {
-        return reinit_operation->get_normal_vector();
+        if (level_set_data.do_reinitialization)
+          return reinit_operation->get_normal_vector();
+        else
+          return curvature_operation->get_normal_vector();
       }
 
       const LinearAlgebra::distributed::Vector<double> &
