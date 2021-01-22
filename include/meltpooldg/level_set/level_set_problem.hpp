@@ -61,7 +61,7 @@ namespace MeltPoolDG
               << "| ls: t= " << std::setw(10) << std::left << time_iterator.get_current_time();
             compute_advection_velocity(*base_in->get_advection_field("level_set"));
 
-            if (base_in->parameters.base.problem_name == "level_set_with_evaporation")
+            if (evaporation_operation)
               {
                 /**
                  * If evaporative mass flux is considered the interface velocity will be modified.
@@ -74,8 +74,7 @@ namespace MeltPoolDG
             level_set_operation.solve(dt, advection_velocity);
 
             // do paraview output if requested
-            output_results(time_iterator.get_current_time_step_number(),
-                           base_in->parameters.base.problem_name == "level_set_with_evaporation");
+            output_results(time_iterator.get_current_time_step_number());
 
             if (base_in->parameters.amr.do_amr)
               refine_mesh(base_in);
@@ -215,7 +214,7 @@ namespace MeltPoolDG
                                                scratch_data->get_triangulation(ls_dof_idx));
 
         // initialize variables
-        output_results(0, base_in->parameters.base.problem_name == "melt_pool");
+        output_results(0);
         /*
          *    Do initial refinement steps if requested
          */
@@ -317,7 +316,8 @@ namespace MeltPoolDG
         if (do_reinit)
           {
             level_set_operation.reinit();
-            evaporation_operation->reinit();
+            if (evaporation_operation)
+              evaporation_operation->reinit();
           }
       }
 
@@ -330,21 +330,22 @@ namespace MeltPoolDG
          */
         advec_func.set_time(time_iterator.get_current_time());
 
-        dealii::VectorTools::interpolate(scratch_data->get_mapping(),
-                                         scratch_data->get_dof_handler(vel_dof_idx),
-                                         advec_func,
-                                         advection_velocity);
-        advection_velocity.update_ghost_values();
+        dealii::VectorTools::project(scratch_data->get_mapping(),
+                                     dof_handler_velocity,
+                                     hanging_node_constraints_velocity,
+                                     scratch_data->get_quadrature(),
+                                     advec_func,
+                                     advection_velocity);
       }
       /*
        *  This function is to create paraview output
        */
       void
-      output_results(const unsigned int time_step, bool do_evaporation) const
+      output_results(const unsigned int time_step) const
       {
         const auto attach_output_vectors = [&](DataOut<dim> &data_out) {
           level_set_operation.attach_output_vectors(data_out);
-          if (do_evaporation)
+          if (evaporation_operation)
             evaporation_operation->attach_output_vectors(data_out);
           /*
            *  output advection velocity
