@@ -3,7 +3,7 @@
     "problem name": "level_set_with_evaporation",
     "application name": "stefans_problem",
     "dimension": "2",
-    "global refinements": "5",
+    "global refinements": "7",
     "degree": "1"
   },
   "levelset" : {
@@ -13,26 +13,45 @@
     "ls time integration scheme" : "crank_nicolson",
     "ls start time": "0.0",
     "ls end time": "1.5707963267948966",
-    "ls time step size": "0.01",
-    "ls do matrix free": "true"
+    "ls time step size": "0.002",
+    "ls do matrix free": "true",
+    "ls implementation": "meltpooldg"
+  },
+  "adaptive meshing" : {
+    "do amr":                    "true",
+    "do not modify boundary cells": "false",
+    "upper perc to refine": "     0.15",
+    "lower perc to coarsen":     "0.15",
+    "n initial refinement cycles": "3",
+    "max grid refinement level": "7",
+    "every n step": "1"
   },
   "reinitialization" : {
     "reinit max n steps": "5",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
-    "reinit eps scale factor": "0.5"
+    "reinit implementation": "meltpooldg",
+    "reinit constant epsilon":"0.01"
   },
   "normal vector": { 
-    "normal vec damping scale factor": "0.5",
-    "normal vec do matrix free": "true"},
+    "normal vec do matrix free": "true",
+    "normal vec implementation": "meltpooldg"
+  },
+  "curvature":{ 
+    "curv do matrix free": "true",
+    "curv implementation": "meltpooldg"
+  },
   "evaporation" : {
-    "evapor evaporative mass flux": "1e-6",
+    "evapor evaporative mass flux": "1.0e-4",
     "evapor density liquid": "1",
-    "evapor density gas": "1"
+    "evapor density gas": "0.01",
+    "evapor ls value liquid":"-1",
+    "evapor ls value gas": "1"
   },
   "paraview" : {
     "paraview do output": "true",
-    "paraview filename": "solution_evaporation"
+    "paraview filename": "solution_evaporation",
+    "paraview directory": "output_down_amr/"
   }
 }
