@@ -33,9 +33,19 @@ namespace MeltPoolDG
     bool
     is_finished() const
     {
+      // number of maximum steps is reached
       if (n_time_steps >= time_data.max_n_time_steps)
         return true;
-      return current_time >= time_data.end_time;
+      // current_time is larger than end time
+      if (current_time > time_data.end_time)
+        return true;
+      // current_time and end_time are (almost) equal
+      else if (std::abs(current_time - time_data.end_time) <=
+               std::numeric_limits<double>::epsilon())
+        return true;
+      // current_time is smaller than end_time and number of maximum steps is not reached
+      else
+        return false;
     }
 
     number
