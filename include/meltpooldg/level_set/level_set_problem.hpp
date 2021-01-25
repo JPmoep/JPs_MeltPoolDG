@@ -195,7 +195,6 @@ namespace MeltPoolDG
           {
             evaporation_operation = std::make_shared<Evaporation::EvaporationOperation<dim>>(
               scratch_data,
-              advection_velocity,
               level_set_operation.get_level_set(),
               level_set_operation.get_normal_vector(),
               base_in,

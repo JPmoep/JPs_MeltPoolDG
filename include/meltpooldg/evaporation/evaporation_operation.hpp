@@ -30,7 +30,6 @@ namespace MeltPoolDG::Evaporation
 
   public:
     EvaporationOperation(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-                         const VectorType &                             velocity_in,
                          const VectorType &                             level_set_in,
                          const BlockVectorType &                        normal_vector_in,
                          std::shared_ptr<SimulationBase<dim>>           base_in,
