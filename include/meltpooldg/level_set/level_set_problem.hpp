@@ -271,9 +271,6 @@ namespace MeltPoolDG
 
         constraints_dirichlet.clear();
         constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs(ls_dof_idx));
-        constraints_dirichlet.merge(
-          hanging_node_constraints,
-          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
         for (const auto &bc : base_in->get_dirichlet_bc(
                "level_set")) // @todo: add name of bc at a more central place
           {
@@ -284,6 +281,9 @@ namespace MeltPoolDG
                                                              constraints_dirichlet);
           }
         constraints_dirichlet.close();
+        constraints_dirichlet.merge(
+          hanging_node_constraints,
+          AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
 
         hanging_node_constraints_with_zero_dirichlet.clear();
         hanging_node_constraints_with_zero_dirichlet.reinit(

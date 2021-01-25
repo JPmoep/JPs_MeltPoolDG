@@ -160,13 +160,21 @@ namespace MeltPoolDG::Simulation::StefansProblem
       /*
        *  create a pair of (boundary_id, dirichlet_function)
        */
+
       constexpr types::boundary_id lower_bc = 1;
       constexpr types::boundary_id upper_bc = 2;
 
-      this->attach_dirichlet_boundary_condition(
-        lower_bc, std::make_shared<Functions::ConstantFunction<dim>>(1.0), "level_set");
-      this->attach_dirichlet_boundary_condition(
-        upper_bc, std::make_shared<Functions::ConstantFunction<dim>>(-1.0), "level_set");
+      if (this->parameters.evapor.ls_value_liquid == -1)
+        {
+          this->attach_dirichlet_boundary_condition(
+            lower_bc, std::make_shared<Functions::ConstantFunction<dim>>(1.0), "level_set");
+        }
+      else if (this->parameters.evapor.ls_value_liquid == 1)
+        {
+          this->attach_dirichlet_boundary_condition(
+            upper_bc, std::make_shared<Functions::ConstantFunction<dim>>(-1.0), "level_set");
+        }
+
 
       /*
        *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
