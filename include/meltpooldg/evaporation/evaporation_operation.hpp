@@ -19,7 +19,7 @@ namespace MeltPoolDG::Evaporation
    *
    *     with the normal vector \f$\boldsymbol{n}\f$, the evaporative mass flux \f$\dot{m}\f$
    *     and the density \f$\rho\f$. One has to take care from which time step the normal
-   *     vector is computed
+   *     vector is computed.
    */
   template <int dim>
   class EvaporationOperation
@@ -61,7 +61,7 @@ namespace MeltPoolDG::Evaporation
       level_set.update_ghost_values();
       normal_vector.update_ghost_values();
       reinit();
-      evaporation_velocities.resize(scratch_data->get_matrix_free().n_cell_batches() * dim *
+      evaporation_velocities.resize(scratch_data->get_matrix_free().n_cell_batches() *
                                     scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx));
 
       FECellIntegrator<dim, 1, double> ls(scratch_data->get_matrix_free(), ls_dof_idx, ls_quad_idx);
@@ -72,7 +72,8 @@ namespace MeltPoolDG::Evaporation
 
       for (unsigned int cell = 0; cell < scratch_data->get_matrix_free().n_cell_batches(); ++cell)
         {
-          Tensor<1, dim, VectorizedArray<double>> *evapor_velocity = begin_interface_velocity(cell);
+          Tensor<1, dim, VectorizedArray<double>> *evapor_velocity =
+            begin_evaporation_velocity(cell);
 
           ls.reinit(cell);
           ls.read_dof_values_plain(level_set);
@@ -114,35 +115,34 @@ namespace MeltPoolDG::Evaporation
         scratch_data->get_fe(vel_hanging_nodes_dof_idx).tensor_degree() + 1, // n_q_points_1d
         [&](const unsigned int cell,
             const unsigned int quad) -> const Tensor<1, dim, VectorizedArray<double>> & {
-          return begin_interface_velocity(cell)[quad];
+          return begin_evaporation_velocity(cell)[quad];
         });
 
       scratch_data->get_constraint(vel_hanging_nodes_dof_idx).distribute(evaporation_velocity);
     }
 
     inline Tensor<1, dim, VectorizedArray<double>> *
-    begin_interface_velocity(const unsigned int macro_cell)
+    begin_evaporation_velocity(const unsigned int macro_cell)
     {
       AssertIndexRange(macro_cell, scratch_data->get_matrix_free().n_cell_batches());
       AssertDimension(evaporation_velocities.size(),
                       scratch_data->get_matrix_free().n_cell_batches() *
-                        scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx) * dim);
+                        scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx));
       return &evaporation_velocities[scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx) *
-                                     dim * macro_cell];
+                                     macro_cell];
     }
 
     inline const Tensor<1, dim, VectorizedArray<double>> &
-    begin_interface_velocity(const unsigned int macro_cell) const
+    begin_evaporation_velocity(const unsigned int macro_cell) const
     {
       AssertIndexRange(macro_cell, scratch_data->get_matrix_free().n_cell_batches());
       AssertDimension(evaporation_velocities.size(),
                       scratch_data->get_matrix_free().n_cell_batches() *
-                        scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx) * dim);
+                        scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx));
       return evaporation_velocities[scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx) *
-                                    dim * macro_cell];
+                                    macro_cell];
     }
 
-  public:
     const LinearAlgebra::distributed::Vector<double> &
     get_evaporation_velocity() const
     {

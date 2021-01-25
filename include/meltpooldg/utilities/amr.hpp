@@ -18,9 +18,9 @@ namespace MeltPoolDG
               const std::vector<std::pair<const DoFHandler<dim> *,
                                           std::function<void(std::vector<VectorType *> &)>>> &data,
               const std::function<void()> &                                                   post,
-              const std::function<void()> &      setup_dof_system,
-              const AdaptiveMeshingData<double> &amr,
-              const int                          n_time_step)
+              const std::function<void()> &setup_dof_system,
+              const AdaptiveMeshingData &  amr,
+              const int                    n_time_step)
   {
     if ((n_time_step == 0) || !(n_time_step % amr.every_n_step))
       {
@@ -122,7 +122,7 @@ namespace MeltPoolDG
               const std::function<void(std::vector<VectorType *> &)> &attach_vectors,
               const std::function<void()> &                           post,
               const std::function<void()> &                           setup_dof_system,
-              const AdaptiveMeshingData<double> &                     amr,
+              const AdaptiveMeshingData &                             amr,
               const DoFHandler<dim> &                                 dof_handler,
               const int                                               n_time_step)
   {

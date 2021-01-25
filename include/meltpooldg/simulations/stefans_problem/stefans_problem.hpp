@@ -80,13 +80,6 @@ namespace MeltPoolDG::Simulation::StefansProblem
 
       return value_[component];
     }
-
-    void
-    vector_value(const Point<dim> &p, Vector<double> &values) const override
-    {
-      for (unsigned int c = 0; c < this->n_components; ++c)
-        values(c) = value(p, c);
-    }
   };
 
   /*
@@ -215,17 +208,4 @@ namespace MeltPoolDG::Simulation::StefansProblem
     const double y_max       = 1.0;
     const double y_interface = 0.5;
   };
-
-  // const static bool isRegistered_1d = MeltPoolDG::SimulationFactory<1,1>::print();
-  // const static bool isRegistered_1d =
-  // MeltPoolDG::SimulationFactory<1,1>::registerSimulation("stefans_problem",
-  // MeltPoolDG::makeDefaultSimulationFactoryFunction<SimulationStefansProblem<1>,1,1>() );
-  // const static bool isRegistered_2d = SimulationFactory<2>::registerSimulation("stefans_problem"
-  // makeDefaultSimulationFactoryFunction<class SimulationStefansProblem<2>>() );
-  // const static bool isRegistered_3d = SimulationFactory<3>::registerSimulation("stefans_problem"
-  // makeDefaultSimulationFactoryFunction<class SimulationStefansProblem<3>>() );
-  /*
-   * this function specifies the initial field of the level set equation
-   */
-
 } // namespace MeltPoolDG::Simulation::StefansProblem

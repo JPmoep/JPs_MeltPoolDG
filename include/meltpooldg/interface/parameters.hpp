@@ -37,13 +37,12 @@ namespace MeltPoolDG
     number       gravity             = 0.0;
   };
 
-  template <typename number = double>
   struct AdaptiveMeshingData
   {
     bool         do_amr                       = false;
     bool         do_not_modify_boundary_cells = true;
-    number       upper_perc_to_refine         = 0.0;
-    number       lower_perc_to_coarsen        = 0.0;
+    double       upper_perc_to_refine         = 0.0;
+    double       lower_perc_to_coarsen        = 0.0;
     int          n_initial_refinement_cycles  = 0;
     int          every_n_step                 = 1;
     unsigned int max_grid_refinement_level    = 12;
@@ -845,7 +844,7 @@ namespace MeltPoolDG
     ParameterHandler prm;
 
     BaseData<number>               base;
-    AdaptiveMeshingData<number>    amr;
+    AdaptiveMeshingData            amr;
     LevelSetData<number>           ls;
     ReinitializationData<number>   reinit;
     AdvectionDiffusionData<number> advec_diff;
