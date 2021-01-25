@@ -170,18 +170,18 @@ namespace MeltPoolDG::Simulation::StefansProblem
 
       /*
        *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
-       *  due to the hyperbolic nature of the analyzed problem
+       *  due to the hyperbolic nature of the analyzed problem)
        *
-                      out
+                      fix
        (0,1)  +---------------+ (1,1)
-              |               |
+              |    ls=-1      |
               |               |
        sym    |               |  sym
               |               |
               |               |
-              |               |
+              |    ls=1       |
               +---------------+
-       * (0,1)      no slip    (1,0)
+       * (0,1)      fix       (1,0)
        */
       if constexpr (dim == 2)
         {
