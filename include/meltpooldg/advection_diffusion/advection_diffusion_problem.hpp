@@ -388,7 +388,8 @@ namespace MeltPoolDG
                                      post,
                                      setup_dof_system,
                                      base_in->parameters.amr,
-                                     dof_handler);
+                                     dof_handler,
+                                     time_iterator.get_current_time_step_number());
         constraints.distribute(advec_diff_operation->get_advected_field());
       }
 

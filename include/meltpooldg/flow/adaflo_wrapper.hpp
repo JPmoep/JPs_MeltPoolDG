@@ -282,14 +282,13 @@ namespace MeltPoolDG::Flow
        *  density
        */
       scratch_data.initialize_dof_vector(density, dof_index_p);
-      UtilityFunctions::fill_dof_vector_from_cell_operation<dim>(
+      UtilityFunctions::fill_dof_vector_from_cell_operation<dim, 1>(
         density,
         scratch_data.get_matrix_free(),
         dof_index_p,
         quad_index_p,
         1, // fe_degree,
         2, /// n_q_points_1D,
-        1, // n_components
         [&](const unsigned int cell, const unsigned int quad) -> const VectorizedArray<double> & {
           return get_density(cell, quad);
         });
@@ -299,14 +298,13 @@ namespace MeltPoolDG::Flow
        */
       scratch_data.initialize_dof_vector(viscosity, dof_index_p);
       data_out.add_data_vector(get_dof_handler_pressure(), density, "density");
-      UtilityFunctions::fill_dof_vector_from_cell_operation<dim>(
+      UtilityFunctions::fill_dof_vector_from_cell_operation<dim, 1>(
         viscosity,
         scratch_data.get_matrix_free(),
         dof_index_p,
         quad_index_p,
         1, // fe_degree,
         2, /// n_q_points_1D,
-        1, // n_components
         [&](const unsigned int cell, const unsigned int quad) -> const VectorizedArray<double> & {
           return get_viscosity(cell, quad);
         });

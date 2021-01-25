@@ -596,8 +596,12 @@ namespace MeltPoolDG::Flow
 
       const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
 
-      refine_grid<dim, VectorType>(
-        mark_cells_for_refinement, data, post, setup_dof_system, base_in->parameters.amr);
+      refine_grid<dim, VectorType>(mark_cells_for_refinement,
+                                   data,
+                                   post,
+                                   setup_dof_system,
+                                   base_in->parameters.amr,
+                                   time_iterator.get_current_time_step_number());
     }
 
     TimeIterator<double> time_iterator;

@@ -37,11 +37,6 @@ namespace MeltPoolDG
       using BlockVectorType = LinearAlgebra::distributed::BlockVector<double>;
 
     public:
-      /*
-       *  All the necessary parameters are stored in this vector.
-       */
-      LevelSetData<double> level_set_data;
-
       LevelSetOperation() = default;
 
       void
@@ -253,9 +248,16 @@ namespace MeltPoolDG
         advec_diff_operation->reinit();
         reinit_operation->reinit();
         curvature_operation->reinit();
+      }
 
-        if (normal_vector_operation)
-          normal_vector_operation->reinit();
+      /**
+       *  this function may be called to recompute the normal vector with the
+       *  current level set.
+       */
+      void
+      update_normal_vector()
+      {
+        reinit_operation->update_initial_solution(get_level_set());
       }
 
       void
@@ -512,6 +514,10 @@ namespace MeltPoolDG
        */
       TimeIterator<double> reinit_time_iterator;
       /*
+       *  All the necessary parameters are stored in this vector.
+       */
+      LevelSetData<double> level_set_data;
+      /*
        * select the relevant DoFHandler
        */
       unsigned int ls_dof_idx;
@@ -519,7 +525,6 @@ namespace MeltPoolDG
       unsigned int ls_quad_idx;
       unsigned int curv_dof_idx;
       unsigned int normal_dof_idx;
-
 
       double reinit_constant_epsilon     = 0; //@todo: better solution
       double reinit_scale_factor_epsilon = 0; //@todo: better solution
@@ -540,7 +545,10 @@ namespace MeltPoolDG
       const LinearAlgebra::distributed::BlockVector<double> &
       get_normal_vector() const
       {
-        return reinit_operation->get_normal_vector();
+        if (level_set_data.do_reinitialization)
+          return reinit_operation->get_normal_vector();
+        else
+          return curvature_operation->get_normal_vector();
       }
 
       const LinearAlgebra::distributed::Vector<double> &
@@ -561,6 +569,9 @@ namespace MeltPoolDG
         return level_set_as_heaviside;
       }
 
+      /**
+       * register vectors for adaptive mesh refinement
+       */
       virtual void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
@@ -599,10 +610,6 @@ namespace MeltPoolDG
          */
         data_out.add_data_vector(distance_to_level_set, "distance");
       }
-      /*
-       *   Computation of the normal vectors
-       */
-      std::shared_ptr<NormalVector::NormalVectorOperationBase<dim>> normal_vector_operation;
       /*
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update
