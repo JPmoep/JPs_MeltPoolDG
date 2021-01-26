@@ -153,8 +153,10 @@ namespace MeltPoolDG
           else
 #endif
             {
-              GridGenerator::hyper_cube(*this->triangulation, left_domain, right_domain);
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
+              GridGenerator::subdivided_hyper_cube(*this->triangulation,
+                                                   2,
+                                                   left_domain,
+                                                   right_domain);
             }
         }
 
@@ -191,7 +193,14 @@ namespace MeltPoolDG
                   face->set_boundary_id(inflow_bc);
             }
           else
-            {}
+            {
+              AssertThrow(false, ExcNotImplemented());
+            }
+
+          // the global refinement is done at this point to keep boundary ids living on the parent
+          // cell (important for amr with p::d::T)
+          if (!this->parameters.base.do_simplex)
+            this->triangulation->refine_global(this->parameters.base.global_refinements - 1);
         }
 
         void

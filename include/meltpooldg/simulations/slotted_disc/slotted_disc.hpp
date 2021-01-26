@@ -301,8 +301,7 @@ namespace MeltPoolDG
           else
             this->triangulation =
               std::make_shared<parallel::distributed::Triangulation<dim>>(this->mpi_communicator);
-          GridGenerator::hyper_cube(*this->triangulation, left_domain, right_domain);
-          this->triangulation->refine_global(this->parameters.base.global_refinements);
+          GridGenerator::subdivided_hyper_cube(*this->triangulation, 2, left_domain, right_domain);
         }
 
         void
@@ -355,6 +354,11 @@ namespace MeltPoolDG
             {
               (void)do_nothing; // suppress unused variable for 1D
             }
+
+          // the global refinement is done at this point to keep boundary ids living on the parent
+          // cell (important for amr with p::d::T)
+          if (!this->parameters.base.do_simplex)
+            this->triangulation->refine_global(this->parameters.base.global_refinements - 1);
         }
 
         void

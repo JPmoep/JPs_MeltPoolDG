@@ -137,21 +137,7 @@ namespace MeltPoolDG
          * 1) The initial solution of the level set equation will be reinitialized first WITHOUT
          *    dirichlet constraints of the reinitialization.
          */
-        if (level_set_data.do_reinitialization)
-          {
-            reinit_operation->update_initial_solution(advec_diff_operation->get_advected_field());
-
-            while (!reinit_time_iterator.is_finished())
-              {
-                const double d_tau = reinit_time_iterator.get_next_time_increment();
-                scratch_data->get_pcout() << std::setw(4) << ""
-                                          << "| reini: τ= " << std::setw(10) << std::left
-                                          << reinit_time_iterator.get_current_time();
-                reinit_operation->solve(d_tau);
-              }
-            advec_diff_operation->get_advected_field() = reinit_operation->get_level_set();
-            reinit_time_iterator.reset();
-          }
+        do_reinitialization();
         /*
          * 2) From now on, the initial solution of the level set equation will be reinitialized
          *    with dirichlet constraints of the reinitialization.
@@ -261,15 +247,8 @@ namespace MeltPoolDG
       }
 
       void
-      solve(const double dt, const VectorType &advection_velocity)
+      do_reinitialization()
       {
-        /*
-         *  solve the advection step of the level set function
-         */
-        advec_diff_operation->solve(dt, advection_velocity);
-        /*
-         *  solve the reinitialization problem of the level set equation
-         */
         if (level_set_data.do_reinitialization)
           {
             reinit_operation->update_initial_solution(advec_diff_operation->get_advected_field());
@@ -286,20 +265,31 @@ namespace MeltPoolDG
                  */
                 advec_diff_operation->get_advected_field() = reinit_operation->get_level_set();
               }
-
-
             reinit_time_iterator.reset();
           }
+      }
+
+      void
+      solve(const double dt, const VectorType &advection_velocity)
+      {
         /*
-         *    compute the smoothened function
+         *  1) solve the advection step of the level set function
+         */
+        advec_diff_operation->solve(dt, advection_velocity);
+        /*
+         *  2) solve the reinitialization problem of the level set equation
+         */
+        do_reinitialization();
+        /*
+         *  3) compute the smoothened heaviside function ...
          */
         transform_level_set_to_smooth_heaviside();
         /*
-         *    compute the curvature
+         *    ... the curvature
          */
         curvature_operation->solve(advec_diff_operation->get_advected_field());
         /*
-         *    correct the curvature value far away from the zero level set
+         *    ... and correct the curvature value far away from the zero level set
          */
         if (level_set_data.do_curvature_correction)
           correct_curvature_values();

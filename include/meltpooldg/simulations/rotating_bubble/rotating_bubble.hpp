@@ -169,8 +169,10 @@ namespace MeltPoolDG
           else
 #endif
             {
-              GridGenerator::hyper_cube(*this->triangulation, left_domain, right_domain);
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
+              GridGenerator::subdivided_hyper_cube(*this->triangulation,
+                                                   2,
+                                                   left_domain,
+                                                   right_domain);
             }
         }
 
@@ -185,7 +187,7 @@ namespace MeltPoolDG
 
           this->attach_dirichlet_boundary_condition(inflow_bc,
                                                     std::make_shared<DirichletCondition<dim>>(),
-                                                    this->parameters.base.problem_name);
+                                                    "level_set");
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
            *  due to the hyperbolic nature of the analyzed problem
@@ -224,6 +226,10 @@ namespace MeltPoolDG
             {
               (void)do_nothing; // suppress unused variable for 1D
             }
+          // the global refinement is done at this point to keep boundary ids living on the parent
+          // cell (important for amr with p::d::T)
+          if (!this->parameters.base.do_simplex)
+            this->triangulation->refine_global(this->parameters.base.global_refinements - 1);
         }
 
         void
