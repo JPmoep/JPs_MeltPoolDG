@@ -115,7 +115,6 @@ namespace MeltPoolDG
 #endif
                 {
                   GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
-                  this->triangulation->refine_global(this->parameters.base.global_refinements);
                 }
             }
           else
@@ -129,6 +128,11 @@ namespace MeltPoolDG
         {
           this->attach_no_slip_boundary_condition(0, "navier_stokes_u");
           this->attach_fix_pressure_constant_condition(0, "navier_stokes_p");
+
+          // the global refinement is done at this point to keep boundary ids living on the parent
+          // cell (important for amr with p::d::T)
+          if (!this->parameters.base.do_simplex)
+            this->triangulation->refine_global(this->parameters.base.global_refinements);
         }
 
         void

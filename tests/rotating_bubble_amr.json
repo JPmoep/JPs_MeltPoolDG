@@ -30,13 +30,14 @@
     "reinit preconditioner type"  : "Identity", 
     "reinit solver type"          : "CG", 
     "reinit do print l2norm"      : "true",
-    "reinit eps scale factor"     : "0.5" 
+    "reinit constant epsilon"     : "0.01"
   },
   "normal vector" : {
     "normal vec damping scale factor" : "0.5",
     "normal vec do matrix free"       : "false"
   },
   "paraview" : {
-    "paraview do output"           : "false"
+    "paraview do output"           : "true",
+    "paraview filename": "solution_rotaitng_bubble"
   }
 }

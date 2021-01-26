@@ -142,8 +142,6 @@ namespace MeltPoolDG
 
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs(advec_diff_dof_idx));
-        constraints.merge(hanging_node_constraints,
-                          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
         for (const auto &bc : base_in->get_dirichlet_bc(
                "advection_diffusion")) // @todo: add name of bc at a more central place
           {
@@ -151,6 +149,8 @@ namespace MeltPoolDG
               scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);
           }
         constraints.close();
+        constraints.merge(hanging_node_constraints,
+                          AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
 
         /*
          *  create the matrix-free object
