@@ -185,7 +185,7 @@ namespace MeltPoolDG
 
           this->attach_dirichlet_boundary_condition(inflow_bc,
                                                     std::make_shared<DirichletCondition<dim>>(),
-                                                    this->parameters.base.problem_name);
+                                                    "level_set");
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
            *  due to the hyperbolic nature of the analyzed problem
