@@ -239,7 +239,8 @@ namespace MeltPoolDG
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 psi.reinit(cell);
-                psi.gather_evaluate(src, true, true);
+                psi.read_dof_values_plain(src);
+                psi.evaluate(true, true);
 
                 normal_vector.reinit(cell);
                 normal_vector.read_dof_values_plain(this->normal_vec);

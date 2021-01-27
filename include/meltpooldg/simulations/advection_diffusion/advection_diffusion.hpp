@@ -35,7 +35,6 @@ namespace MeltPoolDG
       public:
         InitializePhi()
           : Function<dim>()
-          , epsInterface(0.0313)
         {}
         virtual double
         value(const Point<dim> &p, const unsigned int component = 0) const
@@ -55,58 +54,18 @@ namespace MeltPoolDG
           // this->epsInterface
           //);
         }
-
-        void
-        setEpsInterface(double eps)
-        {
-          this->epsInterface = eps;
-        }
-
-        double
-        getEpsInterface()
-        {
-          return this->epsInterface;
-        }
-
-      private:
-        double epsInterface;
       };
 
       template <int dim>
-      class ExactSolution : public Function<dim>
-      {
-      public:
-        ExactSolution(const double eps)
-          : Function<dim>()
-          , eps_interface(eps)
-        {}
-
-        double
-        value(const Point<dim> &p, const unsigned int component = 0) const
-        {
-          (void)component;
-          Point<dim>   center = dim == 1 ? Point<dim>(0.0) : Point<dim>(0.0, 0.5);
-          const double radius = 0.25;
-          return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function(
-            UtilityFunctions::DistanceFunctions::spherical_manifold(p, center, radius),
-            eps_interface);
-        }
-
-      private:
-        double eps_interface;
-      };
-
-
-      template <int dim>
-      class AdvectionField : public TensorFunction<1, dim>
+      class AdvectionField : public Function<dim>
       {
       public:
         AdvectionField()
-          : TensorFunction<1, dim>()
+          : Function<dim>(dim)
         {}
 
-        Tensor<1, dim>
-        value(const Point<dim> &p) const override
+        double
+        value(const Point<dim> &p, const unsigned int component) const override
         {
           Tensor<1, dim> value_;
 
@@ -121,7 +80,14 @@ namespace MeltPoolDG
           else
             AssertThrow(false, ExcMessage("Advection field for dim!=2 not implemented"));
 
-          return value_;
+          return value_[component];
+        }
+
+        void
+        vector_value(const Point<dim> &p, Vector<double> &values) const override
+        {
+          for (unsigned int c = 0; c < this->n_components; ++c)
+            values(c) = value(p, c);
         }
       };
 
@@ -141,6 +107,7 @@ namespace MeltPoolDG
         {
           (void)p;
           (void)component;
+
           return -1.0;
         }
       };
@@ -160,7 +127,7 @@ namespace MeltPoolDG
         }
 
         void
-        create_spatial_discretization() final
+        create_spatial_discretization()
         {
           if (dim == 1 || this->parameters.base.do_simplex)
             {
@@ -201,9 +168,7 @@ namespace MeltPoolDG
 
           auto dirichlet = std::make_shared<DirichletCondition<dim>>();
 
-          this->attach_dirichlet_boundary_condition(inflow_bc,
-                                                    dirichlet,
-                                                    this->parameters.base.problem_name);
+          this->attach_dirichlet_boundary_condition(inflow_bc, dirichlet, "advection_diffusion");
 
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
@@ -252,8 +217,6 @@ namespace MeltPoolDG
                                          "advection_diffusion");
           this->attach_advection_field(std::make_shared<AdvectionField<dim>>(),
                                        "advection_diffusion");
-          this->attach_exact_solution(std::make_shared<ExactSolution<dim>>(0.01),
-                                      "advection_diffusion");
         }
 
       private:

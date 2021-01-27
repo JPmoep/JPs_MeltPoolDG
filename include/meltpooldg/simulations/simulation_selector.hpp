@@ -11,6 +11,7 @@
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
 #include <meltpooldg/simulations/slotted_disc/slotted_disc.hpp>
 #include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
+#include <meltpooldg/simulations/vortex_bubble/vortex_bubble.hpp>
 
 namespace MeltPoolDG
 {
@@ -37,9 +38,11 @@ namespace MeltPoolDG
         else if (simulation_name == "flow_past_cylinder")
           return std::make_shared<FlowPastCylinder::SimulationFlowPastCylinder<dim>>(
             parameter_file, mpi_communicator);
+
         else if (simulation_name == "spurious_currents")
           return std::make_shared<SpuriousCurrents::SimulationSpuriousCurrents<dim>>(
             parameter_file, mpi_communicator);
+
         else if (simulation_name == "rising_bubble")
           return std::make_shared<RisingBubble::SimulationRisingBubble<dim>>(parameter_file,
                                                                              mpi_communicator);
@@ -47,10 +50,11 @@ namespace MeltPoolDG
           return std::make_shared<SlottedDisc::SimulationSlottedDisc<dim>>(parameter_file,
                                                                            mpi_communicator);
         else if (simulation_name == "recoil_pressure")
-          {
-            return std::make_shared<RecoilPressure::SimulationRecoilPressure<dim>>(
-              parameter_file, mpi_communicator);
-          }
+          return std::make_shared<RecoilPressure::SimulationRecoilPressure<dim>>(parameter_file,
+                                                                                 mpi_communicator);
+        else if (simulation_name == "vortex_bubble")
+          return std::make_shared<VortexBubble::SimulationVortexBubble<dim>>(parameter_file,
+                                                                             mpi_communicator);
         /* add your simulation here*/
         else
           AssertThrow(false,

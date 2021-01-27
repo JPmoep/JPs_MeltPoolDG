@@ -22,7 +22,10 @@
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 
+#include <meltpooldg/utilities/fe_integrator.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
+
+
 namespace MeltPoolDG
 {
   /**
@@ -48,6 +51,7 @@ namespace MeltPoolDG
 
     ScratchData(const ScratchData &scratch_data)
     {
+      //@todo: check if mapping is deleted
       this->do_matrix_free = scratch_data.do_matrix_free;
       this->reinit(scratch_data.get_mapping(),
                    scratch_data.get_dof_handlers(),
@@ -66,7 +70,6 @@ namespace MeltPoolDG
     {
       this->clear();
 
-      this->set_mapping(mapping);
 
       for (unsigned int i = 0; i < dof_handler.size(); ++i)
         this->attach_dof_handler(*dof_handler[i]);
@@ -109,18 +112,9 @@ namespace MeltPoolDG
     unsigned int
     attach_quadrature(const Quadrature<dim_q> &quadrature)
     {
-      AssertDimension(this->quad_1D.size(), 0);
-
-      this->quad.emplace_back(quadrature);
-      return this->quad.size() - 1;
-    }
-
-    unsigned int
-    attach_quadrature(const Quadrature<1> &quadrature)
-    {
-      this->quad_1D.emplace_back(quadrature);
-      this->quad.emplace_back(QIterated<dim>(quadrature, 1));
-      this->face_quad.emplace_back(QIterated<dim - 1>(quadrature, 1));
+      this->quad.emplace_back(Quadrature<dim>(quadrature));
+      if constexpr (dim_q == 1) // find a better way to handle face quadrature
+        this->face_quad.emplace_back(Quadrature<dim - 1>(quadrature));
       return this->quad.size() - 1;
     }
 
@@ -131,9 +125,11 @@ namespace MeltPoolDG
        *  recreate DoF-dependent partitioning data
        */
       this->min_cell_size.clear();
+      this->diameter = 0.0;
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
       this->partitioner.clear();
+      this->pout.clear();
 
       int dof_idx = 0;
       for (const auto &dof : dof_handler)
@@ -143,6 +139,13 @@ namespace MeltPoolDG
            */
           this->min_cell_size.push_back(GridTools::minimal_cell_diameter(dof->get_triangulation()) /
                                         std::sqrt(dim));
+          /*
+           *  create diameter of the object
+           */
+          if (dof_idx == 0)
+            // @todo: this should actually mean GridTools::diameter; however dealii does not
+            // support diameter for parallel triangulations atm
+            this->diameter = GridTools::minimal_cell_diameter(dof->get_triangulation());
           /*
            *  create partitioning
            */
@@ -156,6 +159,10 @@ namespace MeltPoolDG
             std::make_shared<Utilities::MPI::Partitioner>(this->get_locally_owned_dofs(dof_idx),
                                                           this->get_locally_relevant_dofs(dof_idx),
                                                           this->get_mpi_comm(dof_idx)));
+          this->pout.push_back(
+            ConditionalOStream(std::cout,
+                               Utilities::MPI::this_mpi_process(this->get_mpi_comm(dof_idx)) == 0));
+
           dof_idx += 1;
         }
     }
@@ -163,18 +170,42 @@ namespace MeltPoolDG
     void
     build()
     {
-      this->matrix_free.clear();
-
-      // We are building MatrixFree only if 1D quadrature rules have been
-      // provided
-      if (this->quad_1D.size() > 0)
+      if (do_matrix_free)
         {
+          this->matrix_free.clear();
+
           typename MatrixFree<dim, double, VectorizedArray<double>>::AdditionalData additional_data;
           additional_data.mapping_update_flags =
             update_values | update_gradients | update_JxW_values | dealii::update_quadrature_points;
 
           this->matrix_free.reinit(
-            *this->mapping, this->dof_handler, this->constraint, this->quad_1D, additional_data);
+            *this->mapping, this->dof_handler, this->constraint, this->quad, additional_data);
+
+          this->cell_diameters.clear();
+
+          /*
+           *  create vector of cell diameters for matrix free
+           */
+          int dof_idx = 0;
+          for (const auto &dof : dof_handler)
+            {
+              (void)dof;
+              AlignedVector<VectorizedArray<double>> cell_diameters_temp;
+              cell_diameters_temp.resize(this->matrix_free.n_cell_batches());
+
+              FullMatrix<double> mat(dim, dim);
+
+              for (unsigned int cell = 0; cell < this->matrix_free.n_cell_batches(); ++cell)
+                {
+                  VectorizedArray<double> diameter = VectorizedArray<double>();
+                  for (unsigned int v = 0; v < matrix_free.n_active_entries_per_cell_batch(cell);
+                       ++v)
+                    diameter[v] = this->matrix_free.get_cell_iterator(cell, v, dof_idx)->diameter();
+                  cell_diameters_temp[cell] = make_vectorized_array<double>(0.0); // diameter;
+                }
+              this->cell_diameters.push_back(cell_diameters_temp);
+              dof_idx += 1;
+            }
         }
     }
 
@@ -221,14 +252,16 @@ namespace MeltPoolDG
     clear()
     {
       this->matrix_free.clear();
-      this->quad_1D.clear();
       this->quad.clear();
       this->constraint.clear();
       this->dof_handler.clear();
       this->mapping.reset();
       this->min_cell_size.clear();
+      this->diameter = 0.0;
+      this->cell_diameters.clear();
       this->locally_owned_dofs.clear();
       this->locally_relevant_dofs.clear();
+      this->pout.clear();
     }
 
     /**
@@ -282,6 +315,12 @@ namespace MeltPoolDG
       return this->face_quad;
     }
 
+    MatrixFree<dim, number, VectorizedArrayType> &
+    get_matrix_free()
+    {
+      return this->matrix_free;
+    }
+
     const MatrixFree<dim, number, VectorizedArrayType> &
     get_matrix_free() const
     {
@@ -301,9 +340,9 @@ namespace MeltPoolDG
     }
 
     const Triangulation<dim> &
-    get_triangulation() const
+    get_triangulation(const unsigned int dof_idx = 0) const
     {
-      return this->get_dof_handler().get_triangulation();
+      return this->get_dof_handler(dof_idx).get_triangulation();
     }
 
     unsigned int
@@ -316,6 +355,18 @@ namespace MeltPoolDG
     get_min_cell_size(const unsigned int dof_idx = 0) const
     {
       return this->min_cell_size[dof_idx];
+    }
+
+    const double &
+    get_diameter() const
+    {
+      return this->diameter;
+    }
+
+    const AlignedVector<VectorizedArray<double>> &
+    get_cell_diameters(const unsigned int dof_idx = 0) const
+    {
+      return this->cell_diameters[dof_idx];
     }
 
     MPI_Comm
@@ -342,23 +393,23 @@ namespace MeltPoolDG
       return this->partitioner[dof_idx];
     }
 
-    ConditionalOStream
+    const ConditionalOStream &
     get_pcout(const unsigned int dof_idx = 0) const
     {
-      return ConditionalOStream(std::cout,
-                                Utilities::MPI::this_mpi_process(this->get_mpi_comm(dof_idx)) == 0);
+      return pout[dof_idx];
     }
 
   private:
-    bool do_matrix_free;
-
-    std::unique_ptr<Mapping<dim, spacedim>>                   mapping;
+    bool                                                      do_matrix_free;
+    std::vector<ConditionalOStream>                           pout;
+    std::shared_ptr<Mapping<dim, spacedim>>                   mapping;
     std::vector<const DoFHandler<dim, spacedim> *>            dof_handler;
     std::vector<const AffineConstraints<number> *>            constraint;
     std::vector<Quadrature<dim>>                              quad;
-    std::vector<Quadrature<1>>                                quad_1D;
     std::vector<Quadrature<dim - 1>>                          face_quad;
     std::vector<double>                                       min_cell_size;
+    double                                                    diameter;
+    std::vector<AlignedVector<VectorizedArray<double>>>       cell_diameters;
     std::vector<IndexSet>                                     locally_owned_dofs;
     std::vector<IndexSet>                                     locally_relevant_dofs;
     std::vector<std::shared_ptr<Utilities::MPI::Partitioner>> partitioner;

@@ -9,6 +9,7 @@
 // DoFTools
 #include <deal.II/dofs/dof_tools.h>
 // MeltPoolDG
+#include <meltpooldg/advection_diffusion/advection_diffusion_operation_base.hpp>
 #include <meltpooldg/advection_diffusion/advection_diffusion_operator.hpp>
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/interface/parameters.hpp>
@@ -22,7 +23,7 @@ namespace MeltPoolDG
     using namespace dealii;
 
     template <int dim>
-    class AdvectionDiffusionOperation
+    class AdvectionDiffusionOperation : public AdvectionDiffusionOperationBase<dim>
     {
     private:
       using VectorType       = LinearAlgebra::distributed::Vector<double>;
@@ -31,14 +32,8 @@ namespace MeltPoolDG
 
     public:
       /*
-       *    This is the primary solution variable of this module, which will be also publically
-       *    accessible for output_results.
-       */
-      VectorType solution_advected_field;
-      /*
        *  All the necessary parameters are stored in this struct.
        */
-      AdvectionDiffusionData<double> advec_diff_data;
 
       AdvectionDiffusionOperation() = default;
 
@@ -46,24 +41,24 @@ namespace MeltPoolDG
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_advected_field_in,
                  const Parameters<double> &                     data_in,
-                 const unsigned int                             dof_idx_in,
-                 const unsigned int                             dof_no_bc_idx_in,
-                 const unsigned int                             quad_idx_in,
-                 const unsigned int                             velocity_dof_idx_in)
+                 const unsigned int                             advec_diff_dof_idx_in,
+                 const unsigned int                             advec_diff_hanging_nodes_dof_idx_in,
+                 const unsigned int                             advec_diff_quad_idx_in,
+                 const unsigned int                             velocity_dof_idx_in) override
       {
-        scratch_data     = scratch_data_in;
-        dof_idx          = dof_idx_in;
-        quad_idx         = quad_idx_in;
-        dof_no_bc_idx    = dof_no_bc_idx_in;
-        velocity_dof_idx = velocity_dof_idx_in;
+        scratch_data                     = scratch_data_in;
+        advec_diff_dof_idx               = advec_diff_dof_idx_in;
+        advec_diff_quad_idx              = advec_diff_quad_idx_in;
+        advec_diff_hanging_nodes_dof_idx = advec_diff_hanging_nodes_dof_idx_in;
+        velocity_dof_idx                 = velocity_dof_idx_in;
         /*
          *  set the advection diffusion data
          */
-        advec_diff_data = data_in.advec_diff;
+        this->advec_diff_data = data_in.advec_diff;
         /*
          *  set the initial solution of the advected field
          */
-        scratch_data->initialize_dof_vector(solution_advected_field, dof_idx);
+        scratch_data->initialize_dof_vector(solution_advected_field, advec_diff_dof_idx);
         solution_advected_field.copy_locally_owned_data_from(solution_advected_field_in);
         solution_advected_field.update_ghost_values();
         /*
@@ -72,9 +67,15 @@ namespace MeltPoolDG
         set_advection_diffusion_parameters(data_in);
       }
 
+      void
+      reinit() override
+      {
+        scratch_data->initialize_dof_vector(solution_advected_field, advec_diff_dof_idx);
+      }
+
 
       void
-      solve(const double dt, const BlockVectorType &advection_velocity)
+      solve(const double dt, const VectorType &advection_velocity) override
       {
         advection_velocity.update_ghost_values();
 
@@ -82,20 +83,24 @@ namespace MeltPoolDG
 
         VectorType src, rhs;
 
-        scratch_data->initialize_dof_vector(src, dof_idx);
-        scratch_data->initialize_dof_vector(rhs, dof_idx);
+        scratch_data->initialize_dof_vector(src, advec_diff_dof_idx);
+        scratch_data->initialize_dof_vector(rhs, advec_diff_dof_idx);
 
         advec_diff_operator->set_time_increment(dt);
 
         int iter = 0;
 
-        if (advec_diff_data.do_matrix_free)
+        if (this->advec_diff_data.do_matrix_free)
           {
             /*
              * apply dirichlet boundary values
              */
             advec_diff_operator->create_rhs_and_apply_dirichlet_mf(
-              rhs, solution_advected_field, *scratch_data, dof_idx, dof_no_bc_idx);
+              rhs,
+              solution_advected_field,
+              *scratch_data,
+              advec_diff_dof_idx,
+              advec_diff_hanging_nodes_dof_idx);
 
             iter = LinearSolve<VectorType, SolverGMRES<VectorType>, OperatorBase<double>>::solve(
               *advec_diff_operator, src, rhs);
@@ -114,12 +119,12 @@ namespace MeltPoolDG
               advec_diff_operator->system_matrix, src, rhs);
           }
 
-        scratch_data->get_constraint(dof_idx).distribute(src);
+        scratch_data->get_constraint(advec_diff_dof_idx).distribute(src);
 
         solution_advected_field = src;
         solution_advected_field.update_ghost_values();
 
-        if (advec_diff_data.do_print_l2norm)
+        if (this->advec_diff_data.do_print_l2norm)
           {
             const ConditionalOStream &pcout = scratch_data->get_pcout();
             pcout << "| GMRES: i=" << std::setw(5) << std::left << iter;
@@ -130,23 +135,65 @@ namespace MeltPoolDG
         advection_velocity.zero_out_ghosts();
       }
 
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field() const override
+      {
+        return solution_advected_field;
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_advected_field() override
+      {
+        return solution_advected_field;
+      }
+
+      const LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old() const override
+      {
+        return solution_advected_field;
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_advected_field_old() override
+      {
+        return solution_advected_field;
+      }
+
+      void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) override
+      {
+        solution_advected_field.update_ghost_values();
+        vectors.push_back(&solution_advected_field);
+      }
+
+      void
+      attach_output_vectors()
+      {
+        /*todo*/
+      }
+
     private:
       void
       set_advection_diffusion_parameters(const Parameters<double> &data_in)
       {
-        advec_diff_data = data_in.advec_diff;
+        this->advec_diff_data = data_in.advec_diff; //@todo is this really needed?
       }
 
       void
-      create_operator(const BlockVectorType &advection_velocity)
+      create_operator(const VectorType &advection_velocity)
       {
-        advec_diff_operator = std::make_unique<AdvectionDiffusionOperator<dim, double>>(
-          *scratch_data, advection_velocity, advec_diff_data, dof_idx, quad_idx, velocity_dof_idx);
+        advec_diff_operator =
+          std::make_unique<AdvectionDiffusionOperator<dim, double>>(*scratch_data,
+                                                                    advection_velocity,
+                                                                    this->advec_diff_data,
+                                                                    advec_diff_dof_idx,
+                                                                    advec_diff_quad_idx,
+                                                                    velocity_dof_idx);
         /*
          *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
          *  apply it to the system matrix. This functionality is part of the OperatorBase class.
          */
-        if (!advec_diff_data.do_matrix_free)
+        if (!this->advec_diff_data.do_matrix_free)
           advec_diff_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 
@@ -161,10 +208,15 @@ namespace MeltPoolDG
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
        *  multiple DoFHandlers, quadrature rules, etc.
        */
-      unsigned int dof_idx;
-      unsigned int quad_idx;
-      unsigned int dof_no_bc_idx;
+      unsigned int advec_diff_dof_idx;
+      unsigned int advec_diff_quad_idx;
+      unsigned int advec_diff_hanging_nodes_dof_idx;
       unsigned int velocity_dof_idx;
+      /*
+       *    This is the primary solution variable of this module, which will be also publically
+       *    accessible for output_results.
+       */
+      VectorType solution_advected_field;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

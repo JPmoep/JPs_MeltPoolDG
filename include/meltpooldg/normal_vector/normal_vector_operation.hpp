@@ -11,6 +11,7 @@
 
 // MeltPoolDG
 #include <meltpooldg/interface/operator_base.hpp>
+#include <meltpooldg/normal_vector/normal_vector_operation_base.hpp>
 #include <meltpooldg/normal_vector/normal_vector_operator.hpp>
 #include <meltpooldg/utilities/linearsolve.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
@@ -39,7 +40,7 @@ namespace MeltPoolDG
      */
 
     template <int dim>
-    class NormalVectorOperation
+    class NormalVectorOperation : public NormalVectorOperationBase<dim>
     {
     private:
       using VectorType       = LinearAlgebra::distributed::Vector<double>;
@@ -59,12 +60,14 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const Parameters<double> &                     data_in,
-                 const unsigned int                             dof_idx_in,
-                 const unsigned int                             quad_idx_in)
+                 const unsigned int                             normal_dof_idx_in,
+                 const unsigned int                             normal_quad_idx_in,
+                 const unsigned int                             ls_dof_idx_in) override
       {
-        scratch_data = scratch_data_in;
-        dof_idx      = dof_idx_in;
-        quad_idx     = quad_idx_in;
+        scratch_data    = scratch_data_in;
+        normal_dof_idx  = normal_dof_idx_in;
+        normal_quad_idx = normal_quad_idx_in;
+        ls_dof_idx      = ls_dof_idx_in;
         /*
          *  initialize normal vector data
          */
@@ -76,18 +79,19 @@ namespace MeltPoolDG
       }
 
       void
-      update()
+      reinit() override
       {
-        create_operator();
+        if (!normal_vector_data.do_matrix_free)
+          normal_vector_operator->initialize_matrix_based<dim>(*scratch_data);
       }
 
       void
-      solve(const VectorType &solution_levelset_in)
+      solve(const VectorType &solution_levelset_in) override
       {
         BlockVectorType rhs;
 
-        scratch_data->initialize_dof_vector(rhs, dof_idx);
-        scratch_data->initialize_dof_vector(solution_normal_vector, dof_idx);
+        scratch_data->initialize_dof_vector(rhs, normal_dof_idx);
+        scratch_data->initialize_dof_vector(solution_normal_vector, normal_dof_idx);
 
         int iter = 0;
 
@@ -114,7 +118,7 @@ namespace MeltPoolDG
                 rhs.block(d));
           }
         for (unsigned int d = 0; d < dim; ++d)
-          scratch_data->get_constraint(dof_idx).distribute(solution_normal_vector.block(d));
+          scratch_data->get_constraint(normal_dof_idx).distribute(solution_normal_vector.block(d));
 
         if (normal_vector_data.do_print_l2norm)
           {
@@ -127,6 +131,13 @@ namespace MeltPoolDG
           }
       }
 
+      const BlockVectorType &
+      get_solution_normal_vector() const override
+      {
+        return solution_normal_vector;
+      }
+
+
     private:
       /**
        * This function creates the normal vector operator for assembling the system operator (either
@@ -135,16 +146,11 @@ namespace MeltPoolDG
       void
       create_operator()
       {
-        //@todo the following lines would correspond to adaflo
-        // const double damping_parameter =
-        // std::pow(scratch_data->get_min_cell_size(dof_idx),2) *
-        // normal_vector_data.damping_scale_factor;
         const double damping_parameter =
-          scratch_data->get_min_cell_size(dof_idx) * normal_vector_data.damping_scale_factor;
-        normal_vector_operator = std::make_unique<NormalVectorOperator<dim>>(*scratch_data,
-                                                                             damping_parameter,
-                                                                             dof_idx,
-                                                                             quad_idx);
+          std::pow(scratch_data->get_min_cell_size(normal_dof_idx), 2) *
+          normal_vector_data.damping_scale_factor;
+        normal_vector_operator = std::make_unique<NormalVectorOperator<dim>>(
+          *scratch_data, damping_parameter, normal_dof_idx, normal_quad_idx, ls_dof_idx);
         /*
          *  In case of a matrix-based simulation, setup the distributed sparsity pattern and
          *  apply it to the system matrix. This functionality is part of the OperatorBase class.
@@ -164,8 +170,9 @@ namespace MeltPoolDG
        *  ScratchData<dim> object is selected. This is important when ScratchData<dim> holds
        *  multiple DoFHandlers, quadrature rules, etc.
        */
-      unsigned int dof_idx;
-      unsigned int quad_idx;
+      unsigned int normal_dof_idx;
+      unsigned int normal_quad_idx;
+      unsigned int ls_dof_idx;
     };
   } // namespace NormalVector
 } // namespace MeltPoolDG

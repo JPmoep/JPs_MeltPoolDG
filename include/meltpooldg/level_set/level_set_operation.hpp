@@ -11,7 +11,11 @@
 // MeltPoolDG
 #include <meltpooldg/advection_diffusion/advection_diffusion_operation.hpp>
 #include <meltpooldg/curvature/curvature_operation.hpp>
+#include <meltpooldg/curvature/curvature_operation_adaflo_wrapper.hpp>
+#include <meltpooldg/curvature/curvature_operation_base.hpp>
 #include <meltpooldg/reinitialization/reinitialization_operation.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation_adaflo_wrapper.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation_base.hpp>
 
 namespace MeltPoolDG
 {
@@ -43,40 +47,95 @@ namespace MeltPoolDG
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
                  const VectorType &                             solution_level_set_in,
-                 const Parameters<double> &                     data_in,
-                 const unsigned int                             dof_idx_in,
-                 const unsigned int                             dof_no_bc_idx_in,
-                 const unsigned int                             quad_idx_in,
-                 const unsigned int                             advection_dof_idx)
+                 const VectorType &                             advection_velocity,
+                 std::shared_ptr<SimulationBase<dim>>           base_in,
+                 const unsigned int                             ls_dof_idx_in,
+                 const unsigned int                             ls_hanging_nodes_dof_idx_in,
+                 const unsigned int                             ls_quad_idx_in,
+                 const unsigned int                             reinit_dof_idx_in,
+                 const unsigned int                             curv_dof_idx_in,
+                 const unsigned int                             normal_dof_idx_in,
+                 const unsigned int                             vel_dof_idx,
+                 const unsigned int                             ls_zero_bc_idx = 0)
       {
-        scratch_data  = scratch_data_in;
-        dof_idx       = dof_idx_in;
-        dof_no_bc_idx = dof_no_bc_idx_in;
-        quad_idx      = quad_idx_in;
+        // parameters = data_in;
+        scratch_data             = scratch_data_in;
+        ls_dof_idx               = ls_dof_idx_in;
+        ls_hanging_nodes_dof_idx = ls_hanging_nodes_dof_idx_in;
+        ls_quad_idx              = ls_quad_idx_in;
+        curv_dof_idx             = curv_dof_idx_in;
         /*
          *  set the level set data
          */
-        level_set_data = data_in.ls;
+        level_set_data = base_in->parameters.ls;
         /*
-         *  initialize the advection_diffusion problem
+         *    initialize the advection diffusion operation and the reinitialization operation class
          */
-        advec_diff_operation.initialize(scratch_data,
-                                        solution_level_set_in,
-                                        data_in,
-                                        dof_idx,
-                                        dof_no_bc_idx_in,
-                                        quad_idx_in,
-                                        advection_dof_idx);
+
+        if ((base_in->parameters.advec_diff.implementation ==
+             "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
+          {
+            advec_diff_operation =
+              std::make_shared<AdvectionDiffusion::AdvectionDiffusionOperation<dim>>();
+            advec_diff_operation->initialize(scratch_data,
+                                             solution_level_set_in, // copy
+                                             base_in->parameters,
+                                             ls_dof_idx,
+                                             ls_hanging_nodes_dof_idx_in,
+                                             ls_quad_idx_in,
+                                             vel_dof_idx);
+          }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if ((base_in->parameters.advec_diff.implementation == "adaflo") ||
+                 (base_in->parameters.ls.implementation == "adaflo"))
+          {
+            advec_diff_operation =
+              std::make_shared<AdvectionDiffusion::AdvectionDiffusionOperationAdaflo<dim>>(
+                *scratch_data, ls_zero_bc_idx, ls_quad_idx_in, vel_dof_idx, base_in, "level_set");
+
+            advec_diff_operation->reinit();
+
+            advec_diff_operation->set_initial_condition(solution_level_set_in, // copy
+                                                        advection_velocity);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
+
         /*
          *  set the parameters for the levelset problem; already determined parameters
          *  from the initialize call of advec_diff_operation are overwritten.
          */
-        set_level_set_parameters(data_in);
-        /*
-         *    initialize the reinitialization operation class
-         */
-        reinit_operation.initialize(
-          scratch_data, solution_level_set_in, data_in, dof_no_bc_idx_in, quad_idx_in);
+        set_level_set_parameters(base_in->parameters);
+
+        if ((base_in->parameters.reinit.implementation ==
+             "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
+          {
+            reinit_operation = std::make_shared<Reinitialization::ReinitializationOperation<dim>>();
+            reinit_operation->initialize(scratch_data,
+                                         advec_diff_operation->get_advected_field(),
+                                         base_in->parameters,
+                                         reinit_dof_idx_in,
+                                         ls_quad_idx_in,
+                                         normal_dof_idx_in);
+          }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if ((base_in->parameters.reinit.implementation == "adaflo") ||
+                 (base_in->parameters.ls.implementation == "adaflo"))
+          {
+            AssertThrow(base_in->parameters.reinit.solver.do_matrix_free, ExcNotImplemented());
+            reinit_operation =
+              std::make_shared<Reinitialization::ReinitializationOperationAdaflo<dim>>(
+                *scratch_data,
+                reinit_dof_idx_in,
+                ls_quad_idx_in,
+                normal_dof_idx_in,
+                advec_diff_operation->get_advected_field(),
+                base_in->parameters);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
         /*
          *  The initial solution of the level set equation will be reinitialized.
          */
@@ -88,10 +147,9 @@ namespace MeltPoolDG
                 scratch_data->get_pcout() << std::setw(4) << ""
                                           << "| reini: τ= " << std::setw(10) << std::left
                                           << reinit_time_iterator.get_current_time();
-                reinit_operation.solve(d_tau);
+                reinit_operation->solve(d_tau);
               }
-            advec_diff_operation.solution_advected_field =
-              reinit_operation.solution_level_set; // @ could be defined by reference
+            advec_diff_operation->get_advected_field() = reinit_operation->get_level_set();
             reinit_time_iterator.reset();
           }
         /*
@@ -101,31 +159,74 @@ namespace MeltPoolDG
         /*
          *    initialize the curvature operation class
          */
-        curvature_operation.initialize(scratch_data, data_in, dof_no_bc_idx_in, quad_idx_in);
-        /*
-         *    compute the curvature of the initial level set field
-         */
-        curvature_operation.solve(advec_diff_operation.solution_advected_field);
-        /*
-         *    correct the curvature value far away from the zero level set
-         */
-        if (level_set_data.do_curvature_correction)
-          correct_curvature_values();
+        if ((base_in->parameters.curv.implementation ==
+             "meltpooldg")) // @todo: add stronger criterion for ls implementation == meltpooldg
+          {
+            curvature_operation = std::make_shared<Curvature::CurvatureOperation<dim>>();
+
+            curvature_operation->initialize(scratch_data,
+                                            base_in->parameters,
+                                            curv_dof_idx_in,
+                                            ls_quad_idx_in,
+                                            normal_dof_idx_in,
+                                            ls_dof_idx);
+            /*
+             *    compute the curvature of the initial level set field
+             */
+            curvature_operation->solve(advec_diff_operation->get_advected_field());
+            /*
+             *    correct the curvature value far away from the zero level set
+             */
+            if (level_set_data.do_curvature_correction)
+              correct_curvature_values();
+          }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if ((base_in->parameters.curv.implementation == "adaflo") ||
+                 (base_in->parameters.ls.implementation == "adaflo"))
+          {
+            AssertThrow(base_in->parameters.curv.do_matrix_free, ExcNotImplemented());
+            curvature_operation = std::make_shared<Curvature::CurvatureOperationAdaflo<dim>>(
+              *scratch_data_in,
+              ls_dof_idx_in,
+              normal_dof_idx_in,
+              curv_dof_idx_in,
+              ls_quad_idx,
+              advec_diff_operation->get_advected_field(),
+              base_in->parameters);
+
+            curvature_operation->solve(advec_diff_operation->get_advected_field());
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
+
+        // this->reinit();
       }
 
       void
-      solve(const double dt, const BlockVectorType &advection_velocity)
+      reinit()
+      {
+        advec_diff_operation->reinit();
+        reinit_operation->reinit();
+        curvature_operation->reinit();
+
+        if (normal_vector_operation)
+          normal_vector_operation->reinit();
+      }
+
+      void
+      solve(const double dt, const VectorType &advection_velocity)
       {
         /*
          *  solve the advection step of the level set function
          */
-        advec_diff_operation.solve(dt, advection_velocity);
+        advec_diff_operation->solve(dt, advection_velocity);
         /*
          *  solve the reinitialization problem of the level set equation
          */
         if (level_set_data.do_reinitialization)
           {
-            reinit_operation.update_initial_solution(advec_diff_operation.solution_advected_field);
+            reinit_operation->update_initial_solution(advec_diff_operation->get_advected_field());
 
             while (!reinit_time_iterator.is_finished())
               {
@@ -133,14 +234,14 @@ namespace MeltPoolDG
                 scratch_data->get_pcout() << std::setw(4) << ""
                                           << "| reini: τ= " << std::setw(10) << std::left
                                           << reinit_time_iterator.get_current_time();
-                reinit_operation.solve(d_tau);
+                reinit_operation->solve(d_tau);
+                /*
+                 *  reset the solution of the level set field to the reinitialized solution
+                 */
+                advec_diff_operation->get_advected_field() = reinit_operation->get_level_set();
               }
 
-            /*
-             *  reset the solution of the level set field to the reinitialized solution
-             */
-            advec_diff_operation.solution_advected_field =
-              reinit_operation.solution_level_set; // @ could be defined by reference
+
             reinit_time_iterator.reset();
           }
         /*
@@ -150,7 +251,7 @@ namespace MeltPoolDG
         /*
          *    compute the curvature
          */
-        curvature_operation.solve(advec_diff_operation.solution_advected_field);
+        curvature_operation->solve(advec_diff_operation->get_advected_field());
         /*
          *    correct the curvature value far away from the zero level set
          */
@@ -159,32 +260,37 @@ namespace MeltPoolDG
       }
 
       void
-      compute_surface_tension(BlockVectorType &  force_rhs,
+      compute_surface_tension(VectorType &       force_rhs,
                               const double       surface_tension_coefficient,
-                              const unsigned int flow_dof_idx,
+                              const unsigned int flow_vel_dof_idx,
                               const unsigned int flow_quad_idx,
                               const bool         zero_out = true)
       {
-        level_set_as_heaviside.update_ghost_values();
-        scratch_data->get_matrix_free().template cell_loop<BlockVectorType, std::nullptr_t>(
-          [&](const auto &matrix_free, auto &force_rhs, const auto &, auto macro_cells) {
-            FECellIntegrator<dim, 1, double> level_set(matrix_free, dof_idx, flow_quad_idx);
+        curvature_operation->get_curvature().update_ghost_values();
 
-            FECellIntegrator<dim, 1, double> curvature(matrix_free, dof_no_bc_idx, flow_quad_idx);
+        scratch_data->get_matrix_free().template cell_loop<VectorType, VectorType>(
+          [&](const auto &matrix_free,
+              auto &      force_rhs,
+              const auto &level_set_as_heaviside,
+              auto        macro_cells) {
+            FECellIntegrator<dim, 1, double> level_set(matrix_free, ls_dof_idx, flow_quad_idx);
+
+            FECellIntegrator<dim, 1, double> curvature(matrix_free, curv_dof_idx, flow_quad_idx);
 
             FECellIntegrator<dim, dim, double> surface_tension(matrix_free,
-                                                               flow_dof_idx,
+                                                               flow_vel_dof_idx,
                                                                flow_quad_idx);
 
             for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
               {
                 level_set.reinit(cell);
-                level_set.gather_evaluate(level_set_as_heaviside, false, true);
+                level_set.read_dof_values_plain(level_set_as_heaviside);
+                level_set.evaluate(false, true);
 
                 surface_tension.reinit(cell);
 
                 curvature.reinit(cell);
-                curvature.read_dof_values_plain(solution_curvature);
+                curvature.read_dof_values_plain(curvature_operation->get_curvature());
                 curvature.evaluate(true, false);
 
                 for (unsigned int q_index = 0; q_index < surface_tension.n_q_points; ++q_index)
@@ -200,9 +306,10 @@ namespace MeltPoolDG
               }
           },
           force_rhs,
-          nullptr,
+          level_set_as_heaviside,
           zero_out);
-        level_set_as_heaviside.zero_out_ghosts();
+
+        curvature_operation->get_curvature().zero_out_ghosts();
       }
       /*
        *  getter functions for solution vectors
@@ -253,11 +360,11 @@ namespace MeltPoolDG
       void
       transform_level_set_to_smooth_heaviside()
       {
-        scratch_data->initialize_dof_vector(level_set_as_heaviside, dof_no_bc_idx);
-        scratch_data->initialize_dof_vector(distance_to_level_set, dof_no_bc_idx);
+        scratch_data->initialize_dof_vector(level_set_as_heaviside, ls_hanging_nodes_dof_idx);
+        scratch_data->initialize_dof_vector(distance_to_level_set, ls_hanging_nodes_dof_idx);
         FEValues<dim> fe_values(scratch_data->get_mapping(),
-                                scratch_data->get_dof_handler(this->dof_no_bc_idx).get_fe(),
-                                scratch_data->get_quadrature(this->quad_idx),
+                                scratch_data->get_dof_handler(ls_hanging_nodes_dof_idx).get_fe(),
+                                scratch_data->get_quadrature(ls_quad_idx),
                                 update_values | update_quadrature_points | update_JxW_values);
 
         const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell();
@@ -267,22 +374,22 @@ namespace MeltPoolDG
         const double cut_off_level_set = std::tanh(2);
 
         for (const auto &cell :
-             scratch_data->get_dof_handler(this->dof_no_bc_idx).active_cell_iterators())
+             scratch_data->get_dof_handler(ls_hanging_nodes_dof_idx).active_cell_iterators())
           if (cell->is_locally_owned())
             {
               cell->get_dof_indices(local_dof_indices);
 
-              const double epsilon_cell = reinit_operation.reinit_data.constant_epsilon > 0.0 ?
-                                            reinit_operation.reinit_data.constant_epsilon :
-                                            cell->diameter() / (std::sqrt(dim)) *
-                                              reinit_operation.reinit_data.scale_factor_epsilon;
+              const double epsilon_cell =
+                reinit_constant_epsilon > 0.0 ?
+                  reinit_constant_epsilon :
+                  cell->diameter() / (std::sqrt(dim)) * reinit_scale_factor_epsilon;
 
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
                 {
-                  const double distance =
-                    approximate_distance_from_level_set(solution_level_set[local_dof_indices[i]],
-                                                        epsilon_cell,
-                                                        cut_off_level_set);
+                  const double distance = approximate_distance_from_level_set(
+                    advec_diff_operation->get_advected_field()[local_dof_indices[i]],
+                    epsilon_cell,
+                    cut_off_level_set);
                   distance_to_level_set(local_dof_indices[i]) = distance;
                   level_set_as_heaviside(local_dof_indices[i]) =
                     smooth_heaviside_from_distance_value(2 * distance / (3 * epsilon_cell));
@@ -309,22 +416,25 @@ namespace MeltPoolDG
       void
       correct_curvature_values()
       {
-        for (unsigned int i = 0; i < solution_curvature.local_size(); ++i)
+        for (unsigned int i = 0; i < curvature_operation->get_curvature().local_size(); ++i)
           // if (std::abs(solution_curvature.local_element(i)) > 1e-4)
-          if (1. - solution_level_set.local_element(i) * solution_level_set.local_element(i) > 1e-2)
-            curvature_operation.solution_curvature.local_element(i) =
-              1. / (1. / curvature_operation.solution_curvature.local_element(i) +
+          if (1. - advec_diff_operation->get_advected_field().local_element(i) *
+                     advec_diff_operation->get_advected_field().local_element(i) >
+              1e-2)
+            curvature_operation->get_curvature().local_element(i) =
+              1. / (1. / curvature_operation->get_curvature().local_element(i) +
                     distance_to_level_set.local_element(i) / (dim - 1));
       }
 
       void
       set_level_set_parameters(const Parameters<double> &data_in)
       {
-        level_set_data.do_reinitialization                   = data_in.ls.do_reinitialization;
-        advec_diff_operation.advec_diff_data.diffusivity     = data_in.ls.artificial_diffusivity;
-        advec_diff_operation.advec_diff_data.theta           = data_in.ls.theta;
-        advec_diff_operation.advec_diff_data.do_print_l2norm = data_in.ls.do_print_l2norm;
-        advec_diff_operation.advec_diff_data.do_matrix_free  = data_in.ls.do_matrix_free;
+        level_set_data.do_reinitialization                = data_in.ls.do_reinitialization;
+        advec_diff_operation->advec_diff_data.diffusivity = data_in.ls.artificial_diffusivity;
+        advec_diff_operation->advec_diff_data.time_integration_scheme =
+          data_in.ls.time_integration_scheme;
+        advec_diff_operation->advec_diff_data.do_print_l2norm = data_in.ls.do_print_l2norm;
+        advec_diff_operation->advec_diff_data.do_matrix_free  = data_in.ls.do_matrix_free;
         /*
          *  setup the time iterator for the reinitialization problem
          */
@@ -333,10 +443,13 @@ namespace MeltPoolDG
                                    100000.,
                                    data_in.reinit.dtau > 0.0 ?
                                      data_in.reinit.dtau :
-                                     scratch_data->get_min_cell_size(dof_idx) *
+                                     scratch_data->get_min_cell_size(ls_dof_idx) *
                                        data_in.reinit.scale_factor_epsilon,
                                    data_in.reinit.max_n_steps,
                                    false});
+
+        reinit_constant_epsilon     = data_in.reinit.constant_epsilon;     //@todo: better solution
+        reinit_scale_factor_epsilon = data_in.reinit.scale_factor_epsilon; //@todo: better solution
       }
 
       std::shared_ptr<const ScratchData<dim>> scratch_data;
@@ -344,10 +457,10 @@ namespace MeltPoolDG
        *  The following objects are the operations, which are performed for solving the
        *  level set equation.
        */
-      AdvectionDiffusionOperation<dim>   advec_diff_operation;
-      ReinitializationOperation<dim>     reinit_operation;
-      Curvature::CurvatureOperation<dim> curvature_operation;
-
+      std::shared_ptr<AdvectionDiffusion::AdvectionDiffusionOperationBase<dim>>
+                                                                            advec_diff_operation;
+      std::shared_ptr<Reinitialization::ReinitializationOperationBase<dim>> reinit_operation;
+      std::shared_ptr<Curvature::CurvatureOperationBase<dim>>               curvature_operation;
       /*
        *  The reinitialization of the level set function is a "pseudo"-time-dependent
        *  equation, which is solved up to quasi-steady state. Thus a time iterator is
@@ -357,26 +470,58 @@ namespace MeltPoolDG
       /*
        * select the relevant DoFHandler
        */
-      unsigned int dof_idx;
-      unsigned int dof_no_bc_idx;
-      unsigned int quad_idx;
+      unsigned int ls_dof_idx;
+      unsigned int ls_hanging_nodes_dof_idx;
+      unsigned int ls_quad_idx;
+      unsigned int curv_dof_idx;
+      unsigned int normal_dof_idx;
+
+
+      double reinit_constant_epsilon     = 0; //@todo: better solution
+      double reinit_scale_factor_epsilon = 0; //@todo: better solution
 
     public:
+      const LinearAlgebra::distributed::Vector<double> &
+      get_curvature() const
+      {
+        return curvature_operation->get_curvature();
+      }
+
+      const LinearAlgebra::distributed::BlockVector<double> &
+      get_normal_vector() const
+      {
+        return reinit_operation->get_normal_vector();
+      }
+      const LinearAlgebra::distributed::Vector<double> &
+      get_level_set() const
+      {
+        return advec_diff_operation->get_advected_field();
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_level_set()
+      {
+        return advec_diff_operation->get_advected_field();
+      }
+
+      LinearAlgebra::distributed::Vector<double> &
+      get_level_set_as_heaviside()
+      {
+        return level_set_as_heaviside;
+      }
+
+      virtual void
+      attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
+      {
+        advec_diff_operation->attach_vectors(vectors);
+        // level_set_as_heaviside.update_ghost_values();
+        // vectors.push_back(&level_set_as_heaviside);
+      }
+
       /*
-       *    This is the primary solution variable of this module, which will be also publically
-       *    accessible for output_results.
+       *   Computation of the normal vectors
        */
-      const VectorType &solution_level_set = advec_diff_operation.solution_advected_field;
-      /*
-       *    This is the curvature solution variable, which will be publically
-       *    accessible for output_results.
-       */
-      const VectorType &solution_curvature = curvature_operation.solution_curvature;
-      /*
-       *    This is the normal vector field, which will be publically
-       *    accessible for output_results.
-       */
-      const BlockVectorType &solution_normal_vector = reinit_operation.solution_normal_vector;
+      std::shared_ptr<NormalVector::NormalVectorOperationBase<dim>> normal_vector_operation;
       /*
        *    This is the surface_tension vector calculated after level set and reinitialization
        * update

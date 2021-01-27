@@ -96,6 +96,7 @@ DEAL_II_SETUP_TARGET(${projectName})
 TARGET_LINK_LIBRARIES(${projectName} ${CMAKE_PROJECT_NAME})
 
 #tests
+SET(_n_tests "0")
 enable_testing()
 ADD_SUBDIRECTORY(tests)
 

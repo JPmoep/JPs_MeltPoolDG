@@ -16,6 +16,12 @@ namespace MeltPoolDG
 {
   namespace AdvectionDiffusion
   {
+    static std::map<std::string, double> get_generalized_theta = {
+      {"explicit_euler", 0.0},
+      {"implicit_euler", 1.0},
+      {"crank_nicolson", 0.5},
+    };
+
     using namespace dealii;
 
     template <int dim, typename number = double>
@@ -35,7 +41,7 @@ namespace MeltPoolDG
     public:
       // clang-format off
     AdvectionDiffusionOperator( const ScratchData<dim>               &scratch_data_in, 
-                                const BlockVectorType                &advection_velocity_in,
+                                const VectorType                     &advection_velocity_in,
                                 const AdvectionDiffusionData<number> &data_in,
                                 const unsigned int                   dof_idx_in,
                                 const unsigned int                   quad_idx_in, 
@@ -43,9 +49,16 @@ namespace MeltPoolDG
     : scratch_data        ( scratch_data_in       )
     , advection_velocity  ( advection_velocity_in )
     , data                ( data_in               )
-    , velocity_dof_idx   ( velocity_dof_idx_in)
+    , velocity_dof_idx    ( velocity_dof_idx_in   )
     {
       this->reset_indices(dof_idx_in, quad_idx_in);
+      /*
+       *  convert the user input to the generalized theta parameter
+       */
+      if (get_generalized_theta.find(data.time_integration_scheme) != get_generalized_theta.end()) 
+        theta = get_generalized_theta[data.time_integration_scheme];
+      else
+        AssertThrow(false, ExcMessage("Advection diffusion operator: Requested time integration scheme not supported."))
     }
       // clang-format on
 
@@ -62,25 +75,27 @@ namespace MeltPoolDG
         AssertThrow(data.diffusivity >= 0.0,
                     ExcMessage("Advection diffusion operator: diffusivity is smaller than zero!"));
 
-        // @todo: the case where the size of the velocity dof vector is
-        // different than the level set field must be added
-        AssertThrow(velocity_dof_idx == this->dof_idx,
-                    ExcMessage("not implemented; try matrix free operation"));
-
         advected_field_old.update_ghost_values();
 
-        FEValues<dim> fe_values(scratch_data.get_mapping(),
-                                scratch_data.get_dof_handler(this->dof_idx).get_fe(),
-                                scratch_data.get_quadrature(this->quad_idx),
-                                update_values | update_gradients | update_quadrature_points |
-                                  update_JxW_values);
+        const FEValuesExtractors::Vector velocities(0);
+
+        FEValues<dim> advec_diff_values(scratch_data.get_mapping(),
+                                        scratch_data.get_dof_handler(this->dof_idx).get_fe(),
+                                        scratch_data.get_quadrature(this->quad_idx),
+                                        update_values | update_gradients |
+                                          update_quadrature_points | update_JxW_values);
+
+        FEValues<dim> vel_values(scratch_data.get_mapping(),
+                                 scratch_data.get_dof_handler(velocity_dof_idx).get_fe(),
+                                 scratch_data.get_quadrature(this->quad_idx),
+                                 update_values);
 
         const unsigned int dofs_per_cell = scratch_data.get_n_dofs_per_cell();
 
         FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
         Vector<double>     cell_rhs(dofs_per_cell);
 
-        const unsigned int n_q_points = fe_values.get_quadrature().size();
+        const unsigned int n_q_points = advec_diff_values.get_quadrature().size();
 
         std::vector<double>         phi_at_q(n_q_points);
         std::vector<Tensor<1, dim>> grad_phi_at_q(n_q_points, Tensor<1, dim>());
@@ -92,68 +107,72 @@ namespace MeltPoolDG
 
         std::vector<Tensor<1, dim>> a(n_q_points, Tensor<1, dim>());
 
+        typename DoFHandler<dim>::active_cell_iterator vel_cell =
+          scratch_data.get_dof_handler(velocity_dof_idx).begin_active();
+
         for (const auto &cell : scratch_data.get_dof_handler(this->dof_idx).active_cell_iterators())
-          if (cell->is_locally_owned())
-            {
-              cell_matrix = 0;
-              cell_rhs    = 0;
+          {
+            if (cell->is_locally_owned())
+              {
+                cell_matrix = 0;
+                cell_rhs    = 0;
 
-              fe_values.reinit(cell);
-              fe_values.get_function_values(advected_field_old, phi_at_q);
-              fe_values.get_function_gradients(advected_field_old, grad_phi_at_q);
+                advec_diff_values.reinit(cell);
+                advec_diff_values.get_function_values(advected_field_old, phi_at_q);
+                advec_diff_values.get_function_gradients(advected_field_old, grad_phi_at_q);
 
-              for (int d = 0; d < dim; ++d)
-                {
-                  std::vector<double> a_comp(n_q_points);
-                  fe_values.get_function_values(advection_velocity.block(d), a_comp);
-                  for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                    a[q_index][d] = a_comp[q_index];
-                }
+                vel_values.reinit(vel_cell);
+                std::vector<Tensor<1, dim>> a(n_q_points, Tensor<1, dim>());
+                vel_values[velocities].get_function_values(advection_velocity, a);
 
-              for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                {
-                  for (const unsigned int i : fe_values.dof_indices())
-                    {
-                      for (const unsigned int j : fe_values.dof_indices())
-                        {
-                          auto velocity_grad_phi_j = a[q_index] * fe_values.shape_grad(j, q_index);
-                          // clang-format off
+                for (const unsigned int q_index : advec_diff_values.quadrature_point_indices())
+                  {
+                    for (const unsigned int i : advec_diff_values.dof_indices())
+                      {
+                        for (const unsigned int j : advec_diff_values.dof_indices())
+                          {
+                            auto velocity_grad_phi_j =
+                              a[q_index] * advec_diff_values.shape_grad(j, q_index);
+                            // clang-format off
                   cell_matrix( i, j ) += 
-                              ( fe_values.shape_value( i, q_index) 
+                              ( advec_diff_values.shape_value( i, q_index) 
                                  * 
-                                 fe_values.shape_value( j, q_index) 
+                                 advec_diff_values.shape_value( j, q_index) 
                                  +
-                                 data.theta * this->d_tau * ( data.diffusivity * 
-                                                       fe_values.shape_grad( i, q_index) * 
-                                                       fe_values.shape_grad( j, q_index) 
+                                 theta * this->d_tau * ( data.diffusivity * 
+                                                       advec_diff_values.shape_grad( i, q_index) * 
+                                                       advec_diff_values.shape_grad( j, q_index) 
                                                        +
-                                                       fe_values.shape_value( i, q_index)  *
+                                                       advec_diff_values.shape_value( i, q_index)  *
                                                        velocity_grad_phi_j )
-                              ) * fe_values.JxW(q_index);
-                          // clang-format on
-                        }
+                              ) * advec_diff_values.JxW(q_index);
+                            // clang-format on
+                          }
 
-                      // clang-format off
+                        // clang-format off
                 cell_rhs( i ) +=
-                  (  fe_values.shape_value( i, q_index) * phi_at_q[q_index]
+                  (  advec_diff_values.shape_value( i, q_index) * phi_at_q[q_index]
                       - 
-                     ( 1. - data.theta ) * this->d_tau * 
+                     ( 1. - theta ) * this->d_tau * 
                        (
-                         data.diffusivity * fe_values.shape_grad( i, q_index) * grad_phi_at_q[q_index]
+                         data.diffusivity * advec_diff_values.shape_grad( i, q_index) * grad_phi_at_q[q_index]
                          +
-                         fe_values.shape_value(i, q_index) * a[q_index] * grad_phi_at_q[q_index] 
+                         advec_diff_values.shape_value(i, q_index) * a[q_index] * grad_phi_at_q[q_index] 
                        )
-                    ) * fe_values.JxW(q_index) ;
-                      // clang-format on
-                    }
-                } // end gauss
+                    ) * advec_diff_values.JxW(q_index) ;
+                        // clang-format on
+                      }
+                  } // end gauss
 
-              // assembly
-              cell->get_dof_indices(local_dof_indices);
+                // assembly
+                cell->get_dof_indices(local_dof_indices);
 
-              scratch_data.get_constraint(this->dof_idx)
-                .distribute_local_to_global(cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
-            }
+                scratch_data.get_constraint(this->dof_idx)
+                  .distribute_local_to_global(
+                    cell_matrix, cell_rhs, local_dof_indices, matrix, rhs);
+              }
+            ++vel_cell;
+          }
 
         matrix.compress(VectorOperation::add);
         rhs.compress(VectorOperation::add);
@@ -195,9 +214,9 @@ namespace MeltPoolDG
                     const scalar velocity_grad_phi =
                       scalar_product(map_to_vector(velocity.get_value(q_index)), grad_phi);
 
-                    advected_field.submit_value(phi + this->d_tau * data.theta * velocity_grad_phi,
+                    advected_field.submit_value(phi + this->d_tau * theta * velocity_grad_phi,
                                                 q_index);
-                    advected_field.submit_gradient(this->d_tau * data.theta * data.diffusivity *
+                    advected_field.submit_gradient(this->d_tau * theta * data.diffusivity *
                                                      grad_phi,
                                                    q_index);
                   }
@@ -245,12 +264,12 @@ namespace MeltPoolDG
 
                     const scalar velocity_grad_phi =
                       scalar_product(map_to_vector(velocity.get_value(q_index)), grad_phi);
-                    advected_field.submit_value(phi - this->d_tau * (1. - data.theta) *
-                                                        velocity_grad_phi,
+                    advected_field.submit_value(phi -
+                                                  this->d_tau * (1. - theta) * velocity_grad_phi,
                                                 q_index);
 
-                    advected_field.submit_gradient(-this->d_tau * (1. - data.theta) *
-                                                     data.diffusivity * grad_phi,
+                    advected_field.submit_gradient(-this->d_tau * (1. - theta) * data.diffusivity *
+                                                     grad_phi,
                                                    q_index);
                   }
 
@@ -283,9 +302,10 @@ namespace MeltPoolDG
 
     private:
       const ScratchData<dim> &              scratch_data;
-      const BlockVectorType &               advection_velocity;
+      const VectorType &                    advection_velocity;
       const AdvectionDiffusionData<number> &data;
       const unsigned int                    velocity_dof_idx;
+      double                                theta;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

@@ -32,6 +32,9 @@
 #include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/reinitialization/reinitialization_operation.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation_adaflo_wrapper.hpp>
+#include <meltpooldg/reinitialization/reinitialization_operation_base.hpp>
+#include <meltpooldg/utilities/amr.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
 // C++
 #include <memory>
@@ -71,7 +74,7 @@ namespace MeltPoolDG
             scratch_data->get_pcout()
               << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
 
-            reinit_operation.solve(d_tau);
+            reinit_operation->solve(d_tau);
 
             output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
 
@@ -95,9 +98,45 @@ namespace MeltPoolDG
       initialize(std::shared_ptr<SimulationBase<dim>> base_in)
       {
         /*
-         *  initialize the dof system
+         *  setup scratch data
          */
-        setup_dof_system(base_in, true);
+        {
+          scratch_data =
+            std::make_shared<ScratchData<dim>>(base_in->parameters.reinit.solver.do_matrix_free);
+          /*
+           *  setup mapping
+           */
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (base_in->parameters.base.do_simplex)
+            scratch_data->set_mapping(
+              MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+          else
+#endif
+            scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+            /*
+             *  create quadrature rule
+             */
+
+#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
+          if (base_in->parameters.base.do_simplex)
+            scratch_data->attach_quadrature(
+              Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
+          else
+#endif
+            reinit_quad_idx =
+              scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+
+          scratch_data->attach_dof_handler(dof_handler);
+          reinit_dof_idx = scratch_data->attach_constraint_matrix(constraints);
+          normal_dof_idx = reinit_dof_idx;
+          /*
+           *  setup DoFHandler
+           */
+          dof_handler.reinit(*base_in->triangulation);
+        }
+
+        setup_dof_system(base_in);
+
         /*
          *  initialize the time iterator
          */
@@ -134,57 +173,49 @@ namespace MeltPoolDG
         /*
          *    initialize the reinitialization operation class
          */
-        reinit_operation.initialize(
-          scratch_data, solution_level_set, base_in->parameters, dof_idx, quad_idx);
+
+        if (base_in->parameters.reinit.implementation == "meltpooldg")
+          {
+            reinit_operation = std::make_shared<ReinitializationOperation<dim>>();
+
+            reinit_operation->initialize(scratch_data,
+                                         solution_level_set,
+                                         base_in->parameters,
+                                         reinit_dof_idx,
+                                         reinit_quad_idx,
+                                         normal_dof_idx);
+          }
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+        else if (base_in->parameters.reinit.implementation == "adaflo")
+          {
+            AssertThrow(base_in->parameters.reinit.solver.do_matrix_free, ExcNotImplemented());
+
+            reinit_operation = std::make_shared<ReinitializationOperationAdaflo<dim>>(
+              *scratch_data,
+              reinit_dof_idx,
+              reinit_quad_idx,
+              normal_dof_idx, // normal vec @todo
+              solution_level_set,
+              base_in->parameters);
+          }
+#endif
+        else
+          AssertThrow(false, ExcNotImplemented());
       }
 
       void
-      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in, const bool do_initial_setup)
+      setup_dof_system(std::shared_ptr<SimulationBase<dim>> base_in)
       {
         /*
-         *  setup scratch data
+         *  setup DoFHandler
          */
-        if (do_initial_setup)
-          {
-            scratch_data =
-              std::make_shared<ScratchData<dim>>(base_in->parameters.reinit.do_matrix_free);
-            /*
-             *  setup mapping
-             */
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-            if (base_in->parameters.base.do_simplex)
-              scratch_data->set_mapping(
-                MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
-            else
-#endif
-              scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
-              /*
-               *  create quadrature rule
-               */
-
-#ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-            if (base_in->parameters.base.do_simplex)
-              scratch_data->attach_quadrature(
-                Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
-            else
-#endif
-              quad_idx =
-                scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-          }
-          /*
-           *  setup DoFHandler
-           */
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
         if (base_in->parameters.base.do_simplex)
-          dof_handler.initialize(*base_in->triangulation,
-                                 Simplex::FE_P<dim>(base_in->parameters.base.degree));
+          dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
         else
 #endif
-          dof_handler.initialize(*base_in->triangulation,
-                                 FE_Q<dim>(base_in->parameters.base.degree));
+          dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
 
-        if (do_initial_setup)
-          scratch_data->attach_dof_handler(dof_handler);
         /*
          *  re-create partitioning
          */
@@ -197,13 +228,13 @@ namespace MeltPoolDG
         DoFTools::make_hanging_node_constraints(dof_handler, constraints);
         constraints.close();
 
-        if (do_initial_setup)
-          dof_idx = scratch_data->attach_constraint_matrix(constraints);
-
         /*
          *  create the matrix-free object
          */
         scratch_data->build();
+
+        if (reinit_operation)
+          reinit_operation->reinit();
       }
 
       /*
@@ -212,87 +243,51 @@ namespace MeltPoolDG
       void
       refine_mesh(std::shared_ptr<SimulationBase<dim>> base_in)
       {
-        if (auto tria = std::dynamic_pointer_cast<parallel::distributed::Triangulation<dim>>(
-              base_in->triangulation))
-          {
-            Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
+        const auto mark_cells_for_refinement =
+          [&](parallel::distributed::Triangulation<dim> &tria) -> bool {
+          Vector<float> estimated_error_per_cell(base_in->triangulation->n_active_cells());
 
-            /*  @todo:
-             *  bug (?)
-             *  for the purpose of the KellyErrorEstimator initialize_dof_vector could not be used
-             *  scratch_data->initialize_dof_vector(locally_relevant_solution);
-             */
+          VectorType locally_relevant_solution;
+          locally_relevant_solution.reinit(scratch_data->get_partitioner());
+          locally_relevant_solution.copy_locally_owned_data_from(reinit_operation->get_level_set());
+          constraints.distribute(locally_relevant_solution);
+          locally_relevant_solution.update_ghost_values();
 
-            VectorType locally_relevant_solution;
-            locally_relevant_solution.reinit(scratch_data->get_partitioner());
-            locally_relevant_solution.copy_locally_owned_data_from(
-              reinit_operation.solution_level_set);
-            constraints.distribute(locally_relevant_solution);
-            locally_relevant_solution.update_ghost_values();
+          KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
+                                             scratch_data->get_face_quadrature(),
+                                             {},
+                                             locally_relevant_solution,
+                                             estimated_error_per_cell);
 
-            KellyErrorEstimator<dim>::estimate(scratch_data->get_dof_handler(),
-                                               scratch_data->get_face_quadrature(),
-                                               {},
-                                               locally_relevant_solution,
-                                               estimated_error_per_cell);
+          parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
+            tria,
+            estimated_error_per_cell,
+            base_in->parameters.amr.upper_perc_to_refine,
+            base_in->parameters.amr.lower_perc_to_coarsen);
 
-            parallel::distributed::GridRefinement::refine_and_coarsen_fixed_fraction(
-              *tria,
-              estimated_error_per_cell,
-              base_in->parameters.amr.upper_perc_to_refine,
-              base_in->parameters.amr.lower_perc_to_coarsen);
+          return true;
+        };
 
-            /*
-             *  Limit the maximum and minimum refinement levels of cells of the grid.
-             */
-            if (tria->n_levels() > base_in->parameters.amr.max_grid_refinement_level)
-              for (auto &cell : tria->active_cell_iterators_on_level(
-                     base_in->parameters.amr.max_grid_refinement_level))
-                cell->clear_refine_flag();
-            if (tria->n_levels() < base_in->parameters.amr.min_grid_refinement_level)
-              for (auto &cell : tria->active_cell_iterators_on_level(
-                     base_in->parameters.amr.min_grid_refinement_level))
-                cell->clear_coarsen_flag();
+        const auto attach_vectors = [&](std::vector<VectorType *> &vectors) {
+          reinit_operation->attach_vectors(vectors);
+        };
 
-            /*
-             *  Initialize the triangulation change from the old grid to the new grid
-             */
-            base_in->triangulation->prepare_coarsening_and_refinement();
-            /*
-             *  Initialize the solution transfer from the old grid to the new grid
-             */
-            parallel::distributed::SolutionTransfer<dim, VectorType, DoFHandlerType>
-              solution_transfer(dof_handler);
-            solution_transfer.prepare_for_coarsening_and_refinement(locally_relevant_solution);
+        const auto post = [&]() {
+          constraints.distribute(reinit_operation->get_level_set());
 
-            /*
-             *  Execute the grid refinement
-             */
-            base_in->triangulation->execute_coarsening_and_refinement();
+          VectorType temp(reinit_operation->get_level_set());
+          temp.copy_locally_owned_data_from(reinit_operation->get_level_set());
+          reinit_operation->update_initial_solution(temp);
+        };
 
-            /*
-             *  update dof-related scratch data to match the current triangulation
-             */
-            setup_dof_system(base_in, false);
+        const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
 
-            /*
-             *  interpolate the given solution to the new discretization
-             *
-             */
-            VectorType interpolated_solution;
-            scratch_data->initialize_dof_vector(interpolated_solution);
-
-            solution_transfer.interpolate(interpolated_solution);
-
-            constraints.distribute(interpolated_solution);
-            /*
-             * update the reinitialization operator with the new solution values
-             */
-            reinit_operation.update_initial_solution(interpolated_solution);
-          }
-        else
-          //@todo: WIP
-          AssertThrow(false, ExcMessage("Mesh refinement for dim=1 not yet supported"));
+        refine_grid<dim, VectorType>(mark_cells_for_refinement,
+                                     attach_vectors,
+                                     post,
+                                     setup_dof_system,
+                                     base_in->parameters.amr,
+                                     dof_handler);
       }
 
       /*
@@ -305,14 +300,11 @@ namespace MeltPoolDG
           {
             DataOut<dim> data_out;
             data_out.attach_dof_handler(dof_handler);
-            data_out.add_data_vector(reinit_operation.solution_level_set, "psi");
+            data_out.add_data_vector(reinit_operation->get_level_set(), "psi");
 
-            if (parameters.paraview.print_normal_vector)
-              {
-                for (unsigned int d = 0; d < dim; ++d)
-                  data_out.add_data_vector(reinit_operation.solution_normal_vector.block(d),
-                                           "normal_" + std::to_string(d));
-              }
+            for (unsigned int d = 0; d < dim; ++d)
+              data_out.add_data_vector(reinit_operation->get_normal_vector().block(d),
+                                       "normal_" + std::to_string(d));
 
             data_out.build_patches(scratch_data->get_mapping());
             data_out.write_vtu_with_pvtu_record("./",
@@ -328,11 +320,12 @@ namespace MeltPoolDG
       DoFHandler<dim>           dof_handler;
       AffineConstraints<double> constraints;
 
-      std::shared_ptr<ScratchData<dim>> scratch_data;
-      TimeIterator<double>              time_iterator;
-      ReinitializationOperation<dim>    reinit_operation;
-      unsigned int                      dof_idx;
-      unsigned int                      quad_idx;
+      std::shared_ptr<ScratchData<dim>>                   scratch_data;
+      TimeIterator<double>                                time_iterator;
+      std::shared_ptr<ReinitializationOperationBase<dim>> reinit_operation;
+      unsigned int                                        reinit_dof_idx;
+      unsigned int                                        normal_dof_idx;
+      unsigned int                                        reinit_quad_idx;
     };
   } // namespace Reinitialization
 } // namespace MeltPoolDG

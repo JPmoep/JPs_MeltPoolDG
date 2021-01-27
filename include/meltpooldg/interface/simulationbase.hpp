@@ -198,7 +198,7 @@ namespace MeltPoolDG
       return field_conditions_map[operation_name]->initial_field;
     }
 
-    const std::shared_ptr<TensorFunction<1, dim>> &
+    const std::shared_ptr<Function<dim>> &
     get_advection_field(const std::string operation_name)
     {
       return field_conditions_map[operation_name]->advection_field;
@@ -251,8 +251,8 @@ namespace MeltPoolDG
     const std::vector<types::boundary_id> &
     get_symmetry_id(const std::string operation_name)
     {
-      if (!boundary_conditions_map[operation_name])
-        AssertThrow(false, ExcMessage("get_symmetry_id: requested boundary condition not found"));
+      // if (!boundary_conditions_map[operation_name])
+      //AssertThrow(false, ExcMessage("get_symmetry_id: requested boundary condition not found")); // @todo temporarily disabled due to compatibility with level set operation of adaflo
       return boundary_conditions_map[operation_name]->symmetry_bc;
     }
 

@@ -2,9 +2,9 @@
   "base" : {
     "problem name": "melt_pool",
     "application name": "recoil_pressure",
-    "global refinements": "4",
+    "global refinements": "5",
     "dimension": "2",
-    "degree": "2",
+    "degree": "1",
     "gravity": "0.0",
     "do print parameters": "true"
   },
@@ -15,12 +15,18 @@
     "flow viscosity difference": "0.0054",
     "flow surface tension coefficient": "1.8",
     "flow start time": "0.0",
-    "flow end time": "0.05",
-    "flow time step size": "0.01"
+    "flow end time": "0.0006",
+    "flow time step size": "0.000001"
   },
   "melt pool" : {
-    "mp laser power": "100.",
-    "mp scan speed": "0.001",
+    "mp laser power": "10.",
+    "mp laser center": "0.0,0.00004",
+    "mp scan speed": "0.003",
+    "mp do move laser": "false",
+    "mp domain x min": "-0.0002",
+    "mp domain x max": "0.0002",
+    "mp domain y min": "-0.0001",
+    "mp domain y max": "0.0002",
     "mp ambient temperature": "300.",
     "mp recoil pressure constant": "10000.",
     "mp recoil pressure temperature constant": "10000.",
@@ -36,7 +42,7 @@
     "ls do reinitialization": "true",
     "ls artificial diffusivity": "0.0",
     "ls do print l2norm": "true",
-    "ls theta": "0.5",
+    "ls time integration scheme" : "crank_nicolson",
     "ls do matrix free": "true"
   },
   "reinitialization" : {
@@ -47,11 +53,11 @@
     "reinit scale factor epsilon": "0.7107"
   },
   "normal vector": { 
-    "normal vec damping scale factor": "4",
+    "normal vec damping scale factor": "0.5",
     "normal vec do matrix free": "true"},
   "curvature" : {
     "curv do matrix free": "true",
-    "curv damping scale factor": "16"
+    "curv damping scale factor": "0.5"
   },
   "paraview" : {
     "paraview do output": "true",
