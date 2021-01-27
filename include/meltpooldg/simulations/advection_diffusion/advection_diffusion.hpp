@@ -156,6 +156,7 @@ namespace MeltPoolDG
                                                    2,
                                                    left_domain,
                                                    right_domain);
+              this->triangulation->refine_global(this->parameters.base.global_refinements - 1);
             }
         }
 
@@ -189,32 +190,28 @@ namespace MeltPoolDG
            */
           if constexpr (dim == 2)
             {
-              for (auto &face : this->triangulation->active_face_iterators())
-                if ((face->at_boundary()))
-                  {
-                    const double half_line = (right_domain + left_domain) / 2;
+              for (const auto &cell : this->triangulation->cell_iterators())
+                for (const auto &face : cell->face_iterators())
+                  if ((face->at_boundary()))
+                    {
+                      const double half_line = (right_domain + left_domain) / 2;
 
-                    if (face->center()[0] == left_domain && face->center()[1] > half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[0] == right_domain && face->center()[1] < half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[1] == right_domain && face->center()[0] > half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[1] == left_domain && face->center()[0] < half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else
-                      face->set_boundary_id(do_nothing);
-                  }
+                      if (face->center()[0] == left_domain && face->center()[1] > half_line)
+                        face->set_boundary_id(inflow_bc);
+                      else if (face->center()[0] == right_domain && face->center()[1] < half_line)
+                        face->set_boundary_id(inflow_bc);
+                      else if (face->center()[1] == right_domain && face->center()[0] > half_line)
+                        face->set_boundary_id(inflow_bc);
+                      else if (face->center()[1] == left_domain && face->center()[0] < half_line)
+                        face->set_boundary_id(inflow_bc);
+                      else
+                        face->set_boundary_id(do_nothing);
+                    }
             }
           else
             {
               (void)do_nothing; // suppress unused variable for 1D
             }
-
-          // the global refinement is done at this point to keep boundary ids living on the parent
-          // cell (important for amr)
-          if (!this->parameters.base.do_simplex)
-            this->triangulation->refine_global(this->parameters.base.global_refinements - 1);
         }
 
         void

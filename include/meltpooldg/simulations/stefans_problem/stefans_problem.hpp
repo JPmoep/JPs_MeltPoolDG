@@ -138,6 +138,7 @@ namespace MeltPoolDG::Simulation::StefansProblem
 #endif
             {
               GridGenerator::hyper_rectangle(*this->triangulation, bottom_left, top_right);
+              this->triangulation->refine_global(this->parameters.base.global_refinements);
             }
         }
       else
@@ -185,24 +186,20 @@ namespace MeltPoolDG::Simulation::StefansProblem
        */
       if constexpr (dim == 2)
         {
-          for (auto &face : this->triangulation->active_face_iterators())
-            if ((face->at_boundary()))
-              {
-                if (face->center()[1] == y_min)
-                  face->set_boundary_id(lower_bc);
-                else if (face->center()[1] == y_max)
-                  face->set_boundary_id(upper_bc);
-              }
+          for (const auto &cell : this->triangulation->cell_iterators())
+            for (const auto &face : cell->face_iterators())
+              if ((face->at_boundary()))
+                {
+                  if (face->center()[1] == y_min)
+                    face->set_boundary_id(lower_bc);
+                  else if (face->center()[1] == y_max)
+                    face->set_boundary_id(upper_bc);
+                }
         }
       else
         {
           AssertThrow(false, ExcNotImplemented());
         }
-
-      // the global refinement is done at this point to keep boundary ids living on the parent cell
-      // (important for amr with p::d::T)
-      if (!this->parameters.base.do_simplex)
-        this->triangulation->refine_global(this->parameters.base.global_refinements);
     }
 
     void
