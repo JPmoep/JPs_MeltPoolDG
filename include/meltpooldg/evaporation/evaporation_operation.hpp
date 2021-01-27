@@ -85,18 +85,20 @@ namespace MeltPoolDG::Evaporation
 
           for (unsigned int q_index = 0; q_index < ls.n_q_points; ++q_index)
             {
-              //@todo: comment
+              // get a vector with 1 = gas phase and 0 = liquid phase
               auto is_one_phase =
                 (evaporation_data.ls_value_gas == 1.0) ?
                   UtilityFunctions::heaviside(ls.get_value(q_index), 0.0) :
                   std::abs(1. - UtilityFunctions::heaviside(ls.get_value(q_index), 0.0));
 
+              // determine the density
               auto density =
                 evaporation_data.density_liquid +
                 (evaporation_data.density_gas - evaporation_data.density_liquid) * is_one_phase;
 
-              evapor_velocity[q_index] =
-                normal_vec.get_value(q_index) * evaporation_data.evaporative_mass_flux / density;
+              const auto n_phi =
+                MeltPoolDG::VectorTools::normalize<dim>(normal_vec.get_value(q_index));
+              evapor_velocity[q_index] = n_phi * evaporation_data.evaporative_mass_flux / density;
 
               if (evaporation_data.ls_value_gas == 1.0)
                 evapor_velocity[q_index] *= -1.0;
