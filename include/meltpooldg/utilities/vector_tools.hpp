@@ -123,5 +123,24 @@ namespace MeltPoolDG
       return vec;
     }
 
+    template <int dim, typename number = double>
+    static Tensor<1, dim, VectorizedArray<number>>
+    map_to_vector(const VectorizedArray<number> &in)
+    {
+      Tensor<1, dim, VectorizedArray<number>> vec;
+
+      for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
+        vec[0][v] = in[v];
+
+      return vec;
+    }
+
+    template <int dim, typename number = double>
+    static Tensor<1, dim, VectorizedArray<number>>
+    map_to_vector(const Tensor<1, dim, VectorizedArray<number>> &in)
+    {
+      return in;
+    }
+
   } // namespace VectorTools
 } // namespace MeltPoolDG
