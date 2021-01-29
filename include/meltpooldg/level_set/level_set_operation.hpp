@@ -234,6 +234,7 @@ namespace MeltPoolDG
         advec_diff_operation->reinit();
         reinit_operation->reinit();
         curvature_operation->reinit();
+        scratch_data->initialize_dof_vector(level_set_as_heaviside, ls_hanging_nodes_dof_idx);
       }
 
       /**
@@ -553,6 +554,11 @@ namespace MeltPoolDG
         return advec_diff_operation->get_advected_field();
       }
 
+      const LinearAlgebra::distributed::Vector<double> &
+      get_level_set_as_heaviside() const
+      {
+        return level_set_as_heaviside;
+      }
       LinearAlgebra::distributed::Vector<double> &
       get_level_set_as_heaviside()
       {
@@ -566,6 +572,8 @@ namespace MeltPoolDG
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
         advec_diff_operation->attach_vectors(vectors);
+        level_set_as_heaviside.update_ghost_values();
+        vectors.push_back(&level_set_as_heaviside);
       }
 
       void

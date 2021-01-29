@@ -68,10 +68,12 @@ namespace MeltPoolDG
                  * Note that the normal vector is used from the old step.
                  */
                 level_set_operation.update_normal_vector();
-                evaporation_operation->solve();
-                advection_velocity += evaporation_operation->get_evaporation_velocity();
+                evaporation_operation->solve(advection_velocity);
+                level_set_operation.solve(dt, evaporation_operation->get_interface_velocity());
               }
-            level_set_operation.solve(dt, advection_velocity);
+            else
+              level_set_operation.solve(dt, advection_velocity);
+
 
             // do paraview output if requested
             output_results(time_iterator.get_current_time_step_number());
@@ -195,13 +197,13 @@ namespace MeltPoolDG
           {
             evaporation_operation = std::make_shared<Evaporation::EvaporationOperation<dim>>(
               scratch_data,
-              level_set_operation.get_level_set(),
+              level_set_operation.get_level_set_as_heaviside(),
               level_set_operation.get_normal_vector(),
               base_in,
               normal_dof_idx,
               vel_dof_idx,
-              ls_quad_idx,
-              ls_dof_idx);
+              ls_hanging_nodes_dof_idx,
+              ls_quad_idx);
           }
         /*
          *  initialize postprocessor
@@ -408,6 +410,7 @@ namespace MeltPoolDG
 
         const auto post = [&]() {
           constraints_dirichlet.distribute(level_set_operation.get_level_set());
+          hanging_node_constraints.distribute(level_set_operation.get_level_set_as_heaviside());
         };
 
         const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
@@ -422,31 +425,35 @@ namespace MeltPoolDG
       }
 
     private:
-      DoFHandler<dim>           dof_handler;
-      DoFHandler<dim>           dof_handler_velocity;
+      std::shared_ptr<ScratchData<dim>> scratch_data;
+
+      TimeIterator<double> time_iterator;
+
+      DoFHandler<dim> dof_handler;
+      DoFHandler<dim> dof_handler_velocity;
+
       AffineConstraints<double> constraints_dirichlet;
       AffineConstraints<double> hanging_node_constraints;
       AffineConstraints<double> hanging_node_constraints_velocity;
       AffineConstraints<double> hanging_node_constraints_with_zero_dirichlet;
 
-      std::shared_ptr<ScratchData<dim>> scratch_data;
-      VectorType                        advection_velocity;
-
-      TimeIterator<double>                                    time_iterator;
-      LevelSetOperation<dim>                                  level_set_operation;
-      std::shared_ptr<Evaporation::EvaporationOperation<dim>> evaporation_operation;
-      VectorType                                              initial_solution;
-      unsigned int                                            ls_dof_idx;
-      unsigned int                                            ls_quad_idx;
-      unsigned int                                            ls_zero_bc_idx;
-      unsigned int                                            ls_hanging_nodes_dof_idx;
-      unsigned int                                            vel_dof_idx;
+      unsigned int        ls_dof_idx;
+      unsigned int        ls_quad_idx;
+      unsigned int        ls_zero_bc_idx;
+      unsigned int        ls_hanging_nodes_dof_idx;
+      unsigned int        vel_dof_idx;
       const unsigned int &curv_dof_idx   = ls_hanging_nodes_dof_idx;
       const unsigned int &normal_dof_idx = ls_hanging_nodes_dof_idx;
       const unsigned int &reinit_dof_idx =
         ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
       const unsigned int &reinit_hanging_nodes_dof_idx =
         ls_hanging_nodes_dof_idx; //@todo: would it make sense to use ls_zero_bc_idx?
+
+      LevelSetOperation<dim>                                  level_set_operation;
+      std::shared_ptr<Evaporation::EvaporationOperation<dim>> evaporation_operation;
+
+      VectorType advection_velocity;
+      VectorType initial_solution;
 
       std::shared_ptr<Postprocessor<dim>> post_processor;
     };
