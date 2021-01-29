@@ -432,6 +432,8 @@ namespace MeltPoolDG
                     smooth_heaviside_from_distance_value(2 * distance / (3 * epsilon_cell));
                 }
             }
+        scratch_data->get_constraint(ls_hanging_nodes_dof_idx).distribute(level_set_as_heaviside);
+        scratch_data->get_constraint(ls_hanging_nodes_dof_idx).distribute(distance_to_level_set);
       }
 
       /// To avoid high-frequency errors in the curvature (spurious currents) the curvature is

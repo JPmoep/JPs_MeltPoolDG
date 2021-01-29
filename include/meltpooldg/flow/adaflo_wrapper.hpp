@@ -38,26 +38,29 @@ namespace MeltPoolDG::Flow
                       *const_cast<Triangulation<dim> *>(&scratch_data.get_triangulation()),
                       &timer)
     {
-      std::cout << "read bc" << std::endl;
       /*
        * Boundary conditions for the velocity field
        */
-      for (const auto &symmetry_id : base_in->get_symmetry_id("navier_stokes_u"))
-        navier_stokes.set_symmetry_boundary(symmetry_id);
-      for (const auto &no_slip_id : base_in->get_no_slip_id("navier_stokes_u"))
-        navier_stokes.set_no_slip_boundary(no_slip_id);
-      for (const auto &dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes_u"))
-        navier_stokes.set_velocity_dirichlet_boundary(dirichlet_bc.first, dirichlet_bc.second);
+      if (base_in->get_bc("navier_stokes_u"))
+        {
+          for (const auto &symmetry_id : base_in->get_symmetry_id("navier_stokes_u"))
+            navier_stokes.set_symmetry_boundary(symmetry_id);
+          for (const auto &no_slip_id : base_in->get_no_slip_id("navier_stokes_u"))
+            navier_stokes.set_no_slip_boundary(no_slip_id);
+          for (const auto &dirichlet_bc : base_in->get_dirichlet_bc("navier_stokes_u"))
+            navier_stokes.set_velocity_dirichlet_boundary(dirichlet_bc.first, dirichlet_bc.second);
+        }
       /*
        * Boundary conditions for the pressure field
        */
-      for (const auto &neumann_bc : base_in->get_neumann_bc("navier_stokes_p"))
-        navier_stokes.set_open_boundary_with_normal_flux(neumann_bc.first, neumann_bc.second);
-      for (const auto &fix_pressure_constant_id :
-           base_in->get_fix_pressure_constant_id("navier_stokes_p"))
-        navier_stokes.fix_pressure_constant(fix_pressure_constant_id);
-
-      std::cout << "end read bc" << std::endl;
+      if (base_in->get_bc("navier_stokes_p"))
+        {
+          for (const auto &neumann_bc : base_in->get_neumann_bc("navier_stokes_p"))
+            navier_stokes.set_open_boundary_with_normal_flux(neumann_bc.first, neumann_bc.second);
+          for (const auto &fix_pressure_constant_id :
+               base_in->get_fix_pressure_constant_id("navier_stokes_p"))
+            navier_stokes.fix_pressure_constant(fix_pressure_constant_id);
+        }
       /*
        * Initial conditions of the navier stokes problem
        */
@@ -71,20 +74,23 @@ namespace MeltPoolDG::Flow
 
       this->dof_index_u = scratch_data.attach_dof_handler(navier_stokes.get_dof_handler_u());
       this->dof_index_p = scratch_data.attach_dof_handler(navier_stokes.get_dof_handler_p());
+      scratch_data.attach_dof_handler(navier_stokes.get_dof_handler_u());
 
       scratch_data.attach_constraint_matrix(navier_stokes.get_constraints_u());
       scratch_data.attach_constraint_matrix(navier_stokes.get_constraints_p());
+      this->dof_index_hanging_nodes_u =
+        scratch_data.attach_constraint_matrix(navier_stokes.get_hanging_node_constraints_u());
 
       const auto &adaflo_params = base_in->parameters.adaflo_params.get_parameters();
 
       this->quad_index_u =
         adaflo_params.use_simplex_mesh ?
           scratch_data.attach_quadrature(Simplex::QGauss<dim>(adaflo_params.velocity_degree + 1)) :
-          scratch_data.attach_quadrature(QGauss<dim>(adaflo_params.velocity_degree + 1));
+          scratch_data.attach_quadrature(QGauss<1>(adaflo_params.velocity_degree + 1));
       this->quad_index_p =
         adaflo_params.use_simplex_mesh ?
           scratch_data.attach_quadrature(Simplex::QGauss<dim>(adaflo_params.velocity_degree)) :
-          scratch_data.attach_quadrature(QGauss<dim>(adaflo_params.velocity_degree));
+          scratch_data.attach_quadrature(QGauss<1>(adaflo_params.velocity_degree));
     }
 
     void
@@ -139,6 +145,12 @@ namespace MeltPoolDG::Flow
       return navier_stokes.solution.block(0);
     }
 
+    LinearAlgebra::distributed::Vector<double> &
+    get_velocity_old() override
+    {
+      return navier_stokes.solution.block(0);
+    }
+
     const DoFHandler<dim> &
     get_dof_handler_velocity() const override
     {
@@ -149,6 +161,12 @@ namespace MeltPoolDG::Flow
     get_dof_handler_idx_velocity() const override
     {
       return dof_index_u;
+    }
+
+    const unsigned int &
+    get_dof_handler_idx_hanging_nodes_velocity() const override
+    {
+      return dof_index_hanging_nodes_u;
     }
 
     const unsigned int &
@@ -175,11 +193,11 @@ namespace MeltPoolDG::Flow
       return navier_stokes.modify_constraints_u();
     }
 
-    //@ todo
-    // const AffineConstraints<double> &
-    // get_hanging_node_constraints_velocity() const override
-    //{
-    //}
+    const AffineConstraints<double> &
+    get_hanging_node_constraints_velocity() const override
+    {
+      return navier_stokes.get_hanging_node_constraints_u();
+    }
 
     const LinearAlgebra::distributed::Vector<double> &
     get_pressure() const override
@@ -189,6 +207,12 @@ namespace MeltPoolDG::Flow
 
     LinearAlgebra::distributed::Vector<double> &
     get_pressure() override
+    {
+      return navier_stokes.solution.block(1);
+    }
+
+    LinearAlgebra::distributed::Vector<double> &
+    get_pressure_old() override
     {
       return navier_stokes.solution.block(1);
     }
@@ -350,6 +374,7 @@ namespace MeltPoolDG::Flow
 
     unsigned int dof_index_u;
     unsigned int dof_index_p;
+    unsigned int dof_index_hanging_nodes_u;
 
     unsigned int quad_index_u;
     unsigned int quad_index_p;
@@ -413,6 +438,12 @@ namespace MeltPoolDG::Flow
       AssertThrow(false, ExcNotImplemented());
     }
 
+    LinearAlgebra::distributed::Vector<double> &
+    get_velocity_old() override
+    {
+      AssertThrow(false, ExcNotImplemented());
+    }
+
     const DoFHandler<1> &
     get_dof_handler_velocity() const override
     {
@@ -421,6 +452,12 @@ namespace MeltPoolDG::Flow
 
     const unsigned int &
     get_dof_handler_idx_velocity() const override
+    {
+      AssertThrow(false, ExcNotImplemented());
+    }
+
+    const unsigned int &
+    get_dof_handler_idx_hanging_nodes_velocity() const override
     {
       AssertThrow(false, ExcNotImplemented());
     }
@@ -449,6 +486,12 @@ namespace MeltPoolDG::Flow
       AssertThrow(false, ExcNotImplemented());
     }
 
+    const AffineConstraints<double> &
+    get_hanging_node_constraints_velocity() const override
+    {
+      AssertThrow(false, ExcNotImplemented());
+    }
+
     const LinearAlgebra::distributed::Vector<double> &
     get_pressure() const override
     {
@@ -457,6 +500,12 @@ namespace MeltPoolDG::Flow
 
     LinearAlgebra::distributed::Vector<double> &
     get_pressure() override
+    {
+      AssertThrow(false, ExcNotImplemented());
+    }
+
+    LinearAlgebra::distributed::Vector<double> &
+    get_pressure_old() override
     {
       AssertThrow(false, ExcNotImplemented());
     }

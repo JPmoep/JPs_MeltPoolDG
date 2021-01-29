@@ -25,11 +25,17 @@ namespace MeltPoolDG
       virtual LinearAlgebra::distributed::Vector<double> &
       get_velocity() = 0;
 
+      virtual LinearAlgebra::distributed::Vector<double> &
+      get_velocity_old() = 0;
+
       virtual const DoFHandler<dim> &
       get_dof_handler_velocity() const = 0;
 
       virtual const unsigned int &
       get_dof_handler_idx_velocity() const = 0;
+
+      virtual const unsigned int &
+      get_dof_handler_idx_hanging_nodes_velocity() const = 0;
 
       virtual const unsigned int &
       get_quad_idx_velocity() const = 0;
@@ -43,11 +49,17 @@ namespace MeltPoolDG
       virtual AffineConstraints<double> &
       get_constraints_velocity() = 0;
 
+      virtual const AffineConstraints<double> &
+      get_hanging_node_constraints_velocity() const = 0;
+
       virtual const LinearAlgebra::distributed::Vector<double> &
       get_pressure() const = 0;
 
       virtual LinearAlgebra::distributed::Vector<double> &
       get_pressure() = 0;
+
+      virtual LinearAlgebra::distributed::Vector<double> &
+      get_pressure_old() = 0;
 
       virtual const DoFHandler<dim> &
       get_dof_handler_pressure() const = 0;
