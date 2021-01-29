@@ -11,7 +11,8 @@
 #include <meltpooldg/simulations/rotating_bubble/rotating_bubble.hpp>
 #include <meltpooldg/simulations/slotted_disc/slotted_disc.hpp>
 #include <meltpooldg/simulations/spurious_currents/spurious_currents.hpp>
-#include <meltpooldg/simulations/stefans_problem/stefans_problem.hpp>
+//#include <meltpooldg/simulations/stefans_problem/stefans_problem.hpp>
+#include <meltpooldg/simulations/stefans_problem/stefans_problem_with_flow.hpp>
 #include <meltpooldg/simulations/vortex_bubble/vortex_bubble.hpp>
 
 namespace MeltPoolDG
@@ -58,7 +59,10 @@ namespace MeltPoolDG
                                                                              mpi_communicator);
         else if (simulation_name == "stefans_problem")
           return std::make_shared<StefansProblem::SimulationStefansProblem<dim>>(parameter_file,
-                                                                                 mpi_communicator);
+                                                                                 //mpi_communicator);
+        else if (simulation_name == "stefans_problem_with_flow")
+          return std::make_shared<StefansProblemWithFlow::SimulationStefansProblemWithFlow<dim>>(parameter_file,
+                                                                                                 mpi_communicator);
         /* add your simulation here*/
         else
           AssertThrow(false,

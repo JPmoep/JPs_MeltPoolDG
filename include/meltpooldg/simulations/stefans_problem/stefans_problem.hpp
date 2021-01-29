@@ -16,7 +16,6 @@
 #include <iostream>
 // MeltPoolDG
 #include <meltpooldg/interface/simulationbase.hpp>
-#include <meltpooldg/simulations/simulation_factory.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
 namespace MeltPoolDG::Simulation::StefansProblem
