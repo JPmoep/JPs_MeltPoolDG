@@ -261,7 +261,8 @@ namespace MeltPoolDG
          */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
 
-      if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool"))
+      if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool") ||
+          (base.problem_name == "two_phase_flow_with_evaporation"))
         {
           adaflo_params.parse_parameters(parameter_filename);
           // WARNING: by setting the differences to a non-zero value we force
@@ -337,7 +338,7 @@ namespace MeltPoolDG
           base.problem_name,
           "Sets the base name for the problem that should be solved.",
           Patterns::Selection(
-            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool|level_set_with_evaporation"));
+            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool|level_set_with_evaporation|two_phase_flow_with_evaporation"));
         prm.add_parameter("dimension", base.dimension, "Defines the dimension of the problem");
         prm.add_parameter("global refinements",
                           base.global_refinements,
