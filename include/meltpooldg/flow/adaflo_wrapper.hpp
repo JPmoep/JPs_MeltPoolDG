@@ -38,6 +38,7 @@ namespace MeltPoolDG::Flow
                       *const_cast<Triangulation<dim> *>(&scratch_data.get_triangulation()),
                       &timer)
     {
+      std::cout << "read bc" << std::endl;
       /*
        * Boundary conditions for the velocity field
        */
@@ -55,6 +56,8 @@ namespace MeltPoolDG::Flow
       for (const auto &fix_pressure_constant_id :
            base_in->get_fix_pressure_constant_id("navier_stokes_p"))
         navier_stokes.fix_pressure_constant(fix_pressure_constant_id);
+
+      std::cout << "end read bc" << std::endl;
       /*
        * Initial conditions of the navier stokes problem
        */
@@ -154,6 +157,12 @@ namespace MeltPoolDG::Flow
       return quad_index_u;
     }
 
+    const unsigned int &
+    get_quad_idx_pressure() const override
+    {
+      return quad_index_p;
+    }
+
     const AffineConstraints<double> &
     get_constraints_velocity() const override
     {
@@ -165,6 +174,12 @@ namespace MeltPoolDG::Flow
     {
       return navier_stokes.modify_constraints_u();
     }
+
+    //@ todo
+    // const AffineConstraints<double> &
+    // get_hanging_node_constraints_velocity() const override
+    //{
+    //}
 
     const LinearAlgebra::distributed::Vector<double> &
     get_pressure() const override
@@ -206,6 +221,12 @@ namespace MeltPoolDG::Flow
     set_force_rhs(const LinearAlgebra::distributed::Vector<double> &vec) override
     {
       navier_stokes.user_rhs.block(0) = vec;
+    }
+
+    void
+    set_mass_balance_rhs(const LinearAlgebra::distributed::Vector<double> &vec) override
+    {
+      navier_stokes.user_rhs.block(1) = vec;
     }
 
     VectorizedArray<double> &
@@ -410,6 +431,12 @@ namespace MeltPoolDG::Flow
       AssertThrow(false, ExcNotImplemented());
     }
 
+    const unsigned int &
+    get_quad_idx_pressure() const override
+    {
+      AssertThrow(false, ExcNotImplemented());
+    }
+
     const AffineConstraints<double> &
     get_constraints_velocity() const override
     {
@@ -460,6 +487,12 @@ namespace MeltPoolDG::Flow
 
     void
     set_force_rhs(const LinearAlgebra::distributed::Vector<double> &) override
+    {
+      AssertThrow(false, ExcNotImplemented());
+    }
+
+    void
+    set_mass_balance_rhs(const LinearAlgebra::distributed::Vector<double> &) override
     {
       AssertThrow(false, ExcNotImplemented());
     }

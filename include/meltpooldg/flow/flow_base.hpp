@@ -34,6 +34,9 @@ namespace MeltPoolDG
       virtual const unsigned int &
       get_quad_idx_velocity() const = 0;
 
+      virtual const unsigned int &
+      get_quad_idx_pressure() const = 0;
+
       virtual const AffineConstraints<double> &
       get_constraints_velocity() const = 0;
 
@@ -60,6 +63,9 @@ namespace MeltPoolDG
 
       virtual void
       set_force_rhs(const LinearAlgebra::distributed::Vector<double> &vec) = 0;
+
+      virtual void
+      set_mass_balance_rhs(const LinearAlgebra::distributed::Vector<double> &vec) = 0;
 
       virtual VectorizedArray<double> &
       get_density(const unsigned int cell, const unsigned int q) = 0;
