@@ -63,9 +63,6 @@ namespace MeltPoolDG::Evaporation
       fluid_velocity.update_ghost_values();
 
       reinit();
-      evaporation_velocities.resize(scratch_data->get_matrix_free().n_cell_batches() *
-                                    scratch_data->get_matrix_free().get_n_q_points(ls_quad_idx));
-
       FECellIntegrator<dim, 1, double> ls(scratch_data->get_matrix_free(),
                                           ls_hanging_nodes_dof_idx,
                                           ls_quad_idx);
@@ -78,20 +75,24 @@ namespace MeltPoolDG::Evaporation
                                                     normal_dof_idx,
                                                     ls_quad_idx);
 
+      evaporation_velocities.resize(scratch_data->get_matrix_free().n_cell_batches() *
+                                    ls.n_q_points);
+
+
       for (unsigned int cell = 0; cell < scratch_data->get_matrix_free().n_cell_batches(); ++cell)
         {
           Tensor<1, dim, VectorizedArray<double>> *interface_vel = begin_interface_velocity(cell);
 
           ls.reinit(cell);
-          ls.read_dof_values_plain(level_set_as_heaviside);
+          ls.read_dof_values(level_set_as_heaviside);
           ls.evaluate(true, false);
 
           normal_vec.reinit(cell);
-          normal_vec.read_dof_values_plain(normal_vector);
+          normal_vec.read_dof_values(normal_vector);
           normal_vec.evaluate(true, false);
 
           vel.reinit(cell);
-          vel.read_dof_values_plain(fluid_velocity);
+          vel.read_dof_values(fluid_velocity);
           vel.evaluate(true, false);
 
           for (unsigned int q_index = 0; q_index < ls.n_q_points; ++q_index)
@@ -145,7 +146,7 @@ namespace MeltPoolDG::Evaporation
     compute_mass_balance_source_term(VectorType &       mass_balance_rhs,
                                      const unsigned int pressure_dof_idx,
                                      const unsigned int pressure_quad_idx,
-                                     bool               zero_out = true)
+                                     bool               zero_out)
     {
       normal_vector.update_ghost_values();
 
@@ -154,11 +155,11 @@ namespace MeltPoolDG::Evaporation
             auto &      force_rhs,
             const auto &level_set_as_heaviside,
             auto        macro_cells) {
-          FECellIntegrator<dim, 1, double> heaviside(scratch_data->get_matrix_free(),
+          FECellIntegrator<dim, 1, double> heaviside(matrix_free,
                                                      ls_hanging_nodes_dof_idx,
                                                      pressure_quad_idx);
 
-          FECellIntegrator<dim, dim, double> normal_vec(scratch_data->get_matrix_free(),
+          FECellIntegrator<dim, dim, double> normal_vec(matrix_free,
                                                         normal_dof_idx,
                                                         pressure_quad_idx);
           FECellIntegrator<dim, 1, double>   mass_flux(matrix_free,
@@ -268,10 +269,10 @@ namespace MeltPoolDG::Evaporation
     /**
      * select the relevant DoFHandlers and quadrature rules
      */
-    unsigned int normal_dof_idx;
-    unsigned int vel_hanging_nodes_dof_idx;
-    unsigned int ls_hanging_nodes_dof_idx;
-    unsigned int ls_quad_idx;
+    const unsigned int normal_dof_idx;
+    const unsigned int vel_hanging_nodes_dof_idx;
+    const unsigned int ls_hanging_nodes_dof_idx;
+    const unsigned int ls_quad_idx;
     /**
      * interface velocity at quadrature points
      */

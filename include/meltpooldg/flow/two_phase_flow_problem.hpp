@@ -20,6 +20,7 @@
 
 #include <deal.II/lac/generic_linear_algebra.h>
 // MeltPoolDG
+#include <meltpooldg/evaporation/evaporation_operation.hpp>
 #include <meltpooldg/flow/adaflo_wrapper.hpp>
 #include <meltpooldg/flow/flow_base.hpp>
 #include <meltpooldg/interface/problembase.hpp>
@@ -58,7 +59,18 @@ namespace MeltPoolDG::Flow
             << "t= " << std::setw(10) << std::left << time_iterator.get_current_time();
 
           // ... solve level-set problem with the given advection field
-          level_set_operation.solve(dt, flow_operation->get_velocity());
+          if (evaporation_operation)
+            {
+              /*
+               If evaporative mass flux is considered the interface velocity will be modified.
+               Note that the normal vector is used from the old step.
+               */
+              level_set_operation.update_normal_vector();
+              evaporation_operation->solve(flow_operation->get_velocity());
+              level_set_operation.solve(dt, evaporation_operation->get_interface_velocity());
+            }
+          else
+            level_set_operation.solve(dt, flow_operation->get_velocity());
 
           // update
           update_phases(level_set_operation.level_set_as_heaviside, base_in->parameters);
@@ -72,8 +84,18 @@ namespace MeltPoolDG::Flow
               force_rhs,
               base_in->parameters.flow.surface_tension_coefficient,
               vel_dof_idx,
-              flow_quad_idx,
+              flow_operation->get_quad_idx_velocity(),
               false /*false means add to force vector*/);
+
+          if (evaporation_operation)
+            {
+              level_set_operation.update_normal_vector();
+              evaporation_operation->compute_mass_balance_source_term(
+                mass_balance_rhs,
+                pressure_dof_idx,
+                flow_operation->get_quad_idx_velocity(),
+                true /* zero out force rhs */);
+            }
 
           if (base_in->parameters.base.problem_name == "melt_pool")
             {
@@ -95,7 +117,7 @@ namespace MeltPoolDG::Flow
                   base_in->parameters.flow.surface_tension_reference_temperature,
                   ls_dof_idx,
                   vel_dof_idx,
-                  flow_quad_idx,
+                  flow_operation->get_quad_idx_velocity(),
                   temp_dof_idx,
                   false /*false means add to force vector*/);
 
@@ -114,6 +136,8 @@ namespace MeltPoolDG::Flow
 
           //  ... and set forces within the Navier-Stokes solver
           flow_operation->set_force_rhs(force_rhs);
+          if (evaporation_operation)
+            flow_operation->set_mass_balance_rhs(mass_balance_rhs);
 
           // solver Navier-Stokes problem
           flow_operation->solve();
@@ -144,56 +168,47 @@ namespace MeltPoolDG::Flow
        *  setup DoFHandler
        */
       dof_handler.reinit(*base_in->triangulation);
-      flow_dof_handler.reinit(*base_in->triangulation);
 
       /*
        *  setup scratch data
        */
-      {
-        scratch_data = std::make_shared<ScratchData<dim>>(/*do_matrix_free*/ true);
+      scratch_data = std::make_shared<ScratchData<dim>>(/*do_matrix_free*/ true);
 
-        /*
-         *  setup mapping
-         */
+      /*
+       *  setup mapping
+       */
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          scratch_data->set_mapping(
-            MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
-        else
+      if (base_in->parameters.base.do_simplex)
+        scratch_data->set_mapping(
+          MappingFE<dim>(Simplex::FE_P<dim>(base_in->parameters.base.degree)));
+      else
 #endif
-          scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
+        scratch_data->set_mapping(MappingQGeneric<dim>(base_in->parameters.base.degree));
 
-        scratch_data->attach_dof_handler(dof_handler);
-        scratch_data->attach_dof_handler(dof_handler);
-        scratch_data->attach_dof_handler(dof_handler);
-        scratch_data->attach_dof_handler(flow_dof_handler);
+      scratch_data->attach_dof_handler(dof_handler);
+      scratch_data->attach_dof_handler(dof_handler);
+      scratch_data->attach_dof_handler(dof_handler);
 
-        ls_hanging_nodes_dof_idx =
-          scratch_data->attach_constraint_matrix(ls_hanging_node_constraints);
-        ls_dof_idx     = scratch_data->attach_constraint_matrix(ls_constraints_dirichlet);
-        reinit_dof_idx = scratch_data->attach_constraint_matrix(reinit_constraints_dirichlet);
-        flow_dof_idx   = scratch_data->attach_constraint_matrix(flow_dummy_constraint);
+      ls_hanging_nodes_dof_idx =
+        scratch_data->attach_constraint_matrix(ls_hanging_node_constraints);
+      ls_dof_idx     = scratch_data->attach_constraint_matrix(ls_constraints_dirichlet);
+      reinit_dof_idx = scratch_data->attach_constraint_matrix(reinit_constraints_dirichlet);
 
-        /*
-         *  create quadrature rule
-         */
+      /*
+       *  create quadrature rule
+       */
 #ifdef DEAL_II_WITH_SIMPLEX_SUPPORT
-        if (base_in->parameters.base.do_simplex)
-          {
-            ls_quad_idx = scratch_data->attach_quadrature(
-              Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
-            flow_quad_idx = scratch_data->attach_quadrature(
-              Simplex::QGauss<dim>(base_in->parameters.flow.velocity_degree + 1));
-          }
-        else
+      if (base_in->parameters.base.do_simplex)
+        {
+          ls_quad_idx = scratch_data->attach_quadrature(
+            Simplex::QGauss<dim>(base_in->parameters.base.n_q_points_1d));
+        }
+      else
 #endif
-          {
-            ls_quad_idx =
-              scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
-            flow_quad_idx = scratch_data->attach_quadrature(
-              QGauss<1>(base_in->parameters.flow.velocity_degree + 1));
-          }
-      }
+        {
+          ls_quad_idx =
+            scratch_data->attach_quadrature(QGauss<1>(base_in->parameters.base.n_q_points_1d));
+        }
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
       flow_operation = std::make_shared<AdafloWrapper<dim>>(*scratch_data, base_in);
@@ -214,7 +229,7 @@ namespace MeltPoolDG::Flow
                                        base_in->parameters,
                                        ls_dof_idx,
                                        vel_dof_idx,
-                                       flow_quad_idx,
+                                       flow_operation->get_quad_idx_velocity(),
                                        temp_dof_idx,
                                        temp_quad_idx,
                                        base_in->parameters.flow.start_time);
@@ -252,7 +267,7 @@ namespace MeltPoolDG::Flow
       dealii::VectorTools::project(scratch_data->get_mapping(),
                                    dof_handler,
                                    ls_constraints_dirichlet,
-                                   scratch_data->get_quadrature(),
+                                   scratch_data->get_quadrature(ls_quad_idx),
                                    *base_in->get_initial_condition("level_set"),
                                    initial_solution);
       initial_solution.update_ghost_values();
@@ -278,14 +293,26 @@ namespace MeltPoolDG::Flow
       if (base_in->parameters.base.problem_name == "melt_pool")
         melt_pool_operation.set_initial_condition(level_set_operation.level_set_as_heaviside);
 
+      if (base_in->parameters.base.problem_name == "two_phase_flow_with_evaporation")
+        {
+          evaporation_operation = std::make_shared<Evaporation::EvaporationOperation<dim>>(
+            scratch_data,
+            level_set_operation.get_level_set(),
+            level_set_operation.get_normal_vector(),
+            base_in,
+            normal_dof_idx,
+            flow_operation->get_dof_handler_idx_hanging_nodes_velocity(),
+            ls_hanging_nodes_dof_idx,
+            ls_quad_idx);
+        }
       /*
        *  initialize postprocessor
        */
       post_processor =
-        std::make_shared<Postprocessor<dim>>(scratch_data->get_mpi_comm(flow_dof_idx),
+        std::make_shared<Postprocessor<dim>>(scratch_data->get_mpi_comm(vel_dof_idx),
                                              base_in->parameters.paraview,
                                              scratch_data->get_mapping(),
-                                             scratch_data->get_triangulation(flow_dof_idx));
+                                             scratch_data->get_triangulation(vel_dof_idx));
       /*
        *  output results of initialization --> initial refinement is done afterwards (!)
        *  @todo: find a way to plot vectors on the refined mesh, which are only relevant for output
@@ -316,14 +343,11 @@ namespace MeltPoolDG::Flow
       if (base_in->parameters.base.do_simplex)
         {
           dof_handler.distribute_dofs(Simplex::FE_P<dim>(base_in->parameters.base.degree));
-          flow_dof_handler.distribute_dofs(
-            Simplex::FE_P<dim>(base_in->parameters.flow.velocity_degree));
         }
       else
 #endif
         {
           dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.base.degree));
-          flow_dof_handler.distribute_dofs(FE_Q<dim>(base_in->parameters.flow.velocity_degree));
         }
 
         /*
@@ -343,7 +367,8 @@ namespace MeltPoolDG::Flow
        *  dirichlet constraints are supported)
        */
       ls_hanging_node_constraints.clear();
-      ls_hanging_node_constraints.reinit(scratch_data->get_locally_relevant_dofs(ls_dof_idx));
+      ls_hanging_node_constraints.reinit(
+        scratch_data->get_locally_relevant_dofs(ls_hanging_nodes_dof_idx));
       DoFTools::make_hanging_node_constraints(dof_handler, ls_hanging_node_constraints);
       ls_hanging_node_constraints.close();
 
@@ -362,9 +387,10 @@ namespace MeltPoolDG::Flow
                 ls_constraints_dirichlet);
             }
         }
-
-      ls_constraints_dirichlet.merge(ls_hanging_node_constraints);
       ls_constraints_dirichlet.close();
+      ls_constraints_dirichlet.merge(
+        ls_hanging_node_constraints,
+        AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
 
       reinit_constraints_dirichlet.clear();
       reinit_constraints_dirichlet.reinit(scratch_data->get_locally_relevant_dofs());
@@ -374,7 +400,6 @@ namespace MeltPoolDG::Flow
           for (const auto &bc : base_in->get_dirichlet_bc(
                  "reinitialization")) // @todo: add name of bc at a more central place
             {
-              std::cout << "bc:: " << std::endl;
               dealii::VectorTools::interpolate_boundary_values(
                 scratch_data->get_mapping(),
                 dof_handler,
@@ -383,8 +408,10 @@ namespace MeltPoolDG::Flow
                 reinit_constraints_dirichlet);
             }
         }
-      reinit_constraints_dirichlet.merge(ls_hanging_node_constraints);
       reinit_constraints_dirichlet.close();
+      reinit_constraints_dirichlet.merge(
+        ls_hanging_node_constraints,
+        AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
 
       scratch_data->build();
       /*
@@ -403,8 +430,11 @@ namespace MeltPoolDG::Flow
       if (do_reinit)
         {
           level_set_operation.reinit();
+
           if (base_in->parameters.base.problem_name == "melt_pool")
             melt_pool_operation.reinit();
+          if (evaporation_operation)
+            evaporation_operation->reinit();
         }
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
@@ -416,6 +446,11 @@ namespace MeltPoolDG::Flow
        *    initialize the force vector for calculating surface tension
        */
       scratch_data->initialize_dof_vector(force_rhs, vel_dof_idx);
+      /*
+       *    initialize the force vector for calculating surface tension
+       */
+      if (evaporation_operation)
+        scratch_data->initialize_dof_vector(mass_balance_rhs, pressure_dof_idx);
     }
 
     /**
@@ -430,7 +465,9 @@ namespace MeltPoolDG::Flow
 
       scratch_data->get_matrix_free().template cell_loop<double, VectorType>(
         [&](const auto &matrix_free, auto &, const auto &src, auto macro_cells) {
-          FECellIntegrator<dim, 1, double> ls_values(matrix_free, ls_dof_idx, flow_quad_idx);
+          FECellIntegrator<dim, 1, double> ls_values(matrix_free,
+                                                     ls_dof_idx,
+                                                     flow_operation->get_quad_idx_velocity());
 
           for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
             {
@@ -479,7 +516,9 @@ namespace MeltPoolDG::Flow
     {
       scratch_data->get_matrix_free().template cell_loop<VectorType, std::nullptr_t>(
         [&](const auto &matrix_free, auto &vec, const auto &, auto macro_cells) {
-          FECellIntegrator<dim, dim, double> force_values(matrix_free, vel_dof_idx, flow_quad_idx);
+          FECellIntegrator<dim, dim, double> force_values(matrix_free,
+                                                          vel_dof_idx,
+                                                          flow_operation->get_quad_idx_velocity());
 
           for (unsigned int cell = macro_cells.first; cell < macro_cells.second; ++cell)
             {
@@ -514,6 +553,9 @@ namespace MeltPoolDG::Flow
 
         if (do_melt_pool)
           melt_pool_operation.attach_output_vectors(data_out);
+
+        if (evaporation_operation)
+          evaporation_operation->attach_output_vectors(data_out);
 
         flow_operation->attach_output_vectors(data_out);
       };
@@ -566,12 +608,8 @@ namespace MeltPoolDG::Flow
         std::pair<const DoFHandler<dim> *, std::function<void(std::vector<VectorType *> &)>>>
         data;
 
-      if (base_in->parameters.base.problem_name == "melt_pool")
-        data.emplace_back(&dof_handler, [&](std::vector<VectorType *> &vectors) {
-          melt_pool_operation.attach_vectors(vectors); // temperature + solid
-        });
       data.emplace_back(&dof_handler, [&](std::vector<VectorType *> &vectors) {
-        level_set_operation.attach_vectors(vectors); // ls
+        level_set_operation.attach_vectors(vectors); // ls + heaviside
       });
       data.emplace_back(&flow_operation->get_dof_handler_velocity(),
                         [&](std::vector<VectorType *> &vectors) {
@@ -582,16 +620,46 @@ namespace MeltPoolDG::Flow
                           flow_operation->attach_vectors_p(vectors);
                         });
 
+      if (base_in->parameters.base.problem_name == "melt_pool")
+        data.emplace_back(&dof_handler, [&](std::vector<VectorType *> &vectors) {
+          melt_pool_operation.attach_vectors(vectors); // temperature + solid
+        });
+
+      if (evaporation_operation)
+        {
+          data.emplace_back(&dof_handler, [&](std::vector<VectorType *> &vectors) {
+            evaporation_operation->attach_vectors(vectors);
+          });
+        }
+
       const auto post = [&]() {
+        /**
+         * level set
+         */
         ls_constraints_dirichlet.distribute(level_set_operation.get_level_set());
+        ls_hanging_node_constraints.distribute(level_set_operation.get_level_set_as_heaviside());
+
+        /**
+         * flow
+         */
         scratch_data->get_constraint(vel_dof_idx).distribute(flow_operation->get_velocity());
         scratch_data->get_constraint(pressure_dof_idx).distribute(flow_operation->get_pressure());
 
+        /**
+         * melt pool
+         */
         if (base_in->parameters.base.problem_name == "melt_pool")
           {
             scratch_data->get_constraint(temp_dof_idx).distribute(melt_pool_operation.temperature);
             scratch_data->get_constraint(temp_dof_idx).distribute(melt_pool_operation.solid);
+            scratch_data->get_constraint(temp_dof_idx).distribute(melt_pool_operation.liquid);
           }
+        /**
+         * evaporation
+         */
+        if (evaporation_operation)
+          scratch_data->get_constraint(flow_operation->get_dof_handler_idx_hanging_nodes_velocity())
+            .distribute(evaporation_operation->get_interface_velocity());
       };
 
       const auto setup_dof_system = [&]() { this->setup_dof_system(base_in); };
@@ -606,14 +674,14 @@ namespace MeltPoolDG::Flow
 
     TimeIterator<double> time_iterator;
     DoFHandler<dim>      dof_handler;
-    DoFHandler<dim>      flow_dof_handler;
 
     AffineConstraints<double> ls_constraints_dirichlet;
     AffineConstraints<double> ls_hanging_node_constraints;
     AffineConstraints<double> reinit_constraints_dirichlet;
-    AffineConstraints<double> flow_dummy_constraint;
 
-    VectorType   force_rhs;
+    VectorType force_rhs;
+    VectorType mass_balance_rhs;
+
     unsigned int ls_dof_idx;
     unsigned int ls_hanging_nodes_dof_idx;
     unsigned int ls_quad_idx;
@@ -627,13 +695,12 @@ namespace MeltPoolDG::Flow
 
     unsigned int vel_dof_idx;
     unsigned int pressure_dof_idx;
-    unsigned int flow_dof_idx;
-    unsigned int flow_quad_idx;
 
-    std::shared_ptr<ScratchData<dim>> scratch_data;
-    std::shared_ptr<FlowBase<dim>>    flow_operation;
-    LevelSet::LevelSetOperation<dim>  level_set_operation;
-    MeltPool::MeltPoolOperation<dim>  melt_pool_operation;
+    std::shared_ptr<ScratchData<dim>>                       scratch_data;
+    std::shared_ptr<FlowBase<dim>>                          flow_operation;
+    LevelSet::LevelSetOperation<dim>                        level_set_operation;
+    MeltPool::MeltPoolOperation<dim>                        melt_pool_operation;
+    std::shared_ptr<Evaporation::EvaporationOperation<dim>> evaporation_operation;
 
     std::shared_ptr<Postprocessor<dim>> post_processor;
   };
