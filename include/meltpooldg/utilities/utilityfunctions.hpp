@@ -65,6 +65,11 @@ namespace MeltPoolDG
 
       FECellIntegrator<dim, n_components, double> fe_eval(matrix_free, dof_idx, quad_idx);
 
+      // @todo: replace n_q_points_1D argument completely from fe_eval?
+      AssertThrow(fe_eval.n_q_points == std::pow(n_q_points_1D, dim),
+                  ExcMessage("The number of quadrature points in 1D must comply with the number of "
+                             "quadrature points of the cell operation."));
+
       for (unsigned int cell = 0; cell < matrix_free.n_cell_batches(); ++cell)
         {
           fe_eval.reinit(cell);
@@ -127,6 +132,11 @@ namespace MeltPoolDG
           projection_matrix_1d[k] = matrix(j, i);
 
       FECellIntegrator<dim, n_components, double> fe_eval(matrix_free, dof_idx, quad_idx);
+
+      // @todo: replace n_q_points_1D argument completely from fe_eval?
+      AssertThrow(fe_eval.n_q_points == std::pow(n_q_points_1D, dim),
+                  ExcMessage("The number of quadrature points in 1D must comply with the number of "
+                             "quadrature points of the cell operation."));
 
       for (unsigned int cell = 0; cell < matrix_free.n_cell_batches(); ++cell)
         {
