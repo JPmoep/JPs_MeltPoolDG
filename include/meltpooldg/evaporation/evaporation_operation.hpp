@@ -63,6 +63,7 @@ namespace MeltPoolDG::Evaporation
       fluid_velocity.update_ghost_values();
 
       reinit();
+
       FECellIntegrator<dim, 1, double> ls(scratch_data->get_matrix_free(),
                                           ls_hanging_nodes_dof_idx,
                                           ls_quad_idx);
@@ -132,8 +133,8 @@ namespace MeltPoolDG::Evaporation
         scratch_data->get_matrix_free(),
         vel_hanging_nodes_dof_idx,
         ls_quad_idx,
-        scratch_data->get_fe(vel_hanging_nodes_dof_idx).tensor_degree(),     // fe_degree
-        scratch_data->get_fe(vel_hanging_nodes_dof_idx).tensor_degree() + 1, // n_q_points_1d
+        scratch_data->get_fe(vel_hanging_nodes_dof_idx).tensor_degree(),    // fe_degree
+        scratch_data->get_fe(ls_hanging_nodes_dof_idx).tensor_degree() + 1, // n_q_points_1d
         [&](const unsigned int cell,
             const unsigned int quad) -> const Tensor<1, dim, VectorizedArray<double>> & {
           return begin_interface_velocity(cell)[quad];
@@ -175,6 +176,8 @@ namespace MeltPoolDG::Evaporation
               normal_vec.reinit(cell);
               normal_vec.read_dof_values_plain(normal_vector);
               normal_vec.evaluate(true, false);
+
+              mass_flux.reinit(cell);
 
               for (unsigned int q_index = 0; q_index < mass_flux.n_q_points; ++q_index)
                 {
