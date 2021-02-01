@@ -276,7 +276,19 @@ namespace MeltPoolDG
           adaflo_params.params.density_diff   = 1.0;
           adaflo_params.params.viscosity_diff = 1.0;
 
-          flow.density   = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+          if ((evapor.density_gas > 0) && (evapor.density_liquid > 0))
+            {
+              flow.density = (evapor.density_gas > 0.0) && (evapor.ls_value_gas == -1) ?
+                               evapor.density_gas :
+                               evapor.density_liquid;
+
+              flow.density_difference = (flow.density == evapor.density_gas) ?
+                                          evapor.density_liquid - evapor.density_gas :
+                                          evapor.density_gas - evapor.density_liquid;
+            }
+          else
+            flow.density = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+
           flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
           flow.velocity_degree        = (flow.velocity_degree > 0.0) ?
                                           flow.velocity_degree :
@@ -293,7 +305,6 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
           adaflo_params.params.use_simplex_mesh     = base.do_simplex;
         }
-
 #endif
     }
 
