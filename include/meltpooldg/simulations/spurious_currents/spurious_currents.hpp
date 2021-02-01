@@ -40,7 +40,10 @@ namespace MeltPoolDG
             center[d] = 0.02 + 0.01 * d;
 
           return UtilityFunctions::CharacteristicFunctions::sgn(
-            UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5));
+           UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5));
+          //double distance       = std::numeric_limits<double>::max();
+          //distance = UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5);
+          //std::cout << "Initialize Phi = " << distance << std::endl;
         }
       };
 
@@ -91,6 +94,7 @@ namespace MeltPoolDG
           this->attach_initial_condition(std::make_shared<Functions::ZeroFunction<dim>>(dim),
                                          "navier_stokes_u");
         }
+
       };
 
     } // namespace SpuriousCurrents

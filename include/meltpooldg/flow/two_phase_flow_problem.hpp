@@ -112,6 +112,10 @@ namespace MeltPoolDG
             // solver Navier-Stokes problem
             flow_operation->solve();
 
+            // evaluate spurious currents
+            if(base_in->parameters.base.application_name == "spurious_currents" )
+              evaluate_spurious_currents(base_in);
+
             // ... and output the results to vtk files.
             output_results(n, base_in->parameters);
 
@@ -478,6 +482,59 @@ namespace MeltPoolDG
           nullptr,
           zero_out);
       }
+
+      /*
+       * This function is to evaluate spurious currents
+       */
+
+      void
+      evaluate_spurious_currents(std::shared_ptr<SimulationBase<dim>> base_in) 
+      {
+          // declaration
+          
+          double velocity_norm, local_norm_velocity;
+          const QIterated<dim> quadrature_formula(QTrapez<1>(), base_in->parameters.base.degree + 2);
+          FEValues<dim> fe_values(scratch_data->get_mapping() ,scratch_data->get_fe(vel_dof_idx), quadrature_formula, update_values);
+          const unsigned int   n_q_points = quadrature_formula.size();
+           std::vector<Tensor<1, dim>> velocity_values(n_q_points);
+         // double pressure_jump;
+        //  parallel::distributed::Triangulation<dim> triangulation;
+         // const MPI_Comm &         mpi_communicator = triangulation.get_communicator();
+          local_norm_velocity = 0;
+          velocity_norm = 0;
+
+          const FEValuesExtractors::Vector velocities(0);
+
+          typename DoFHandler<dim>::active_cell_iterator
+           cell = flow_operation->get_dof_handler_velocity().begin_active(),
+            endc = flow_operation->get_dof_handler_velocity().end();
+
+          for (; cell != endc; ++cell)
+            if (cell->is_locally_owned())
+              {
+                fe_values.reinit(cell);
+                fe_values[velocities].get_function_values(flow_operation->get_velocity(),
+                                          velocity_values);
+                
+                for (unsigned int q = 0; q < n_q_points; ++q)
+                {
+                  velocity_norm = std::max(velocity_values[q].norm(),velocity_norm);
+                  //local_norm_velocity = std::max(local_norm_velocity, max_velocity);
+                }
+              }
+
+             
+          //velocity_norm = Utilities::MPI::max(local_norm_velocity, mpi_communicator);
+          //  std::cout << "velocity norm" << velocity_norm << std::endl;
+          
+         std::cout << "velocity norm = " << velocity_norm << std::endl;
+        //@TODO:prozentrechnung - jump?!
+          // pressure_jump = flow_operation->get_pressure();
+          //std::cout << "pressure jump:" << pressure_jump << "%" << std::endl;
+        
+      }
+
+
 
       /*
        *  This function is to create paraview output
