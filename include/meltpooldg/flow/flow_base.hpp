@@ -73,6 +73,9 @@ namespace MeltPoolDG
       virtual AffineConstraints<double> &
       get_constraints_pressure() = 0;
 
+      virtual const AffineConstraints<double> &
+      get_hanging_node_constraints_pressure() const = 0;
+
       virtual void
       set_force_rhs(const LinearAlgebra::distributed::Vector<double> &vec) = 0;
 

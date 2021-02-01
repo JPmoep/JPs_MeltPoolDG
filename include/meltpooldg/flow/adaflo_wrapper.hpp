@@ -130,6 +130,7 @@ namespace MeltPoolDG::Flow
     solve() override
     {
       navier_stokes.get_constraints_u().set_zero(navier_stokes.user_rhs.block(0));
+      navier_stokes.get_constraints_p().set_zero(navier_stokes.user_rhs.block(1));
       navier_stokes.advance_time_step();
     }
 
@@ -241,6 +242,12 @@ namespace MeltPoolDG::Flow
       return navier_stokes.modify_constraints_p();
     }
 
+    const AffineConstraints<double> &
+    get_hanging_node_constraints_pressure() const override
+    {
+      return navier_stokes.get_hanging_node_constraints_p();
+    }
+
     void
     set_force_rhs(const LinearAlgebra::distributed::Vector<double> &vec) override
     {
@@ -332,27 +339,30 @@ namespace MeltPoolDG::Flow
         scratch_data.get_matrix_free(),
         dof_index_p,
         quad_index_p,
-        1, // fe_degree,
-        2, /// n_q_points_1D,
+        scratch_data.get_fe(dof_index_p).tensor_degree(),     // fe_degree,
+        scratch_data.get_fe(dof_index_p).tensor_degree() + 1, // fe_degree,
         [&](const unsigned int cell, const unsigned int quad) -> const VectorizedArray<double> & {
           return get_density(cell, quad);
         });
+
+      get_hanging_node_constraints_pressure().distribute(density);
       density.update_ghost_values();
+      data_out.add_data_vector(get_dof_handler_pressure(), density, "density");
       /**
        *  viscosity
        */
       scratch_data.initialize_dof_vector(viscosity, dof_index_p);
-      data_out.add_data_vector(get_dof_handler_pressure(), density, "density");
       UtilityFunctions::fill_dof_vector_from_cell_operation<dim, 1>(
         viscosity,
         scratch_data.get_matrix_free(),
         dof_index_p,
         quad_index_p,
-        1, // fe_degree,
-        2, /// n_q_points_1D,
+        scratch_data.get_fe(dof_index_p).tensor_degree(),     // fe_degree,
+        scratch_data.get_fe(dof_index_p).tensor_degree() + 1, // fe_degree,
         [&](const unsigned int cell, const unsigned int quad) -> const VectorizedArray<double> & {
           return get_viscosity(cell, quad);
         });
+      get_hanging_node_constraints_pressure().distribute(viscosity);
       viscosity.update_ghost_values();
       data_out.add_data_vector(get_dof_handler_pressure(), viscosity, "viscosity");
       /**
@@ -530,6 +540,12 @@ namespace MeltPoolDG::Flow
 
     AffineConstraints<double> &
     get_constraints_pressure() override
+    {
+      AssertThrow(false, ExcNotImplemented());
+    }
+
+    const AffineConstraints<double> &
+    get_hanging_node_constraints_pressure() const override
     {
       AssertThrow(false, ExcNotImplemented());
     }
