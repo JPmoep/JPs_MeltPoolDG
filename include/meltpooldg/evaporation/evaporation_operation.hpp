@@ -186,8 +186,8 @@ namespace MeltPoolDG::Evaporation
                 {
                   const auto n_phi =
                     MeltPoolDG::VectorTools::normalize<dim>(normal_vec.get_value(q_index));
-                  mass_flux.submit_value((1. / evaporation_data.density_liquid -
-                                          1. / evaporation_data.density_gas) *
+                  mass_flux.submit_value(-(1. / evaporation_data.density_liquid -
+                                           1. / evaporation_data.density_gas) *
                                            evaporation_data.evaporative_mass_flux *
                                            heaviside.get_gradient(q_index) * n_phi,
                                          q_index);
