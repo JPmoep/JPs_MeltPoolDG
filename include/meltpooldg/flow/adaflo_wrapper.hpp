@@ -303,6 +303,17 @@ namespace MeltPoolDG::Flow
     }
 
     void
+    distribute_constraints() override
+    {
+      navier_stokes.get_constraints_u().distribute(navier_stokes.solution.block(0));
+      navier_stokes.get_hanging_node_constraints_u().distribute(
+        navier_stokes.solution_old.block(0));
+      navier_stokes.get_constraints_p().distribute(navier_stokes.solution.block(1));
+      navier_stokes.get_hanging_node_constraints_p().distribute(
+        navier_stokes.solution_old.block(1));
+    }
+
+    void
     attach_output_vectors(DataOut<dim> &data_out)
     {
       MeltPoolDG::VectorTools::update_ghost_values(get_velocity(),
@@ -616,6 +627,12 @@ namespace MeltPoolDG::Flow
     {
       Assert(false, ExcNotImplemented());
       (void)vectors;
+    }
+
+    void
+    distribute_constraints() override
+    {
+      Assert(false, ExcNotImplemented());
     }
 
     void

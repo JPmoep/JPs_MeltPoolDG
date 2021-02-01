@@ -101,6 +101,9 @@ namespace MeltPoolDG
       attach_vectors_p(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
 
       virtual void
+      distribute_constraints() = 0;
+
+      virtual void
       attach_output_vectors(DataOut<dim> &data_out) = 0;
     };
 
