@@ -62,8 +62,6 @@ namespace MeltPoolDG::Evaporation
       normal_vector.update_ghost_values();
       fluid_velocity.update_ghost_values();
 
-      reinit();
-
       FECellIntegrator<dim, 1, double> ls(scratch_data->get_matrix_free(),
                                           ls_hanging_nodes_dof_idx,
                                           ls_quad_idx);
@@ -125,6 +123,8 @@ namespace MeltPoolDG::Evaporation
       normal_vector.zero_out_ghosts();
       fluid_velocity.zero_out_ghosts();
 
+      reinit();
+
       /**
        * write interface velocity to dof vector
        */
@@ -133,14 +133,17 @@ namespace MeltPoolDG::Evaporation
         scratch_data->get_matrix_free(),
         vel_hanging_nodes_dof_idx,
         ls_quad_idx,
-        scratch_data->get_fe(vel_hanging_nodes_dof_idx).tensor_degree(),    // fe_degree
-        scratch_data->get_fe(ls_hanging_nodes_dof_idx).tensor_degree() + 1, // n_q_points_1d
+        scratch_data->get_fe(vel_hanging_nodes_dof_idx)
+          .tensor_degree(), // fe_degree of the resulting vector
+        scratch_data->get_fe(ls_hanging_nodes_dof_idx).tensor_degree() +
+          1, // n_q_points_1d of cell operation
         [&](const unsigned int cell,
             const unsigned int quad) -> const Tensor<1, dim, VectorizedArray<double>> & {
           return begin_interface_velocity(cell)[quad];
         });
 
       scratch_data->get_constraint(vel_hanging_nodes_dof_idx).distribute(interface_velocity);
+      interface_velocity.zero_out_ghosts();
     }
 
     void
