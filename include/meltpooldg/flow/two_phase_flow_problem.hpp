@@ -90,6 +90,7 @@ namespace MeltPoolDG::Flow
           if (evaporation_operation)
             {
               level_set_operation.update_normal_vector();
+
               evaporation_operation->compute_mass_balance_source_term(
                 mass_balance_rhs,
                 pressure_dof_idx,
@@ -328,9 +329,13 @@ namespace MeltPoolDG::Flow
             scratch_data->get_pcout()
               << "cycle: " << i << " n_dofs: " << dof_handler.n_dofs() << "(ls) + "
               << flow_operation->get_dof_handler_velocity().n_dofs() << "(vel) + "
-              << flow_operation->get_dof_handler_pressure().n_dofs() << "(p)"
-              << " T.size " << melt_pool_operation.temperature.size() << " solid.size "
-              << melt_pool_operation.solid.size() << std::endl;
+              << flow_operation->get_dof_handler_pressure().n_dofs() << "(p)";
+
+            if (base_in->parameters.base.problem_name == "melt_pool")
+              scratch_data->get_pcout() << " T.size " << melt_pool_operation.temperature.size()
+                                        << " solid.size " << melt_pool_operation.solid.size();
+
+            scratch_data->get_pcout() << std::endl;
 
             refine_mesh(base_in);
           }
@@ -627,9 +632,10 @@ namespace MeltPoolDG::Flow
 
       if (evaporation_operation)
         {
-          data.emplace_back(&dof_handler, [&](std::vector<VectorType *> &vectors) {
-            evaporation_operation->attach_vectors(vectors);
-          });
+          data.emplace_back(&flow_operation->get_dof_handler_velocity(),
+                            [&](std::vector<VectorType *> &vectors) {
+                              evaporation_operation->attach_vectors(vectors);
+                            });
         }
 
       const auto post = [&]() {
