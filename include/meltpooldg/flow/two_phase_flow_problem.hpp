@@ -438,8 +438,6 @@ namespace MeltPoolDG::Flow
 
           if (base_in->parameters.base.problem_name == "melt_pool")
             melt_pool_operation.reinit();
-          if (evaporation_operation)
-            evaporation_operation->reinit();
         }
 
 #ifdef MELT_POOL_DG_WITH_ADAFLO
@@ -455,7 +453,10 @@ namespace MeltPoolDG::Flow
        *    initialize the force vector for calculating surface tension
        */
       if (evaporation_operation)
-        scratch_data->initialize_dof_vector(mass_balance_rhs, pressure_dof_idx);
+        {
+          evaporation_operation->reinit();
+          scratch_data->initialize_dof_vector(mass_balance_rhs, pressure_dof_idx);
+        }
     }
 
     /**
@@ -556,13 +557,13 @@ namespace MeltPoolDG::Flow
       const auto attach_output_vectors = [&](DataOut<dim> &data_out) {
         level_set_operation.attach_output_vectors(data_out);
 
+        flow_operation->attach_output_vectors(data_out);
+
         if (do_melt_pool)
           melt_pool_operation.attach_output_vectors(data_out);
 
         if (evaporation_operation)
           evaporation_operation->attach_output_vectors(data_out);
-
-        flow_operation->attach_output_vectors(data_out);
       };
       /**
        * do the output operation
@@ -631,12 +632,10 @@ namespace MeltPoolDG::Flow
         });
 
       if (evaporation_operation)
-        {
-          data.emplace_back(&flow_operation->get_dof_handler_velocity(),
-                            [&](std::vector<VectorType *> &vectors) {
-                              evaporation_operation->attach_vectors(vectors);
-                            });
-        }
+        data.emplace_back(&flow_operation->get_dof_handler_velocity(),
+                          [&](std::vector<VectorType *> &vectors) {
+                            evaporation_operation->attach_vectors(vectors);
+                          });
 
       const auto post = [&]() {
         /**
@@ -648,8 +647,7 @@ namespace MeltPoolDG::Flow
         /**
          * flow
          */
-        scratch_data->get_constraint(vel_dof_idx).distribute(flow_operation->get_velocity());
-        scratch_data->get_constraint(pressure_dof_idx).distribute(flow_operation->get_pressure());
+        flow_operation->distribute_constraints();
 
         /**
          * melt pool
