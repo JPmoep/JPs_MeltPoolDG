@@ -493,13 +493,11 @@ namespace MeltPoolDG
           // declaration
           
           double velocity_norm, local_norm_velocity;
-          const QIterated<dim> quadrature_formula(QTrapez<1>(), base_in->parameters.base.degree + 2);
+          const QIterated<dim> quadrature_formula(QTrapez<1>(), base_in->parameters.flow.velocity_degree + 2);
           FEValues<dim> fe_values(scratch_data->get_mapping() ,scratch_data->get_fe(vel_dof_idx), quadrature_formula, update_values);
           const unsigned int   n_q_points = quadrature_formula.size();
            std::vector<Tensor<1, dim>> velocity_values(n_q_points);
-         // double pressure_jump;
-        //  parallel::distributed::Triangulation<dim> triangulation;
-         // const MPI_Comm &         mpi_communicator = triangulation.get_communicator();
+          const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
           local_norm_velocity = 0;
           velocity_norm = 0;
 
@@ -518,20 +516,85 @@ namespace MeltPoolDG
                 
                 for (unsigned int q = 0; q < n_q_points; ++q)
                 {
-                  velocity_norm = std::max(velocity_values[q].norm(),velocity_norm);
-                  //local_norm_velocity = std::max(local_norm_velocity, max_velocity);
+                  local_norm_velocity = std::max(local_norm_velocity, velocity_values[q].norm());
                 }
               }
 
-             
-          //velocity_norm = Utilities::MPI::max(local_norm_velocity, mpi_communicator);
-          //  std::cout << "velocity norm" << velocity_norm << std::endl;
-          
-         std::cout << "velocity norm = " << velocity_norm << std::endl;
-        //@TODO:prozentrechnung - jump?!
-          // pressure_jump = flow_operation->get_pressure();
-          //std::cout << "pressure jump:" << pressure_jump << "%" << std::endl;
+          velocity_norm = Utilities::MPI::max(local_norm_velocity, mpi_communicator);          
+          std::cout << "velocity norm = " << velocity_norm << std::endl;
+
         
+        double pressure_jump = 0;
+        {
+          QGauss<dim>       quadrature_formula(base_in->parameters.flow.velocity_degree + 1);
+          QGauss<dim - 1>   face_quadrature_formula(base_in->parameters.flow.velocity_degree + 1);
+          FEValues<dim>     ns_values(scratch_data->get_fe(pressure_dof_idx),
+                                  quadrature_formula,
+                                  update_values | update_JxW_values);
+          FEFaceValues<dim> fe_face_values(scratch_data->get_fe(pressure_dof_idx),
+                                          face_quadrature_formula,
+                                          update_values | update_JxW_values);
+
+          const unsigned int n_q_points = quadrature_formula.size();
+
+          std::vector<double> p_values(n_q_points);
+          std::vector<double> p_face_values(face_quadrature_formula.size());
+
+          // With all this in place, we can go on with the loop over all cells and
+          // add the local contributions.
+          //
+          // The first thing to do is to evaluate the FE basis functions at the
+          // quadrature points of the cell, as well as derivatives and the other
+          // quantities specified above.  Moreover, we need to reset the local
+          // matrices and right hand side before filling them with new information
+          // from the current cell.
+          const FEValuesExtractors::Scalar p(dim);
+          double pressure_average = 0, one_average = 0, press_b = 0, one_b = 0;
+          typename DoFHandler<dim>::active_cell_iterator
+            endc    = flow_operation->get_dof_handler_pressure().end(),
+            ns_cell = flow_operation->get_dof_handler_pressure().begin_active();
+          for (; ns_cell != endc; ++ns_cell)
+            if (ns_cell->is_locally_owned())
+              {
+                ns_values.reinit(ns_cell);
+                if (ns_cell->center().norm() < 0.1)
+                  {
+                    ns_values.get_function_values(flow_operation->get_pressure(), p_values);
+                    for (unsigned int q = 0; q < n_q_points; ++q)
+                      {
+                        pressure_average += p_values[q] * ns_values.JxW(q);
+                        one_average += ns_values.JxW(q);
+                      }
+                  }
+                for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+                  if (ns_cell->face(face)->at_boundary())
+                    {
+                      fe_face_values.reinit(ns_cell, face);
+                      fe_face_values.get_function_values(flow_operation->get_pressure(),
+                                                        p_face_values);
+                      for (unsigned int q = 0; q < face_quadrature_formula.size(); ++q)
+                        {
+                          press_b += p_face_values[q] * fe_face_values.JxW(q);
+                          one_b += fe_face_values.JxW(q);
+                        }
+                    }
+              }
+
+          const double global_p_avg = Utilities::MPI::sum(pressure_average, mpi_communicator);
+          const double global_o_avg = Utilities::MPI::sum(one_average, mpi_communicator);
+          const double global_p_bou = Utilities::MPI::sum(press_b, mpi_communicator);
+          const double global_o_bou = Utilities::MPI::sum(one_b, mpi_communicator);
+          pressure_jump = ((global_p_avg / global_o_avg - global_p_bou / global_o_bou) -
+                          2. * (dim - 1) * base_in->parameters.flow.surface_tension_coefficient) /
+                          (2 * (dim - 1) * base_in->parameters.flow.surface_tension_coefficient) * 100.;
+
+          std::cout.precision(8);
+          std::cout << "  Error in pressure jump: " << pressure_jump << " %" << std::endl;
+        }
+
+        // calculate spurious currents
+        std::cout << "  Size spurious currents, absolute: " << velocity_norm << std::endl;
+
       }
 
 
