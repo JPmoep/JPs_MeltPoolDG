@@ -18,6 +18,16 @@
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
+/**
+ * This example is derived from
+ *
+ * Hardt, S., and F. Wondra. "Evaporation model for interfacial flows based on a continuum-field
+ * representation of the source terms." Journal of Computational Physics 227.11 (2008): 5871-5895.
+ *
+ * and represents a simplified example of the denoted "Stefan's Problem 2" with neglection of
+ * the temperature field.
+ */
+
 namespace MeltPoolDG::Simulation::StefansProblemWithFlow
 {
   using namespace dealii;
@@ -128,29 +138,34 @@ namespace MeltPoolDG::Simulation::StefansProblemWithFlow
       const types::boundary_id left_bc  = 3;
       const types::boundary_id right_bc = 4;
 
-      // if (this->parameters.evapor.ls_value_liquid == -1)
-      //{
-      // this->attach_dirichlet_boundary_condition(
-      // lower_bc, std::make_shared<Functions::ConstantFunction<dim>>(1.0), "level_set");
-      //// lower, right and left faces
-      // this->attach_no_slip_boundary_condition(lower_bc, "navier_stokes_u");
-      //}
-      // else if (this->parameters.evapor.ls_value_liquid == 1)
-      //{
-      // this->attach_dirichlet_boundary_condition(
-      // upper_bc, std::make_shared<Functions::ConstantFunction<dim>>(-1.0), "level_set");
-      // this->attach_no_slip_boundary_condition(upper_bc, "navier_stokes_u");
-      //}
+      if (this->parameters.evapor.ls_value_liquid == -1)
+        {
+          // lower part = gas; upper part = liquid
+          this->attach_dirichlet_boundary_condition(
+            lower_bc, std::make_shared<Functions::ConstantFunction<dim>>(1.0), "level_set");
+          this->attach_no_slip_boundary_condition(upper_bc, "navier_stokes_u");
+          this->attach_open_boundary_condition(lower_bc, "navier_stokes_u");
+        }
+      else if (this->parameters.evapor.ls_value_liquid == 1)
+        {
+          // lower part = liquid; upper part = gas
+          this->attach_dirichlet_boundary_condition(
+            upper_bc, std::make_shared<Functions::ConstantFunction<dim>>(-1.0), "level_set");
+          this->attach_no_slip_boundary_condition(lower_bc, "navier_stokes_u");
+          this->attach_open_boundary_condition(upper_bc, "navier_stokes_u");
+        }
+      else
+        AssertThrow(false, ExcNotImplemented());
       //// upper face
       this->attach_symmetry_boundary_condition(left_bc, "navier_stokes_u");
       this->attach_symmetry_boundary_condition(right_bc, "navier_stokes_u");
-      // this->attach_fix_pressure_constant_condition(upper_bc, "navier_stokes_p");
+
 
       /*
        *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
        *  due to the hyperbolic nature of the analyzed problem)
        *
-                    fix
+                    fix/open
        (0,1)  +---------------+ (1,1)
               |    ls=-1      |
               |               |
@@ -159,7 +174,7 @@ namespace MeltPoolDG::Simulation::StefansProblemWithFlow
               |               |
               |    ls=1       |
               +---------------+
-       * (0,1)      fix       (1,0)
+       * (0,1)      fix/open   (1,0)
        */
       if constexpr (dim == 2)
         {
