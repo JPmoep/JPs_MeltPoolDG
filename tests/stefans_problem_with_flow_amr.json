@@ -1,0 +1,84 @@
+{
+  "base" : {
+    "problem name": "two_phase_flow_with_evaporation",
+    "application name": "stefans_problem_with_flow",
+    "dimension": "2",
+    "global refinements": "5",
+    "gravity": "0.",
+    "degree": "1",
+    "do print parameters": "false"
+  },
+  "flow" : {
+    "flow viscosity": "0.001",
+    "flow viscosity difference": "0.009",
+    "flow surface tension coefficient": "0.",
+    "flow start time": "0.0",
+    "flow end time": "0.002",
+    "flow time step size": "0.005"
+  },
+  "Navier-Stokes" : {
+    "adaflo" : {
+      "Navier-Stokes" : {
+        "physical type"      : "incompressible",
+        "dimension"          : "2",
+        "global refinements" : "0",
+        "velocity degree"    : "2",
+        "Solver" : {
+          "linearization scheme"         : "coupled implicit Newton",
+          "NL max iterations"            : "10",
+          "NL tolerance"                 : "1.e-9",
+          "lin max iterations"           : "30",
+          "lin tolerance"                : "1.e-4",
+          "lin velocity preconditioner"  : "ilu",
+          "lin its before inner solvers" : "50"
+        }
+      },
+      "Time stepping" : {
+        "scheme"           : "bdf_2"
+      },
+      "Output options" : 
+      {
+          "output verbosity" : "2",
+          "output walltimes" : "0"
+      }
+    }
+  },
+  "levelset" : {
+    "ls do reinitialization": "true",
+    "ls time integration scheme" : "crank_nicolson",
+    "ls do matrix free": "true"
+  },
+  "adaptive meshing" : {
+    "do amr":                    "true",
+    "do not modify boundary cells": "false",
+    "upper perc to refine": "     0.4",
+    "lower perc to coarsen":     "0.15",
+    "n initial refinement cycles": "5",
+    "max grid refinement level": "7",
+    "every n step": "1"
+  },
+  "reinitialization" : {
+    "reinit max n steps": "5",
+    "reinit modeltype": "olsson2007",
+    "reinit do matrix free": "true",
+    "reinit constant epsilon": "0.02"
+  },
+  "normal vector": { 
+    "normal vec do matrix free": "true",
+    "normal vec implementation": "meltpooldg"
+  },
+  "curvature":{ 
+    "curv do matrix free": "true",
+    "curv implementation": "meltpooldg"
+  },
+  "evaporation" : {
+    "evapor evaporative mass flux": "1.e-3",
+    "evapor density liquid": "1.0",
+    "evapor density gas": "0.01",
+    "evapor ls value liquid":"1",
+    "evapor ls value gas": "-1"
+  },
+  "paraview" : {
+    "paraview do output": "false"
+  }
+}
