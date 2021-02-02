@@ -151,6 +151,21 @@ namespace MeltPoolDG
     }
 
     void
+    attach_open_boundary_condition(types::boundary_id id, const std::string operation_name)
+    {
+      if (!boundary_conditions_map[operation_name])
+        boundary_conditions_map[operation_name] = std::make_shared<BoundaryConditions<dim>>();
+
+      auto &bc = boundary_conditions_map[operation_name]->open_boundary_bc;
+      if (std::find(bc.begin(), bc.end(), id) != bc.end())
+        AssertThrow(false,
+                    ExcMessage("You try to attach an open boundary conditions "
+                               "for a boundary_id for which a boundary condition is already "
+                               "specified. Check your input related to bc!"));
+      bc.push_back(id);
+    }
+
+    void
     attach_fix_pressure_constant_condition(types::boundary_id id, const std::string operation_name)
     {
       if (!boundary_conditions_map[operation_name])
@@ -254,6 +269,12 @@ namespace MeltPoolDG
       // if (!boundary_conditions_map[operation_name])
       //AssertThrow(false, ExcMessage("get_symmetry_id: requested boundary condition not found")); // @todo temporarily disabled due to compatibility with level set operation of adaflo
       return boundary_conditions_map[operation_name]->symmetry_bc;
+    }
+
+    const std::vector<types::boundary_id> &
+    get_open_boundary_id(const std::string operation_name)
+    {
+      return boundary_conditions_map[operation_name]->open_boundary_bc;
     }
 
   public:
