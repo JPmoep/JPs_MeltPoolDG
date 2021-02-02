@@ -394,6 +394,8 @@ namespace MeltPoolDG
           }
       }
 
+
+
       void
       transform_level_set_to_smooth_heaviside()
       {
@@ -561,12 +563,18 @@ namespace MeltPoolDG
       {
         return level_set_as_heaviside;
       }
+
       LinearAlgebra::distributed::Vector<double> &
       get_level_set_as_heaviside()
       {
         return level_set_as_heaviside;
       }
 
+      const LinearAlgebra::distributed::Vector<double> &
+      get_distance_to_level_set() const
+      {
+        return distance_to_level_set;
+      }
       /**
        * register vectors for adaptive mesh refinement
        */
