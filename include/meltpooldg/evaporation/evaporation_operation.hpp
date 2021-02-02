@@ -111,6 +111,11 @@ namespace MeltPoolDG::Evaporation
                 MeltPoolDG::VectorTools::normalize<dim>(normal_vec.get_value(q_index));
               interface_vel[q_index] = n_phi * evaporation_data.evaporative_mass_flux / density;
 
+              // The normal vector field is oriented such that the normal vector points from
+              // the negative level set value (= default for representing the gas phase) to the
+              // positive value (= default for representing the liquid phase). Thus, in case the gas
+              // phase corresponds to a level set value of 1, the sign of the normal vector has to
+              // be changed.
               if (evaporation_data.ls_value_gas == 1.0)
                 interface_vel[q_index] *= -1.0;
 
@@ -186,10 +191,14 @@ namespace MeltPoolDG::Evaporation
                 {
                   const auto n_phi =
                     MeltPoolDG::VectorTools::normalize<dim>(normal_vec.get_value(q_index));
+
+                  // the factor of 0.5 is needed to ensure that the integral of phi * n * 0.5
+                  // over the volume is equal to 1 and represents the approximation of a delta
+                  // function. @todo -- better solution?
                   mass_flux.submit_value(-(1. / evaporation_data.density_liquid -
                                            1. / evaporation_data.density_gas) *
                                            evaporation_data.evaporative_mass_flux *
-                                           heaviside.get_gradient(q_index) * n_phi,
+                                           heaviside.get_gradient(q_index) * n_phi * 0.5,
                                          q_index);
                 }
               mass_flux.integrate_scatter(true, false, force_rhs);
