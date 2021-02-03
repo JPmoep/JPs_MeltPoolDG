@@ -195,10 +195,10 @@ namespace MeltPoolDG::Evaporation
                   // the factor of 0.5 is needed to ensure that the integral of phi * n * 0.5
                   // over the volume is equal to 1 and represents the approximation of a delta
                   // function. @todo -- better solution?
-                  mass_flux.submit_value(-(1. / evaporation_data.density_liquid -
-                                           1. / evaporation_data.density_gas) *
+                  mass_flux.submit_value((1. / evaporation_data.density_liquid -
+                                          1. / evaporation_data.density_gas) *
                                            evaporation_data.evaporative_mass_flux *
-                                           heaviside.get_gradient(q_index) * n_phi * 0.5,
+                                           -heaviside.get_gradient(q_index) * n_phi * 0.5,
                                          q_index);
                 }
               mass_flux.integrate_scatter(true, false, force_rhs);
