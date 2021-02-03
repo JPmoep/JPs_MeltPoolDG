@@ -38,7 +38,7 @@
       },
       "Output options" : 
       {
-          "output verbosity" : "2",
+          "output verbosity" : "1",
           "output walltimes" : "0"
       }
     }

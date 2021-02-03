@@ -120,7 +120,7 @@ namespace MeltPoolDG::Evaporation
                 interface_vel[q_index] *= -1.0;
 
               interface_vel[q_index] +=
-                MeltPoolDG::VectorTools::map_to_vector<dim>(vel.get_value(q_index));
+                MeltPoolDG::VectorTools::convert_to_vector<dim>(vel.get_value(q_index));
             }
         }
 

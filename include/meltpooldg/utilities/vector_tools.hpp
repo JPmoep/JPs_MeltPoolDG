@@ -125,7 +125,7 @@ namespace MeltPoolDG
 
     template <int dim, typename number = double>
     static Tensor<1, dim, VectorizedArray<number>>
-    map_to_vector(const VectorizedArray<number> &in)
+    convert_to_vector(const VectorizedArray<number> &in)
     {
       Tensor<1, dim, VectorizedArray<number>> vec;
 
@@ -137,7 +137,7 @@ namespace MeltPoolDG
 
     template <int dim, typename number = double>
     static Tensor<1, dim, VectorizedArray<number>>
-    map_to_vector(const Tensor<1, dim, VectorizedArray<number>> &in)
+    convert_to_vector(const Tensor<1, dim, VectorizedArray<number>> &in)
     {
       return in;
     }
