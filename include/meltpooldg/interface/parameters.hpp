@@ -261,7 +261,8 @@ namespace MeltPoolDG
          */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
 
-      if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool"))
+      if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool") ||
+          (base.problem_name == "two_phase_flow_with_evaporation"))
         {
           adaflo_params.parse_parameters(parameter_filename);
           // WARNING: by setting the differences to a non-zero value we force
@@ -275,7 +276,19 @@ namespace MeltPoolDG
           adaflo_params.params.density_diff   = 1.0;
           adaflo_params.params.viscosity_diff = 1.0;
 
-          flow.density   = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+          if ((evapor.density_gas > 0) && (evapor.density_liquid > 0))
+            {
+              flow.density = (evapor.density_gas > 0.0) && (evapor.ls_value_gas == -1) ?
+                               evapor.density_gas :
+                               evapor.density_liquid;
+
+              flow.density_difference = (flow.density == evapor.density_gas) ?
+                                          evapor.density_liquid - evapor.density_gas :
+                                          evapor.density_gas - evapor.density_liquid;
+            }
+          else
+            flow.density = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+
           flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
           flow.velocity_degree        = (flow.velocity_degree > 0.0) ?
                                           flow.velocity_degree :
@@ -292,7 +305,6 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
           adaflo_params.params.use_simplex_mesh     = base.do_simplex;
         }
-
 #endif
     }
 
@@ -337,7 +349,7 @@ namespace MeltPoolDG
           base.problem_name,
           "Sets the base name for the problem that should be solved.",
           Patterns::Selection(
-            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool|level_set_with_evaporation"));
+            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool|level_set_with_evaporation|two_phase_flow_with_evaporation"));
         prm.add_parameter("dimension", base.dimension, "Defines the dimension of the problem");
         prm.add_parameter("global refinements",
                           base.global_refinements,

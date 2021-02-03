@@ -25,6 +25,9 @@ namespace MeltPoolDG
       virtual LinearAlgebra::distributed::Vector<double> &
       get_velocity() = 0;
 
+      virtual LinearAlgebra::distributed::Vector<double> &
+      get_velocity_old() = 0;
+
       virtual const DoFHandler<dim> &
       get_dof_handler_velocity() const = 0;
 
@@ -32,7 +35,13 @@ namespace MeltPoolDG
       get_dof_handler_idx_velocity() const = 0;
 
       virtual const unsigned int &
+      get_dof_handler_idx_hanging_nodes_velocity() const = 0;
+
+      virtual const unsigned int &
       get_quad_idx_velocity() const = 0;
+
+      virtual const unsigned int &
+      get_quad_idx_pressure() const = 0;
 
       virtual const AffineConstraints<double> &
       get_constraints_velocity() const = 0;
@@ -40,11 +49,17 @@ namespace MeltPoolDG
       virtual AffineConstraints<double> &
       get_constraints_velocity() = 0;
 
+      virtual const AffineConstraints<double> &
+      get_hanging_node_constraints_velocity() const = 0;
+
       virtual const LinearAlgebra::distributed::Vector<double> &
       get_pressure() const = 0;
 
       virtual LinearAlgebra::distributed::Vector<double> &
       get_pressure() = 0;
+
+      virtual LinearAlgebra::distributed::Vector<double> &
+      get_pressure_old() = 0;
 
       virtual const DoFHandler<dim> &
       get_dof_handler_pressure() const = 0;
@@ -58,8 +73,14 @@ namespace MeltPoolDG
       virtual AffineConstraints<double> &
       get_constraints_pressure() = 0;
 
+      virtual const AffineConstraints<double> &
+      get_hanging_node_constraints_pressure() const = 0;
+
       virtual void
       set_force_rhs(const LinearAlgebra::distributed::Vector<double> &vec) = 0;
+
+      virtual void
+      set_mass_balance_rhs(const LinearAlgebra::distributed::Vector<double> &vec) = 0;
 
       virtual VectorizedArray<double> &
       get_density(const unsigned int cell, const unsigned int q) = 0;
@@ -78,6 +99,9 @@ namespace MeltPoolDG
 
       virtual void
       attach_vectors_p(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors) = 0;
+
+      virtual void
+      distribute_constraints() = 0;
 
       virtual void
       attach_output_vectors(DataOut<dim> &data_out) = 0;

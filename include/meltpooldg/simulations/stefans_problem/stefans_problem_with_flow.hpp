@@ -18,7 +18,17 @@
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 
-namespace MeltPoolDG::Simulation::StefansProblem
+/**
+ * This example is derived from
+ *
+ * Hardt, S., and F. Wondra. "Evaporation model for interfacial flows based on a continuum-field
+ * representation of the source terms." Journal of Computational Physics 227.11 (2008): 5871-5895.
+ *
+ * and represents a simplified example of the denoted "Stefan's Problem 2" with neglection of
+ * the temperature field.
+ */
+
+namespace MeltPoolDG::Simulation::StefansProblemWithFlow
 {
   using namespace dealii;
   using namespace MeltPoolDG::Simulation;
@@ -51,45 +61,15 @@ namespace MeltPoolDG::Simulation::StefansProblem
     }
     double x_min, x_max, y_min, y_interface;
   };
-
-  template <int dim>
-  class AdvectionField : public Function<dim>
-  {
-  public:
-    AdvectionField()
-      : Function<dim>(dim)
-    {}
-
-    double
-    value(const Point<dim> &p, const unsigned int component) const override
-    {
-      (void)p;
-      Tensor<1, dim> value_;
-
-      if constexpr (dim == 2)
-        {
-          // const double x = p[0];
-          // const double y = p[1];
-
-          value_[0] = 0.0;
-          value_[1] = 0.0;
-        }
-      else
-        AssertThrow(false, ExcMessage("Advection field for dim!=2 not implemented"));
-
-      return value_[component];
-    }
-  };
-
   /*
    *      This class collects all relevant input data for the level set simulation
    */
 
   template <int dim>
-  class SimulationStefansProblem : public SimulationBase<dim>
+  class SimulationStefansProblemWithFlow : public SimulationBase<dim>
   {
   public:
-    SimulationStefansProblem(std::string parameter_file, const MPI_Comm mpi_communicator)
+    SimulationStefansProblemWithFlow(std::string parameter_file, const MPI_Comm mpi_communicator)
       : SimulationBase<dim>(parameter_file, mpi_communicator)
     {
       this->set_parameters();
@@ -153,26 +133,39 @@ namespace MeltPoolDG::Simulation::StefansProblem
        *  create a pair of (boundary_id, dirichlet_function)
        */
 
-      constexpr types::boundary_id lower_bc = 1;
-      constexpr types::boundary_id upper_bc = 2;
+      const types::boundary_id lower_bc = 1;
+      const types::boundary_id upper_bc = 2;
+      const types::boundary_id left_bc  = 3;
+      const types::boundary_id right_bc = 4;
 
       if (this->parameters.evapor.ls_value_liquid == -1)
         {
+          // lower part = gas; upper part = liquid
           this->attach_dirichlet_boundary_condition(
             lower_bc, std::make_shared<Functions::ConstantFunction<dim>>(1.0), "level_set");
+          this->attach_no_slip_boundary_condition(upper_bc, "navier_stokes_u");
+          this->attach_open_boundary_condition(lower_bc, "navier_stokes_u");
         }
       else if (this->parameters.evapor.ls_value_liquid == 1)
         {
+          // lower part = liquid; upper part = gas
           this->attach_dirichlet_boundary_condition(
             upper_bc, std::make_shared<Functions::ConstantFunction<dim>>(-1.0), "level_set");
+          this->attach_no_slip_boundary_condition(lower_bc, "navier_stokes_u");
+          this->attach_open_boundary_condition(upper_bc, "navier_stokes_u");
         }
+      else
+        AssertThrow(false, ExcNotImplemented());
+      //// upper face
+      this->attach_symmetry_boundary_condition(left_bc, "navier_stokes_u");
+      this->attach_symmetry_boundary_condition(right_bc, "navier_stokes_u");
 
 
       /*
        *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
        *  due to the hyperbolic nature of the analyzed problem)
        *
-                      fix
+                    fix/open
        (0,1)  +---------------+ (1,1)
               |    ls=-1      |
               |               |
@@ -181,7 +174,7 @@ namespace MeltPoolDG::Simulation::StefansProblem
               |               |
               |    ls=1       |
               +---------------+
-       * (0,1)      fix       (1,0)
+       * (0,1)      fix/open   (1,0)
        */
       if constexpr (dim == 2)
         {
@@ -193,6 +186,10 @@ namespace MeltPoolDG::Simulation::StefansProblem
                     face->set_boundary_id(lower_bc);
                   else if (face->center()[1] == y_max)
                     face->set_boundary_id(upper_bc);
+                  else if (face->center()[0] == x_min)
+                    face->set_boundary_id(left_bc);
+                  else if (face->center()[0] == x_max)
+                    face->set_boundary_id(right_bc);
                 }
         }
       else
@@ -206,7 +203,8 @@ namespace MeltPoolDG::Simulation::StefansProblem
     {
       this->attach_initial_condition(
         std::make_shared<InitialValuesLS<dim>>(x_min, x_max, y_min, y_interface), "level_set");
-      this->attach_advection_field(std::make_shared<AdvectionField<dim>>(), "level_set");
+      this->attach_initial_condition(
+        std::shared_ptr<Function<dim>>(new Functions::ZeroFunction<dim>(dim)), "navier_stokes_u");
     }
 
   private:
@@ -216,4 +214,4 @@ namespace MeltPoolDG::Simulation::StefansProblem
     const double y_max       = 1.0;
     const double y_interface = 0.5;
   };
-} // namespace MeltPoolDG::Simulation::StefansProblem
+} // namespace MeltPoolDG::Simulation::StefansProblemWithFlow

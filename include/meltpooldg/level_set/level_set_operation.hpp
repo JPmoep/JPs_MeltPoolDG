@@ -234,6 +234,7 @@ namespace MeltPoolDG
         advec_diff_operation->reinit();
         reinit_operation->reinit();
         curvature_operation->reinit();
+        scratch_data->initialize_dof_vector(level_set_as_heaviside, ls_hanging_nodes_dof_idx);
       }
 
       /**
@@ -393,6 +394,8 @@ namespace MeltPoolDG
           }
       }
 
+
+
       void
       transform_level_set_to_smooth_heaviside()
       {
@@ -431,6 +434,8 @@ namespace MeltPoolDG
                     smooth_heaviside_from_distance_value(2 * distance / (3 * epsilon_cell));
                 }
             }
+        scratch_data->get_constraint(ls_hanging_nodes_dof_idx).distribute(level_set_as_heaviside);
+        scratch_data->get_constraint(ls_hanging_nodes_dof_idx).distribute(distance_to_level_set);
       }
 
       /// To avoid high-frequency errors in the curvature (spurious currents) the curvature is
@@ -553,12 +558,23 @@ namespace MeltPoolDG
         return advec_diff_operation->get_advected_field();
       }
 
+      const LinearAlgebra::distributed::Vector<double> &
+      get_level_set_as_heaviside() const
+      {
+        return level_set_as_heaviside;
+      }
+
       LinearAlgebra::distributed::Vector<double> &
       get_level_set_as_heaviside()
       {
         return level_set_as_heaviside;
       }
 
+      const LinearAlgebra::distributed::Vector<double> &
+      get_distance_to_level_set() const
+      {
+        return distance_to_level_set;
+      }
       /**
        * register vectors for adaptive mesh refinement
        */
@@ -566,6 +582,8 @@ namespace MeltPoolDG
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
         advec_diff_operation->attach_vectors(vectors);
+        level_set_as_heaviside.update_ghost_values();
+        vectors.push_back(&level_set_as_heaviside);
       }
 
       void
