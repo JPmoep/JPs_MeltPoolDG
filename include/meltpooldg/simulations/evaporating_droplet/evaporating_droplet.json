@@ -8,14 +8,12 @@
     "gravity": "0.00"
   },
   "flow" : {
-    "flow density": "1",
-    "flow density difference": "-0.9",
-    "flow viscosity": "0.01",
-    "flow viscosity difference": "-0.009",
-    "flow surface tension coefficient": "0.0245",
+    "flow viscosity": "0.001",
+    "flow viscosity difference": "0.009",
+    "flow surface tension coefficient": "0.00",
     "flow start time": "0.0",
     "flow end time": "1.0",
-    "flow time step size": "0.02"
+    "flow time step size": "0.005"
   },
   "levelset" : {
     "ls do reinitialization": "true",
@@ -24,21 +22,28 @@
     "ls do matrix free": "true"
   },
   "reinitialization" : {
-    "reinit max n steps": "5",
+    "reinit max n steps": "10",
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
     "reinit scale factor epsilon": "1.707"
   },
   "normal vector": { 
-    "normal vec damping scale factor": "4",
-    "normal vec do matrix free": "true" 
+    "normal vec do matrix free": "true",
+    "normal vec implementation": "adaflo" 
   },
   "curvature" : {
     "curv do matrix free": "true"
   },
   "paraview" : {
     "paraview do output": "true"
+  },
+  "evaporation" : {
+    "evapor evaporative mass flux": "1.0e-3",
+    "evapor density liquid": "1",
+    "evapor density gas": "0.01",
+    "evapor ls value liquid":"1",
+    "evapor ls value gas": "-1"
   },
   "Navier-Stokes" : {
     "adaflo" : {
