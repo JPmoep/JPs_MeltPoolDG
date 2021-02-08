@@ -91,6 +91,8 @@ namespace MeltPoolDG::Flow
             {
               level_set_operation.update_normal_vector();
 
+              // @todo: why needed?
+              scratch_data->initialize_dof_vector(mass_balance_rhs, pressure_dof_idx);
               evaporation_operation->compute_mass_balance_source_term(
                 mass_balance_rhs,
                 pressure_dof_idx,
