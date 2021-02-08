@@ -8,6 +8,8 @@
 
 #include <deal.II/lac/generic_linear_algebra.h>
 
+#include <meltpooldg/utilities/vector_tools.hpp>
+
 namespace MeltPoolDG::Evaporation
 {
   using namespace dealii;
@@ -258,7 +260,7 @@ namespace MeltPoolDG::Evaporation
       /*
        *  evaporation velocity
        */
-      MeltPoolDG::VectorTools::update_ghost_values(interface_velocity);
+      interface_velocity.update_ghost_values();
 
       std::vector<DataComponentInterpretation::DataComponentInterpretation>
         vector_component_interpretation(dim,
