@@ -4,6 +4,7 @@
 #include <meltpooldg/utilities/utilityfunctions.hpp>
 // simulations
 #include <meltpooldg/simulations/advection_diffusion/advection_diffusion.hpp>
+#include <meltpooldg/simulations/evaporating_droplet/evaporating_droplet.hpp>
 #include <meltpooldg/simulations/flow_past_cylinder/flow_past_cylinder.hpp>
 #include <meltpooldg/simulations/recoil_pressure/recoil_pressure.hpp>
 #include <meltpooldg/simulations/reinit_circle/reinit_circle.hpp>
@@ -62,6 +63,9 @@ namespace MeltPoolDG
                                                                                  mpi_communicator);
         else if (simulation_name == "stefans_problem_with_flow")
           return std::make_shared<StefansProblemWithFlow::SimulationStefansProblemWithFlow<dim>>(
+            parameter_file, mpi_communicator);
+        else if (simulation_name == "evaporating_droplet")
+          return std::make_shared<EvaporatingDroplet::SimulationEvaporatingDroplet<dim>>(
             parameter_file, mpi_communicator);
         /* add your simulation here*/
         else
