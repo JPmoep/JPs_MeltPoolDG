@@ -45,7 +45,7 @@ namespace MeltPoolDG
       , mapping(mapping_in)
       , triangulation(triangulation_in)
       , pcout(std::cout, (Utilities::MPI::this_mpi_process(mpi_communicator) == 0))
-      , do_simplex(!triangulation.all_reference_cell_types_are_hyper_cube())
+      , do_simplex(!triangulation.all_reference_cells_are_hyper_cube())
     {}
 
     /*
