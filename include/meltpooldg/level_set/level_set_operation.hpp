@@ -138,6 +138,7 @@ namespace MeltPoolDG
          *    dirichlet constraints of the reinitialization.
          */
         do_reinitialization();
+        reinit_time_iterator.reset_max_n_time_steps(base_in->parameters.reinit.max_n_steps);
         /*
          * 2) From now on, the initial solution of the level set equation will be reinitialized
          *    with dirichlet constraints of the reinitialization.
@@ -486,7 +487,7 @@ namespace MeltPoolDG
                                      data_in.reinit.dtau :
                                      scratch_data->get_min_cell_size(ls_dof_idx) *
                                        data_in.reinit.scale_factor_epsilon,
-                                   data_in.reinit.max_n_steps,
+                                   (unsigned int)data_in.ls.n_initial_reinit_steps,
                                    false});
 
         reinit_constant_epsilon     = data_in.reinit.constant_epsilon;     //@todo: better solution
