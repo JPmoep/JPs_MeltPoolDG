@@ -64,6 +64,12 @@ namespace MeltPoolDG
       current_time_increment *= factor;
     }
 
+    void
+    reset_max_n_time_steps(const int time_steps_in)
+    {
+      time_data.max_n_time_steps = time_steps_in;
+    }
+
     number
     get_current_time() const
     {
