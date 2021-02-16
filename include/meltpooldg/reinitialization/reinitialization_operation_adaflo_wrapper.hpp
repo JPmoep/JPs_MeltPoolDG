@@ -62,7 +62,6 @@ namespace MeltPoolDG
                                     cell_diameters,
                                     cell_diameter_min,
                                     cell_diameter_max);
-        set_adaflo_parameters(parameters, reinit_dof_idx, reinit_quad_idx, normal_dof_idx);
 
         /*
          * initialize normal_vector_operation from adaflo
