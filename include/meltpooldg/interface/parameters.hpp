@@ -53,6 +53,7 @@ namespace MeltPoolDG
   struct LevelSetData
   {
     bool        do_reinitialization     = false;
+    int         n_initial_reinit_steps  = -1.0;
     number      artificial_diffusivity  = 0.0;
     std::string time_integration_scheme = "crank_nicolson";
     number      start_time              = 0.0;
@@ -239,6 +240,13 @@ namespace MeltPoolDG
        */
       if (amr.min_grid_refinement_level == 1)
         amr.min_grid_refinement_level = base.global_refinements;
+
+      /*
+       *  set the number of initial reinitialization steps equal to the number of reinit steps
+       *  if no value is provided
+       */
+      if (ls.do_reinitialization && ls.n_initial_reinit_steps < 0.0)
+        ls.n_initial_reinit_steps = reinit.max_n_steps;
       /*
        *  set the melt pool center if not specified
        */
@@ -453,6 +461,10 @@ namespace MeltPoolDG
         prm.add_parameter("ls do reinitialization",
                           ls.do_reinitialization,
                           "Defines if reinitialization of level set function is activated");
+        prm.add_parameter(
+          "ls n initial reinit steps",
+          ls.n_initial_reinit_steps,
+          "Defines the number of initial reinitialization steps of the level set function.");
         prm.add_parameter("ls time integration scheme",
                           ls.time_integration_scheme,
                           "Determines the time integration scheme.",
