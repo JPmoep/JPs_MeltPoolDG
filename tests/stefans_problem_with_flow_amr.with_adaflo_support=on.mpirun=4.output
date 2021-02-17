@@ -1,0 +1,16 @@
+| normal vector:         i=15 	|n_0| = 6.45715122e-14 |n_1| = 213.88493701   
+    | reini: τ= 0.015625      | reini: τ= 0.03125       | reini: τ= 0.046875      | reini: τ= 0.0625        | reini: τ= 0.078125  | normal vector:         i=15 	|n_0| = 1.6392917588e-06|n_1| = 168.50435717   
+| curvature:         i=31 	|k| = 936.09769941   
+cycle: 0 n_dofs: 1089(ls) + 8450(vel) + 1089(p)
+cycle: 1 n_dofs: 1315(ls) + 10250(vel) + 1315(p)
+cycle: 2 n_dofs: 1765(ls) + 13842(vel) + 1765(p)
+cycle: 3 n_dofs: 2345(ls) + 18466(vel) + 2345(p)
+cycle: 4 n_dofs: 2345(ls) + 18466(vel) + 2345(p)
+t= 0.002     | normal vector:         i=47 	|n_0| = 1.6678490356e-06|n_1| = 592.88436711   
+| normal vector:         i=47 	|n_0| = 0.00012288516572|n_1| = 593.76013003   
+    | reini: τ= 0.015625      | reini: τ= 0.03125       | reini: τ= 0.046875      | reini: τ= 0.0625        | reini: τ= 0.078125  | normal vector:         i=47 	|n_0| = 4.5661130267e-06|n_1| = 581.04867338   
+| curvature:         i=31 	|k| = 960.17537312   
+| normal vector:         i=47 	|n_0| = 4.5661130267e-06|n_1| = 581.04867338   
+
+Time step #1, advancing from t_n-1 = 0 to t = 0.002 (dt = 0.002). 
+  Residual/iterations: [0.00284/ILU/25] [4.04e-05/19] [2.08e-09/4] [4.69e-10/conv.]

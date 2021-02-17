@@ -11,6 +11,7 @@
 #include <meltpooldg/interface/operator_base.hpp>
 #include <meltpooldg/interface/parameters.hpp>
 #include <meltpooldg/utilities/fe_integrator.hpp>
+#include <meltpooldg/utilities/vector_tools.hpp>
 
 namespace MeltPoolDG
 {
@@ -212,7 +213,9 @@ namespace MeltPoolDG
                     const vector grad_phi = advected_field.get_gradient(q_index);
 
                     const scalar velocity_grad_phi =
-                      scalar_product(map_to_vector(velocity.get_value(q_index)), grad_phi);
+                      scalar_product(MeltPoolDG::VectorTools::convert_to_vector<dim>(
+                                       velocity.get_value(q_index)),
+                                     grad_phi);
 
                     advected_field.submit_value(phi + this->d_tau * theta * velocity_grad_phi,
                                                 q_index);
@@ -263,7 +266,9 @@ namespace MeltPoolDG
                     const vector grad_phi = advected_field.get_gradient(q_index);
 
                     const scalar velocity_grad_phi =
-                      scalar_product(map_to_vector(velocity.get_value(q_index)), grad_phi);
+                      scalar_product(MeltPoolDG::VectorTools::convert_to_vector<dim>(
+                                       velocity.get_value(q_index)),
+                                     grad_phi);
                     advected_field.submit_value(phi -
                                                   this->d_tau * (1. - theta) * velocity_grad_phi,
                                                 q_index);
@@ -280,25 +285,6 @@ namespace MeltPoolDG
           src,
           false); // rhs should not be zeroed out in order to consider inhomogeneous dirichlet BC
       }
-
-    private:
-      static vector
-      map_to_vector(const scalar &in)
-      {
-        vector vec;
-
-        for (unsigned int v = 0; v < VectorizedArray<number>::size(); ++v)
-          vec[0][v] = in[v];
-
-        return vec;
-      }
-
-      static vector
-      map_to_vector(const vector &in)
-      {
-        return in;
-      }
-
 
     private:
       const ScratchData<dim> &              scratch_data;

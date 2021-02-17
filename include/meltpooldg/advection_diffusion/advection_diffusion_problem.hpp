@@ -21,6 +21,7 @@
 #include <deal.II/grid/grid_out.h>
 
 #include <deal.II/numerics/data_out.h>
+#include <deal.II/numerics/error_estimator.h>
 
 #include <deal.II/simplex/fe_lib.h>
 #include <deal.II/simplex/quadrature_lib.h>
@@ -33,6 +34,7 @@
 #include <meltpooldg/interface/scratch_data.hpp>
 #include <meltpooldg/interface/simulationbase.hpp>
 #include <meltpooldg/utilities/amr.hpp>
+#include <meltpooldg/utilities/postprocessor.hpp>
 #include <meltpooldg/utilities/timeiterator.hpp>
 
 namespace MeltPoolDG
@@ -77,7 +79,7 @@ namespace MeltPoolDG
             /*
              *  do paraview output if requested
              */
-            output_results(time_iterator.get_current_time_step_number(), base_in->parameters);
+            output_results(time_iterator.get_current_time_step_number());
 
             if (base_in->parameters.amr.do_amr)
               refine_mesh(base_in);
@@ -140,8 +142,6 @@ namespace MeltPoolDG
 
         constraints.clear();
         constraints.reinit(scratch_data->get_locally_relevant_dofs(advec_diff_dof_idx));
-        constraints.merge(hanging_node_constraints,
-                          AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
         for (const auto &bc : base_in->get_dirichlet_bc(
                "advection_diffusion")) // @todo: add name of bc at a more central place
           {
@@ -149,6 +149,8 @@ namespace MeltPoolDG
               scratch_data->get_mapping(), dof_handler, bc.first, *bc.second, constraints);
           }
         constraints.close();
+        constraints.merge(hanging_node_constraints,
+                          AffineConstraints<double>::MergeConflictBehavior::right_object_wins);
 
         /*
          *  create the matrix-free object
@@ -291,6 +293,14 @@ namespace MeltPoolDG
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
+        /*
+         *  initialize postprocessor
+         */
+        post_processor =
+          std::make_shared<Postprocessor<dim>>(scratch_data->get_mpi_comm(advec_diff_dof_idx),
+                                               base_in->parameters.paraview,
+                                               scratch_data->get_mapping(),
+                                               scratch_data->get_triangulation(advec_diff_dof_idx));
       }
 
       void
@@ -310,71 +320,25 @@ namespace MeltPoolDG
                                          advection_velocity);
       }
 
+      /*
+       *  perform output of results
+       */
       void
-      output_results(const unsigned int time_step, const Parameters<double> &parameters)
+      output_results(const unsigned int time_step)
       {
-        if (parameters.paraview.do_output)
-          {
-            const MPI_Comm mpi_communicator = scratch_data->get_mpi_comm();
+        const auto attach_output_vectors = [&](DataOut<dim> &data_out) {
+          advec_diff_operation->attach_output_vectors(data_out);
 
-            advec_diff_operation->get_advected_field().update_ghost_values();
-            advection_velocity.update_ghost_values();
-            /*
-             *  output advected field
-             */
-            DataOut<dim> data_out;
-            data_out.attach_dof_handler(dof_handler);
-            data_out.add_data_vector(advec_diff_operation->get_advected_field(), "advected_field");
-
-            /*
-             *  output advection velocity
-             */
-            std::vector<DataComponentInterpretation::DataComponentInterpretation>
-              vector_component_interpretation(
-                dim, DataComponentInterpretation::component_is_part_of_vector);
-
-            data_out.add_data_vector(dof_handler_velocity,
-                                     advection_velocity,
-                                     std::vector<std::string>(dim, "velocity"),
-                                     vector_component_interpretation);
-            /*
-             * write data to vtu file
-             */
-            data_out.build_patches(scratch_data->get_mapping());
-            data_out.write_vtu_with_pvtu_record("./",
-                                                parameters.paraview.filename,
-                                                time_step,
-                                                scratch_data->get_mpi_comm(),
-                                                parameters.paraview.n_digits_timestep,
-                                                parameters.paraview.n_groups);
-
-            advec_diff_operation->get_advected_field().zero_out_ghosts();
-            advection_velocity.zero_out_ghosts();
-            /*
-             * write data of boundary -- @todo: move to own utility function
-             */
-            if (parameters.paraview.print_boundary_id)
-              {
-                const unsigned int rank    = Utilities::MPI::this_mpi_process(mpi_communicator);
-                const unsigned int n_ranks = Utilities::MPI::n_mpi_processes(mpi_communicator);
-
-                const unsigned int n_digits =
-                  static_cast<int>(std::ceil(std::log10(std::fabs(n_ranks))));
-
-                std::string filename = "./solution_advection_diffusion_boundary_IDs" +
-                                       Utilities::int_to_string(rank, n_digits) + ".vtk";
-                std::ofstream output(filename.c_str());
-
-                GridOut           grid_out;
-                GridOutFlags::Vtk flags;
-                flags.output_cells         = false;
-                flags.output_faces         = true;
-                flags.output_edges         = false;
-                flags.output_only_relevant = false;
-                grid_out.set_flags(flags);
-                grid_out.write_vtk(scratch_data->get_dof_handler().get_triangulation(), output);
-              }
-          }
+          std::vector<DataComponentInterpretation::DataComponentInterpretation>
+            vector_component_interpretation(
+              dim, DataComponentInterpretation::component_is_part_of_vector);
+          advection_velocity.update_ghost_values();
+          data_out.add_data_vector(scratch_data->get_dof_handler(velocity_dof_idx),
+                                   advection_velocity,
+                                   std::vector<std::string>(dim, "velocity"),
+                                   vector_component_interpretation);
+        };
+        post_processor->process(time_step, attach_output_vectors);
       }
 
       /*
@@ -424,7 +388,8 @@ namespace MeltPoolDG
                                      post,
                                      setup_dof_system,
                                      base_in->parameters.amr,
-                                     dof_handler);
+                                     dof_handler,
+                                     time_iterator.get_current_time_step_number());
         constraints.distribute(advec_diff_operation->get_advected_field());
       }
 
@@ -449,6 +414,8 @@ namespace MeltPoolDG
       unsigned int velocity_dof_idx;
 
       unsigned int advec_diff_quad_idx;
+
+      std::shared_ptr<Postprocessor<dim>> post_processor;
     };
   } // namespace AdvectionDiffusion
 } // namespace MeltPoolDG

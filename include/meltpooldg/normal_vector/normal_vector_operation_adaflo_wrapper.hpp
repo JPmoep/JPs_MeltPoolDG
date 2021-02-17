@@ -4,20 +4,23 @@
  *
  * ---------------------------------------------------------------------*/
 #pragma once
-// for parallelization
-#include <deal.II/lac/generic_linear_algebra.h>
-// DoFTools
-#include <deal.II/dofs/dof_tools.h>
-// MeltPoolDG
-#include <meltpooldg/interface/operator_base.hpp>
-#include <meltpooldg/interface/parameters.hpp>
-#include <meltpooldg/normal_vector/normal_vector_operation_base.hpp>
-#include <meltpooldg/utilities/utilityfunctions.hpp>
 
-#include <adaflo/block_matrix_extension.h>
-#include <adaflo/level_set_okz_compute_normal.h>
-#include <adaflo/level_set_okz_preconditioner.h>
-#include <adaflo/util.h>
+#ifdef MELT_POOL_DG_WITH_ADAFLO
+
+// for parallelization
+#  include <deal.II/lac/generic_linear_algebra.h>
+// DoFTools
+#  include <deal.II/dofs/dof_tools.h>
+// MeltPoolDG
+#  include <meltpooldg/interface/operator_base.hpp>
+#  include <meltpooldg/interface/parameters.hpp>
+#  include <meltpooldg/normal_vector/normal_vector_operation_base.hpp>
+#  include <meltpooldg/utilities/utilityfunctions.hpp>
+
+#  include <adaflo/block_matrix_extension.h>
+#  include <adaflo/level_set_okz_compute_normal.h>
+#  include <adaflo/level_set_okz_preconditioner.h>
+#  include <adaflo/util.h>
 
 namespace MeltPoolDG
 {
@@ -142,6 +145,12 @@ namespace MeltPoolDG
         return normal_vector_field;
       }
 
+      LinearAlgebra::distributed::BlockVector<double> &
+      get_solution_normal_vector() override
+      {
+        return normal_vector_field;
+      }
+
       LevelSetOKZSolverComputeNormal<dim> &
       get_adaflo_obj()
       {
@@ -205,3 +214,4 @@ namespace MeltPoolDG
     };
   } // namespace NormalVector
 } // namespace MeltPoolDG
+#endif

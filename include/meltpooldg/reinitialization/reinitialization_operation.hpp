@@ -51,7 +51,6 @@ namespace MeltPoolDG
 
       void
       initialize(const std::shared_ptr<const ScratchData<dim>> &scratch_data_in,
-                 const VectorType &                             solution_level_set_in,
                  const Parameters<double> &                     data_in,
                  const unsigned int                             reinit_dof_idx_in,
                  const unsigned int                             reinit_quad_idx_in,
@@ -99,10 +98,6 @@ namespace MeltPoolDG
 #endif
         else
           AssertThrow(false, ExcNotImplemented());
-        /*
-         *    compute the normal vector field and update the initial solution
-         */
-        update_initial_solution(solution_level_set_in);
         /*
          *   create reinitialization operator. This class supports matrix-based
          *   and matrix-free computation.
@@ -247,10 +242,29 @@ namespace MeltPoolDG
         return solution_level_set;
       }
 
+      BlockVectorType &
+      get_normal_vector() override
+      {
+        return normal_vector_operation->get_solution_normal_vector();
+      }
+
       void
       attach_vectors(std::vector<LinearAlgebra::distributed::Vector<double> *> &vectors)
       {
         vectors.push_back(&solution_level_set);
+      }
+
+      void
+      attach_output_vectors(DataOut<dim> &data_out) const
+      {
+        solution_level_set.update_ghost_values();
+        data_out.attach_dof_handler(scratch_data->get_dof_handler(reinit_dof_idx));
+        data_out.add_data_vector(get_level_set(), "psi");
+
+        //@todo: attach_output_vectors from normal_vector_operation
+        get_normal_vector().update_ghost_values();
+        for (unsigned int d = 0; d < dim; ++d)
+          data_out.add_data_vector(get_normal_vector().block(d), "normal_" + std::to_string(d));
       }
 
 

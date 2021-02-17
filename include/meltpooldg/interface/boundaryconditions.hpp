@@ -34,6 +34,7 @@ namespace MeltPoolDG
     std::vector<types::boundary_id>                              no_slip_bc;
     std::vector<types::boundary_id>                              fix_pressure_constant;
     std::vector<types::boundary_id>                              symmetry_bc;
+    std::vector<types::boundary_id>                              open_boundary_bc;
 
     inline DEAL_II_ALWAYS_INLINE BoundaryTypes
     get_boundary_type(types::boundary_id id)

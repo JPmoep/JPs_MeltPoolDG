@@ -82,7 +82,7 @@ If you prefer dynamic linking, make sure that you are compiling adaflo with `-D 
 As an example the simulation of the newly created "vortex_bubble" is demonstrated using 4 processes:
 ```bash  
 make -j 4 
-mpirun -np 4 ./run_simulation ../include/meltpooldg/simulations/vortex_bubble.json
+mpirun -np 4 ./meltpooldg ../include/meltpooldg/simulations/vortex_bubble.json
 ```
 
 

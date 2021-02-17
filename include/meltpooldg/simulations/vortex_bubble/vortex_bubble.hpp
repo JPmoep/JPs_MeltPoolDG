@@ -153,8 +153,11 @@ namespace MeltPoolDG
           else
 #endif
             {
-              GridGenerator::hyper_cube(*this->triangulation, left_domain, right_domain);
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
+              GridGenerator::subdivided_hyper_cube(*this->triangulation,
+                                                   2,
+                                                   left_domain,
+                                                   right_domain);
+              this->triangulation->refine_global(this->parameters.base.global_refinements - 1);
             }
         }
 
@@ -164,8 +167,7 @@ namespace MeltPoolDG
           /*
            *  create a pair of (boundary_id, dirichlet_function)
            */
-          constexpr types::boundary_id inflow_bc  = 42;
-          constexpr types::boundary_id do_nothing = 0;
+          constexpr types::boundary_id inflow_bc = 42;
 
           this->attach_dirichlet_boundary_condition(inflow_bc,
                                                     std::make_shared<DirichletCondition<dim>>(),
@@ -187,13 +189,14 @@ namespace MeltPoolDG
            */
           if constexpr (dim == 2)
             {
-              for (auto &face : this->triangulation->active_face_iterators())
-                if ((face->at_boundary()))
-                  face->set_boundary_id(inflow_bc);
+              for (const auto &cell : this->triangulation->cell_iterators())
+                for (const auto &face : cell->face_iterators())
+                  if ((face->at_boundary()))
+                    face->set_boundary_id(inflow_bc);
             }
           else
             {
-              (void)do_nothing; // suppress unused variable for 1D
+              AssertThrow(false, ExcNotImplemented());
             }
         }
 

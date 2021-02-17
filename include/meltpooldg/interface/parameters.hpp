@@ -39,18 +39,21 @@ namespace MeltPoolDG
 
   struct AdaptiveMeshingData
   {
-    bool         do_amr                      = false;
-    double       upper_perc_to_refine        = 0.0;
-    double       lower_perc_to_coarsen       = 0.0;
-    int          n_initial_refinement_cycles = 0;
-    unsigned int max_grid_refinement_level   = 12;
-    int          min_grid_refinement_level   = 1;
+    bool         do_amr                       = false;
+    bool         do_not_modify_boundary_cells = true;
+    double       upper_perc_to_refine         = 0.0;
+    double       lower_perc_to_coarsen        = 0.0;
+    int          n_initial_refinement_cycles  = 0;
+    int          every_n_step                 = 1;
+    unsigned int max_grid_refinement_level    = 12;
+    int          min_grid_refinement_level    = 1;
   };
 
   template <typename number = double>
   struct LevelSetData
   {
     bool        do_reinitialization     = false;
+    int         n_initial_reinit_steps  = -1.0;
     number      artificial_diffusivity  = 0.0;
     std::string time_integration_scheme = "crank_nicolson";
     number      start_time              = 0.0;
@@ -133,12 +136,16 @@ namespace MeltPoolDG
     std::string temperature_formulation              = "analytical";
     number      temperature_x_to_y_ratio             = 1.0;
     number      laser_power                          = 0.0;
+    std::string laser_power_over_time                = "constant";
+    number      laser_power_start_time               = 0.0;
+    number      laser_power_end_time                 = 0.0;
     std::string laser_center                         = "0,0,0";
     std::string melt_pool_center                     = "not_initialized";
     std::string melt_pool_shape                      = "ellipse";
     number      scan_speed                           = 0.0;
     bool        do_move_laser                        = false;
     bool        set_velocity_to_zero_in_solid        = false;
+    bool        set_level_set_to_zero_in_solid       = false;
     number      ambient_temperature                  = 0.0;
     number      domain_x_min                         = 0.0;
     number      domain_y_min                         = 0.0;
@@ -169,10 +176,21 @@ namespace MeltPoolDG
   };
 
   template <typename number = double>
+  struct EvaporationData
+  {
+    number evaporative_mass_flux = 0.0;
+    number density_liquid        = 0.0;
+    number density_gas           = 0.0;
+    number ls_value_liquid       = 1.0;
+    number ls_value_gas          = -1.0;
+  };
+
+  template <typename number = double>
   struct ParaviewData
   {
     bool        do_output           = false;
     std::string filename            = "solution";
+    std::string directory           = "./";
     int         write_frequency     = 1;
     bool        do_initial_state    = true;
     bool        print_levelset      = true;
@@ -222,6 +240,13 @@ namespace MeltPoolDG
        */
       if (amr.min_grid_refinement_level == 1)
         amr.min_grid_refinement_level = base.global_refinements;
+
+      /*
+       *  set the number of initial reinitialization steps equal to the number of reinit steps
+       *  if no value is provided
+       */
+      if (ls.do_reinitialization && ls.n_initial_reinit_steps < 0.0)
+        ls.n_initial_reinit_steps = reinit.max_n_steps;
       /*
        *  set the melt pool center if not specified
        */
@@ -232,12 +257,20 @@ namespace MeltPoolDG
        */
       if (mp.max_temperature < mp.boiling_temperature)
         mp.max_temperature = mp.boiling_temperature + 500;
+      /*
+       *  check if level set assignment of gaseous/liquid phase is done correctly
+       */
+      if (evapor.ls_value_liquid == evapor.ls_value_gas)
+        AssertThrow(false,
+                    ExcMessage(
+                      "Parameterhandler: ls value liquid must not be equal to ls value gas."));
         /*
          *  parameters for adaflo
          */
 #ifdef MELT_POOL_DG_WITH_ADAFLO
 
-      if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool"))
+      if ((base.problem_name == "two_phase_flow") || (base.problem_name == "melt_pool") ||
+          (base.problem_name == "two_phase_flow_with_evaporation"))
         {
           adaflo_params.parse_parameters(parameter_filename);
           // WARNING: by setting the differences to a non-zero value we force
@@ -251,7 +284,19 @@ namespace MeltPoolDG
           adaflo_params.params.density_diff   = 1.0;
           adaflo_params.params.viscosity_diff = 1.0;
 
-          flow.density   = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+          if ((evapor.density_gas > 0) && (evapor.density_liquid > 0))
+            {
+              flow.density = (evapor.density_gas > 0.0) && (evapor.ls_value_gas == -1) ?
+                               evapor.density_gas :
+                               evapor.density_liquid;
+
+              flow.density_difference = (flow.density == evapor.density_gas) ?
+                                          evapor.density_liquid - evapor.density_gas :
+                                          evapor.density_gas - evapor.density_liquid;
+            }
+          else
+            flow.density = (flow.density > 0.0) ? flow.density : adaflo_params.params.density;
+
           flow.viscosity = (flow.viscosity > 0.0) ? flow.viscosity : adaflo_params.params.viscosity;
           flow.velocity_degree        = (flow.velocity_degree > 0.0) ?
                                           flow.velocity_degree :
@@ -268,7 +313,6 @@ namespace MeltPoolDG
           adaflo_params.params.time_step_size_max   = flow.time_step_size;
           adaflo_params.params.use_simplex_mesh     = base.do_simplex;
         }
-
 #endif
     }
 
@@ -313,7 +357,7 @@ namespace MeltPoolDG
           base.problem_name,
           "Sets the base name for the problem that should be solved.",
           Patterns::Selection(
-            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool"));
+            "advection_diffusion|reinitialization|level_set|two_phase_flow|melt_pool|level_set_with_evaporation|two_phase_flow_with_evaporation"));
         prm.add_parameter("dimension", base.dimension, "Defines the dimension of the problem");
         prm.add_parameter("global refinements",
                           base.global_refinements,
@@ -337,6 +381,9 @@ namespace MeltPoolDG
         prm.add_parameter("do amr",
                           amr.do_amr,
                           "Sets this parameter to true to activate adaptive meshing");
+        prm.add_parameter("do not modify boundary cells",
+                          amr.do_not_modify_boundary_cells,
+                          "Sets this parameter to true to not refine/coarsen along boundaries.");
         prm.add_parameter("upper perc to refine",
                           amr.upper_perc_to_refine,
                           "Defines the (upper) percentage of elements that should be refined");
@@ -354,6 +401,9 @@ namespace MeltPoolDG
         prm.add_parameter("n initial refinement cycles",
                           amr.n_initial_refinement_cycles,
                           "Defines the number of initial refinements.");
+        prm.add_parameter("every n step",
+                          amr.every_n_step,
+                          "Defines at every nth step the amr should be performed.");
       }
       prm.leave_subsection();
       /*
@@ -411,6 +461,10 @@ namespace MeltPoolDG
         prm.add_parameter("ls do reinitialization",
                           ls.do_reinitialization,
                           "Defines if reinitialization of level set function is activated");
+        prm.add_parameter(
+          "ls n initial reinit steps",
+          ls.n_initial_reinit_steps,
+          "Defines the number of initial reinitialization steps of the level set function.");
         prm.add_parameter("ls time integration scheme",
                           ls.time_integration_scheme,
                           "Determines the time integration scheme.",
@@ -613,9 +667,17 @@ namespace MeltPoolDG
         prm.add_parameter("mp temperature x to y ratio",
                           mp.temperature_x_to_y_ratio,
                           "This factor scales the analytical temperature field to be anisotropic.");
-        prm.add_parameter("mp laser power",
-                          mp.laser_power, //@todo: add user input function
-                          "Intensity of the laser");
+        prm.add_parameter("mp laser power", mp.laser_power, "Intensity of the laser");
+        prm.add_parameter("mp laser power over time",
+                          mp.laser_power_over_time,
+                          "Temporal distribution of the laser power",
+                          Patterns::Selection("constant|ramp"));
+        prm.add_parameter("mp laser power start time",
+                          mp.laser_power_start_time,
+                          "In case of time-dependent laser power: activation time of laser.");
+        prm.add_parameter("mp laser power end time",
+                          mp.laser_power_end_time,
+                          "In case of time-dependent laser power: end time of laser.");
         prm.add_parameter("mp laser center",
                           mp.laser_center,
                           "Center coordinates of the laser beam on the interface melt/gas.");
@@ -651,6 +713,10 @@ namespace MeltPoolDG
           "mp set velocity to zero in solid",
           mp.set_velocity_to_zero_in_solid,
           "Set this parameter to true to constrain the flow velocity in the solid domain.");
+        prm.add_parameter(
+          "mp set level set to zero in solid",
+          mp.set_level_set_to_zero_in_solid,
+          "Set this parameter to true to constrain the level set in the solid domain.");
         prm.add_parameter("mp ambient temperature",
                           mp.ambient_temperature,
                           "Ambient temperature in the inert gas.");
@@ -702,6 +768,30 @@ namespace MeltPoolDG
       }
       prm.leave_subsection();
       /*
+       *  evaporation
+       */
+      prm.enter_subsection("evaporation");
+      {
+        prm.add_parameter("evapor evaporative mass flux",
+                          evapor.evaporative_mass_flux,
+                          "Mass flux due to evaporation (SI unit in kg/m²s).");
+        prm.add_parameter("evapor density liquid",
+                          evapor.density_liquid,
+                          "Density value of the liquid fluid.");
+        prm.add_parameter("evapor density gas",
+                          evapor.density_gas,
+                          "Density value of the gaseous fluid.");
+        prm.add_parameter("evapor ls value liquid",
+                          evapor.ls_value_liquid,
+                          "Set the level set value corresponding to the liquid domain.",
+                          Patterns::Selection("1|-1|1.|-1.|1.0|-1.0"));
+        prm.add_parameter("evapor ls value gas",
+                          evapor.ls_value_gas,
+                          "Set the level set value corresponding to the gaseous domain.",
+                          Patterns::Selection("1|-1|1.|-1.|1.0|-1.0"));
+      }
+      prm.leave_subsection();
+      /*
        *   paraview
        */
       prm.enter_subsection("paraview");
@@ -712,6 +802,9 @@ namespace MeltPoolDG
         prm.add_parameter("paraview filename",
                           paraview.filename,
                           "Sets the base name for the paraview file output.");
+        prm.add_parameter("paraview directory",
+                          paraview.directory,
+                          "Sets the base directory for the paraview file output.");
         prm.add_parameter("paraview write frequency",
                           paraview.write_frequency,
                           "every n timestep that should be written");
@@ -783,6 +876,7 @@ namespace MeltPoolDG
     NormalVectorData<number>       normal_vec;
     CurvatureData<number>          curv;
     MeltPoolData<number>           mp;
+    EvaporationData<number>        evapor;
     ParaviewData<number>           paraview;
     OutputData<number>             output;
     Flow::AdafloWrapperParameters  adaflo_params;

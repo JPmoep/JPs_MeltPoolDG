@@ -169,8 +169,11 @@ namespace MeltPoolDG
           else
 #endif
             {
-              GridGenerator::hyper_cube(*this->triangulation, left_domain, right_domain);
-              this->triangulation->refine_global(this->parameters.base.global_refinements);
+              GridGenerator::subdivided_hyper_cube(*this->triangulation,
+                                                   2,
+                                                   left_domain,
+                                                   right_domain);
+              this->triangulation->refine_global(this->parameters.base.global_refinements - 1);
             }
         }
 
@@ -185,7 +188,7 @@ namespace MeltPoolDG
 
           this->attach_dirichlet_boundary_condition(inflow_bc,
                                                     std::make_shared<DirichletCondition<dim>>(),
-                                                    this->parameters.base.problem_name);
+                                                    "level_set");
           /*
            *  mark inflow edges with boundary label (no boundary on outflow edges must be prescribed
            *  due to the hyperbolic nature of the analyzed problem
@@ -203,22 +206,23 @@ namespace MeltPoolDG
            */
           if constexpr (dim == 2)
             {
-              for (auto &face : this->triangulation->active_face_iterators())
-                if ((face->at_boundary()))
-                  {
-                    const double half_line = (right_domain + left_domain) / 2;
+              for (const auto &cell : this->triangulation->cell_iterators())
+                for (const auto &face : cell->face_iterators())
+                  if ((face->at_boundary()))
+                    {
+                      const double half_line = (right_domain + left_domain) / 2;
 
-                    if (face->center()[0] == left_domain && face->center()[1] > half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[0] == right_domain && face->center()[1] < half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[1] == right_domain && face->center()[0] > half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else if (face->center()[1] == left_domain && face->center()[0] < half_line)
-                      face->set_boundary_id(inflow_bc);
-                    else
-                      face->set_boundary_id(do_nothing);
-                  }
+                      if (face->center()[0] == left_domain && face->center()[1] > half_line)
+                        face->set_boundary_id(inflow_bc);
+                      else if (face->center()[0] == right_domain && face->center()[1] < half_line)
+                        face->set_boundary_id(inflow_bc);
+                      else if (face->center()[1] == right_domain && face->center()[0] > half_line)
+                        face->set_boundary_id(inflow_bc);
+                      else if (face->center()[1] == left_domain && face->center()[0] < half_line)
+                        face->set_boundary_id(inflow_bc);
+                      else
+                        face->set_boundary_id(do_nothing);
+                    }
             }
           else
             {

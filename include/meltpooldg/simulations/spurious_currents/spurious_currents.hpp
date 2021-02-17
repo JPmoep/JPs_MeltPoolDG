@@ -26,8 +26,9 @@ namespace MeltPoolDG
       class InitializePhi : public Function<dim>
       {
       public:
-        InitializePhi()
+        InitializePhi(const double eps)
           : Function<dim>()
+          , eps(eps)
         {}
         virtual double
         value(const Point<dim> &p, const unsigned int component = 0) const
@@ -39,12 +40,16 @@ namespace MeltPoolDG
           for (unsigned int d = 0; d < dim; ++d)
             center[d] = 0.02 + 0.01 * d;
 
-          return UtilityFunctions::CharacteristicFunctions::sgn(
-           UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5));
-          //double distance       = std::numeric_limits<double>::max();
-          //distance = UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5);
-          //std::cout << "Initialize Phi = " << distance << std::endl;
+          return UtilityFunctions::CharacteristicFunctions::tanh_characteristic_function(
+            UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5), eps);
+
+          // Alternative if no signed distance function should be used in the beginning:
+          //
+          // return UtilityFunctions::CharacteristicFunctions::sgn(
+          // UtilityFunctions::DistanceFunctions::spherical_manifold<dim>(p, center, 0.5));
         }
+
+        double eps = 0.0;
       };
 
       /*
@@ -60,6 +65,7 @@ namespace MeltPoolDG
         {
           this->set_parameters();
         }
+
 
         void
         create_spatial_discretization() override
@@ -90,7 +96,22 @@ namespace MeltPoolDG
         void
         set_field_conditions() override
         {
-          this->attach_initial_condition(std::make_shared<InitializePhi<dim>>(), "level_set");
+          double eps = 0.0;
+          if (this->parameters.reinit.implementation == "adaflo" ||
+              this->parameters.ls.implementation == "adaflo")
+            eps = this->parameters.reinit.constant_epsilon > 0.0 ?
+                    this->parameters.reinit.constant_epsilon :
+                    GridTools::minimal_cell_diameter(*this->triangulation) /
+                      this->parameters.base.degree / std::sqrt(dim);
+          else
+            eps = this->parameters.reinit.constant_epsilon > 0.0 ?
+                    this->parameters.reinit.constant_epsilon :
+                    GridTools::minimal_cell_diameter(*this->triangulation) / std::sqrt(dim) *
+                      this->parameters.reinit.scale_factor_epsilon;
+
+          AssertThrow(eps > 0, ExcNotImplemented());
+
+          this->attach_initial_condition(std::make_shared<InitializePhi<dim>>(eps), "level_set");
           this->attach_initial_condition(std::make_shared<Functions::ZeroFunction<dim>>(dim),
                                          "navier_stokes_u");
         }

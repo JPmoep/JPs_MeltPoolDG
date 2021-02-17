@@ -1,0 +1,54 @@
+{
+  "base" : {
+    "problem name": "level_set_with_evaporation",
+    "application name": "rotating_bubble",
+    "dimension": "2",
+    "global refinements": "7",
+    "degree": "1",
+    "do print parameters": "false"
+  },
+  "levelset" : {
+    "ls do reinitialization": "true",
+    "ls artificial diffusivity": "0.0",
+    "ls time integration scheme" : "crank_nicolson",
+    "ls start time": "0.0",
+    "ls end time": "0.05",
+    "ls time step size": "0.01",
+    "ls do matrix free": "true",
+    "ls implementation": "meltpooldg"
+  },
+  "adaptive meshing" : {
+    "do amr":                    "false",
+    "do not modify boundary cells": "false",
+    "upper perc to refine": "     0.15",
+    "lower perc to coarsen":     "0.15",
+    "n initial refinement cycles": "5",
+    "max grid refinement level": "8",
+    "every n step": "1"
+  },
+  "reinitialization" : {
+    "reinit max n steps": "2",
+    "reinit modeltype": "olsson2007",
+    "reinit do matrix free": "true",
+    "reinit implementation": "meltpooldg",
+    "reinit constant epsilon": "0.01"
+  },
+  "normal vector": { 
+    "normal vec do matrix free": "true",
+    "normal vec implementation": "meltpooldg"
+  },
+  "curvature":{ 
+    "curv do matrix free": "true",
+    "curv implementation": "meltpooldg"
+  },
+  "evaporation" : {
+    "evapor evaporative mass flux": "1.0e-4",
+    "evapor density liquid": "1",
+    "evapor density gas": "0.01",
+    "evapor ls value liquid":"1",
+    "evapor ls value gas": "-1"
+  },
+  "paraview" : {
+    "paraview do output": "false"
+  }
+}

@@ -32,6 +32,7 @@ namespace MeltPoolDG
        */
       VectorType temperature;
       VectorType solid;
+      VectorType liquid;
       /*
        *  All the necessary parameters are stored in this struct.
        */
@@ -48,7 +49,7 @@ namespace MeltPoolDG
                  const unsigned int                             flow_quad_idx_in,
                  const unsigned int                             temp_dof_idx_in,
                  const unsigned int                             temp_quad_idx_in,
-                 const VectorType &                             level_set_as_heaviside)
+                 const double                                   start_time_in)
       {
         scratch_data     = scratch_data_in;
         ls_dof_idx       = ls_dof_idx_in;
@@ -56,10 +57,7 @@ namespace MeltPoolDG
         flow_quad_idx    = flow_quad_idx_in;
         temp_dof_idx     = temp_dof_idx_in;
         temp_quad_idx    = temp_quad_idx_in;
-        /*
-         *  set the advection diffusion data
-         */
-        mp_data = data_in.mp;
+        time             = start_time_in;
         /*
          *  set the parameters for the melt pool operation
          */
@@ -69,6 +67,11 @@ namespace MeltPoolDG
          */
         laser_center =
           MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(mp_data.laser_center);
+      }
+
+      void
+      set_initial_condition(const VectorType &level_set_as_heaviside)
+      {
         /*
          *  Initialize the temperature field
          */
@@ -87,6 +90,7 @@ namespace MeltPoolDG
                                     const double      dt,
                                     bool              zero_out = true)
       {
+        time += dt;
         // 1) compute the current center of the laser beam
         if (mp_data.do_move_laser)
           laser_center[0] += mp_data.scan_speed * dt;
@@ -255,6 +259,7 @@ namespace MeltPoolDG
 
         scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
         scratch_data->initialize_dof_vector(solid, temp_dof_idx);
+        scratch_data->initialize_dof_vector(liquid, temp_dof_idx);
 
         FEValues<dim> fe_values(scratch_data->get_mapping(),
                                 scratch_data->get_dof_handler(temp_dof_idx).get_fe(),
@@ -282,6 +287,8 @@ namespace MeltPoolDG
                                                  level_set_as_heaviside[local_dof_indices[i]]);
                   solid[local_dof_indices[i]] =
                     is_solid_region(support_points[local_dof_indices[i]]);
+                  liquid[local_dof_indices[i]] =
+                    is_liquid_region(support_points[local_dof_indices[i]]);
                 }
             }
 
@@ -300,6 +307,7 @@ namespace MeltPoolDG
       {
         const unsigned int dofs_per_cell = flow_dof_handler.get_fe().n_dofs_per_cell();
 
+
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
         std::map<types::global_dof_index, Point<dim>> support_points;
@@ -312,6 +320,7 @@ namespace MeltPoolDG
 
         AffineConstraints<double> solid_constraints;
         solid_constraints.reinit(flow_locally_relevant_dofs);
+        DoFTools::make_hanging_node_constraints(flow_dof_handler, solid_constraints);
 
         for (const auto &cell : flow_dof_handler.active_cell_iterators())
           if (cell->is_locally_owned())
@@ -320,11 +329,91 @@ namespace MeltPoolDG
 
               for (unsigned int i = 0; i < dofs_per_cell; ++i)
                 if (is_solid_region(support_points[local_dof_indices[i]]))
-                  solid_constraints.add_line(local_dof_indices[i]);
+                  {
+                    solid_constraints.add_line(local_dof_indices[i]);
+                  }
             }
+
         solid_constraints.close();
         flow_constraints.merge(solid_constraints,
                                AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
+      }
+
+      void
+      set_level_set(VectorType &level_set)
+      {
+        level_set.update_ghost_values();
+
+        FEValues<dim> fe_values(scratch_data->get_mapping(),
+                                scratch_data->get_dof_handler(temp_dof_idx).get_fe(),
+                                scratch_data->get_quadrature(temp_quad_idx),
+                                update_values | update_gradients | update_quadrature_points |
+                                  update_JxW_values);
+
+        const unsigned int dofs_per_cell = scratch_data->get_n_dofs_per_cell(temp_dof_idx);
+
+        std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
+        std::map<types::global_dof_index, Point<dim>> support_points;
+        DoFTools::map_dofs_to_support_points(scratch_data->get_mapping(),
+                                             scratch_data->get_dof_handler(temp_dof_idx),
+                                             support_points);
+
+        for (const auto &cell : scratch_data->get_dof_handler(temp_dof_idx).active_cell_iterators())
+          if (cell->is_locally_owned())
+            {
+              cell->get_dof_indices(local_dof_indices);
+              for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                {
+                  if (liquid[local_dof_indices[i]])
+                    level_set[local_dof_indices[i]] = 1.0;
+                  else if (is_solid_region(support_points[local_dof_indices[i]]))
+                    level_set[local_dof_indices[i]] = 0.0;
+                  else
+                    level_set[local_dof_indices[i]] = -1.0;
+                }
+            }
+        level_set.zero_out_ghosts();
+      }
+
+      void
+      remove_the_level_set_from_solid_regions(const DoFHandler<dim> &    level_set_dof_handler,
+                                              AffineConstraints<double> &level_set_constraints)
+
+
+      {
+        FEValues<dim> fe_values(scratch_data->get_mapping(),
+                                level_set_dof_handler.get_fe(),
+                                scratch_data->get_quadrature(flow_quad_idx),
+                                update_values);
+
+        const unsigned int dofs_per_cell = level_set_dof_handler.get_fe().n_dofs_per_cell();
+
+        std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
+        std::map<types::global_dof_index, Point<dim>> support_points;
+        DoFTools::map_dofs_to_support_points(scratch_data->get_mapping(),
+                                             level_set_dof_handler,
+                                             support_points);
+
+        AffineConstraints<double> solid_constraints;
+
+        IndexSet ls_locally_relevant_dofs;
+        DoFTools::extract_locally_relevant_dofs(level_set_dof_handler, ls_locally_relevant_dofs);
+
+        solid_constraints.reinit(ls_locally_relevant_dofs);
+        for (const auto &cell : level_set_dof_handler.active_cell_iterators())
+          if (cell->is_locally_owned())
+            {
+              cell->get_dof_indices(local_dof_indices);
+
+              for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                if (is_solid_region(support_points[local_dof_indices[i]]))
+                  solid_constraints.add_line(local_dof_indices[i]);
+            }
+        level_set_constraints.merge(
+          solid_constraints, AffineConstraints<double>::MergeConflictBehavior::left_object_wins);
+        level_set_constraints.close();
       }
 
       void
@@ -332,6 +421,7 @@ namespace MeltPoolDG
       {
         scratch_data->initialize_dof_vector(temperature, temp_dof_idx);
         scratch_data->initialize_dof_vector(solid, temp_dof_idx);
+        scratch_data->initialize_dof_vector(liquid, temp_dof_idx);
       }
 
       void
@@ -339,8 +429,30 @@ namespace MeltPoolDG
       {
         temperature.update_ghost_values();
         solid.update_ghost_values();
+        liquid.update_ghost_values();
         vectors.push_back(&temperature);
         vectors.push_back(&solid);
+        vectors.push_back(&liquid);
+      }
+
+      void
+      attach_output_vectors(DataOut<dim> &data_out) const
+      {
+        MeltPoolDG::VectorTools::update_ghost_values(temperature, solid, liquid);
+        /**
+         *  temperature
+         */
+        data_out.add_data_vector(scratch_data->get_dof_handler(temp_dof_idx),
+                                 temperature,
+                                 "temperature");
+        /**
+         *  solid
+         */
+        data_out.add_data_vector(scratch_data->get_dof_handler(temp_dof_idx), solid, "solid");
+        /**
+         *  liquid
+         */
+        data_out.add_data_vector(scratch_data->get_dof_handler(temp_dof_idx), liquid, "liquid");
       }
 
     private:
@@ -362,9 +474,25 @@ namespace MeltPoolDG
             //
             //  In order to capture anisotropic temperature fields, a modification is introduced.
             const double indicator = UtilityFunctions::CharacteristicFunctions::heaviside(phi, 0.5);
-            const double &P        = mp_data.laser_power;
-            const double &v        = mp_data.scan_speed;
-            const double &T0       = mp_data.ambient_temperature;
+
+
+            double laser_intensity = 1.0;
+            if (mp_data.laser_power_over_time == "ramp")
+              {
+                AssertThrow(
+                  mp_data.laser_power_end_time > mp_data.laser_power_start_time,
+                  ExcMessage(
+                    "For the temporal ramp distribution of the laser power,"
+                    " the parameter laser power end time must be larger than laser power start time."));
+                laser_intensity = (time - mp_data.laser_power_start_time) /
+                                  (mp_data.laser_power_end_time - mp_data.laser_power_start_time);
+                laser_intensity = std::min(std::max(0.0, laser_intensity), 1.0);
+              }
+
+
+            const double &P  = mp_data.laser_power * laser_intensity;
+            const double &v  = mp_data.scan_speed;
+            const double &T0 = mp_data.ambient_temperature;
             const double &absorptivity =
               (indicator == 1) ? mp_data.liquid.absorptivity : mp_data.gas.absorptivity;
             const double &conductivity =
@@ -396,8 +524,8 @@ namespace MeltPoolDG
        *  This function determines for a given point, whether it belongs to the solid domain.
        *
        *  WARNING: All points above (component dim-1) the center point of the laser source are
-       * automatically identified as gaseous parts. Thus, this function has to be modified when the
-       * initial interface between the feedstock and the ambient gas is not planar.
+       *  automatically identified as gaseous parts. Thus, this function has to be modified when the
+       *  initial interface between the feedstock and the ambient gas is not planar.
        */
       bool
       is_solid_region(const Point<dim> point)
@@ -442,6 +570,51 @@ namespace MeltPoolDG
           }
       }
 
+      /*
+       * check if a given point is liquid
+       */
+      bool
+      is_liquid_region(const Point<dim> point)
+      {
+        if (mp_data.liquid.melt_pool_radius == 0)
+          return false;
+        else if (point[dim - 1] >= laser_center[dim - 1])
+          return false;
+        else
+          {
+            Point<dim> shifted_center =
+              MeltPoolDG::UtilityFunctions::convert_string_coords_to_point<dim>(
+                mp_data.melt_pool_center);
+
+            if (mp_data.melt_pool_shape == "parabola")
+              {
+                if (dim == 2)
+                  {
+                    const double sign =
+                      -2 * mp_data.liquid.melt_pool_radius * (point[1] - shifted_center[1]) +
+                      std::pow(point[0] - shifted_center[0], 2);
+                    return (sign >= 0) ? false : true;
+                  }
+                else
+                  AssertThrow(false, ExcMessage("not implemented"));
+              }
+            else if (mp_data.melt_pool_shape == "ellipse")
+              return UtilityFunctions::DistanceFunctions::ellipsoidal_manifold<dim>(
+                       point,
+                       shifted_center,
+                       mp_data.liquid.melt_pool_radius,
+                       mp_data.liquid.melt_pool_depth) > 0 ?
+                       true :
+                       false;
+            else if (mp_data.melt_pool_shape == "temperature_dependent")
+              return (analytical_temperature_field(point, 1.0 /* is_liquid */) >=
+                      mp_data.liquid.melting_point) ?
+                       true :
+                       false;
+            else
+              AssertThrow(false, ExcMessage("not implemented"));
+          }
+      }
       /**
        *  This function computes the recoil pressure coefficient for a given temperature value
        *  dependent on the input parameters.
@@ -471,6 +644,11 @@ namespace MeltPoolDG
       unsigned int flow_quad_idx;
       unsigned int temp_dof_idx;
       unsigned int temp_quad_idx;
+
+      /*
+       *  current time
+       */
+      double time;
     };
   } // namespace MeltPool
 } // namespace MeltPoolDG

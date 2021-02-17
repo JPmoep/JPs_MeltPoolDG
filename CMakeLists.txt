@@ -10,9 +10,7 @@ MESSAGE("_______________________________________________________________________
 
 
 # this is the standard deal.II search mechanism, including check for Trilinos and p4est
-
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
-
+cmake_minimum_required(VERSION 3.3)  
 set(CMAKE_CXX_STANDARD 17)
 
 ## avoid in-source compilation
@@ -32,6 +30,8 @@ IF(NOT ${deal.II_FOUND})
     "or set an environment variable \"DEAL_II_DIR\" that contains this path."
     )
 ENDIF()
+
+MESSAGE("-- deal.II found: ${DEAL_II_DIR}")
 
 IF(NOT DEAL_II_WITH_P4EST)
   MESSAGE(FATAL_ERROR
@@ -56,15 +56,19 @@ INCLUDE_DIRECTORIES(include ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 PROJECT(MeltPoolDG)
 
-ADD_LIBRARY(MeltPoolDG ${TARGET_SRC})
+SET(projectName "meltpooldg")
+
+message("-- building project: ${CMAKE_PROJECT_NAME}")
+ADD_EXECUTABLE(${projectName} 
+                meltpooldg.cpp)
 
 FIND_LIBRARY(ADAFLO adaflo HINTS ${ADAFLO_LIB})
-MESSAGE(${ADAFLO}) 
 IF(ADAFLO)
-      TARGET_COMPILE_DEFINITIONS(MeltPoolDG PUBLIC MELT_POOL_DG_WITH_ADAFLO)
-      TARGET_INCLUDE_DIRECTORIES(MeltPoolDG PUBLIC ${ADAFLO_INCLUDE})
-      TARGET_LINK_LIBRARIES(MeltPoolDG ${ADAFLO})
-      SET(DEAL_II_WITH_ADAFLO_SUPPORT ON )
+  MESSAGE("-- Adaflo found: ${ADAFLO}") 
+  TARGET_COMPILE_DEFINITIONS(${projectName} PUBLIC MELT_POOL_DG_WITH_ADAFLO)
+  TARGET_INCLUDE_DIRECTORIES(${projectName} PUBLIC ${ADAFLO_INCLUDE})
+  TARGET_LINK_LIBRARIES(${projectName} ${ADAFLO})
+  SET(DEAL_II_WITH_ADAFLO_SUPPORT ON )
 ENDIF()
 
 # Define custom targets to easily switch the build type:
@@ -81,19 +85,11 @@ ADD_CUSTOM_TARGET(release
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 IF(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
-  MESSAGE("Tests found")
   SET(DEAL_II_HAVE_TESTS_DIRECTORY TRUE)
 ENDIF()
 
-SET(projectName "run_simulation")
-
-message("--------- building project: ${CMAKE_PROJECT_NAME}")
-ADD_EXECUTABLE(${projectName} 
-                run_simulation.cpp)
 
 DEAL_II_SETUP_TARGET(${projectName})
-
-TARGET_LINK_LIBRARIES(${projectName} ${CMAKE_PROJECT_NAME})
 
 #tests
 SET(_n_tests "0")

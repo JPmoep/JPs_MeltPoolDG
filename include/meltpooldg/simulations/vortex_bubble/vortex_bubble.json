@@ -29,8 +29,6 @@
   "paraview":
   {
     "paraview do output" : "true",
-    "paraview print normal vector" : "true",
-    "paraview print advection" : "true",
     "paraview print boundary id" : "true"
   }
 }
