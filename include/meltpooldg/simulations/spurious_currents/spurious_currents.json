@@ -17,6 +17,7 @@
   },
   "levelset" : {
     "ls do reinitialization": "true",
+    "ls n initial reinit steps": "0",
     "ls artificial diffusivity": "0.0",
     "ls do print l2norm": "true",
     "ls time integration scheme" : "crank_nicolson",

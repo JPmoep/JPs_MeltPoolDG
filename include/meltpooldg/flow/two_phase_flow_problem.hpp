@@ -585,8 +585,7 @@ namespace MeltPoolDG::Flow
               }
 
           velocity_norm = Utilities::MPI::max(local_norm_velocity, mpi_communicator);          
-          std::cout << "velocity norm = " << velocity_norm << std::endl;
-
+          
         
         double pressure_jump = 0;
         {
@@ -657,7 +656,7 @@ namespace MeltPoolDG::Flow
         }
 
         // calculate spurious currents
-        std::cout << "  Size spurious currents, absolute: " << velocity_norm << std::endl;
+        std::cout << "  Size spurious currents, sup norm: " << velocity_norm << std::endl;
 
       }
 
