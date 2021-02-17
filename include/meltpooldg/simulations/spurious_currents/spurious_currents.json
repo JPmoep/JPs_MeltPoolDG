@@ -13,7 +13,7 @@
     "flow surface tension coefficient" : "1.0",
     "flow start time"                  : "0.0",
     "flow end time"                    : "0.3",
-    "flow time step size"              : "0.01"
+    "flow time step size"              : "0.0001"
   },
   "levelset" : {
     "ls do reinitialization": "true",
@@ -27,7 +27,7 @@
     "reinit modeltype": "olsson2007",
     "reinit do matrix free": "true",
     "reinit do print l2norm": "true",
-    "reinit eps scale factor": "1.5"
+    "reinit scale factor epsilon": "0.5"
   },
   "normal vector": { 
     "normal vec damping scale factor": "0.05",
@@ -55,7 +55,7 @@
     "physical type"      : "incompressible",
     "dimension"         : "2",
     "global refinements" : "0",
-    "velocity degree"    : "3",
+    "velocity degree"    : "2",
     "viscosity"          : "0.001",
     "Solver" : {
       "NL max iterations"            : "10",
