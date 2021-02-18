@@ -145,6 +145,9 @@ namespace MeltPoolDG::Flow
           // solver Navier-Stokes problem
           flow_operation->solve();
 
+          //
+          evaluate_spurious_currents(base_in);
+
           // ... and output the results to vtk files.
           output_results(n, base_in->parameters.base.problem_name == "melt_pool");
 
